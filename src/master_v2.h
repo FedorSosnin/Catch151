@@ -1,5 +1,4 @@
-// V2 step 7: fights pay, the Master Ball and the Ultra Ball (Fedor). scene_v2.h includes this at its end, so it's
-// only there with UI_V2 on.
+// V2 step 7: fights pay, the Master Ball and the Ultra Ball (Fedor). scene_v2.h includes this at its end.
 //
 // Every wild, Travel or Knomi Tower battle won (Fedor: "You should only get one for winning one"; until 2.1.2 a loss
 // counted too; buddy battles and the dungeon don't count) fills two bars a step (pet.fightPays()): ULTRA_FIGHTS of them earn an Ultra Ball, which triples the catch

@@ -446,12 +446,12 @@ class TestSketchSanity(unittest.TestCase):
 class TestHowToPlayCards(unittest.TestCase):
     """Each game's how-to-play card fits: wrapped as drawWrapped() does it in the sketch (at the
     spaces, a number kept with the next word, lines up to CARD_TEXT_W wide), no language needs more
-    than six lines between the game's name and the Ready, GO! button, and the button's words fit it. The classic font is 12 px a
+    than eight lines in the panel between the game's name and the Ready, GO! button, and the button's words fit it. The classic font is 12 px a
     character at size 2; the CJK one (unifont, at 1x there) 8 px for ASCII and 16 for the rest."""
 
     IDS = ('S_HOW_BERRY', 'S_HOW_BERRY_KEYS', 'S_HOW_WHO', 'S_HOW_RUN', 'S_HOW_DN', 'S_HOW_DN_KEYS',
            'S_HOW_SURF', 'S_HOW_SURF_KEYS', 'S_HOW_VB', 'S_HOW_VB_KEYS', 'S_HOW_SD', 'S_HOW_DUEL', 'S_HOW_DUEL_KEYS')
-    MAX_LINES = 6
+    MAX_LINES = 8  # the panel's 176 px at CARD_LINE_H
 
     @classmethod
     def setUpClass(cls):
@@ -467,7 +467,7 @@ class TestHowToPlayCards(unittest.TestCase):
         rows = fmt.extract_table(read('i18n.cpp'), 'STRINGS', len(cls.LANGS))
         cls.LIT = {sid: [row[k] for row in rows] for k, sid in enumerate(ids)}
         ino = read('PokeKnomiGochi.ino')
-        cls.MAX_W = int(re.search(r'#define\s+CARD_TEXT_W\s+(\d+)', ino).group(1))
+        cls.MAX_W = int(re.search(r'#define\s+CARD_TEXT_W\s+(\d+)', read('menus_v2.h')).group(1))
         cls.BTN_W = int(re.search(r'#define\s+CARD_BTN_W\s+(\d+)', ino).group(1))
 
     @staticmethod

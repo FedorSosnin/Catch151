@@ -1,6 +1,6 @@
 #pragma once
 // V2, the new look: the home screen's header, need bars, icon band and icons (step 1 of the V2 build).
-// PokeKnomiGochi.ino includes this after its drawing helpers, and only with UI_V2 on: it draws with them
+// PokeKnomiGochi.ino includes this after its drawing helpers: it draws with them
 // (gfx, setSize, printT, drawMap...) and reads the sketch's state (pet, gNight). Positions are in
 // layout_v2.h and colours in palettes_v2.h.
 #include "../host/glcdfont.h"  // the classic 5x7 font's pixels, for the labels turned along the bars
@@ -315,17 +315,6 @@ static void v2DrawBars() {
 }
 
 // ---------- the icons ----------
-
-// drawMap in one flat colour (an icon in shadow)
-static void v2MapFlat(const char *const *map, int n, int x, int y, int s, uint16_t col) {
-  x = SNAP2(x);
-  y = SNAP2(y);
-  for (int r = 0; r < n; r++) {
-    const char *row = map[r];
-    forRuns(n, [&](int c) { return charKey(row[c], true); },
-            [&](int c0, int len, int) { gfx->fillRect(x + c0 * s, y + r * s, len * s, s, col); });
-  }
-}
 
 // The band's see-through ink: white on a dark scene, the track on a light one; ra over all of it (its 3 px edge
 // has only that), ta more inside. The radial menu's ring has it too (radial_v2.h).

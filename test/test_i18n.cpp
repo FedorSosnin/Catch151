@@ -45,7 +45,6 @@ static const ExpectedFmt EXPECTED[] = {
   { S_BUDDY_LEFT_FMT, "%s" },
   { S_BUDDY_BUSY_FMT, "%s" },
   { S_TRADE_GOT_FMT, "%s" },
-#if UI_V2
   { S_FLOOR_WON_FMT, "%d" },
   { S_NEXT_FMT, "%d,%s" },
   { S_GATE_FMT, "%d" },
@@ -59,7 +58,6 @@ static const ExpectedFmt EXPECTED[] = {
   { S_TIP_NOSTRONG_FMT, "%s,%s" },
   { S_CHEER_FMT, "%d" },
   { S_CHEER_NEXT_FMT, "%d" },
-#endif
   { S_ZONE_CAUGHT_FMT, "%d,%d" },
   { S_POKEDEX_FMT,     "%u" },
   { S_NAME_FMT,        "%s,%s,%u" },
@@ -103,7 +101,6 @@ static const ExpectedFmt EXPECTED[] = {
   { S_CAUGHT_FMT,      "%s" },
   { S_FLED_FMT,        "%s" },
   { S_VISIT_BYE_FMT,   "%s" },
-#if UI_V2
   { S_PLAY_WITH_FMT,   "%s" },  // V2: Play together's "with PIKACHU" (menus_v2.h)
   { S_CHOOSE_Q_FMT,    "%s" },  // V2: the starter screen's "Choose PIKACHU?" (starter_v2.h)
   { S_THANKS_DAYS_FMT, "%u" },  // V2: a goodbye's panel (starter_v2.h)
@@ -116,7 +113,6 @@ static const ExpectedFmt EXPECTED[] = {
   { S_TRG_BUDDIES_FMT, "%d,%d" },  // V2: the trophy room's shelves' boards (menus_v2.h v2TrophyShelf())
   { S_TRG_CARE_FMT,    "%d,%d" },
   { S_EVO_TRYING_FMT,  "%s" },  // V2: the hold's EVOLVE box, "Your CATERPIE is trying to evolve!" (menus_v2.h)
-#endif
 };
 static const int NUM_EXPECTED = (int)(sizeof(EXPECTED) / sizeof(EXPECTED[0]));
 

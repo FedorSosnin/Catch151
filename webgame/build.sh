@@ -3,7 +3,7 @@
 # the game compiled to WebAssembly with the host layer, the Knomi's compressed sprite pack
 # (1.2 MB instead of the 40 MB folder) and the CJK fonts. Needs Emscripten (brew install emscripten).
 #   webgame/build.sh
-#   UI_V2=0 WEB_OUT=/some/folder webgame/build.sh    the other look, somewhere that isn't published
+#   WEB_OUT=/some/folder webgame/build.sh    somewhere that isn't published
 set -e
 cd "${0:A:h}/.."
 OUT=${WEB_OUT:-web/play}
@@ -14,7 +14,7 @@ python3 -I tools/pack_flash.py $B/res/sprites.tpkz >/dev/null
 cp host/fonts/*.u8g2 $B/res/fonts/
 python3 -I host/gen_sketch_unit.py PokeKnomiGochi.ino $B/sketch_unit.cpp
 
-em++ -std=c++17 -O2 -DBOARD_HOST -DBOARD_KNOMI_V2 ${UI_V2:+-DUI_V2=$UI_V2} -I host -I host/shim -I . -I src \
+em++ -std=c++17 -O2 -DBOARD_HOST -DBOARD_KNOMI_V2 -I host -I host/shim -I . -I src \
   webgame/main.cpp \
   host/host_canvas.cpp host/host_prefs.cpp host/host_runtime.cpp host/host_board.cpp host/host_buddy.cpp host/host_audio.cpp \
   src/pet.cpp src/i18n.cpp src/sdmon.cpp src/ota_update.cpp $B/sketch_unit.cpp \

@@ -367,11 +367,7 @@ static void relayMessage(bool text, const std::string &m) {  // the game's threa
 
 // ---- sound: the game's 16 kHz mono, pulled on a thread of its own ----
 #define AUDIO_BUFFERS 3
-#if UI_V2
 #define AUDIO_FRAMES 1536  // ~32 ms per buffer at 48 kHz
-#else
-#define AUDIO_FRAMES 512  // ~32 ms per buffer at 16 kHz
-#endif
 
 static void audioThread() {
   HANDLE ev = CreateEventW(NULL, FALSE, FALSE, NULL);
@@ -857,7 +853,7 @@ static void showMenu(POINT at) {
   AppendMenuW(m, MF_STRING | (gCrt ? MF_CHECKED : 0), ID_CRT, L"CRT Screen");
   // the same setting as the game's SND button on the clock screen, saved with the game
   AppendMenuW(m, MF_STRING | (hostSoundEnabled() ? 0 : MF_CHECKED), ID_MUTE, L"Mute Sound");
-#if UI_V2  // V2's music: the same setting as the Music row on the settings page, off or its level
+  // V2's music: the same setting as the Music row on the settings page, off or its level
   HMENU music = CreatePopupMenu();
   const wchar_t *levelNames[] = {L"Off", L"Low", L"Medium", L"High"};
   for (int i = 0; i < 4; i++) {
@@ -865,7 +861,6 @@ static void showMenu(POINT at) {
     AppendMenuW(music, MF_STRING | (on ? MF_CHECKED : 0), ID_MUSIC + i, levelNames[i]);
   }
   AppendMenuW(m, MF_POPUP, (UINT_PTR)music, L"Music");
-#endif
   if (gXSet && controllerIndex() >= 0)  // only with a controller that can buzz
     AppendMenuW(m, MF_STRING | (gVibeOn ? MF_CHECKED : 0), ID_VIBE, L"Vibration");
   if (gAccel)  // only with a motion sensor

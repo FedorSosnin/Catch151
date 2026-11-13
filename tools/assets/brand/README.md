@@ -28,5 +28,5 @@ multiple of it, with `image-rendering: pixelated`.
   2 px a pixel so it lands whole on the Knomi's 240 px panel (3x would blur there). `webgame/assets/logo.svg` is the
   regular one, at the top of the web game's page (`webgame/shell.html`).
 - **The signs** are the game's wooden name board (`v2SignIn()`) in its 5x7 font: gold for DEX, wood for a device.
-- The 1024 px icon is the art alone. A Mac app icon still needs Apple's margin round it (`mac/make_icon.py` does that
-  for today's icon).
+- The 1024 px icon is the art alone: the apps' icons (`mac/AppIcon.icns`, `windows/app.ico`) and the web's are made
+  from these sizes.

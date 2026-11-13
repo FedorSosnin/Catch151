@@ -552,7 +552,6 @@ static void testGame() {
   hostFrameRGBA(rgba.data());
   CHECK(!hostFrameDirty());
   CHECK(rgba[3] == 255);
-#if !defined(UI_V2) || UI_V2
   {  // V2: the four starters walk through the Field; a tap shorter than the game's polling interval is not lost:
      // Bulbasaur, then the question's YES, and it's yours at once
     extern Pet pet;
@@ -571,20 +570,6 @@ static void testGame() {
     CHECK(!pet.awaitingStarter() && !pet.isEgg() && pet.speciesId == 1);
     CHECK(hostFrameDirty());
   }
-#else
-  int center = (HOST_CANVAS_SIZE * HOST_CANVAS_SIZE / 2 + HOST_CANVAS_SIZE / 2) * 4;
-  CHECK(rgba[center] > 200 && rgba[center + 1] > 200);  // the light background of the starter choice
-
-  // a tap shorter than the game's polling interval is not lost
-  hostPointer(233, 145, true);
-  hostPointer(233, 145, false);
-  int16_t x, y;
-  CHECK(hostPointerRead(&x, &y) && x == 233 && y == 145);
-  runTicks(150);
-  CHECK(!hostPointerRead(&x, &y));
-  runTicks(150);  // chose Bulbasaur: the background becomes the egg's
-  CHECK(hostFrameDirty());
-#endif
 
   // the arrow keys are a ramp, with the sign playerTilt() expects
   hostTiltKeys(false, true);
@@ -670,7 +655,6 @@ static void testGame() {
   for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);  // until it has ended
   runTicks(1000);
   CHECK(runOpen && runOverT);  // the result, waiting for a tap
-#if !defined(UI_V2) || UI_V2
   tapAt(233, 200);  // V2: a tap on its panel does nothing
   CHECK(runOpen && runOverT);
   tapAt(233, 287);  // PLAY AGAIN!: a new run at once
@@ -696,9 +680,6 @@ static void testGame() {
     CHECK(runOpen && runOverT);
   }
   tapAt(233, 422);  // the X
-#else
-  tapAt(233, 200);
-#endif
   CHECK(!runOpen && gamesMenuOpen);
 
   // auto-update: on unless turned off, and kept apart from the pet's save; an update found waits for the
@@ -717,7 +698,6 @@ static void testGame() {
   CHECK(std::string(opts.begin(), opts.end()).find("aupd 00") != std::string::npos);
   hostSetAutoUpdate(true);
 
-#if !defined(UI_V2) || UI_V2
   // V2's home: each icon answers at its new centre on the circle round the screen's middle, and the
   // hygiene bar on the rim is painted in its status colour from its lower end (layout_v2.h)
   {
@@ -781,9 +761,7 @@ static void testGame() {
     runTicks(100);
     // the games' X clicks, as every X does (Fedor)
     audioSetEnabled(true);
-#if !defined(UI_V2) || UI_V2
     musicSetEnabled(false);  // (V2: the menu's music would sound too)
-#endif
     std::vector<int16_t> drain(HOST_AUDIO_RATE * 10);
     hostAudioRender(drain.data(), (int)drain.size());  // what's queued so far, out of the way
     gamesMenuOpen = true;
@@ -795,9 +773,7 @@ static void testGame() {
     runTicks(200);
     CHECK(!gamesMenuOpen);
     CHECK(anySound(HOST_AUDIO_RATE / 10));
-#if !defined(UI_V2) || UI_V2
     musicSetEnabled(true);
-#endif
     // no swipes on home (Fedor: "Making the hold menu the main navigation there"): a quick swipe each way
     // opens nothing; the ring opens the pages, where a swipe still turns them
     extern bool galleryOpen, clockOpen, v2RadialOpen;
@@ -1054,9 +1030,7 @@ static void testGame() {
     CHECK(fb[182 * 466 + 330] == 0x8651);  // a wild battle: the foe's base under its feet, #86c98a
     runTicks(100);
   }
-#endif
 
-#if !defined(UI_V2) || UI_V2
   {  // V2's music follows the screen (music_v2.h): the home's, Knomi Island's, a wild battle's (the zone its Pokemon
      // lives in: Magikarp's is the Beach), a legend's, the victory jingle, a track the console forces. It sounds, and
      // the Music switch silences it
@@ -1214,7 +1188,6 @@ static void testGame() {
     runTicks(100);
     CHECK(hostMusicWanted() != 17);
   }
-#endif
 
   hostSerialPush("WIPE");
   runTicks(50);

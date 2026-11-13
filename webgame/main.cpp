@@ -66,7 +66,7 @@ EMSCRIPTEN_KEEPALIVE void webSave(void) {
 EMSCRIPTEN_KEEPALIVE int webSoundOn(void) { return hostSoundEnabled(); }
 EMSCRIPTEN_KEEPALIVE void webSetSound(int on) { hostSetSoundEnabled(on != 0); }
 // V2's music: 0 off, 1..3 its level, or -1 for a build without it (V1): the page hides its button
-EMSCRIPTEN_KEEPALIVE int webMusicLevel(void) { return UI_V2 ? (hostMusicEnabled() ? hostMusicVolume() : 0) : -1; }
+EMSCRIPTEN_KEEPALIVE int webMusicLevel(void) { return hostMusicEnabled() ? hostMusicVolume() : 0; }
 EMSCRIPTEN_KEEPALIVE void webSetMusicLevel(int level) {
   if (level <= 0) hostSetMusicEnabled(false);
   else hostSetMusicVolume(level);

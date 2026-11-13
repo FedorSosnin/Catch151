@@ -35,13 +35,11 @@ void Pet::newEgg() {
     if (shinyBase < 8) shinyBase = 8;
   }
   eggShiny = (random(shinyBase) == 0);
-#if UI_V2
   // V2 (Fedor): no egg and no shiny roll. The four starters until a goodbye has been offered, then any base form
   // in the Pokedex, regular or shiny: a Pokemon is shiny only when you pick a shiny form you own
   starterPick = !pickOk || eggChoiceCount() == 0;
   eggPick = !starterPick;
   eggShiny = false;
-#endif
   eggStars = 0;  // picking a form sets its band; a drawn egg rolls 90-110
   eggTaps = 0;
   fullness = 80;
@@ -93,12 +91,10 @@ void Pet::advanceDay() {
   }
   bool clockDay = d == lastSeenEpoch / 86400;  // not held back: the clock's own day
   gameDay = d;
-#if UI_V2
   if (!metDay && !isEgg() && !starterPick && !eggPick) {  // V2: the day it came, as near as its age tells
     uint32_t back = ageMinutes / 1440;
     metDay = back < d ? d - back : 1;
   }
-#endif
   dayLife = lifeMin - (clockDay && (first || clockTrusted) ? (lastSeenEpoch % 86400) / 60 : 0);
   pendingSave = true;
 }
@@ -183,12 +179,10 @@ void Pet::update(uint32_t nowMs) {
     newEgg();
     return;
   }
-#if UI_V2
   if (isEgg() && !starterPick && !eggPick && ceremony == CER_NONE) {  // V2 has no egg: an older version's hatches now
     hatch();
     return;
   }
-#endif
   while (nowMs - lastTick >= PET_TICK_MS) {
     lastTick += PET_TICK_MS;
     lifeMin++;  // even while choosing or saying goodbye: the trainer's time
@@ -226,12 +220,10 @@ void Pet::tick() {
     if (ageMinutes >= 3) hatch();  // if you don't touch it, it hatches on its own after 3 min
     return;
   }
-#if UI_V2
   if (!pickOk && canFarewellNow()) {  // V2: its goodbye is offered from now on: the next Pokemon comes from the Pokedex
     pickOk = true;
     save();
   }
-#endif
 
   // sleep is rest: energy recovers and needs drop MUCH
   // slower than awake and with a floor (it wakes up wanting some cuddles, not at
@@ -366,15 +358,12 @@ bool Pet::chooseEgg(int16_t dex, bool shinyForm) {
   if (shinyForm) eggShiny = true;  // otherwise the roll from newEgg() stays: a surprise
   eggStars = starsOf(dex, shinyForm);  // a 3-star form hatches a 3-star Pokemon
   eggPick = false;
-#if UI_V2
   hatch();  // V2: no egg, it's yours at once (and shiny only if picked: newEgg() rolls none)
   return true;
-#endif
   save();
   return true;
 }
 
-#if UI_V2
 uint8_t Pet::fightPays() {
   uint8_t earned = 0;
   if (++masterBar >= MASTER_FIGHTS) {
@@ -436,7 +425,6 @@ void Pet::chooseStarter(int16_t dex, bool shinyForm) {
   starterPick = eggPick = false;
   hatch();
 }
-#endif
 
 int16_t Pet::registeredAt(int idx) const {
   for (int16_t d = 1; d <= 151; d++)
@@ -667,9 +655,7 @@ bool Pet::canRunawayNow() const {
 
 void Pet::startFarewell() {
   if (isEgg() || ceremony != CER_NONE) return;
-#if UI_V2
   pickOk = true;  // V2: a goodbye said was a goodbye offered
-#endif
   lastEnd = CER_FAREWELL;
   ceremony = CER_FAREWELL;
   ceremonyUntil = millis() + CEREMONY_MS;
@@ -708,9 +694,7 @@ void Pet::release() {
 void Pet::hatch() {
   speciesId = eggTarget;
   shiny = eggShiny;
-#if UI_V2
   metDay = gameDay;  // (0 without a clock yet: advanceDay() sets it)
-#endif
   // individual's genes: 90-110% per stat (every raising is unique), or inside the band of the form it
   // was picked from, so its stars are that form's
   int lo = eggStars == 1 ? 90 : eggStars == 2 ? GENE_BAND_1 + 1 : eggStars == 3 ? GENE_BAND_2 + 1 : 90;
@@ -726,16 +710,12 @@ void Pet::hatch() {
   movesSeen = 1;
   counted100 = false;
   evoAskAgain = 0;
-#if UI_V2
   evoKept = 0;  // V2: a new one is asked about its own evolution
-#endif
   berryKnown = false;
-  bond = 0;          // bond, medals and name belong to the individual
+  bond = 0;          // bond and name belong to the individual
   bondToday = 0;
-#if !UI_V2
-  medals = 0;
-#endif  // V2 (Fedor: "my care achievements got wiped for this new pokemon and I re-earned the berry achievement. I
-        // think these should only happens once"): the care medals too are earned once and kept, as the trainer's are
+  // the medals stay (Fedor: "my care achievements got wiped for this new pokemon and I re-earned the berry achievement.
+  // I think these should only happens once"): the care medals too are earned once and kept, as the trainer's are
   newMedal = 0;
   nick[0] = 0;
   registerSpecies(speciesId);  // raised = registered in the pokedex
@@ -872,7 +852,6 @@ void Pet::dungeonResult(uint8_t floor) {
 
 // battle: winning trains more than losing, and losing never does permanent damage
 // a win trains, cheers and bonds; a loss earns nothing, it only tires
-#if UI_V2
 void Pet::towerFightWon(bool petFought) {
   energy = energy > TOWER_FIGHT_ENERGY ? energy - TOWER_FIGHT_ENERGY : 0;
   if (petFought && !isEgg() && ceremony == CER_NONE) {
@@ -924,7 +903,6 @@ uint8_t Pet::towerChalDone(uint8_t got) {
   }
   return fresh;
 }
-#endif
 
 uint8_t Pet::battleResult(bool won) {
   if (ceremony != CER_NONE || isEgg()) return 0;
@@ -1055,9 +1033,7 @@ int16_t Pet::pickWildSpecies(uint8_t lvl) {
       uint8_t r = DEX_TBL[d].rarity;
       if (legend ? r != R_LEGENDARY : r == R_LEGENDARY) continue;
       if (btlMinLevel(d) > lvl) continue;
-#if UI_V2
       if (pass < 2 && repelKeepsAway(d)) continue;  // V2: a Repel keeps weaker ones away
-#endif
       if (pass == 0 && preferNew && isRegistered(d)) continue;
       if (pass == 0 && r == R_RARE && random(100) < 60) continue;  // rares, less often
       cand[n++] = d;
@@ -1080,34 +1056,22 @@ int16_t Pet::pickZoneSpecies(uint8_t zone, uint8_t lvl) {
   if (random(1000) < ZONE_LEGEND_PERMIL) return legend;  // any time, but seldom
   // now and then only the common ones you're missing (V2: most of the time, rares too but less often, as a
   // Wild Encounter looks for them); otherwise anyone strong enough to be here
-#if UI_V2
   // V2: a Repel. In a zone not yet complete every one here is as likely; in a complete one, weaker ones stay away
   // (and if that leaves nobody, the last pass is the usual one)
   int first = random(100) < ZONE_V2_NEW_PCT ? 0 : 1;
   bool even = repelOn() && !zoneComplete(zone), strong = repelOn() && !even;
   if (even) first = 1;
   for (int pass = first; pass < (strong ? 3 : 2); pass++) {
-#else
-  for (int pass = random(100) < ZONE_NEW_PCT ? 0 : 1; pass < 2; pass++) {
-#endif
     int16_t cand[151];
     uint8_t w[151];
     int n = 0, total = 0;
     for (int16_t d = 1; d <= 151; d++) {
       if (zoneOf(d) != zone || d == legend || btlMinLevel(d) > lvl) continue;
-#if UI_V2
       if (pass == 0 && (isRegistered(d) || (zoneIsRare(d) && random(100) < ZONE_V2_RARE_SKIP))) continue;
-#else
-      if (pass == 0 && (isRegistered(d) || zoneIsRare(d))) continue;
-#endif
-#if UI_V2
       if (strong && pass < 2 && repelKeepsAway(d)) continue;
-#endif
       cand[n] = d;
       w[n] = zoneWeight(d);
-#if UI_V2
       if (even) w[n] = 1;
-#endif
       total += w[n++];
     }
     if (n > 0) {
@@ -1211,7 +1175,6 @@ void Pet::save() {
   prefs.putBool("sleep", sleeping);
   prefs.putUChar("lend", lastEnd);
   prefs.putBool("fquiet", farewellQuiet);
-#if UI_V2
   prefs.putBool("pkok", pickOk);
   prefs.putUChar("mbar", masterBar);
   prefs.putUChar("mbls", masterBalls);
@@ -1233,7 +1196,6 @@ void Pet::save() {
   prefs.putUInt("hofe", hofEpoch);
   prefs.putUInt("met", metDay);
   prefs.putShort("evok", evoKept);
-#endif
   if (lastSeenEpoch) prefs.putUInt("seen", lastSeenEpoch);
   prefs.putUInt("life", lifeMin);
   prefs.putUInt("gday", gameDay);
@@ -1313,7 +1275,6 @@ void Pet::load() {
   sleeping = prefs.getBool("sleep", false);
   lastEnd = prefs.getUChar("lend", CER_NONE);
   farewellQuiet = prefs.getBool("fquiet", false);
-#if UI_V2
   pickOk = prefs.getBool("pkok", false) || lastEnd == CER_FAREWELL || farewellQuiet;  // older saves: a goodbye said or put off
   masterBar = prefs.getUChar("mbar", 0);
   masterBalls = prefs.getUChar("mbls", 0);
@@ -1348,7 +1309,6 @@ void Pet::load() {
   hofEpoch = prefs.getUInt("hofe", 0);
   metDay = prefs.getUInt("met", 0);
   evoKept = prefs.getShort("evok", 0);
-#endif
   prefs.getBytes("dexreg", dexReg, sizeof(dexReg));
   bool hadStars = prefs.isKey("dexstr");
   if (hadStars) prefs.getBytes("dexstr", dexStars, sizeof(dexStars));
@@ -1374,21 +1334,17 @@ void Pet::load() {
   counted100 = prefs.getBool("l100c", false);
   // from before the count: the Level 100 medal means one got there. If it isn't this one, count it
   if (!prefs.isKey("l100n") && (trainerMedals & MED_LV100) && level() < LEVEL_MAX) lv100Count = 1;
-#if UI_V2
   // V2: care medals earned once and kept (2.1.0). A save from before lost them to each new Pokemon (Fedor: "I already
   // got that badge before, I dont need to get it again"); the ones the trainer's records still prove come back
   // quietly, so they aren't won a second time
   if (bestStreak >= 7) medals |= MED_STREAK7;
   if ((trainerMedals & MED_LV100) || lv100Count) medals |= MED_LV10 | MED_LV25 | MED_LV50;
-#endif
   lifeMin = prefs.getUInt("life", 0);
   gameDay = prefs.getUInt("gday", 0);  // older saves: 0, and the first clock sets today without a wait
-#if UI_V2
   if (!metDay && gameDay && !isEgg() && !starterPick && !eggPick) {  // V2: a save from before: the day it came, by its age
     uint32_t back = ageMinutes / 1440;
     metDay = back < gameDay ? gameDay - back : 1;
   }
-#endif
   dayLife = prefs.getUInt("dlife", 0);
   refUtc = prefs.getUInt("rutc", 0);
   refLife = prefs.getUInt("rlife", 0);
@@ -1408,7 +1364,6 @@ void Pet::load() {
   }
 }
 
-#if UI_V2
 // ----- the save's storage name (savename.h): V2's own, and a save from before the rename carried over -----
 static const char *gSaveNs = SAVE_NS_NEW;
 const char *saveNs() { return gSaveNs; }
@@ -1523,4 +1478,3 @@ void saveForgetOld() {
   p.clear();
   p.end();
 }
-#endif

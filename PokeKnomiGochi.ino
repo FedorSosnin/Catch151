@@ -51,13 +51,10 @@
 #include "src/ota_update.h"
 #include "src/buddy_net.h"
 
-#include "src/ui_v2.h"  // UI_V2: 1 draws V2, the new look; 0 draws 1.51's screens
-#if UI_V2
 #include "src/layout_v2.h"
 #include "src/palettes_v2.h"
 #include "src/sprites_v2.h"
 #include "src/music.h"  // background music, on a computer and the web (HAS_MUSIC)
-#endif
 
 // Firmware version. Bump this number on every release (and manifest.json for
 // the web installer). Shown on the settings screen and over serial at boot.
@@ -117,12 +114,7 @@ struct {
   uint32_t until = 0;   // end of the current state
   float x = 233, targetX = 233;
 } beh;
-uint32_t walkLast = 0;  // time of the last walk step (0 = none yet)
-#if UI_V2
 #define PET_GROUND 256  // V2: the home's scene is V2_SCENE_UP (32) higher, its Pokemon with it (layout_v2.h)
-#else
-#define PET_GROUND 288  // pet ground line: 8 px over the bottom panel (296), so feet are never cut off
-#endif
 PmdMon galleryPmd;  // large sprite for the gallery detail view (PMD/TPK2, legal)
 PmdMon galleryShinyPmd;  // the entry's shiny, next to the regular one when both are caught
 
@@ -141,19 +133,12 @@ int16_t galleryDetail = 0;  // dex in detail view, 0 = grid
 #define DEXG_SPRITE_S 3    // the largest scale in a square
 #define DEXG_STARS_H 12    // room under the sprite for a 3-star entry's stars (they tuck under its feet)
 #define DEXG_STAR_R 5
-#if UI_V2  // V2: 3 squares of 92 in a panel under the board, "Page 1 of 17" under it, clear of the X (dex_grid())
+// V2: 3 squares of 92 in a panel under the board, "Page 1 of 17" under it, clear of the X (dex_grid())
 #define DEXG_X 95
 #define DEXG_Y 74
 #define DEXG_CELL 92
 #define DEXG_PAGE_Y 362
 #define PAGE_ARROW_Y V2_PAGE_ARROW_Y  // the page buttons: at the sides half way down, on every grid
-#else
-#define DEXG_X 86          // the Pokedex: 3 squares of 98 under the count and the title
-#define DEXG_Y 84
-#define DEXG_CELL 98
-#define DEXG_PAGE_Y 386    // "Page 1 of 17"
-#define PAGE_ARROW_Y (DEXG_Y + 3 * DEXG_CELL / 2)  // the page arrows: level with the Pokedex grid's middle, on every grid
-#endif
 #define PAGE_ARROW_INSET 32  // the page arrows sit as far in from the round edge as the X does from the bottom (464 - 432)
 PmdMon dexGridPmd[DEXG_PAGE];       // the page's shinies, animated
 int16_t dexGridPmdDex[DEXG_PAGE];   // which one each holds (0: none)
@@ -170,16 +155,10 @@ char nameBuf[12] = "";
 uint8_t nameLen = 0;
 int cardNameBottom = 84;      // where the card's name (and the species under a nickname) ends: tapping above renames
 uint8_t cardPage = 0;         // the card: 0 profile, 1 stats, 2 training, 3 progress; the achievements: their pages
-#if UI_V2
 #define CARD_PAGES 7  // V2: after Progress, a page for each item: the Ultra Ball (4), the Master Ball (5), the Repel (6)
-#else
-#define CARD_PAGES 4
-#endif
 bool cardAch = false;         // the same screen showing the achievements (swipe right to left from home)
 int8_t achDetail = -1;        // a medal tapped there: its card, with how to earn it (-1: the medals)
-#if UI_V2
 int8_t achGroup = -1;  // V2: one of the trophy room's five groups on its shelf, under a medal's card too (-1: the room)
-#endif
 #define ACH_PAGES 6           // the pet's medals (2 pages), the trainer's (2), the zones' (1), level 100 (1): 6 at most a page
 #define cardPageCount() (cardAch ? ACH_PAGES : CARD_PAGES)  // a macro: a function here would come before the sketch's prototypes
 uint8_t clockPage = 0;        // 0 time, 1 settings (Knomi only)
@@ -201,15 +180,12 @@ bool clockTzUi = false;       // the time page shows where the time comes from: 
 #else
 bool clockTzUi = true;        // ...Wi-Fi, and the time zone button
 #endif
-#define TIME_STATUS_Y 180     // the locked time page: "Set by Wi-Fi"
-#define TZ_LABEL_Y 210        // "Time zone"
 #define TZ_BTN_X 83           // the city button
 #define TZ_BTN_Y 234
 #define TZ_BTN_W 300
 #define TZ_BTN_H 40
 #define TZ_CITY_Y 200         // the picker: the city's name, then its UTC offset
 #define TZ_ARROW_Y 214        // ...and the arrows either side
-#define UI_MUTED C565(0x7a, 0x78, 0x84)  // grey text that still reads on the cream (UI_TRACK is fainter)
 
 // bath scene: water drops showering down and soap bubbles foaming up over the pet, then it sparkles clean
 uint32_t bathUntil = 0;
@@ -223,9 +199,7 @@ bool bathDuckLeft = true;   // the rubber duck on the ground, right beside the p
 #define BATH_DUCK_S 3       // the duck: its 14x14 map at 3x (42 px, still small beside the pet)...
 #define BATH_DUCK_GAP 44    // ...its near edge this far from the pet's centre
 uint32_t feedMenuUntil = 0;   // food picker open until this millis
-#if UI_V2
 uint32_t v2FeedOpenT = 0;     // V2: when the backpack's band last opened: it slides up out of the bag (scene_v2.h)
-#endif
 
 // Berry Drop (gameOpen): catch the falling berries
 bool gameOpen = false;
@@ -240,15 +214,10 @@ bool playKeysUi = true;   // the cards add the arrow keys (a computer, the web).
 #else
 bool playKeysUi = false;  // ...or keep to tilting and touch (the Knomi)
 #endif
-#if UI_V2
 enum ZoneScreen : uint8_t { ZS_NONE, ZS_PICK, ZS_ZONE, ZS_TOWER };  // ZS_TOWER: V2's Knomi Tower (tower_v2.h)
-#else
-enum ZoneScreen : uint8_t { ZS_NONE, ZS_PICK, ZS_ZONE };
-#endif
 ZoneScreen zoneScreen = ZS_NONE;
 uint8_t zoneCur = 0, zonePage = 0;
 int8_t bZone = -1;                  // this battle is in a zone; -1 = random
-#if UI_V2
 bool bTower = false;       // V2: this battle is a Knomi Tower fight (tower_v2.h): no catch, RUN always works, its end
                            // goes back to the climb
 void towerOpen();  // (tower_v2.h, included with the V2 screens further down)
@@ -257,7 +226,6 @@ bool towerClimbing();
 bool bFromIsland = false;  // V2: a Wild Encounter from Knomi Island: its end goes back there, as a zone's does (Fedor:
                            // "When hitting run, you should go back to the zone you were in right before you battled.
                            // Not back to home screen. Makes hunting shinys more tedious")
-#endif
 int16_t zoneDetail = 0;             // the entry opened from the zone's grid (0 = the grid)
 uint16_t *zoneArt = nullptr;        // the 5 frames, painted the first time the menu opens
 uint16_t *zoneBg = nullptr;         // the current battle's one, scaled up to the screen
@@ -311,7 +279,6 @@ uint16_t surfTheir10 = 0;  // their time in tenths of a second, as they last sai
 #define SURF_DUEL_READY_MS 1800UL  // "get ready", as the other games with a buddy
 #define SURF_DUEL_SEND_MS 200UL    // where you are, this often (each one says it all: a lost one doesn't matter)
 #define SURF_DUEL_GONE_MS 10000UL  // nothing from them this long: they've gone
-#define SURF_DUEL_DONE_MS 6000UL   // the result, then back to Play together
 bool dungeonOpen = false, dnBot = false, dnNewHi = false, dnHeld = false;
 DnState dn;
 
@@ -329,13 +296,9 @@ uint32_t bsId = 0, bsT = 0, bsResendT = 0, buddyHelloT = 0;
 bool buddyMenuOpen = false;
 bool partyOpen = false;  // the Party Boost screen: who is around and what it gives
 uint32_t farHintUntil = 0;  // after "stay together": how to get the goodbye back
-#if UI_V2  // V2: after "keep form" too, how to evolve it later (pet.evoHintUntil): its first line
+// V2: after "keep form" too, how to evolve it later (pet.evoHintUntil): its first line
 #define FAR_HINT_ON timeLeft(farHintUntil) || timeLeft(pet.evoHintUntil)
 #define FAR_HINT1 (timeLeft(pet.evoHintUntil) ? S_EVO_HINT1 : S_FAREWELL_HINT1)
-#else
-#define FAR_HINT_ON timeLeft(farHintUntil)
-#define FAR_HINT1 S_FAREWELL_HINT1
-#endif
 bool partyVisitor = false;  // ...showing the visitor's stats
 bool partyVisitorOnly = false;  // ...opened by tapping the visitor at home: closing goes home, not to the list
 uint8_t buddyPage = 1;      // the buddy view: 0 its stats, 1 Battle/Trade/Play
@@ -445,8 +408,6 @@ struct Btn {
 // equal gaps between the bodies (not the centres).
 #define BTN_COUNT 5
 #define HOME_PANEL_Y 296  // the bottom panel: the bars, then the icons
-#define FEED_Y 272        // the food picker, just over the bars
-#if UI_V2
 // V2: on a circle round the screen's own centre (layout_v2.h), so each is as far from the edge; the moon's
 // zZ are orange
 Btn buttons[BTN_COUNT] = {  // (what each does is still by its number: 0 the bag, 1 the games, 2 the map...)
@@ -456,23 +417,9 @@ Btn buttons[BTN_COUNT] = {  // (what each does is still by its number: 0 the bag
   { V2_BTN[3][0], V2_BTN[3][1], SPR_HOME_MOON_V2 },
   { V2_BTN[4][0], V2_BTN[4][1], SPR_HOME_DROP },
 };
-#else
-Btn buttons[BTN_COUNT] = {
-  { 116, 382, SPR_HOME_BAG },     // the bag: berries and candy (more items later)
-  { 174, 403, SPR_HOME_GAMES },   // the mini games
-  { 233, 410, SPR_HOME_MAP },     // battle: a map of the zones, places to travel to
-  { 298, 402, SPR_HOME_MOON },    // light (sleep): a moon and zZ
-  { 352, 381, SPR_HOME_DROP },    // bath: a drop of water
-};
-#endif
 #define BTN_LIGHT 3  // the one that still works while it sleeps
-#if UI_V2
 #define BTN_HALF V2_ICON_HALF  // V2: the 72x72 icon (HOME_ICON_N at 4x)
 #define BTN_HIT 44             // ...and a touch that much bigger
-#else
-#define BTN_HALF 27  // the 54x54 icon (HOME_ICON_N at 3x)
-#define BTN_HIT 36   // touch radius (a bit more generous; neighbours overlap, so the closest wins)
-#endif
 
 // the icon under a touch: the closest one within BTN_HIT (-1: none)
 int buttonAt(int16_t x, int16_t y) {
@@ -491,12 +438,7 @@ static const uint8_t CRACK2[][2] = { {11,13},{12,14},{11,15},{20,12},{19,13},{20
 static const uint16_t STARS[][2] = { {120,140},{330,120},{370,210},{95,230},{280,90},{160,95} };
 
 bool wasPressed = false;
-// starter choice (first game): Bulbasaur / Charmander / Squirtle, 3 rows
-static const int16_t STARTER_DEX[3] = { 1, 4, 7 };
-#define STARTER_ROW_Y 110
-#define STARTER_ROW_H 70
-#define STARTER_ROW_GAP 8
-#if UI_V2  // V2: the evolve and goodbye buttons under the pet, over the icons (v2b-evolve.png)
+// V2: the evolve and goodbye buttons under the pet, over the icons (v2b-evolve.png)
 #define EVO_BTN_W 200
 #define EVO_BTN_H 52
 #define EVO_BTN_X (CX - EVO_BTN_W / 2)
@@ -512,19 +454,6 @@ static const int16_t STARTER_DEX[3] = { 1, 4, 7 };
 #define FAR_BTN_H 56
 #define FAR_BTN_X (CX - FAR_BTN_W / 2)
 #define FAR_BTN_Y 260
-#else
-// evolution CTA button (centered, mid-screen)
-#define EVO_BTN_W 256
-#define EVO_BTN_H 64
-#define EVO_BTN_X (CX - EVO_BTN_W / 2)
-#define EVO_BTN_Y 172
-// farewell CTA button (wider: carries the name + phrase)
-#define FAR_BTN_W 408
-#define FAR_BTN_H 58
-#define FAR_BTN_X (CX - FAR_BTN_W / 2)
-#define FAR_BTN_Y 176
-#define EVO_DECLINE_IF  // (V1: a tap off it declines)
-#endif
 // the CST9217 signals on the INT pin when there is touch data; we use it to avoid
 // reading the I2C bus while the chip is asleep (that read hung for ~1s)
 volatile bool gTouchIrq = false;
@@ -533,17 +462,13 @@ uint32_t lastRender = 0;
 uint32_t sdEpoch = 0;  // +1 every time the SD is reloaded (thumbnails change)
 // AMOLED protection: dimmed on inactivity
 uint32_t lastInteract = 0;
-#if UI_V2
 uint32_t v2PlayInputAt = 0;  // V2: the last touch, tilt or key held (only time played earns a Repel: repel_v2.h)
-#endif
 uint8_t dimStage = 0;        // 0 awake, 1 dimmed (90s), 2 nearly off (5min)
 bool swallowGesture = false; // the touch that wakes it does nothing
-uint32_t holdStart = 0;     // long press on the pet
 uint32_t confirmUntil = 0;  // "release?" dialog active until this millis
 #ifdef BOARD_KNOMI_V2
 uint32_t gBtnSimUntil = 0;  // simulated press of the physical button (serial console)
 #endif
-#if UI_V2
 bool v2RadialOpen = false;    // V2: the radial menu, a hold on the Pokemon (radial_v2.h)
 int8_t v2RadialHover = -1;   // its section under the finger
 static void v2RadialStart();
@@ -555,7 +480,6 @@ static int v2RadialAt(int16_t x, int16_t y);
 static void v2RadialLift(int16_t x, int16_t y);
 bool v2ResetSure = false;    // V2: ERASE EVERYTHING was tapped once; the question now asks "Are you sure?"
 uint32_t v2ResetSureT = 0;
-#endif
 uint8_t choiceKind = 0;     // decision dialog: 0 none, 1 evolution, 2 farewell, 3 delete save, 4 runaway
 uint32_t choiceUntil = 0;   // closes by itself at this millis
 int16_t tX0, tY0, tXl, tYl; // gesture in progress (start and last position)
@@ -572,9 +496,7 @@ void setup() {
   Serial.setTxTimeoutMs(0);
 #endif
   Serial.printf("Catch 151 fw v%s\n", FW_VERSION);
-#if UI_V2
   saveMigrate();  // V2: a save from before the rename is carried over first (savename.h)
-#endif
   loadLang();  // saved language (ES by default)
 #ifdef BOARD_KNOMI_V2
   autoUpdateLoad();  // (Wi-Fi updates are the Knomi's)
@@ -672,9 +594,7 @@ void ensureMon() {
   }
 }
 
-#if UI_V2
 static bool v2Sliding();  // V2: a menu's page sliding (slide_v2.h, with the scene)
-#endif
 // loop timing, for lag reports: the slowest pass since the last HEALTH line, and its parts
 static uint32_t loopNetMs = 0, loopDrawMs = 0, loopMaxMs = 0, loopSlowCount = 0;
 
@@ -690,10 +610,8 @@ void loopTiming(uint32_t start) {
 #endif
 }
 
-#if UI_V2
 static void v2RepelTick(uint32_t now);  // V2: minigame time earns Repels (repel_v2.h, included with the scene)
 static bool v2AboutQrOpen();            // V2: a link's QR code is over the About page (about_v2.h)
-#endif
 #if HAS_MUSIC
 static uint8_t v2MusicPick(uint32_t now);  // V2: the music this screen wants (music_v2.h, included with the scene)
 static void v2MusicForce(int track);       // ...or one track whatever the screen (the console's MUSIC)
@@ -725,12 +643,10 @@ void loop() {
   wasRunReady = runReady;
 
   handleTouch();
-#if UI_V2 && defined(BOARD_HOST)
+#if defined(BOARD_HOST)
   v2HoverUpdate();  // V2 on a computer and the web: what's under the mouse (hover_v2.h)
 #endif
-#if UI_V2
   v2RepelTick(now);  // V2: every second of a minigame played counts toward a Repel
-#endif
 #if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
   autoRotateTick(now);
 #endif
@@ -794,11 +710,7 @@ void loop() {
     otaConfirmBoot();
   }
   static uint32_t lastOtaCheck = 0;
-#if UI_V2
   uint32_t otaDue = !lastOtaCheck ? OTA_FIRST_CHECK_MS : otaState() == OTA_FAILED ? 3600000UL : OTA_CHECK_V2_MS;
-#else
-  uint32_t otaDue = !lastOtaCheck ? OTA_FIRST_CHECK_MS : otaState() == OTA_FAILED ? 3600000UL : OTA_CHECK_EVERY_MS;
-#endif
   if ((screenOff || dimStage >= 1) && buddyNetUp() && !pet.ceremony && now - lastOtaCheck >= otaDue) {
     lastOtaCheck = now ? now : 1;
     otaCheck(FW_VERSION);
@@ -808,17 +720,12 @@ void loop() {
   // day, with the pet awake: the restart lights the screen, and not in a dark bedroom. One try an hour:
   // a failed one (no Wi-Fi) doesn't hold it in a loop. The pet's save is never touched by it.
   static uint32_t autoTriedT = 0;
-#if UI_V2
   // V2: from any screen a restart loses nothing on (Fedor: "the knomi finds the update but never auto install it":
   // menus stay open when left alone, and only the light wakes the pet), and asleep in the middle of the day (otaAutoNow())
   bool otaBusy = pet.ceremony || choiceKind || confirmUntil || bsState != BS_IDLE || gameOpen || runOpen || surfOpen ||
                  dungeonOpen || battleOpen || quizOpen || vbOpen || sdOpen || tradeOpen || kbOpen ||
                  wifiSetupState() != WS_OFF || towerClimbing();
 #define OTA_AUTO_WHEN otaAutoNow(screenOff || dimStage >= 1, otaBusy, pet.sleeping, sceneHour())
-#else  // (one `if` line for both: the prototype generator counts braces without reading #if)
-#define OTA_AUTO_WHEN (screenOff || dimStage >= 1) && onMainScreen() && !pet.ceremony && \
-      !choiceKind && bsState == BS_IDLE && !pet.sleeping && sceneHour() >= 7 && sceneHour() < 20
-#endif
   if (autoUpdate && otaState() == OTA_AVAILABLE && OTA_AUTO_WHEN &&
       (!autoTriedT || now - autoTriedT > 3600000UL)) {
     autoTriedT = now ? now : 1;
@@ -864,9 +771,7 @@ void loop() {
 #ifdef BOARD_HOST
   if (interval > 150) interval = 150;  // no battery to protect, the pet stays alive at idle
 #endif
-#if UI_V2
   if (interval && v2Sliding()) interval = V2_SLIDE_FRAME_MS;  // V2: a page sliding (slide_v2.h)
-#endif
   bool drewFrame = false;
   // a medal or streak earned away from home (in a battle, a game...) slides down once you're back
   if (now - lastCelebDraw > CELEB_HOLD_MS) pet.holdCelebration();
@@ -888,11 +793,9 @@ PowerCtx powerCtx(uint32_t now) {
   c.idleMs = idleSince(now, lastInteract);
   c.screenOff = screenOff;
   c.sleeping = pet.sleeping;
-#if UI_V2
   // V2: asleep, only the home is dim; a menu opened over it (the radial menu too) is in full colour (Fedor). Left
   // alone it still dims, as any screen does
   if (v2RadialOpen || !onMainScreen()) c.sleeping = false;
-#endif
 #ifdef BOARD_HOST
   if (!c.sleeping) c.idleMs = 0;  // a desktop window has no panel to protect: only the pet's sleep dims it
 #endif
@@ -1090,13 +993,11 @@ void handleSerial() {
       if (bPeers[i].on)
         Serial.printf("  %d: %08lx #%d Lv.%u\n", i, (unsigned long)bPeers[i].id, bPeers[i].dex, bPeers[i].level);
     Serial.println("DONE");
-#if UI_V2
   } else if (line.startsWith("NEEDS ") && pet.noSave) {  // V2: "NEEDS food joy energy hygiene", 0-100 (screenshots)
     int f = 0, j = 0, e = 0, h = 0;
     sscanf(line.c_str() + 6, "%d %d %d %d", &f, &j, &e, &h);
     pet.fullness = f, pet.joy = j, pet.energy = e, pet.hygiene = h;
     Serial.println("DONE");
-#endif
   } else if (line.startsWith("FAKEBUDDY ") && pet.noSave) {  // "FAKEBUDDY dex level [nick]": screenshots without a second board
     char nick[12] = "";
     int dex = 0, lv = 0;
@@ -1147,13 +1048,11 @@ void handleSerial() {
   } else if (line == "RUNBOT" && pet.noSave) {  // plays by itself, to see high speeds
     runBot = !runBot;
     Serial.println("DONE");
-#if UI_V2
   } else if (line == "WALK" && pet.noSave) {  // V2: a walk toward you starts now (testing)
     beh.mode = 1;
     beh.t0 = millis();
     beh.until = millis() + 20000;
     Serial.println("DONE");
-#endif
 #if HAS_MUSIC
   } else if (line.startsWith("MUSIC")) {  // V2: "MUSIC n" plays track n (music.h) whatever the screen; "MUSIC" alone, the screens'
     v2MusicForce(line.length() > 6 ? line.substring(6).toInt() : -1);
@@ -1174,7 +1073,6 @@ void handleSerial() {
   } else if (line == "ZONES") {
     openZones();
     Serial.println("DONE");
-#if UI_V2
   } else if (line == "TOWER") {  // V2: Knomi Tower's screen (testing)
     openZones();
     towerOpen();
@@ -1215,7 +1113,6 @@ void handleSerial() {
   } else if (line.startsWith("TOWERSTEP ") && pet.noSave) {  // V2: "TOWERSTEP n": a climb under way jumps to step n (testing)
     towerJump((uint8_t)line.substring(10).toInt());
     Serial.println("DONE");
-#endif
   } else if (line.startsWith("WILD ")) {  // specific foe (testing); "WILD 25 S": a shiny one
     bNextShiny = line.indexOf(" S") > 0 && pet.noSave;
     startBattleWith(line.substring(5).toInt());
@@ -1327,10 +1224,7 @@ bool inPetZone(int16_t x, int16_t y) {
   int n = partyOthers();
   if (n)  // with others around, yours stands in the middle
     return abs(x - PARTY_MINE_X) < (n <= 2 ? 72 : 56) && y > PET_GROUND - (n <= 2 ? 150 : 115) && y < HOME_PANEL_Y;
-#if UI_V2
   return x > 110 && x < 356 && y > 95 && y < PET_GROUND + 12;  // V2: down to its feet (it stands higher)
-#endif
-  return x > 110 && x < 356 && y > 95 && y < HOME_PANEL_Y;
 }
 
 // press preview (press.h): the control under the finger, drawn by pressOverlay() on each flush
@@ -1338,14 +1232,12 @@ PressTarget pressT;
 bool pressOn = false;
 bool pressSoftGone = false;  // this touch moved off a soft target (a buddy): a swipe, no preview till lift
 bool pressTargetAt(int16_t x, int16_t y, PressTarget &t);  // prototypes (defined at the end)
-#if UI_V2
 void v2DexEntryPos(int16_t dex, int &pos, int &n);          // V2: an entry's side buttons (menus_v2.h)
 void v2DexEntryStep(int d);
 bool v2DexEntryArrowTap(int16_t x, int16_t y);
 bool v2PressNav(int16_t x, int16_t y, PressTarget &t, int page, int pages, int arrowY, bool hasX, int cy = CLOSE_Y);
 bool v2PressDexEntry(int16_t x, int16_t y, PressTarget &t);  // the side buttons' and the X's press previews,
 bool v2PressTrophies(int16_t x, int16_t y, PressTarget &t);  // the trophy room's (menus_v2.h)
-#endif
 void gameTap(int16_t x, int16_t y);
 
 // screens that only repaint on a change must repaint when the highlight moves
@@ -1409,9 +1301,7 @@ void handleTouch() {
   if (Wire.endTransmission() != 0) return;  // no response: retry in 20 ms
   int16_t x, y;
   bool pressed = touch.getPoint(&x, &y, 1) > 0;
-#if UI_V2
   if (pressed) v2PlayInputAt = millis();  // V2: a finger on it
-#endif
 
 #ifdef BOARD_KNOMI_V2
   // wifi password: the key lights up under the finger and is pressed on release, so you can
@@ -1465,7 +1355,7 @@ void handleTouch() {
           introTouch(tX0, tY0, tXl, tYl, picked);
         } else if (picked) {
           gameTap(tXl, tYl);  // the control under the finger when it lifted
-        } else if (swipeUpQuit(tX0, tY0, tXl, tYl, millis() - tStart) V2_AND(!battleOpen)) {  // V2: no swipe out of a battle
+        } else if (swipeUpQuit(tX0, tY0, tXl, tYl, millis() - tStart) && !battleOpen) {  // V2: no swipe out of a battle
           if (zoneScreen) zoneBack();  // (Fedor: "you can swipe out of a battle. Which means you can cancel out a run")
           else quitGame();
         } else if (zoneScreen && abs(tXl - tX0) >= 40 && abs(tYl - tY0) < abs(tXl - tX0)) {
@@ -1490,7 +1380,6 @@ void handleTouch() {
   } else if (pressed) {  // still held down
     tXl = x;
     tYl = y;
-#if UI_V2
     // V2: a hold on the pet opens the radial menu (Fedor); held on still in its middle, the release dialog below
     if (!v2RadialOpen && !holdFired && !swallowGesture && !galleryOpen && !cardOpen && !kbOpen && !clockOpen &&
         !buddyMenuOpen && !partyOpen && !tradeOpen && millis() - tStart > V2_RADIAL_HOLD_MS && abs(tXl - tX0) < 30 &&
@@ -1498,7 +1387,6 @@ void handleTouch() {
         !feedMenuUntil && !choiceKind)
       v2RadialStart();
     if (v2RadialOpen) v2RadialHover = v2RadialAt(tXl, tYl);
-#endif
     // long press without moving on the pet -> release dialog
     if (!holdFired && !swallowGesture && !galleryOpen && !cardOpen && !kbOpen && !clockOpen && !buddyMenuOpen && !partyOpen && !tradeOpen && millis() - tStart > 3000 &&
         abs(tXl - tX0) < 30 && abs(tYl - tY0) < 30 && inPetZone(tX0, tY0) &&
@@ -1510,23 +1398,19 @@ void handleTouch() {
         confirmUntil = millis() + 10000;
       }
       holdFired = true;
-#if UI_V2
       v2RadialOpen = false;  // V2: (the radial menu gives way)
-#endif
     }
   }
   if (pressed) {
-    if (!holdFired V2_AND(!v2RadialOpen)) pressUpdate(x, y);
+    if (!holdFired && !v2RadialOpen) pressUpdate(x, y);
   } else if (wasPressed) {  // finger lifts: resolve gesture
     wakeUI();
-#if UI_V2
     if (v2RadialOpen && !holdFired) {  // V2: the radial menu takes the lift
       pressRelease();
       if (!swallowGesture) v2RadialLift(tXl, tYl);
       wasPressed = pressed;
       return;
     }
-#endif
     int dx = tXl - tX0, dy = tYl - tY0;
     uint32_t dt = millis() - tStart;
     bool picked = pressRelease();
@@ -1561,26 +1445,13 @@ void onSwipeV(int dir) {
     return;
   }
   if (cardOpen) {
-#if UI_V2
     if (achDetail >= 0) achGroup = v2TrophyGroup(achDetail);  // V2: a medal's card goes back to its group's shelf
-#endif
     if (achDetail >= 0) achDetail = -1;  // a medal's card: back to the medals
-#if UI_V2
     else if (cardAch && achGroup >= 0) achGroup = -1;  // V2: a shelf, back to the room
-#endif
     else if (dir < 0 && !cardAch) cardOpen = false;  // up closes the card
     return;
   }
-#if UI_V2
   return;  // V2: no swipes on home: hold your Pokemon for the ring that opens these (radial_v2.h), with room for more
-#endif
-  if (dir > 0) {                    // swipe down: set the time
-    if (!confirmUntil && !feedMenuUntil) openClock();
-  } else if (!pet.isEgg() && !confirmUntil && !feedMenuUntil) {
-    cardOpen = true;                // swipe up: card
-    cardAch = false;
-    cardPage = 0;
-  }
 }
 
 // swipe: dir +1 = to the right
@@ -1598,11 +1469,7 @@ void onSwipe(int dir) {
     return;
   }
   if (pet.awaitingEggPick()) {
-#if UI_V2
     int pages = (pet.eggChoiceCount() + DEXG_PAGE - 1) / DEXG_PAGE;  // V2: nine a page, as the Pokedex
-#else
-    int pages = (pet.eggChoiceCount() + 15) / 16;
-#endif
     int np = eggPickPage - dir;  // swiping left advances a page
     if (!eggPickDetail && np >= 0 && np < pages) {
       eggPickPage = np;
@@ -1617,7 +1484,6 @@ void onSwipe(int dir) {
     return;
   }
 #endif
-#if UI_V2
   if (clockOpen && wifiSetupState() == WS_OFF) {  // V2: Settings, (the Knomi's Wi-Fi,) About; left advances
     int next = clockPage + (dir > 0 ? -1 : 1);
     if (next >= 0 && next < V2_CLOCK_PAGES) {
@@ -1626,7 +1492,6 @@ void onSwipe(int dir) {
     }
     return;
   }
-#endif
 #if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)  // on the host, wifi is the system's business: there is no page
   if (clockOpen && wifiSetupState() == WS_OFF) {  // time <-> settings; left advances
     uint8_t next = dir > 0 ? 0 : 1;
@@ -1638,15 +1503,10 @@ void onSwipe(int dir) {
   if (gameOpen || kbOpen || clockOpen) return;
   if (cardOpen) {  // inside the card or the achievements: switch pages
     if (achDetail >= 0) {  // a medal's card: back to the medals
-#if UI_V2
       int g = v2TrophyGroup(achDetail), p = v2TrophyPos(achDetail) + (dir > 0 ? -1 : 1);  // V2: a swipe steps
       if (p >= V2_TR_GROUP_FIRST[g] && p < V2_TR_GROUP_FIRST[g + 1]) achDetail = V2_TROPHY_ORDER[p];  // through its group
       return;
-#endif
-      achDetail = -1;
-      return;
     }
-#if UI_V2
     if (cardAch) {  // V2: the trophy room and its groups' shelves
       if (achGroup >= 0) {  // a shelf: on through the five, back past the first to the room
         int g = achGroup + (dir > 0 ? -1 : 1);
@@ -1658,7 +1518,6 @@ void onSwipe(int dir) {
       }
       return;
     }
-#endif
     int p = (int)cardPage + (dir > 0 ? -1 : 1);  // left advances
     if (p < 0 && cardAch) {  // back past the first: home, as the Pokedex does
       cardOpen = cardAch = false;
@@ -1667,17 +1526,13 @@ void onSwipe(int dir) {
     cardPage = p < 0 ? 0 : (p > cardPageCount() - 1 ? cardPageCount() - 1 : p);
     return;
   }
-#if UI_V2
   if (!galleryOpen) return;  // V2: no swipes on home: hold your Pokemon for the ring (radial_v2.h)
-#endif
   if (!galleryOpen && dir < 0) {  // right to left on home: the achievements, off to the right
     if (!pet.ceremony && !confirmUntil && !pet.isEgg()) {
       cardOpen = cardAch = true;
       cardPage = 0;
       achDetail = -1;
-#if UI_V2
       achGroup = -1;  // V2: the room
-#endif
     }
     return;
   }
@@ -1690,12 +1545,10 @@ void onSwipe(int dir) {
     }
     return;
   }
-#if UI_V2
   if (galleryDetail) {  // V2: an entry's swipe steps through the Pokedex, as its side buttons do
     v2DexEntryStep(-dir);
     return;
   }
-#endif
   if (galleryDetail) {  // in detail: back to the grid
     galleryDetail = 0;
     galleryUnload();
@@ -1715,7 +1568,6 @@ void onSwipe(int dir) {
   }
 }
 
-#if UI_V2
 static void v2StarterTap(int16_t x, int16_t y);  // V2: the starter screen (starter_v2.h, included with the scene)
 static void v2StarterScreen();
 static bool v2RepelSeat();  // V2: the Repel in the backpack (repel_v2.h)
@@ -1723,22 +1575,10 @@ static void v2RepelUse();
 static int v2FeedAt(int16_t x, int16_t y);  // V2: the backpack's seats (scene_v2.h)
 static int v2FeedFoods();
 static void v2FoodDropStart(int item);
-#endif
 void onTap(int16_t x, int16_t y) {
   // Serial.printf("TOUCH %d %d\n", x, y);  // diagnostic (silenced: floods the log)
   if (pet.awaitingStarter()) {  // first game: choose starter
-#if UI_V2
     v2StarterTap(x, y);  // V2: tap one, then YES (starter_v2.h)
-    return;
-#endif
-    for (int i = 0; i < 3; i++) {
-      int ry = STARTER_ROW_Y + i * (STARTER_ROW_H + STARTER_ROW_GAP);
-      if (x >= 70 && x <= 396 && y >= ry && y <= ry + STARTER_ROW_H) {
-        pet.chooseStarter(STARTER_DEX[i]);
-        sfxPlay(SFX_TAP);
-        break;
-      }
-    }
     return;
   }
   if (pet.awaitingEggPick()) {
@@ -1770,7 +1610,7 @@ void onTap(int16_t x, int16_t y) {
     return;
   }
   if (clockOpen) {
-#if UI_V2 && defined(BOARD_KNOMI_V2)
+#if defined(BOARD_KNOMI_V2)
     if (!tzPickOpen && clockPage == 0 && clockLocked() && x >= V2_RESET_X0 - 3 && x <= V2_RESET_X1 + 3 &&
         y >= V2_RESET_Y0 - 3 && y <= V2_RESET_Y1 + 3) {  // V2: START OVER asks first, on the home screen
       sfxPlay(SFX_TAP);
@@ -1778,7 +1618,6 @@ void onTap(int16_t x, int16_t y) {
       return;
     }
 #endif
-#if UI_V2
     if (!tzPickOpen && wifiSetupState() == WS_OFF && !(clockPage == V2_ABOUT_PAGE && v2AboutQrOpen())) {  // V2: the side buttons turn the pages
       int a = pageArrowAt(x, y, clockPage, V2_CLOCK_PAGES, V2_PAGE_ARROW_Y);
       if (a) {
@@ -1787,14 +1626,12 @@ void onTap(int16_t x, int16_t y) {
         return;
       }
     }
-#endif
     clockTap(x, y);
     return;
   }
   if (pet.ceremony) return;  // no buttons during the farewell
   if (cardOpen) {
     if (cardAch && achDetail >= 0) {  // a medal's card: the X goes back to the medals
-#if UI_V2
       int g = v2TrophyGroup(achDetail), pos = v2TrophyPos(achDetail) - V2_TR_GROUP_FIRST[g];
       int a = pageArrowAt(x, y, pos, v2TrophyGroupSize(g), V2_PAGE_ARROW_Y);
       if (a) {  // V2: the side buttons step through its group
@@ -1803,14 +1640,12 @@ void onTap(int16_t x, int16_t y) {
         return;
       }
       if (closeHit(x, y)) achGroup = g;  // V2: the X goes back to its group's shelf
-#endif
       if (closeHit(x, y)) {
         sfxPlay(SFX_TAP);
         achDetail = -1;
       }
       return;
     }
-#if UI_V2
     if (!cardAch) {  // V2: the side buttons turn the card's pages, as a swipe would
       int a = pageArrowAt(x, y, cardPage, cardPageCount(), V2_PAGE_ARROW_Y);
       if (a) {
@@ -1835,7 +1670,6 @@ void onTap(int16_t x, int16_t y) {
       else if (m >= 0) achDetail = m;
       return;
     }
-#endif
     if (!cardAch && cardPage == 0 && y < cardNameBottom + 12) openKeyboard();  // tap the name (or its pencil) = rename
 #ifndef BOARD_KNOMI_V2  // on the Knomi, battle opens with the physical button
     else if (!cardAch && cardPage == 1 && y >= 300 && y <= 340 && x >= 96 && x <= 370) {
@@ -1871,7 +1705,6 @@ void onTap(int16_t x, int16_t y) {
     } else if (choiceKind == 5) {          // the buddy invites
       if (b1) buddyAcceptInvite();
       else buddyDeclineInvite();
-#if UI_V2
     } else if (choiceKind == 3 && !v2ResetSure && b1) {  // V2: ERASE EVERYTHING asks once more (Fedor)
       v2ResetSure = true;
       v2ResetSureT = millis();
@@ -1879,9 +1712,6 @@ void onTap(int16_t x, int16_t y) {
       sfxPlay(SFX_DENY);
       return;
     } else if (choiceKind == 3 && v2ResetSure && b2 && millis() - v2ResetSureT > 500) {  // the second time it's below
-#else
-    } else if (choiceKind == 3 && b1) {    // delete the game (Knomi button)
-#endif
       pet.factoryReset();
       delay(100);
       ESP.restart();
@@ -1890,7 +1720,6 @@ void onTap(int16_t x, int16_t y) {
     return;
   }
   if (confirmUntil) {        // "release?" dialog: YES / NO
-#if UI_V2
     if (timeLeft(confirmUntil) && x >= V2_REL_X0 - 4 && x <= V2_REL_X1 + 4 && y >= V2_REL_Y0 - 4 && y <= V2_REL_Y1 + 4)
       pet.release();  // V2: RELEASE (KEEP, or anywhere else, keeps it)
     else if (timeLeft(confirmUntil) && pet.canEvolveNow() && x >= V2_HEVO_X0 - 4 && x <= V2_HEVO_X1 + 4 &&
@@ -1901,14 +1730,7 @@ void onTap(int16_t x, int16_t y) {
     }
     confirmUntil = 0;
     return;
-#endif
-    if (timeLeft(confirmUntil) && x >= 118 && x <= 218 && y >= 252 && y <= 304) {
-      pet.release();
-    }
-    confirmUntil = 0;
-    return;
   }
-#if UI_V2
   if (feedMenuUntil) {       // food picker: V2's bubble out of the bag, four seats a row
     int item = timeLeft(feedMenuUntil) ? v2FeedAt(x, y) : -1;
     if (item >= v2FeedFoods()) {  // the Repel: it starts, and the bag closes
@@ -1925,21 +1747,6 @@ void onTap(int16_t x, int16_t y) {
     }
     return;
   }
-#else
-  if (feedMenuUntil) {       // food picker
-    int count = pet.canHaveCandy() ? 4 : 3;
-    int x0 = CX - count * 33;
-    if (timeLeft(feedMenuUntil) && y >= FEED_Y && y <= FEED_Y + 64 && x >= x0 && x <= x0 + count * 66) {
-      int item = (x - x0) / 66;
-      if (item >= count) item = count - 1;
-      if (item == 3) pet.feedCandy();
-      else pet.feedBerry(item);
-      sfxPlay(SFX_EAT);
-    }
-    feedMenuUntil = 0;
-    return;
-  }
-#endif
   if (pet.isEgg()) {
     pet.eggTap();
     sfxPlay(SFX_TAP);
@@ -1983,14 +1790,10 @@ void onTap(int16_t x, int16_t y) {
     Serial.printf("BTN %d\n", i);
     sfxPlay(SFX_TAP);
     if (i == 0) {
-#if UI_V2
       if (!pet.sleeping) {  // V2: opened from closed, the band slides up out of the bag
         if (!feedMenuUntil || !timeLeft(feedMenuUntil)) v2FeedOpenT = millis();
         feedMenuUntil = millis() + 6000;
       }
-#else
-      if (!pet.sleeping) feedMenuUntil = millis() + 6000;
-#endif
     } else if (i == 1) {
       openGamesMenu();
     } else if (i == 2) {
@@ -2062,15 +1865,9 @@ extern "C" bool hostQuietForUpdate() {
 // ---------- render ----------
 
 bool gNight = false;  // real night (by time) or sleeping: set by render()
-#if UI_V2
 bool gV2Dark = false;  // V2: the home's zone is dark at every hour (the Cave, the Mansion): light text over it
-#endif
 uint16_t inkColor() {
-#if UI_V2
   return gNight || gV2Dark ? UI_INK_NIGHT : UI_INK;
-#else
-  return gNight ? UI_INK_NIGHT : UI_INK;
-#endif
 }
 
 // ---------- background scene: type biome + real RTC time ----------
@@ -2187,31 +1984,9 @@ void drawScene(uint8_t biome, uint32_t now, bool night) {
 
 // first game: choose a starter among Bulbasaur / Charmander / Squirtle
 void renderStarterSelect() {
-#if UI_V2
   v2StarterScreen();  // V2: the four starters walk toward you through the Field (starter_v2.h)
   gfx->flush();
   return;
-#endif
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  const char *t = T(S_CHOOSE_STARTER);
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(t, 2), 68);
-  printT(t);
-  for (int i = 0; i < 3; i++) {
-    int16_t d = STARTER_DEX[i];
-    const DexEntry &de = DEX_TBL[d];
-    int ry = STARTER_ROW_Y + i * (STARTER_ROW_H + STARTER_ROW_GAP);
-    gfx->fillRoundRect(70, ry, 326, STARTER_ROW_H, 14, lerp565(de.accent, UI_WHITE, 6, 8));
-    gfx->drawRoundRect(70, ry, 326, STARTER_ROW_H, 14, de.accent);
-    const uint8_t *th = thumbs.get(d);     // starter thumbnail (if the SD is ready)
-    if (th) drawThumb(th, 76, ry - 5, 3, false);
-    gfx->setTextColor(UI_INK);
-    setSize(3);
-    setCur(178, ry + 24);
-    printT(dexName(d));
-  }
-  gfx->flush();
 }
 
 // ---------- text: size and cursor (CJK-font ready) ----------
@@ -2339,19 +2114,13 @@ void printT(const char *s) {
 // Screens that only change on a touch (or with data that changes very rarely):
 // while their "key" doesn't change they are neither repainted nor flushed over QSPI.
 static bool staticScreen() {
-#if UI_V2
   if (pet.awaitingStarter()) return false;  // V2: the starters walk
-#endif
   if (pet.awaitingStarter()) return true;
   if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen) return false;  // the gallery manages its own repainting
-#if UI_V2
   if (clockOpen && clockPage == V2_ABOUT_PAGE) return false;  // V2: About's coin spins and gleams
-#endif
   if (kbOpen || clockOpen) return true;
-#if UI_V2
   if (cardOpen && !cardAch && cardPage >= 4) return false;  // V2: an item's page: the item hovers (Fedor)
   if (cardOpen && cardAch && achDetail < 0 && achGroup < 0 && (pet.medals | pet.trainerMedals)) return false;  // V2: the trophy room's gleam
-#endif
   return cardOpen && (cardAch || cardPage != 0);  // the card's page 0 has the animated portrait
 }
 static uint32_t mixKey(uint32_t h, uint32_t v) { return (h ^ v) * 16777619u; }
@@ -2359,9 +2128,7 @@ static uint32_t screenKey() {
   uint32_t h = 2166136261u;
   h = mixKey(h, pet.awaitingStarter() ? 1 : kbOpen ? 2 : clockOpen ? 3 : 4 + cardPage + (cardAch ? 16 : 0));
   h = mixKey(h, cardAch ? achDetail + 1 : 0);
-#if UI_V2
   h = mixKey(h, cardAch ? achGroup + 1 : 0);  // V2: the trophy room's shelves
-#endif
   h = mixKey(h, sdEpoch);
   h = mixKey(h, partyBoostOn());  // the stats page shows the boost
   if (kbOpen) {
@@ -2397,12 +2164,10 @@ static uint32_t screenKey() {
                         (uint32_t)pet.fullness, (uint32_t)pet.joy, (uint32_t)pet.energy, (uint32_t)pet.hygiene,
                         (uint32_t)pet.berryKnown, (uint32_t)pet.battleWins, (uint32_t)pet.trainerMedals, (uint32_t)gLang })
       h = mixKey(h, v);
-#if UI_V2
     for (uint32_t v : { (uint32_t)pet.masterBar, (uint32_t)pet.masterBalls, (uint32_t)pet.ultraBar, (uint32_t)pet.ultraBalls,
                         (uint32_t)pet.repelHeld, (uint32_t)pet.repelPlaySec,
                         (uint32_t)pet.repelMinutesLeft() })  // V2: the Items page
       h = mixKey(h, v);
-#endif
     for (const char *c = pet.nick; *c; c++) h = mixKey(h, (uint8_t)*c);
   }
   return h;
@@ -2410,22 +2175,18 @@ static uint32_t screenKey() {
 bool screenKeyValid = false;  // (the host renderer invalidates it between scenes)
 uint32_t lastScreenKey = 0;
 
-#if UI_V2
 #include "src/scene_v2.h"  // V2's home: header, bars, band, icons (uses the helpers above)
-#endif
 
 // Draws a frame and returns true if it flushed it to the panel.
 bool render() {
 #ifdef KNOMI_RIM
   gKnomiLiftOn = false;  // V2: nothing over the Knomi's rim until this frame's need bars mark their labels (knomi_rim.h)
 #endif
-#if UI_V2
   if (v2Sliding()) {  // V2: a page sliding: its frames are made from the two pages, nothing drawn (slide_v2.h)
     gfx->flush();
     return true;
   }
-#endif
-  if (!galleryOpen && zoneScreen != ZS_ZONE V2_AND(!pet.awaitingEggPick())) dexGridUnload();  // off the grids: their shinies go
+  if (!galleryOpen && zoneScreen != ZS_ZONE && !pet.awaitingEggPick()) dexGridUnload();  // off the grids: their shinies go
   if (staticScreen()) {
     uint32_t k = screenKey();
     if (screenKeyValid && k == lastScreenKey) return false;
@@ -2442,7 +2203,7 @@ bool render() {
     renderEggPick();
     return true;
   }
-  if (buddyMenuOpen V2_AND(buddyPage == 0)) {  // V2: Battle/Trade/Play is a panel over the home, drawn at its end
+  if (buddyMenuOpen && buddyPage == 0) {  // V2: Battle/Trade/Play is a panel over the home, drawn at its end
     renderBuddyMenu();
     return true;
   }
@@ -2518,7 +2279,6 @@ bool render() {
   gNight = pet.sleeping || h < 6 || h >= 20;
   // drawScene covers the full 466x466: no prior fillScreen(BLACK) so
   // an overlapping DMA flush never captures half-black (anti-flicker)
-#if UI_V2
   {  // V2: the pixel scene of the Pokemon's Travel zone; while it walks the world slides by (walk_v2.h)
     uint8_t zone = v2HomeZone();
     gV2Dark = zone == Z_CAVE || zone == Z_MANSION;
@@ -2526,16 +2286,12 @@ bool render() {
     uint8_t tod = pet.ceremony && pet.ceremony != CER_RUNAWAY ? 1 : v2HomeTod();  // a goodbye at sunset (r11-farewell.png)
     if (zone == Z_MEADOW || !v2DrawWalkScene(zone, tod)) v2DrawScene(zone, tod);
   }
-#else
-  drawScene(pet.isEgg() ? 0 : DEX_TBL[pet.speciesId].biome, millis(), gNight);
-#endif
 
   if (pet.ceremony) {
     const DexEntry &d = DEX_TBL[pet.speciesId];
     const char *msg = (pet.ceremony == CER_FAREWELL) ? T(S_FAREWELL)
                       : (pet.ceremony == CER_RUNAWAY) ? T(S_RUNAWAY)
                                                       : T(S_GOODBYE);
-#if UI_V2
     {  // V2: its name and level over the scene; the panel says goodbye (v2Departure())
       char lv[12];
       snprintf(lv, sizeof(lv), T(S_LVL_FMT), pet.level());
@@ -2543,9 +2299,6 @@ bool render() {
       (void)msg;
       (void)d;
     }
-#else
-    drawHeader(dexName(pet.speciesId), d.accent, msg, nullptr);
-#endif
     drawCeremony();
     gfx->flush();
     return true;
@@ -2574,7 +2327,6 @@ bool render() {
     setCur(centerX(reg, 2), HOME_PANEL_Y + 36);
     printT(reg);
   } else {
-#if UI_V2
     // V2: while it evolves it's still the old form by name and colour (evoPmd, the form it was), until it has
     // (Fedor: "during the evolution it said Venusaur is evolving")
     int16_t shown = v2ShownSpecies();
@@ -2582,15 +2334,8 @@ bool render() {
     char name[28];
     char lv[12];
     const char *base = pet.nick[0] ? pet.nick : dexName(shown);
-#else
-    const DexEntry &d = DEX_TBL[pet.speciesId];
-    char name[28];
-    char lv[12];
-    const char *base = pet.nick[0] ? pet.nick : dexName(pet.speciesId);
-#endif
     snprintf(name, sizeof(name), "%s%s", pet.shiny ? "*" : "", base);
     snprintf(lv, sizeof(lv), T(S_LVL_FMT), pet.level());
-#if UI_V2
     // V2: the scene runs to the rim; the bars ride on it and the icons sit on their band. The radial menu's ring
     // is see-through (Fedor), so while it's open what it would show through stays out: the header, the band, the
     // icons and the pill (radial_v2.h)
@@ -2606,23 +2351,8 @@ bool render() {
       v2DrawIcons();
       drawBuddyTop();  // under the dialogs, and dimmed with the rest behind a medal or the evolve button
     }
-#else
-    drawHeader(name, gNight ? UI_INK_NIGHT : d.accent, statusMsg(), lv);
-    drawStreakBadge();
-    drawPet();
-    drawBath();
-    drawPoops();
-    // bottom panel: clean base for bars and buttons over the landscape
-    gfx->fillRect(0, HOME_PANEL_Y, 466, 466 - HOME_PANEL_Y, gNight ? UI_BG_NIGHT : UI_BG_DAY);
-    drawBars();
-    drawButtons();
-#endif
     if (homeModal()) dimFrame();  // what's behind a medal, the evolve button or the goodbye
-#if UI_V2
     // V2: a medal's banner is drawn last, in front of everything (at the end of the frame)
-#else
-    drawCelebration();
-#endif
     if (pet.wantEvolveButton()) drawEvolveButton();        // red CTA: evolve
     else if (pet.canRunawayNow()) drawRunawayButton();     // grim CTA: runaway (neglect)
     else if (pet.wantFarewellButton()) drawFarewellButton();  // gold CTA: farewell
@@ -2630,88 +2360,45 @@ bool render() {
 
   // food picker
   if (feedMenuUntil) {
-#if UI_V2
     // V2: open till it's closed (Fedor: "If I opened the backpack, I want it to stay opened"): by a tap off it or on
     // the bag, the Repel, or your Pokemon falling asleep. Kept open only while it's drawn: back from a screen over it
     // after 6 s, it's closed
     if (pet.sleeping) feedMenuUntil = 0;
     else if (timeLeft(feedMenuUntil)) feedMenuUntil = millis() + 6000;
-#endif
     if (!timeLeft(feedMenuUntil)) {
       feedMenuUntil = 0;
     } else {
       // once the day's candies are used up, the menu stays at the three berries
       int count = pet.canHaveCandy() ? 4 : 3;
-#if UI_V2
       v2DrawFoodPicker(count);  // a text-box bubble out of the bag (its seats: scene_v2.h)
-#else
-      int x0 = CX - count * 33;
-      gfx->fillRoundRect(x0, FEED_Y, count * 66, 64, 14, UI_WHITE);
-      gfx->drawRoundRect(x0, FEED_Y, count * 66, 64, 14, inkColor());
-      static const char *const *const FOOD[4] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP, SPR_CANDY };
-      for (int i = 0; i < count; i++) drawMap(FOOD[i], HOME_ICON_N, x0 + 6 + 66 * i, FEED_Y + 5, 3, false);
-      if (count == 4) drawCandyCount(x0 + 6 + 66 * 3, FEED_Y + 5, pet.candiesLeft());
-#endif
     }
   }
 
-#if UI_V2
   v2FoodDropDraw();  // V2: a food from the bag dropping onto it (repel_v2.h)
   if (v2RadialOpen) v2RadialDraw();  // V2: the radial menu, over everything on the home (radial_v2.h)
-#endif
 
   // "release?" dialog (long press on the pet)
   if (confirmUntil) {
-#if UI_V2
     // V2: it waits for an answer (Fedor: "pretty much nothing in the game closes or changes by itself"; 10 s): kept
     // open while it's drawn, as the backpack is
     if (timeLeft(confirmUntil)) confirmUntil = millis() + 10000;
-#endif
     if (!timeLeft(confirmUntil)) {
       confirmUntil = 0;
     } else {
-#if UI_V2
       char rq[48];  // V2: "Release GENGAR?" in a panel over the dimmed home
       snprintf(rq, sizeof(rq), T(S_RELEASE_FMT), dexName(pet.speciesId));
       v2ReleaseDialog(rq);
       if (pet.canEvolveNow()) v2HoldEvolve();  // V2: and, while it can, EVOLVE in a box of its own above (Fedor)
-#else
-      gfx->fillRoundRect(94, 168, 278, 152, 16, UI_WHITE);
-      gfx->drawRoundRect(94, 168, 278, 152, 16, UI_INK);
-      // 48 and not 28: the buffer was sized when every string was one byte
-      // per character. With a UTF-8 row, "%s 놓아줄까요?" plus the name goes
-      // over 28 and snprintf cuts in the middle of a 3-byte sequence, which the
-      // font can no longer draw.
-      char q[48];
-      snprintf(q, sizeof(q), T(S_RELEASE_FMT), dexName(pet.speciesId));
-      gfx->setTextColor(UI_INK);
-      setSize(2);
-      setCur(centerX(q, 2), 196);
-      printT(q);
-      gfx->fillRoundRect(118, 252, 100, 52, 12, UI_BAR_OK);
-      gfx->setTextColor(UI_WHITE);
-      setCur(118 + (100 - textW(T(S_YES), 2)) / 2, 270);
-      printT(T(S_YES));
-      gfx->fillRoundRect(248, 252, 100, 52, 12, UI_BAR_BAD);
-      setCur(248 + (100 - textW(T(S_NO), 2)) / 2, 270);
-      printT(T(S_NO));
-#endif
     }
   }
 
-#if UI_V2
   if (pet.isEgg()) drawBuddyTop();  // (with a Pokemon it's drawn before the dimming, above)
-#else
-  drawBuddyTop();
-#endif
 
   // decision dialog (evolve/keep, say goodbye/stay together)
   if (choiceKind) {
-#if UI_V2
     // V2: evolve, goodbye, run away and ERASE EVERYTHING wait for an answer (12 s) while they're up; a buddy's
     // invitation still goes when they stop waiting
     if (choiceKind != 5 && timeLeft(choiceUntil)) choiceUntil = millis() + 12000;
-#endif
     if (!timeLeft(choiceUntil)) choiceKind = 0;
     else drawChoiceDialog();
   } else if (FAR_HINT_ON) {  // after "stay together": the way back to the goodbye (V2: after "keep form", to evolving)
@@ -2728,7 +2415,6 @@ bool render() {
     printT(T(S_FAREWELL_HINT2));
   }
 
-#if UI_V2
   // V2: a medal's banner, in front of everything on the screen. A dialog asking something answers taps
   // before the banner does (onTap): over it, the banner would hide the question while a tap pressed the
   // button beneath, so while one is open the banner waits, whole (as found for 1.52's fix)
@@ -2744,7 +2430,6 @@ bool render() {
     if (bPeers[bCur].on) v2BuddyActions(buddyTradeOk());
     else buddyMenuOpen = false;
   }
-#endif
   gfx->flush();
   return true;
 }
@@ -2849,9 +2534,7 @@ float playerTilt() {
 #endif
     t = wasPressed ? (tXl - CX) / 150.0f : 0;
   if (t > -0.06f && t < 0.06f) t = 0;  // dead zone: a shaky hand moves nothing
-#if UI_V2
   if (t != 0) v2PlayInputAt = millis();  // V2: steering
-#endif
   t = t > 1 ? 1 : (t < -1 ? -1 : t);
   tiltSmooth += (t - tiltSmooth) * 0.5f;
   return tiltSmooth;
@@ -2897,22 +2580,10 @@ void stepGame() {
 // As the zones: a round window onto each game, its own scene with your Pokemon in it, the name under.
 #define GAMES_COUNT 5    // battles have their own icon on the home screen
 #define GAME_ICON_R 50
-#define GAME_ART (2 * GAME_ICON_R)
-#define GAME_GLIMPSE_K 2  // each window shows a 200 x 200 piece of its game, at half size
-// a grid like Travel's: two on top, centred, and three under them; tiles, and names on up to two lines
-static const int16_t GAME_XY[GAMES_COUNT][2] = { { 170, 128 }, { 108, 286 }, { 296, 128 }, { 358, 286 }, { 233, 286 } };
-uint16_t *gameArt = nullptr;  // the 4 windows, painted each time the menu opens (day or night, your Pokemon)
 
 const char *gameLabel(int row) {
   static const StrId L[GAMES_COUNT] = { S_GAME_TILT, S_GAME_WHO, S_GAME_RUN, S_GAME_DUNGEON, S_GAME_SURF };
   return T(L[row]);
-}
-
-// each game's colour: its window's ring on the menu and on its how-to-play card
-uint16_t gameColor(int row) {
-  if (row == 1) return C565(0xf0, 0x84, 0x1c);  // Who's That?: orange, like its rays (and apart from PokeRun's red)
-  static const uint8_t TY[GAMES_COUNT] = { TY_GRASS, TY_PSYCHIC, TY_FIRE, TY_GHOST, TY_WATER };
-  return TYPE_ACCENT[TY[row]];
 }
 
 // how to play it, plainly: the ways to move and the point. Two versions where the controls differ: the
@@ -2944,132 +2615,10 @@ void grabArt(uint16_t *art, int n, int x0, int y0, int k) {
     }
 }
 
-// the 200 x 200 piece of the canvas around (fx, fy), at half size, its colours made richer: a
-// window should look like fun, not like a photo of the screen
-void gameGlimpseGrab(uint16_t *art, int fx, int fy) {
-  grabArt(art, GAME_ART, fx - GAME_ICON_R * GAME_GLIMPSE_K, fy - GAME_ICON_R * GAME_GLIMPSE_K, GAME_GLIMPSE_K);
-  for (int i = 0; i < GAME_ART * GAME_ART; i++) {
-    uint16_t c = art[i];
-    int r = (c >> 11) * 255 / 31, g = ((c >> 5) & 0x3F) * 255 / 63, b = (c & 0x1F) * 255 / 31;
-    int lum = (r * 3 + g * 6 + b) / 10;
-    int ch[3] = { r, g, b };
-    for (int k = 0; k < 3; k++) {
-      int v = lum + (ch[k] - lum) * 3 / 2;  // half again as colourful
-      v = 128 + (v - 128) * 11 / 10;        // and a touch more contrast
-      ch[k] = v < 0 ? 0 : v > 255 ? 255 : v;
-    }
-    art[i] = C565(ch[0], ch[1], ch[2]);
-  }
-}
-
-// a ring from radius r0 to r1 (inclusive), filled row by row so it has no gaps
-void fillRing(int cx, int cy, int r0, int r1, uint16_t col) {
-  for (int dy = -r1; dy <= r1; dy++) {
-    int out = (int)sqrtf((float)(r1 * r1 - dy * dy));
-    int in = abs(dy) < r0 ? (int)sqrtf((float)(r0 * r0 - dy * dy)) : -1;
-    if (in < 0) gfx->fillRect(cx - out, cy + dy, 2 * out + 1, 1, col);
-    else {
-      gfx->fillRect(cx - out, cy + dy, out - in, 1, col);
-      gfx->fillRect(cx + in + 1, cy + dy, out - in, 1, col);
-    }
-  }
-}
-
 // paints a moment of each game on the canvas (not shown) and keeps the piece for its window
 void gameGlimpsesPaint() {
-#if UI_V2
   v2PaintGameLabels();  // V2: the cartridges' labels, each its game's background at half size with yours at 1x
   return;
-#endif
-  if (!gameArt) gameArt = (uint16_t *)ps_malloc(GAMES_COUNT * GAME_ART * GAME_ART * sizeof(uint16_t));
-  if (!gameArt) return;
-  uint32_t now = millis();
-  int hh = sceneHour();
-  bool night = hh < 6 || hh >= 20;
-  static const char *const *const BERRY[3] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP };
-
-  // Berry Drop: the woods, three berries falling to your Pokemon, sparkling
-  drawCatchScene();
-  drawMap(BERRY[0], HOME_ICON_N, 180, 214, 3, false);
-  drawMap(BERRY[2], HOME_ICON_N, 132, 252, 2, false);
-  drawMap(BERRY[1], HOME_ICON_N, 237, 252, 2, false);
-  drawSparkle(176, 238, 8);
-  drawSparkle(276, 246, 6);
-  drawSparkle(138, 302, 6);
-  if (pmd.loaded) drawPmdAct(PMD_IDLE, 210, 394, now, true, false, 3);
-  gameGlimpseGrab(gameArt, 200, 300);
-
-  // Who's That?: a burst of red and orange rays, a silhouette and a big yellow question mark
-  gfx->fillScreen(C565(0xd8, 0x3c, 0x1c));
-  for (int i = 0; i < 16; i += 2) {  // every other ray lighter, out from behind the silhouette
-    float a0 = i * 6.28318f / 16, a1 = (i + 1) * 6.28318f / 16;
-    gfx->fillTriangle(206, 244, 206 + (int)(400 * cosf(a0)), 244 + (int)(400 * sinf(a0)),
-                      206 + (int)(400 * cosf(a1)), 244 + (int)(400 * sinf(a1)), C565(0xf8, 0x8c, 0x2c));
-  }
-  gfx->fillCircle(210, 246, 48, C565(0xff, 0xd6, 0x9c));  // a warm glow behind it
-  if (const uint8_t *t = thumbs.get(25)) {
-    int box[4];
-    drawThumbFit(t, 210, 248, 80, 80, 3, true, 0, box);
-  }
-  setSize(5);
-  gfx->setTextColor(UI_INK);
-  setCur(266, 182);  // its shadow, then the mark
-  printT("?");
-  gfx->setTextColor(C565(0xff, 0xd8, 0x30));
-  setCur(262, 178);
-  printT("?");
-  gameGlimpseGrab(gameArt + GAME_ART * GAME_ART, 233, 233);
-
-  // PokeRun: the forest trail, your Pokemon leaping a rock, speed lines behind it
-  drawForest(240.0f, night);
-  RunObstacle rock = { 298.0f, RUN_ROCK, true };
-  drawRunObstacle(rock, night);
-  for (int i = 0; i < 3; i++) gfx->fillRect(184 - i * 6, RUN_GROUND_Y - 96 + i * 22, 30 + i * 6, 5, UI_WHITE);
-  gfx->fillCircle(218, RUN_GROUND_Y - 6, 9, C565(0xe8, 0xdc, 0xc0));  // the dust it kicked up
-  gfx->fillCircle(204, RUN_GROUND_Y - 3, 6, C565(0xe8, 0xdc, 0xc0));
-  if (pmd.loaded) {
-    uint8_t fit = pmdFitScale(pmd, PMD_IDLE, 90, 90);
-    gPmdForceScale = fit > 3 ? 3 : fit;
-    drawPmdAct(pmd.has(PMD_WALKR) ? PMD_WALKR : PMD_IDLE, 252, RUN_GROUND_Y - 40, now, true, false, 3);
-    gPmdForceScale = 0;
-  }
-  gameGlimpseGrab(gameArt + 2 * GAME_ART * GAME_ART, 262, RUN_GROUND_Y - 64);
-
-  // PokeDungeon: a room with the stairs down, a berry and a wild one
-  gfx->fillScreen(C565(0x24, 0x20, 0x2c));
-  static const uint8_t ROOM[5][5] = { { DN_WALL, DN_WALL, DN_WALL, DN_WALL, DN_WALL },
-                                      { DN_FLOOR, DN_FLOOR, DN_FLOOR, DN_FLOOR, DN_WALL },
-                                      { DN_FLOOR, DN_FLOOR, DN_FLOOR, DN_STAIRS, DN_WALL },
-                                      { DN_FLOOR, DN_FLOOR, DN_FLOOR, DN_FLOOR, DN_FLOOR },
-                                      { DN_FLOOR, DN_FLOOR, DN_FLOOR, DN_FLOOR, DN_FLOOR } };
-  int ox = CX - DN_TILE / 2 - 2 * DN_TILE, oy = CY - DN_TILE / 2 - 2 * DN_TILE;
-  for (int ty = 0; ty < 5; ty++)
-    for (int tx = 0; tx < 5; tx++)
-      dnDrawTileKind(ROOM[ty][tx], ty < 4 && ROOM[ty + 1][tx] != DN_WALL, tx + 3, ty + 5, ox + tx * DN_TILE, oy + ty * DN_TILE);
-  drawMap(BERRY[1], HOME_ICON_N, CX - 76, CY + 40, 3, false);
-  if (const uint8_t *t = thumbs.get(41)) drawThumb(t, CX + 4, CY - 10, 2, false);  // a Zubat
-  gfx->fillCircle(CX + 66, CY - 6, 13, UI_BAR_BAD);  // and it has seen you
-  gfx->fillRect(CX + 63, CY - 15, 6, 12, UI_WHITE);
-  gfx->fillRect(CX + 63, CY + 0, 6, 5, UI_WHITE);
-  if (pmd.loaded) {
-    uint8_t fit = pmdFitScale(pmd, PMD_IDLE, 76, 76);
-    gPmdForceScale = fit > 3 ? 3 : fit;
-    drawPmdAct(PMD_IDLE, CX - 8, CY + DN_TILE / 2 - 4, now, true, false, 3);
-    gPmdForceScale = 0;
-  }
-  gameGlimpseGrab(gameArt + 3 * GAME_ART * GAME_ART, CX + 8, CY - 4);
-
-  // PikaSurf: the rushing water, yours on its board with Pikachu alongside, a rock coming up
-  drawSurfWater(300.0f, night);
-  drawSurfRock(262, 316, night);
-  drawSurfWake(272, 190, now, night);
-  drawMap(SPR_SURF_BOARD_P, 24, 236, 190, 3, false);
-  if (const uint8_t *t = thumbs.get(25)) drawThumb(t, 272 - 32, 166, 2, false);
-  if (pmd.loaded) {
-    uint8_t fit = pmdFitScale(pmd, PMD_IDLE, 76, 76);
-    drawSurfRider(pmd, SPR_SURF_BOARD, 4, 194, 214, PMD_IDLE, fit > 3 ? 3 : fit, now, night);
-  }
-  gameGlimpseGrab(gameArt + 4 * GAME_ART * GAME_ART, 233, 250);
 }
 
 // a game that has ended goes back to the games menu, where it was chosen; home instead when the main
@@ -3088,14 +2637,7 @@ void openGamesMenu() {
 
 // the game under a tap: its window or its name under it, or -1
 int gameAt(int16_t x, int16_t y) {
-#if UI_V2
   return v2GameAt(x, y);  // V2: a cartridge on the TV
-#endif
-  for (int i = 0; i < GAMES_COUNT; i++) {
-    int dx = x - GAME_XY[i][0], dy = y - GAME_XY[i][1];
-    if ((abs(dx) < GAME_ICON_R + 8 && abs(dy) < GAME_ICON_R + 8) || (abs(dx) < 60 && dy > 0 && dy < GAME_ICON_R + 48)) return i;
-  }
-  return -1;
 }
 
 // ---- a game's how-to-play card (introCard): a white disc a little smaller than the screen, so the game
@@ -3104,9 +2646,6 @@ int gameAt(int16_t x, int16_t y) {
 #define CARD_R 188
 #define CARD_DROP_MS 420
 #define CARD_AWAY_MS 260
-#define CARD_TITLE_DY -112  // the game's name, from the card's centre
-#define CARD_TEXT_W 324     // the widest line: 27 letters of the classic font at size 2
-#define CARD_LINE_H 24
 #define CARD_BTN_W 240
 #define CARD_BTN_H 52
 #define CARD_BTN_DY 76      // the button's top, below the card's centre
@@ -3162,12 +2701,6 @@ const char *introTitle(int g) {
   if (g == CARD_SHOWDOWN) return T(S_SHOWDOWN);
   if (g == CARD_DUEL) return T(S_GAME_SURF);
   return gameLabel(g);
-}
-uint16_t introColor(int g) {
-  if (g == CARD_VOLLEY) return TYPE_ACCENT[TY_GRASS];
-  if (g == CARD_SHOWDOWN) return TYPE_ACCENT[TY_PSYCHIC];
-  if (g == CARD_DUEL) return TYPE_ACCENT[TY_WATER];
-  return gameColor(g);
 }
 const char *introHow(int g) {
   if (g == CARD_VOLLEY) return T(playKeysUi ? S_HOW_VB_KEYS : S_HOW_VB);
@@ -3300,40 +2833,14 @@ void drawIntroCard() {
   uint32_t now = millis();
   int cx, cy;
   introCardPos(now, cx, cy);
-#if UI_V2
   v2IntroCard(cx, cy, !introAwayT || now - introAwayT < CARD_AWAY_MS / 2, introTitle(g), introHow(g));  // V2: board, panel, button
   return;
-#endif
-  if (!introAwayT || now - introAwayT < CARD_AWAY_MS / 2) dimFrame();
-  gfx->fillCircle(cx + 4, cy + 8, CARD_R, C565(0x10, 0x10, 0x18));  // its shadow
-  gfx->fillCircle(cx, cy, CARD_R, UI_WHITE);
-  fillRing(cx, cy, CARD_R - 12, CARD_R - 7, introColor(g));  // a thin ring in the game's colour
-  gfx->setTextColor(introColor(g));
-  int ts = textW(introTitle(g), 3) <= 270 ? 3 : 2;  // a long name a size down, inside the card's ring
-  setSize(ts);
-  setCur(cx - textW(introTitle(g), ts) / 2, cy + CARD_TITLE_DY + (ts == 3 ? 0 : 4));
-  printT(introTitle(g));
-  const char *how = introHow(g);
-  int n = drawWrappedAt(how, 2, CARD_TEXT_W, cx, 0, CARD_LINE_H, false);
-  int w = CARD_TEXT_W;  // as narrow as it goes in as many lines: even lines, no word left alone
-  while (w > 120 && drawWrappedAt(how, 2, w - 12, cx, 0, CARD_LINE_H, false) == n) w -= 12;
-  int top = cy + CARD_TITLE_DY + 30, room = CARD_BTN_DY - 12 - (CARD_TITLE_DY + 30);
-  gfx->setTextColor(UI_INK);
-  drawWrappedAt(how, 2, w, cx, top + (room - (n * CARD_LINE_H - 8)) / 2, CARD_LINE_H, true);
-  gfx->fillRoundRect(cx - CARD_BTN_W / 2, cy + CARD_BTN_DY, CARD_BTN_W, CARD_BTN_H, 16, UI_BAR_OK);
-  gfx->setTextColor(UI_WHITE);
-  int bs = gCjkFont ? 4 : 3;  // the CJK font at twice its size, so the words fill the button too
-  setSize(bs);
-  setCur(cx - textW(T(S_READY_GO), bs) / 2, cy + CARD_BTN_DY + (gCjkFont ? 10 : 15));
-  printT(T(S_READY_GO));
 }
 
 void gamesMenuTap(int16_t x, int16_t y) {
   gamesMenuOpen = false;
   int g = gameAt(x, y);
-#if UI_V2
   if (g < 0) sfxPlay(SFX_TAP);  // V2: its X (or a tap beside the cartridges) closes it with the click every X has (Fedor)
-#endif
   if (g < 0) return;  // outside = go back
   sfxPlay(SFX_TAP);
   if (g == 0) startGame();
@@ -3342,42 +2849,6 @@ void gamesMenuTap(int16_t x, int16_t y) {
   else if (g == 3) startDungeon();
   else startSurf();
   if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen) introOpen(g);  // it opens under its card
-}
-
-// A name under a tile, centred on cx, on two lines when it's wider than maxW: broken at the space
-// nearest the middle, or in a name of two joined words before the second's capital ("Poke" "Dungeon").
-// A single word too long for either stays whole. Returns the lines.
-#define TILE_LABEL_W 120  // 10 letters: the three columns' names never meet
-#define TILE_LINE_H 18
-int drawTileLabel(const char *l, int cx, int y) {
-  setSize(2);
-  gfx->setTextColor(UI_INK);
-  if (textW(l, 2) <= TILE_LABEL_W) {
-    setCur(cx - textW(l, 2) / 2, y);
-    printT(l);
-    return 1;
-  }
-  int n = (int)strlen(l), best = -1, skip = 0;
-  for (int i = 1; i < n; i++) {
-    bool space = l[i] == ' ', cap = !gCjkFont && l[i] >= 'A' && l[i] <= 'Z' && l[i - 1] >= 'a' && l[i - 1] <= 'z';
-    if ((space || cap) && (best < 0 || abs(2 * i - n) < abs(2 * best - n))) {
-      best = i;
-      skip = space ? 1 : 0;
-    }
-  }
-  if (best < 0) {
-    setCur(cx - textW(l, 2) / 2, y);
-    printT(l);
-    return 1;
-  }
-  char a[40], b[40];
-  snprintf(a, sizeof(a), "%.*s", best, l);
-  snprintf(b, sizeof(b), "%s", l + best + skip);
-  setCur(cx - textW(a, 2) / 2, y);
-  printT(a);
-  setCur(cx - textW(b, 2) / 2, y + TILE_LINE_H);
-  printT(b);
-  return 2;
 }
 
 // the art in a rounded square r from its centre, its corners rad round
@@ -3405,28 +2876,11 @@ void drawTile(const uint16_t *art, int cx, int cy, int r, uint16_t col) {
   drawTileArt(art, cx, cy, r, TILE_RAD, col);
 }
 
-void drawGameIcon(int i) {
-  int cx = GAME_XY[i][0], cy = GAME_XY[i][1];
-  drawTile(gameArt ? gameArt + i * GAME_ART * GAME_ART : nullptr, cx, cy, GAME_ICON_R, gameColor(i));
-  drawTileLabel(gameLabel(i), cx, cy + GAME_ICON_R + TILE_FRAME + 6);  // where Travel has its names
-}
-
 void renderGamesMenu() {
   if (pet.sleeping || pet.ceremony) { gamesMenuOpen = false; return; }  // left alone it stays open
-#if UI_V2
   v2GamesTv();  // V2: the old TV with its five cartridges
   gfx->flush();
   return;
-#endif
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(T(S_GAMES), 3), 26);
-  printT(T(S_GAMES));
-  setSize(2);
-  for (int i = 0; i < GAMES_COUNT; i++) drawGameIcon(i);
-  drawCloseButton();  // any tap outside the games closes it too
-  gfx->flush();
 }
 
 // ---------- who's that pokemon ----------
@@ -3467,14 +2921,8 @@ void closeQuiz() {
 #define QUIZ_OPT_Y 268
 #define QUIZ_OPT_H 44
 #define QUIZ_OPT_GAP 6
-#if UI_V2
 #define QUIZ_OPT_INSET(i) 26  // V2: all three as narrow as the bottom one (Fedor: "make all three choice buttons be the same width. The narrower one")
-#else
-#define QUIZ_OPT_INSET(i) i == 2 ? 26 : 0
-#endif
-#if UI_V2
 #define QUIZ_ASK_MS 10000UL  // V2: 10 s to answer, then it counts as wrong (Fedor), as a Showdown round (SD_ROUND_MS)
-#endif
 
 void quizTap(int16_t x, int16_t y) {
   if (quizPhase == QP_END) {
@@ -3498,13 +2946,8 @@ void quizTap(int16_t x, int16_t y) {
 
 void renderQuiz() {
   if (pet.ceremony) { closeQuiz(); return; }
-#if UI_V2
   if (introPaused() && quizPhase == QP_ASK) quizT = millis();  // V2: the countdown waits under the card
-#else
-  introPaused();  // only to start the clock once its card has gone: nothing runs while asking
-#endif
   uint32_t t = millis() - quizT;
-#if UI_V2
   if (quizPhase == QP_ASK && t >= QUIZ_ASK_MS) {  // V2: out of time: it counts as wrong, and the answer shows
     quizTapped = 0;
     sfxPlay(SFX_DENY);
@@ -3512,7 +2955,6 @@ void renderQuiz() {
     quizT = millis();
     t = 0;
   }
-#endif
   if (quizPhase == QP_REVEAL && t > 2000) {
     if (++quizRound >= QUIZ_ROUNDS) {
       pet.quizResult(quizScore);
@@ -3524,50 +2966,22 @@ void renderQuiz() {
     }
     t = 0;
   }
-  if (quizPhase == QP_END && t > 5000 V2_AND(false)) { closeQuiz(); gameEndToMenu(); return; }  // (V2: it waits)
   if (!quizOpen) return;
 
-#if UI_V2
   v2BurstScene(false);  // V2: the burst of rays in two blues
-#else
-  gfx->fillScreen(TYPE_ACCENT[TY_WATER]);  // to the edge: no black ring
-#endif
   gfx->setTextColor(UI_WHITE);
   setSize(2);
   char b[32];
   if (quizPhase == QP_END) {
-#if UI_V2
     snprintf(b, sizeof(b), "%u/%u", quizScore, QUIZ_ROUNDS);  // V2: the result in a panel over the dimmed burst
     v2GameResult(gameLabel(1), nullptr, b, false, nullptr, quizScore >= 3 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
-    gfx->flush();
-    return;
-#endif
-#if UI_V2
-    gfx->setTextColor(UI_INK);  // on the burst's light middle
-#endif
-    snprintf(b, sizeof(b), "%u/%u", quizScore, QUIZ_ROUNDS);
-    setSize(6);
-    setCur(centerX(b, 6), 170);
-    printT(b);
-    setSize(2);
-    const char *msg = quizScore >= 3 ? T(S_GREAT_JOY) : T(S_PLUS_JOY);
-    setCur(centerX(msg, 2), 260);
-    printT(msg);
     gfx->flush();
     return;
   }
   bool reveal = quizPhase == QP_REVEAL;
   if (reveal) snprintf(b, sizeof(b), T(S_ITS_FMT), dexName(quizAnswer));
   else strlcpy(b, T(S_WHO_Q), sizeof(b));
-#if UI_V2
   v2QuizHead(b, quizRound + 1, QUIZ_ROUNDS, reveal ? -1 : (int)((QUIZ_ASK_MS - t + 999) / 1000));  // V2: the question (or the answer) on a board, the round and the countdown in panels
-#else
-  setCur(centerX(b, 2), 48);
-  printT(b);
-  snprintf(b, sizeof(b), "%u/%u", quizRound + 1, QUIZ_ROUNDS);
-  setCur(centerX(b, 2), 72);
-  printT(b);
-#endif
   gPmdForceScale = pmdFitScale(quizPmd, PMD_IDLE, 300, 166);
   drawPmdActM(quizPmd, PMD_IDLE, CX, 262, reveal ? millis() : 0, true, !reveal, 8);
   gPmdForceScale = 0;
@@ -3577,14 +2991,7 @@ void renderQuiz() {
     uint16_t bg = UI_WHITE;
     if (reveal && quizOpts[i] == quizAnswer) bg = UI_BAR_OK;
     else if (reveal && quizOpts[i] == quizTapped) bg = UI_BAR_BAD;
-#if UI_V2
     v2QuizOption(83 + inset, y, 300 - 2 * inset, QUIZ_OPT_H, dexName(quizOpts[i]), bg);  // V2: panels, V1's boxes
-#else
-    gfx->fillRoundRect(83 + inset, y, 300 - 2 * inset, QUIZ_OPT_H, 10, bg);
-    gfx->setTextColor(bg == UI_WHITE ? UI_INK : UI_WHITE);
-    setCur(centerX(dexName(quizOpts[i]), 2), y + 15);
-    printT(dexName(quizOpts[i]));
-#endif
   }
   drawIntroCard();  // its how-to-play card, while it is up
   gfx->flush();
@@ -3693,15 +3100,11 @@ void drawVisitor(uint32_t now) {
   } else if ((t / 6000) % 2 && visitPmd.has(PMD_HOP)) {
     act = PMD_HOP;
   }
-#if UI_V2
   bool walk = visitPhase == VP_HANG && v2Walking && visitPmd.has(PMD_WALKD);  // V2: it walks beside yours
   if (walk) act = PMD_WALKD;
   int gy = v2GroundAt(x);  // on the hill's curve (scene_v2.h)
   v2PetShadow(x, gy - 4 + v2Bob, 30);
   drawPmdActM(visitPmd, act, x, gy + v2Bob, walk ? v2WalkT() : now - visitT, true, false, partyOthersScale(n));
-#else
-  drawPmdActM(visitPmd, act, x, PET_GROUND, now - visitT, true, false, partyOthersScale(n));
-#endif
   if (visitPhase == VP_HANG && n == 1 && (t / 900) % 4 == 0) drawMap(SPR_HEART, 32, 286, PET_GROUND - 150, 1, false);
   if (visitPhase == VP_LEAVE) {
     char b[40];
@@ -3724,7 +3127,7 @@ void knomiButtonTap() {
   screenOff = false;
   wakeUI();
   if (wasAsleep) return;  // in the dark it only wakes, like the touchscreen
-#if UI_V2 && defined(BOARD_HOST)
+#if defined(BOARD_HOST)
   if (v2KeyThrow()) return;  // V2 on a computer: Space throws on the catch (master_v2.h)
 #endif
   if (buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || gameOpen || runOpen || surfOpen || dungeonOpen || quizOpen || gamesMenuOpen || zoneScreen || galleryOpen || cardOpen || kbOpen || clockOpen || choiceKind || confirmUntil) return;
@@ -3753,9 +3156,7 @@ void knomiAskReset() {
   sfxPlay(SFX_DENY);
   choiceKind = 3;
   choiceUntil = millis() + 12000;
-#if UI_V2
   v2ResetSure = false;  // V2: it asks twice
-#endif
 }
 
 void handleKnomiButton(uint32_t now) {
@@ -3821,9 +3222,7 @@ void startBattleWith(int16_t dex) {
     return;
   }
   uint8_t foeLvl = btlWildLevel(lvl, random(4));
-#if UI_V2
   if (pet.repelOn() && (bZone < 0 || pet.zoneComplete(bZone))) foeLvl = btlWildLevel(lvl, 3);  // V2: a Repel: none below yours
-#endif
   if (dex < 1 || dex > DEX_COUNT) dex = bZone >= 0 ? pet.pickZoneSpecies(bZone, foeLvl) : pet.pickWildSpecies(foeLvl);
   bFoeShiny = bNextShiny || random(100) < WILD_SHINY_PCT;
   bNextShiny = false;
@@ -3854,20 +3253,16 @@ void closeBattle() {
   if (bPvp) buddyBattleClosed();
   battleOpen = false;
   wildPmd.unload();
-#if UI_V2
   if (bTower) {  // V2: back to the climb
     bTower = false;
     towerFightEnded(bWon, bPhase == BP_RAN);
     return;
   }
-#endif
   if (bZone >= 0) zoneBattleEnded();
-#if UI_V2
   if (bFromIsland) {
     bFromIsland = false;
     zoneScreen = ZS_PICK;  // (asleep, a farewell or an egg shuts it again: zone render)
   }
-#endif
 }
 
 void battleMoveRect(uint8_t i, int &x0, int &x1) {
@@ -3889,29 +3284,17 @@ void battleTap(int16_t x, int16_t y) {
     return;
   }
   if (bPhase == BP_END) {
-    if (millis() - bPhaseT > 800 V2_AND(!v2MasterNew || millis() - bPhaseT > V2_MASTER_SKIP_MS)) battleAfterEnd();  // time to read the result
+    if (millis() - bPhaseT > 800 && (!v2MasterNew || millis() - bPhaseT > V2_MASTER_SKIP_MS)) battleAfterEnd();  // time to read the result
     return;
   }
   if (bPhase == BP_AIM) {
-#if UI_V2
     v2BallTap(x, y);  // V2: a ball chooses, THROW throws (master_v2.h)
-    return;
-#endif
-    if (y < BTL_BAND_Y) return;
-#if UI_V2
-    v2Throw = v2BallAt(x);  // V2: the ball nearest the tap, in the row of those you hold (master_v2.h)
-#endif
-    sfxPlay(SFX_TAP);
-    tiltZero();
-    bBallX = CX;
-    bBallT = millis();
-    battleSetPhase(BP_THROW);
     return;
   }
   if (bPhase != BP_CHOOSE) return;
   if (y >= 392 && x >= 160 && x <= 306) {
     if (bRunFailed) { sfxPlay(SFX_DENY); return; }
-    if (!bPvp V2_AND(!bTower) && random(100) < RUN_FAIL_PCT) {  // a buddy battle can always be left (V2: and a tower fight)
+    if (!bPvp && !bTower && random(100) < RUN_FAIL_PCT) {  // a buddy battle can always be left (V2: and a tower fight)
       bRunFailed = true;
       sfxPlay(SFX_DENY);
       return;
@@ -3948,7 +3331,6 @@ void battleFinish(bool won) {
 #if HAS_MUSIC
   if (won) v2SayWin();  // V2: yours says its name
 #endif
-#if UI_V2
   if (bTower) {  // V2: a Knomi Tower fight won fills the balls' bars like any (Fedor); the rest of its end is the climb's
     v2MasterNew = won ? pet.fightPays() : 0;
     bGain = 0;
@@ -3958,7 +3340,6 @@ void battleFinish(bool won) {
   }
   // V2: a fight won fills the balls' bars (master_v2.h; Fedor: "You should only get one for winning one")
   v2MasterNew = bPvp || !won ? 0 : pet.fightPays();
-#endif
   if (bPvp) {
     pet.friendlyBattle(won);
     bGain = 0;
@@ -3972,11 +3353,9 @@ void battleFinish(bool won) {
 
 // after the result: every wild win can be caught, a form you have too (it may have more stars)
 void battleAfterEnd() {
-  if (!bPvp && bWon V2_AND(!bTower)) {  // (V2: a tower's guardians can't be caught)
+  if (!bPvp && bWon && !bTower) {  // (V2: a tower's guardians can't be caught)
     bBalls = CATCH_BALLS;
-#if UI_V2
     v2Pick = V2_BALL_POKE;  // V2: each catch starts on the Poke Ball (master_v2.h)
-#endif
     catchRunStart();
     battleSetPhase(BP_AIM);
   } else {
@@ -4061,21 +3440,17 @@ void battleThrowStep(uint32_t now) {
     bCatchX = battleFoeSway(now);
     uint8_t chance = catchChance(bBallX, bCatchX);  // which ring it landed in
     bBreakAt = catchBreakAt(random(100), random(CATCH_SHAKES), chance);
-#if UI_V2
     if (v2Throw == V2_BALL_MASTER && pet.useMasterBall()) {
       bBreakAt = 0;  // V2: a Master Ball that hits always holds
     } else if (v2Throw == V2_BALL_ULTRA && pet.useUltraBall()) {  // V2: an Ultra Ball triples its chance (Fedor)
       chance = chance > 33 ? 100 : chance * 3;
       bBreakAt = catchBreakAt(random(100), random(CATCH_SHAKES), chance);
     }
-#endif
     bShakesHeard = 0;
     Serial.printf("catch: in the ball, %u%% ring (%s)\n", chance, bBreakAt ? "will break out" : "holds");
     battleSetPhase(BP_SHAKE);
   } else {
-#if UI_V2
     if (v2Throw == V2_BALL_POKE)  // V2: a missed Ultra or Master Ball comes back, and isn't one of the three
-#endif
     bBalls--;
     Serial.printf("catch: miss, %u left\n", bBalls);
     sfxPlay(SFX_DENY);
@@ -4109,7 +3484,7 @@ void battleStep() {
     case BP_INTRO:
       if (t > 1800) {
         // the new move is announced only once; DITTO copies, doesn't learn
-        bool announces = bMe.dex != DEX_DITTO && !bPvp V2_AND(!bTower);  // (V2: a tower friend's moves aren't yours)
+        bool announces = bMe.dex != DEX_DITTO && !bPvp && !bTower;  // (V2: a tower friend's moves aren't yours)
         int16_t learned = announces ? btlMoveToAnnounce(pet.movesSeen, bMeMoves) : -1;
         if (announces) pet.movesSeen = btlMovesSeenValue(bMeMoves);
         if (learned >= 0) {
@@ -4147,9 +3522,9 @@ void battleStep() {
       break;
     case BP_EFFECT: if (t > 1000) battleAfterHit(); break;
     case BP_RAN: if (t > (bPvpGone ? 2500UL : 1200UL)) closeBattle(); break;
-    case BP_END: if (t > 3500 V2_AND(!v2MasterNew || t > V2_MASTER_END_MS)) battleAfterEnd(); break;  // (V2: a Master Ball's moment)
+    case BP_END: if (t > 3500 && (!v2MasterNew || t > V2_MASTER_END_MS)) battleAfterEnd(); break;  // (V2: a Master Ball's moment)
     case BP_AIM:
-#if UI_V2 && defined(BOARD_HOST)
+#if defined(BOARD_HOST)
       v2AimKeys();  // V2 on a computer: the up arrow throws (master_v2.h)
 #endif
       break;  // it keeps running until you throw, however long you wait
@@ -4161,10 +3536,8 @@ void battleStep() {
       if (t > 3000) closeBattle();  // it broke out and ran off: no more throws
       break;
     case BP_SHAKE: {  // a rock and a tone per count; it may pop out halfway through one
-#if UI_V2
       if (t < V2_CATCH_DROP_MS) break;  // V2: still falling to the ground (master_v2.h)
       t -= V2_CATCH_DROP_MS;
-#endif
       uint8_t shake = t / CATCH_SHAKE_MS;  // 0..2 while counting
       if (shake < CATCH_SHAKES && bShakesHeard <= shake) {
         bShakesHeard = shake + 1;
@@ -4191,16 +3564,11 @@ void battleStep() {
 }
 
 void drawBattlePanel(int x, int y, const BtlFighter &f, float shown, bool numbers) {
-#if UI_V2
   v2Panel(x, y, x + 177, y + 61, 10);  // V2: the text box
-#else
-  gfx->fillRoundRect(x, y, 178, 62, 10, UI_WHITE);
-  gfx->drawRoundRect(x, y, 178, 62, 10, UI_INK);
-#endif
   gfx->setTextColor(UI_INK);
   setSize(2);
   setCur(x + 10, y + 6);
-  printT(BTL_NAME(f));  // (V2: yours by its nickname)
+  printT(v2BtlName(f));  // (V2: yours by its nickname)
   float pct = f.maxHp ? shown / f.maxHp : 0;
   gfx->fillRoundRect(x + 10, y + 28, 158, 10, 4, UI_TRACK);
   int w = (int)(158 * pct);
@@ -4228,7 +3596,6 @@ void drawBattleFighter(PmdMon &m, bool mine, int cx, int ground, uint8_t maxS) {
     if ((t / 90) % 2) return;  // hit blink
   }
   if (bPhase == BP_END && (mine ? bMe.hp : bFoe.hp) == 0) return;  // the defeated one is gone
-#if UI_V2
   // V2: yours from behind, facing the foe up to its right, as in the Game Boy games (Fedor: "shouldnt our own
   // pokemon be facing the other pokemon during battle like in pokemon blue?"): standing, attacking and hurt, each
   // where its pack has it (sdmon.h; one without stays facing you)
@@ -4236,14 +3603,11 @@ void drawBattleFighter(PmdMon &m, bool mine, int cx, int ground, uint8_t maxS) {
     uint8_t b = act == PMD_ATTACK ? PMD_ATTACKUR : act == PMD_HURT ? PMD_HURTUR : PMD_IDLEUR;
     if (m.has(b)) act = b;
   }
-#endif
   drawPmdActM(m, act, x, y, now - bPhaseT, true, false, maxS);
 }
 
 void battleCenterLine(const char *s, int y) {
-#if UI_V2
   if (gV2LineBox) v2LineBox(s, y);  // V2: over the scene, in a text box
-#endif
   setCur(centerX(s, 2), y);
   printT(s);
 }
@@ -4251,9 +3615,7 @@ void battleCenterLine(const char *s, int y) {
 // the result of a throw: large text on color, so nobody is left in doubt
 void catchBanner(const char *s, uint16_t bg) { catchBannerAt(s, bg, 352, 3); }
 void catchBannerAt(const char *s, uint16_t bg, int y, uint8_t maxSize) {
-#if UI_V2
   maxSize = 2;  // V2: size 2 (bold below), crisp on the Knomi; 3 was soft
-#endif
   uint8_t size = maxSize >= 3 && textW(s, 3) <= 306 ? 3 : 2;
   int w = textW(s, size) + 24, h = size == 3 ? 44 : 36;
   gfx->fillRoundRect(CX - w / 2, y, w, h, 12, bg);
@@ -4261,12 +3623,10 @@ void catchBannerAt(const char *s, uint16_t bg, int y, uint8_t maxSize) {
   setSize(size);
   setCur(centerX(s, size), y + (h - 8 * size) / 2);
   printT(s);
-#if UI_V2
   if (!gCjkFont) {  // V2: bold, a Knomi pixel over
     setCur(SNAP2(centerX(s, size)) + 2, y + (h - 8 * size) / 2);
     printT(s);
   }
-#endif
   setSize(2);
   gfx->setTextColor(UI_INK);
 }
@@ -4307,12 +3667,7 @@ int catchRingY() {
   for (int r = 0; r < a.h && top == a.h; r++)
     for (int c = 0; c < a.w; c++)
       if (a.data[r * a.w + c] != 0xFF) { top = r; break; }
-#if UI_V2
   uint8_t s = pmdScale(wildPmd, 3);
-#else
-  uint8_t s = a.h ? 170 / a.h : 3;
-  s = s < 2 ? 2 : s > 3 ? 3 : s;
-#endif
   return CATCH_GROUND_Y - ((a.base ? a.base : a.h) - top) * s / 2;
 }
 void drawCatchRings(int cx) {
@@ -4358,11 +3713,7 @@ void drawCatchShine(int cx, int cy, uint32_t t) {
 
 void renderCatch() {
   uint32_t now = millis();
-#if UI_V2
   v2BattleScene(bZone, false, BTL_FOE_X, BTL_FOE_GROUND, BTL_ME_X, BTL_ME_GROUND);  // V2: the scene, no bases
-#else
-  drawGameScene();
-#endif
   bool held = bPhase == BP_SHAKE || bPhase == BP_CAUGHT;  // in the ball, where it landed
   float foeX = held ? bCatchX : battleFoeSway(now);
   bFoeX = foeX;
@@ -4379,11 +3730,7 @@ void renderCatch() {
     uint8_t act = dir > 0 ? PMD_WALKR : PMD_WALKL;
     if (!wildPmd.has(act)) act = PMD_IDLE;
     int fx = (int)foeX;
-#if UI_V2
     v2PetShadow(fx, CATCH_GROUND_Y, 28);
-#else
-    gfx->fillRoundRect(fx - 26, CATCH_GROUND_Y - 4, 52, 9, 4, lerp565(soil, RGB565_BLACK, 5, 16));
-#endif
     float speed = battleFoeSpeed(now);  // slows to turn at each end
     if (speed > 0.35f) {
       uint16_t dust = lerp565(soil, UI_WHITE, 9, 16);
@@ -4395,35 +3742,26 @@ void renderCatch() {
     drawPmdActM(wildPmd, act, fx, CATCH_GROUND_Y, (uint32_t)((now - bPhaseT) * CATCH_RUN_MS / bRunMs), true, false, 3);  // quicker steps for the quick ones
     if (bPhase == BP_AIM || bPhase == BP_THROW) drawCatchRings(fx);
   }
-#if UI_V2
   int ballGround = CATCH_GROUND_Y - 51 + V2_BALL_LOWER;  // V2: it lands lower, in front of where it stood (master_v2.h)
-#else
-  int ballGround = CATCH_GROUND_Y - 51;  // a ball at 3x resting on the ground
-#endif
   if (bPhase == BP_THROW) {
     float k = (now - bBallT) / 1500.0f;
     if (k > 1) k = 1;
     int y = 360 - (int)((360 - catchRingY()) * k), s = k < 0.5f ? 3 : 2;  // moves away, to the rings
     float spin = (now - bBallT) * CATCH_SPIN_DEG_MS;  // spinning all the way there
-#if UI_V2
     if (v2Throw) v2SpecialBallTurned(s, spin, bBallX, y, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);  // V2
     else
-#endif
     drawMapTurned(SPR_HOME_BALL, HOME_ICON_N, s, spin, bBallX, y, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);
   } else if (bPhase == BP_MISS) {  // bounces and falls: clearly it didn't go in
     float k = (now - bPhaseT) / 700.0f;
     if (k > 1) k = 1;
     float spin = (1500 + now - bPhaseT) * CATCH_SPIN_DEG_MS * (bBallX < foeX ? -1 : 1);  // still spinning as it falls
-#if UI_V2
     if (v2Throw) v2SpecialBallTurned(2, spin, bBallX + (bBallX < foeX ? -70 : 70) * k, catchRingY() + 200 * k * k,
                                           HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);  // V2
     else
-#endif
     drawMapTurned(SPR_HOME_BALL, HOME_ICON_N, 2, spin, bBallX + (bBallX < foeX ? -70 : 70) * k, catchRingY() + 200 * k * k,
                   HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);
   } else if (bPhase == BP_SHAKE) {  // on the ground, tipping over to one side on each count: it wants out
     uint32_t t = now - bPhaseT;
-#if UI_V2
     if (t < V2_CATCH_DROP_MS) {  // V2: first it falls from where it hit to the ground where the Pokemon stood (Fedor)
       float k = t / (float)V2_CATCH_DROP_MS, top = catchRingY() + 16, yb, gy = ballGround + 51;  // its bottom: where it hit,
       if (k < 0.25f) yb = top - 28 * sinf(k * 2 * 3.14159f);  // then up off the Pokemon a little,
@@ -4438,52 +3776,31 @@ void renderCatch() {
     } else {
     t -= V2_CATCH_DROP_MS;
     v2PetShadow((int)bCatchX, ballGround + 51, 20);  // V2: on the ground, its shadow
-#endif
     uint32_t in = t % CATCH_SHAKE_MS;
     float k = in < 420 ? sinf(in * 3.14159f / 420) : 0;  // a tip, then still until the next count
     int side = (t / CATCH_SHAKE_MS) % 2 ? 1 : -1;
     float pivotX = bCatchX + side * 3 * HOME_ICON_N / 2.0f * k * 0.35f;  // rolling a little on its edge
-#if UI_V2
     if (v2Throw) v2SpecialBallTurned(3, side * CATCH_TIP_DEG * k, pivotX, ballGround + 3 * HOME_ICON_N - 3,
                                           HOME_ICON_N / 2.0f, HOME_ICON_N - 1);  // V2
     else
-#endif
     drawMapTurned(SPR_HOME_BALL, HOME_ICON_N, 3, side * CATCH_TIP_DEG * k, pivotX, ballGround + 3 * HOME_ICON_N - 3,
                   HOME_ICON_N / 2.0f, HOME_ICON_N - 1);
-#if UI_V2
     }
-#endif
   } else if (bPhase == BP_CAUGHT) {
-#if UI_V2
     v2PetShadow((int)bFoeX, ballGround + 51, 20);  // V2: its shadow
-#endif
     drawCatchShine((int)bFoeX, ballGround + 27, now - bPhaseT);
-#if UI_V2
     if (v2Throw) v2SpecialBall((int)bFoeX - 27, ballGround, 3);  // V2
     else
-#endif
     drawMap(SPR_HOME_BALL, HOME_ICON_N, (int)bFoeX - 27, ballGround, 3, false);
   }
 
-#if UI_V2
   gV2LineBox = true;  // V2: no band; the lines go in text boxes
-#else
-  gfx->fillRect(0, BTL_BAND_Y, 466, 466 - BTL_BAND_Y, UI_BG_DAY);
-  gfx->fillRect(0, BTL_BAND_Y, 466, 3, UI_INK);
-#endif
   gfx->setTextColor(UI_INK);
   setSize(2);
   char b[48];
   switch (bPhase) {
     case BP_AIM:
-#if UI_V2
       v2PickDraw(bBalls);  // V2: the hint in the sky, THROW and the balls to choose from (master_v2.h)
-      break;
-#else
-      battleCenterLine(T(S_THROW_HINT), 350);
-#endif
-      drawMap(SPR_HOME_BALL, HOME_ICON_N, CX - 36, 372, 4, false);  // the pokeball is the button
-      drawCountBadge(CX + 32, 378, bBalls);                           // how many are left, as on the candy
       break;
     case BP_THROW:
       battleCenterLine(T(S_TILT_HINT), 380);
@@ -4495,40 +3812,28 @@ void renderCatch() {
       break;
     case BP_SHAKE: {  // the count to three, big
       uint32_t t = millis() - bPhaseT;
-#if UI_V2
       if (t < V2_CATCH_DROP_MS) break;  // V2: no count until the ball has landed
       t -= V2_CATCH_DROP_MS;
-#endif
       uint8_t n = t / CATCH_SHAKE_MS + 1;
       if (n > CATCH_SHAKES) n = CATCH_SHAKES;
       char c[8];
       snprintf(c, sizeof(c), n == 1 ? "1" : n == 2 ? "1  2" : "1  2  3");
       setSize(5);
-#if UI_V2
       setSize(4);
       {
         int w = textW(c, 4) + 36;
         v2Panel(CX - w / 2, 352, CX + w / 2, 410, 10);
       }
-#endif
-#if UI_V2
       setSize(4);  // V2: size 4, crisp on the Knomi (5 was soft)
       setCur(centerX(c, 4), 366);
-#else
-      setCur(centerX(c, 5), 362);
-#endif
       printT(c);
       setSize(2);
       break;
     }
     case BP_BROKE:
       snprintf(b, sizeof(b), T(S_GOT_AWAY_FMT), dexName(bFoe.dex));
-#if UI_V2
       snprintf(b, sizeof(b), T(S_BROKE_FREE_FMT), dexName(bFoe.dex));  // V2: "broke free!", as high as the hint
       catchBannerAt(b, C565(0x55, 0x55, 0x60), V2_HINT_Y - 7, 3);
-      break;
-#endif
-      catchBanner(b, C565(0x55, 0x55, 0x60));
       break;
     case BP_FLED:
       snprintf(b, sizeof(b), T(S_FLED_FMT), dexName(bFoe.dex));
@@ -4536,9 +3841,7 @@ void renderCatch() {
       break;
     default: break;
   }
-#if UI_V2
   gV2LineBox = false;
-#endif
   gfx->flush();
 }
 
@@ -4557,21 +3860,14 @@ int centerWrapped(const char *p, int y, int maxChars) {
 
 // after the catch, on its own screen: the Pokemon, its stars, and what that means for the one you had
 // (new: added; better: it takes the weaker one's place; the same or worse: it goes back to the wild)
-#define RESULT_BANNER_Y 70
 #define RESULT_ART_TOP 116
 #define RESULT_ART_BOTTOM 236
-#define RESULT_STARS_Y 260
-#define RESULT_STAR_R 13
 #define RESULT_LINE_Y 292
 void renderCatchResult() {
   gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
   char b[48];
   snprintf(b, sizeof(b), T(S_CAUGHT_FMT), dexName(bFoe.dex));
-#if UI_V2
   v2CaughtBack(b);  // V2: a gold burst, the news on a red ribbon
-#else
-  catchBannerAt(b, C565(0x1e, 0x7d, 0x3c), RESULT_BANNER_Y, 2);
-#endif
 
   int top, bottom, left, right;
   if (pmdBoxAll(wildPmd, PMD_IDLE, top, bottom, left, right)) {  // as big as it fits, centred in its box
@@ -4584,11 +3880,7 @@ void renderCatchResult() {
     drawPmdActM(wildPmd, PMD_IDLE, CX, RESULT_ART_BOTTOM - (down > 0 ? down : 0), millis(), true, false, 8);
     gPmdForceScale = 0;
   }
-#if UI_V2
   v2CaughtStars(bCatchStars, bCatchResult == CR_NEW ? 1 : 2);  // V2: pixel stars, sparkles, the lines' panel
-#else
-  drawStars(CX, RESULT_STARS_Y, RESULT_STAR_R, bCatchStars);
-#endif
 
   setSize(2);
   if (bCatchResult == CR_NEW) {
@@ -4761,37 +4053,24 @@ void renderBattle() {
     renderCatch();
     return;
   }
-#if UI_V2
   v2BattleScene(bTower ? V2_ZONE_TOWER + towerHall() : bZone, bPhase != BP_TIRED, BTL_FOE_X, BTL_FOE_GROUND, BTL_ME_X, BTL_ME_GROUND);  // V2: with the two bases (Knomi Tower: its hall)
-#else
-  drawGameScene();
-#endif
   bool tired = bPhase == BP_TIRED;
   if (!tired) {
-#if !UI_V2
-    uint16_t soil = battleSoil();
-    gfx->fillRoundRect(BTL_FOE_X - 70, BTL_FOE_GROUND - 10, 140, 24, 12, soil);
-#endif
     // the on-screen HP chases the real one
     bShownMe += (bMe.hp - bShownMe) * 0.28f;
     bShownFoe += (bFoe.hp - bShownFoe) * 0.28f;
-    drawBattleFighter(wildPmd, false, BTL_FOE_X, BTL_FOE_GROUND V2_PLUS(v2BtlBobFoe), 3);  // (V2: riding its base's bob)
+    drawBattleFighter(wildPmd, false, BTL_FOE_X, BTL_FOE_GROUND + v2BtlBobFoe, 3);  // (V2: riding its base's bob)
     // (V2: in Knomi Tower, whoever of your team fights)
-    drawBattleFighter(V2_TOWER_ME(pmd), true, BTL_ME_X, BTL_ME_GROUND V2_PLUS(v2BtlBobMe), 4);
-    drawMoveFx(BTL_ME_X, (BTL_ME_GROUND + pmdTopY(V2_TOWER_ME(pmd), BTL_ME_GROUND, 4)) / 2 V2_PLUS(v2BtlBobMe),
-               BTL_FOE_X, (BTL_FOE_GROUND + pmdTopY(wildPmd, BTL_FOE_GROUND, 3)) / 2 V2_PLUS(v2BtlBobFoe));
+    drawBattleFighter(towerMePmd(pmd), true, BTL_ME_X, BTL_ME_GROUND + v2BtlBobMe, 4);
+    drawMoveFx(BTL_ME_X, (BTL_ME_GROUND + pmdTopY(towerMePmd(pmd), BTL_ME_GROUND, 4)) / 2 + v2BtlBobMe,
+               BTL_FOE_X, (BTL_FOE_GROUND + pmdTopY(wildPmd, BTL_FOE_GROUND, 3)) / 2 + v2BtlBobFoe);
     drawBattlePanel(72, 64, bFoe, bShownFoe, false);
     drawBattlePanel(226, 256, bMe, bShownMe, true);
   } else {
     drawPmdAct(pet.sleeping && pmd.has(PMD_SLEEP) ? PMD_SLEEP : PMD_IDLE, CX, 300, millis(), true, false, 4);
   }
 
-#if UI_V2
   gV2LineBox = bPhase != BP_CHOOSE;  // V2: no band; the lines go in text boxes (not RUN's, on its button)
-#else
-  gfx->fillRect(0, BTL_BAND_Y, 466, 466 - BTL_BAND_Y, UI_BG_DAY);
-  gfx->fillRect(0, BTL_BAND_Y, 466, 3, UI_INK);
-#endif
   gfx->setTextColor(UI_INK);
   setSize(2);
   char b[48];
@@ -4799,9 +4078,7 @@ void renderBattle() {
     case BP_TIRED: battleCenterLine(T(S_BTL_TIRED), 380); break;
     case BP_INTRO:
       if (bPvp) snprintf(b, sizeof(b), "VS %s!", buddyName());
-#if UI_V2
       else if (bTower) snprintf(b, sizeof(b), "%s!", dexName(bFoe.dex));  // V2: the floor's guardian
-#endif
       else snprintf(b, sizeof(b), T(bFoeShiny ? S_SHINY_WILD_FMT : S_BTL_WILD), dexName(bFoe.dex));
       battleCenterLine(b, 380);
       break;
@@ -4814,11 +4091,7 @@ void renderBattle() {
         BtlMove m = MOVE_TBL[bMeMoves.ids[i]];
         int x0, x1;
         battleMoveRect(i, x0, x1);
-#if UI_V2
         v2Button(x0, 346, x1 - x0, 40, TYPE_ACCENT[m.type]);
-#else
-        gfx->fillRoundRect(x0, 346, x1 - x0, 40, 10, TYPE_ACCENT[m.type]);
-#endif
         gfx->setTextColor(UI_WHITE);
         setCur((x0 + x1) / 2 - (int)strlen(m.name) * 6, 359);
         printT(m.name);
@@ -4826,28 +4099,19 @@ void renderBattle() {
       if (bRunFailed) {  // stays for the rest of the fight, in place of RUN
         const char *s = T(S_BTL_NO_ESCAPE);
         int w = textW(s, 2) + 24;
-#if UI_V2
         v2Button(CX - w / 2, 394, w, 38, UI_BAR_BAD);
-#else
-        gfx->fillRoundRect(CX - w / 2, 394, w, 38, 10, UI_BAR_BAD);
-#endif
         gfx->setTextColor(UI_WHITE);
         battleCenterLine(s, 406);
       } else {
-#if UI_V2
         v2Button(160, 394, 146, 38, C565(0x8e, 0x8c, 0x96));  // grey, as a way out
         gfx->setTextColor(UI_WHITE);
-#else
-        gfx->fillRoundRect(160, 394, 146, 38, 10, UI_TRACK);
-        gfx->setTextColor(UI_INK);
-#endif
         battleCenterLine(T(S_BTL_RUN), 406);
       }
       break;
     case BP_ATTACK:
     case BP_HIT: {
       const BtlFighter &a = bTurn[bStep].mine ? bMe : bFoe;
-      snprintf(b, sizeof(b), "%s: %s!", BTL_NAME(a), MOVE_TBL[(bTurn[bStep].mine ? bMeMoves : bFoeMoves).ids[bTurn[bStep].move]].name);
+      snprintf(b, sizeof(b), "%s: %s!", v2BtlName(a), MOVE_TBL[(bTurn[bStep].mine ? bMeMoves : bFoeMoves).ids[bTurn[bStep].move]].name);
       battleCenterLine(b, 380);
       break;
     }
@@ -4869,7 +4133,7 @@ void renderBattle() {
         snprintf(b, sizeof(b), T(S_BTL_LOST), dexName(bFoe.dex));
         battleCenterLine(b, 352);
       } else {
-        snprintf(b, sizeof(b), T(S_BTL_LOST), BTL_NAME(bMe));
+        snprintf(b, sizeof(b), T(S_BTL_LOST), v2BtlName(bMe));
         battleCenterLine(b, 352);
       }
       if (!bPvp && bGain) {  // no training between friends, nor from a loss; nothing when it's maxed
@@ -4877,52 +4141,19 @@ void renderBattle() {
         snprintf(b, sizeof(b), T(S_STR_GAIN_FMT), bGain);
         battleCenterLine(b, 380);
       }
-#if UI_V2
       if (!bPvp && bWon) v2MasterEnd(millis() - bPhaseT);  // V2: the balls' bars, or the one it earned (a loss: none)
-#endif
       break;
     }
   }
-#if UI_V2
   gV2LineBox = false;
-#endif
   gfx->flush();
 }
 
-// minigame background: the pet's habitat (sky by hour + biome ground)
-// the sky down to hor, by the hour, with stars at night; true at night
-bool drawSky(int hor) {
-  int hh = sceneHour();
-  bool night = hh < 6 || hh >= 20;
-  uint16_t top, bot;
-  if (night)       { top = C565(0x0c, 0x12, 0x24); bot = C565(0x1e, 0x26, 0x46); }
-  else if (hh < 8) { top = C565(0xd1, 0x6a, 0x86); bot = C565(0xf3, 0xb8, 0x7c); }
-  else if (hh < 18){ top = C565(0x8f, 0xc8, 0xea); bot = C565(0xdc, 0xee, 0xe6); }
-  else             { top = C565(0xc7, 0x5a, 0x4a); bot = C565(0xf0, 0xae, 0x64); }
-  for (int y = 0; y < hor; y += 8)
-    gfx->fillRect(0, y, 466, 8, lerp565(top, bot, y, hor));
-  if (night)
-    for (auto &st : STARS) gfx->fillRect(st[0], st[1], 4, 4, UI_WHITE);
-  return night;
-}
-
-#define NIGHT_TINT C565(0x16, 0x1c, 0x30)
-uint16_t sceneShade(uint16_t c, bool night) { return night ? lerp565(c, NIGHT_TINT, 9, 16) : c; }
 
 // your Pokemon's home: the biome of its species, as on the main screen
 uint8_t homeBiome() {
   uint8_t b = pet.isEgg() ? 0 : DEX_TBL[pet.speciesId].biome;
   return b < 6 ? b : 0;
-}
-
-// a battle's backdrop: its zone's picture, or a Wild Encounter (and a buddy's battle) at home, in the
-// very scene of the main screen
-void drawGameScene() {
-  if (zoneBg) {
-    gfx->draw16bitRGBBitmap(0, 0, zoneBg, 466, BTL_BAND_Y);
-    return;
-  }
-  drawScene(homeBiome(), millis(), sceneHour() < 6 || sceneHour() >= 20);
 }
 
 // the ground the fighters stand on: the zone's, or home's
@@ -4937,82 +4168,13 @@ uint16_t battleSoil() {
 // berries growing in them and vines hanging down, and a treeline behind. The middle of the sky stays
 // open for the score, and the falling berry has plain sky behind it most of the way.
 void drawCatchScene() {
-#if UI_V2
   v2TiltScene();  // V2: the clearing between two big trees, in the 8-bit style
-#else
-  int hor = 376;
-  bool night = drawSky(hor);
-  uint16_t far = sceneShade(C565(0x8c, 0xc4, 0x8e), night), farDk = sceneShade(C565(0x6c, 0xa8, 0x72), night);
-  uint16_t bark = sceneShade(C565(0x6e, 0x4a, 0x2e), night), barkDk = sceneShade(C565(0x4e, 0x32, 0x1e), night);
-  uint16_t leaf = sceneShade(C565(0x2e, 0x7a, 0x3c), night), leafHi = sceneShade(C565(0x4a, 0x9c, 0x4e), night);
-  uint16_t vine = sceneShade(C565(0x3a, 0x8a, 0x3e), night);
-  uint16_t grass = sceneShade(C565(0x4f, 0x9a, 0x4a), night), floor = sceneShade(C565(0x3e, 0x6e, 0x34), night);
-  // the treeline behind: pines, then round bushes along the horizon
-  for (int x = 10; x < 466; x += 58) {
-    int t = 268 + (x * 37) % 40;
-    gfx->fillTriangle(x, t, x - 30, hor, x + 30, hor, (x / 58) & 1 ? far : farDk);
-  }
-  for (int x = 0; x < 480; x += 44) gfx->fillCircle(x, hor - 4, 22 + (x % 3) * 3, farDk);
-  // the ground
-  gfx->fillRect(0, hor, 466, 14, grass);
-  gfx->fillRect(0, hor + 14, 466, 466 - hor - 14, floor);
-  for (int x = 6; x < 466; x += 34) gfx->fillTriangle(x, hor - 6, x - 4, hor + 2, x + 4, hor + 2, grass);
-  // two tall trunks, with bark and roots
-  for (int side = 0; side < 2; side++) {
-    int x = side ? 386 : 28;
-    gfx->fillRect(x, 0, 52, hor + 4, bark);
-    for (int bx = x + 10; bx < x + 46; bx += 14) gfx->fillRect(bx, 40, 3, hor - 60, barkDk);
-    gfx->fillTriangle(x - 18, hor + 6, x, hor - 30, x + 8, hor + 6, bark);
-    gfx->fillTriangle(x + 44, hor + 6, x + 52, hor - 30, x + 70, hor + 6, bark);
-  }
-  // their leafy tops over the corners: the same shape, mirrored
-  static const int16_t CLUMP[][3] = { { 58, 42, 72 }, { 128, 8, 50 }, { 16, 132, 58 }, { 104, 92, 40 }, { 150, 52, 26 } };
-  static const int16_t BERRY[][3] = { { 72, 98, 0 }, { 148, 66, 1 }, { 34, 178, 2 }, { 120, 120, 2 }, { 96, 40, 1 } };
-  static const uint16_t BERRY_C[3] = { C565(0xd8, 0x3a, 0x4a), C565(0x3a, 0x6c, 0xd8), C565(0xf2, 0xb8, 0x2a) };
-  for (int side = 0; side < 2; side++) {
-    for (auto &c : CLUMP) gfx->fillCircle(side ? 466 - c[0] : c[0], c[1], c[2], leaf);
-    for (auto &c : CLUMP) gfx->fillCircle((side ? 466 - c[0] : c[0]) - c[2] / 4, c[1] - c[2] / 4, c[2] / 2, leafHi);
-    for (auto &b : BERRY) {
-      int bx = side ? 466 - b[0] : b[0];
-      gfx->fillCircle(bx, b[1], 7, sceneShade(BERRY_C[b[2]], night));
-      gfx->fillRect(bx - 2, b[1] - 3, 3, 3, sceneShade(UI_WHITE, night));
-    }
-    // a vine down from each, swaying a little with its leaves
-    int vx = side ? 466 - 118 : 118, len = side ? 196 : 236;
-    for (int y = 90; y < len; y += 4) gfx->fillRect(vx + (int)(5 * sinf(y * 0.06f)), y, 3, 4, vine);
-    for (int y = 104, k = 0; y < len - 6; y += 22, k++) {
-      int lx = vx + (int)(5 * sinf(y * 0.06f));
-      gfx->fillCircle(lx + (k & 1 ? 7 : -5), y, 5, leafHi);
-    }
-  }
-#endif
 }
 
 // Poke Ball Volley's court, from above: your half, the net along the top where the ball crosses to
 // your buddy's screen, the side lines where it bounces and the attack line.
 void drawCourtScene() {
-#if UI_V2
   v2CourtScene();  // V2: the mown court, the net's tape on VB_TOP
-#else
-  int hh = sceneHour();
-  bool night = hh < 6 || hh >= 20;
-  uint16_t out = sceneShade(C565(0xc0, 0x6a, 0x48), night), court = sceneShade(C565(0x2c, 0x76, 0x3c), night);  // a deep green court
-  uint16_t line = sceneShade(UI_WHITE, night), post = sceneShade(C565(0x5a, 0x5e, 0x6a), night);
-  uint16_t mesh = sceneShade(C565(0x26, 0x2a, 0x34), night);
-  gfx->fillRect(0, 0, 466, 466, out);
-  gfx->fillRect(VB_LEFT, VB_TOP, VB_RIGHT - VB_LEFT, 466 - VB_TOP, court);
-  for (int y = VB_TOP + 30; y < 466; y += 60) gfx->fillRect(VB_LEFT, y, VB_RIGHT - VB_LEFT, 30, lerp565(court, UI_WHITE, 1, 12));  // light stripes
-  gfx->fillRect(VB_LEFT - 3, VB_TOP, 6, 466 - VB_TOP, line);   // side lines
-  gfx->fillRect(VB_RIGHT - 3, VB_TOP, 6, 466 - VB_TOP, line);
-  gfx->fillRect(VB_LEFT, 196, VB_RIGHT - VB_LEFT, 5, line);    // attack line
-  // the net: posts outside the side lines, a mesh band and its white top tape at VB_TOP
-  gfx->fillRect(VB_LEFT - 30, VB_TOP - 24, 12, 40, post);
-  gfx->fillRect(VB_RIGHT + 18, VB_TOP - 24, 12, 40, post);
-  gfx->fillRect(VB_LEFT - 18, VB_TOP + 2, VB_RIGHT - VB_LEFT + 36, 22, mesh);
-  for (int x = VB_LEFT - 18; x < VB_RIGHT + 18; x += 8) gfx->fillRect(x, VB_TOP + 2, 1, 22, lerp565(mesh, line, 5, 16));
-  for (int y = VB_TOP + 8; y < VB_TOP + 24; y += 7) gfx->fillRect(VB_LEFT - 18, y, VB_RIGHT - VB_LEFT + 36, 1, lerp565(mesh, line, 5, 16));
-  gfx->fillRect(VB_LEFT - 18, VB_TOP - 3, VB_RIGHT - VB_LEFT + 36, 6, line);
-#endif
 }
 
 void renderGame() {
@@ -5024,44 +4186,12 @@ void renderGame() {
 
   if (gameOverUntil) {
     drawCatchScene();
-    if (!timeLeft(gameOverUntil) V2_AND(false)) {  // (V2: the end waits for PLAY AGAIN! or the X)
-      gameOpen = false;
-      gameEndToMenu();
-      return;
-    }
-#if UI_V2
-    {  // V2: the result in a panel over the dimmed clearing
-      char big[24];
-      char rec[24];
-      snprintf(big, sizeof(big), T(S_SCORE_FMT), gameScore);
-      snprintf(rec, sizeof(rec), T(S_RECORD_FMT), pet.gameHi);
-      v2GameResult(gameLabel(0), nullptr, big, gameNewHi && gameScore > 0, rec, gameScore >= 10 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
-      gfx->flush();
-      return;
-    }
-#endif
-    char buf[22];
-    snprintf(buf, sizeof(buf), T(S_SCORE_FMT), gameScore);
-    gfx->setTextColor(ink);
-    setSize(4);
-    setCur(centerX(buf, 4), 160);
-    printT(buf);
-    setSize(2);
-    if (gameNewHi && gameScore > 0) {
-      gfx->setTextColor(UI_BAR_WARN);
-      setCur(centerX(T(S_NEW_RECORD), 2), 214);
-      printT(T(S_NEW_RECORD));
-    } else {
-      char rec[20];
-      snprintf(rec, sizeof(rec), T(S_RECORD_FMT), pet.gameHi);
-      gfx->setTextColor(ink);
-      setCur(centerX(rec, 2), 214);
-      printT(rec);
-    }
-    const char *msg = gameScore >= 10 ? T(S_GREAT_JOY) : T(S_PLUS_JOY);
-    gfx->setTextColor(ink);
-    setCur(centerX(msg, 2), 250);
-    printT(msg);
+    // V2: the result in a panel over the dimmed clearing
+    char big[24];
+    char rec[24];
+    snprintf(big, sizeof(big), T(S_SCORE_FMT), gameScore);
+    snprintf(rec, sizeof(rec), T(S_RECORD_FMT), pet.gameHi);
+    v2GameResult(gameLabel(0), nullptr, big, gameNewHi && gameScore > 0, rec, gameScore >= 10 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
     gfx->flush();
     return;
   }
@@ -5072,15 +4202,8 @@ void renderGame() {
   // score, record and lives
   char buf[8];
   snprintf(buf, sizeof(buf), "%u", gameScore);
-#if UI_V2
   surfText(buf, 4, 30, UI_WHITE);  // V2: white with a shadow, over the leaves and the sky
   gfx->setTextColor(ink);
-#else
-  gfx->setTextColor(ink);
-  setSize(4);
-  setCur(centerX(buf, 4), 30);
-  printT(buf);
-#endif
   // 24 and not 12: in Japanese "きろく %u" is 10 bytes before the number and the
   // record was cut to its first digit ("きろく 2" with 219). The sizes of
   // the text buffers are watched by TestBuffersDeTexto in test/test_tools.py.
@@ -5089,14 +4212,7 @@ void renderGame() {
   setSize(2);
   setCur(centerX(rec, 2), 76);
   printT(rec);
-#if UI_V2
   for (int i = 0; i < 3; i++) v2LifeHeart(CX + (i - 1) * 28, 104, i < 3 - gameMisses);  // V2: three hearts, centred
-#else
-  for (int i = 0; i < 3; i++) {
-    if (i < 3 - gameMisses) gfx->fillCircle(180 + i * 28, 104, 6, UI_BAR_BAD);
-    else gfx->drawCircle(180 + i * 28, 104, 6, UI_TRACK);
-  }
-#endif
 
   if (pmd.loaded) {
     uint8_t act = gamePetVX > 0.1f ? PMD_WALKR : gamePetVX < -0.1f ? PMD_WALKL : PMD_IDLE;
@@ -5202,31 +4318,12 @@ void dnDrawTile(int tx, int ty, int sx, int sy) {
 // a tile of a kind (the games menu draws a room of its own); faceBelow: a wall with floor under it
 // shows its face
 void dnDrawTileKind(uint8_t t, bool faceBelow, int tx, int ty, int sx, int sy) {
-#if UI_V2
   v2DnTile(t, faceBelow, tx, ty, sx, sy);  // V2: flagstones, brick faces, torches
-#else
-  const uint16_t floorC = C565(0x62, 0x58, 0x4c), floorD = C565(0x56, 0x4d, 0x43);
-  const uint16_t wallTop = C565(0x24, 0x20, 0x2c), wallFace = C565(0x3e, 0x37, 0x42);
-  if (t == DN_WALL) {
-    gfx->fillRect(sx, sy, DN_TILE, DN_TILE, wallTop);
-    if (faceBelow) gfx->fillRect(sx, sy + DN_TILE - 16, DN_TILE, 16, wallFace);
-    return;
-  }
-  gfx->fillRect(sx, sy, DN_TILE, DN_TILE, floorC);
-  uint8_t h = (tx * 7 + ty * 13) % 5;  // fixed little pebbles so you can tell you are moving
-  gfx->fillRect(sx + 8 + h * 9, sy + 12 + h * 5, 7, 5, floorD);
-  gfx->fillRect(sx + 44 - h * 6, sy + 42 - h * 2, 9, 5, floorD);
-  if (t == DN_STAIRS) {
-    for (int i = 0; i < 4; i++)
-      gfx->fillRect(sx + 6 + i * 6, sy + 8 + i * 12, DN_TILE - 12 - i * 12, 10, lerp565(C565(0xd8, 0xd0, 0xb8), C565(0x20, 0x1c, 0x24), i, 4));
-  }
-#endif
 }
 
 void renderDungeon() {
   if (pet.ceremony || !pmd.loaded) { closeDungeon(); return; }
   uint32_t now = millis();
-  if (dnOverT && now - dnOverT > 6000 V2_AND(false)) { closeDungeon(); gameEndToMenu(); return; }  // (V2: it waits)
 
   bool paused = introPaused();  // under its card nobody moves
   if (dnBot && !paused && !dn.dead && now - dnStepT > 200) {
@@ -5291,22 +4388,7 @@ void renderDungeon() {
   gPmdForceScale = 0;
 
   char b[48];
-#if UI_V2
   v2DnHud(dn.floor, dn.me.hp, dn.me.maxHp);  // V2: the floor and the HP in one panel at the top
-#else
-  snprintf(b, sizeof(b), "B%uF", dn.floor);
-  setSize(3);
-  int fw = textW(b, 3) + 24;
-  gfx->fillRoundRect(CX - fw / 2, 14, fw, 36, 10, UI_INK);
-  gfx->setTextColor(UI_WHITE);
-  setCur(centerX(b, 3), 21);
-  printT(b);
-
-  float pct = dn.me.maxHp ? (float)dn.me.hp / dn.me.maxHp : 0;
-  gfx->fillRoundRect(CX - 104, 432, 208, 16, 6, UI_INK);
-  int hw = (int)(200 * pct);
-  if (hw > 2) gfx->fillRoundRect(CX - 100, 436, hw, 8, 4, pct > 0.5f ? UI_BAR_OK : (pct > 0.2f ? UI_BAR_WARN : UI_BAR_BAD));
-#endif
 
   // the latest thing that happened, while it can be read
   b[0] = 0;
@@ -5314,7 +4396,7 @@ void renderDungeon() {
     if (dn.ate) strlcpy(b, T(S_DN_BERRY), sizeof(b));
     else if (dn.hitCount) {
       const DnHit &h = dn.hits[dn.hitCount - 1];
-      snprintf(b, sizeof(b), "%s: %s!", DN_NAME(h.mine || h.mon < 0, dn.me.dex, dn.mon[h.mon].f.dex), MOVE_TBL[h.move].name);
+      snprintf(b, sizeof(b), "%s: %s!", (h.mine || h.mon < 0 ? v2MyName(dn.me.dex) : dexName(dn.mon[h.mon].f.dex)), MOVE_TBL[h.move].name);
     }
   }
   setSize(2);
@@ -5327,41 +4409,13 @@ void renderDungeon() {
   }
 
   if (dnOverT) {
-#if UI_V2
     char top[44];  // V2: the result in a panel over the dimmed dungeon
     char big[12];
     char rec[24];
-    snprintf(top, sizeof(top), T(S_BTL_LOST), MY_NAME(dn.me.dex));
+    snprintf(top, sizeof(top), T(S_BTL_LOST), v2MyName(dn.me.dex));
     snprintf(big, sizeof(big), "B%uF", dn.floor);
     snprintf(rec, sizeof(rec), T(S_RECORD_FMT), pet.dungeonHi);
     v2GameResult(gameLabel(3), top, big, dnNewHi, rec, dn.floor >= 5 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
-  }
-  if (dnOverT && !UI_V2) {
-#endif
-    gfx->fillRoundRect(83, 130, 300, 190, 16, UI_WHITE);
-    gfx->drawRoundRect(83, 130, 300, 190, 16, UI_INK);
-    gfx->setTextColor(UI_INK);
-    snprintf(b, sizeof(b), T(S_BTL_LOST), MY_NAME(dn.me.dex));
-    setCur(centerX(b, 2), 148);
-    printT(b);
-    snprintf(b, sizeof(b), "B%uF", dn.floor);
-    setSize(5);
-    setCur(centerX(b, 5), 180);
-    printT(b);
-    setSize(2);
-    if (dnNewHi) {
-      gfx->setTextColor(UI_BAR_WARN);
-      setCur(centerX(T(S_NEW_RECORD), 2), 240);
-      printT(T(S_NEW_RECORD));
-    } else {
-      snprintf(b, sizeof(b), T(S_RECORD_FMT), pet.dungeonHi);
-      setCur(centerX(b, 2), 240);
-      printT(b);
-    }
-    const char *msg = dn.floor >= 5 ? T(S_GREAT_JOY) : T(S_PLUS_JOY);
-    gfx->setTextColor(UI_INK);
-    setCur(centerX(msg, 2), 272);
-    printT(msg);
   }
   drawIntroCard();  // its how-to-play card, while it is up
   gfx->flush();
@@ -5392,40 +4446,8 @@ void runTap() {
 
 // forest with two layers of pines that move slower than the ground
 void drawForest(float dist, bool night) {
-#if UI_V2
   (void)night;  // V2 grades it by the hour itself, dusk too
   v2RunScene(dist);
-#else
-  uint16_t dark = C565(0x0c, 0x12, 0x24);
-  uint16_t top = C565(0xa8, 0xdc, 0xd8), bot = C565(0xe2, 0xf2, 0xc8);
-  uint16_t farC = C565(0x6f, 0xa8, 0x7c), nearC = C565(0x35, 0x7a, 0x52), trunk = C565(0x5a, 0x40, 0x30);
-  uint16_t grass = C565(0x5c, 0xa8, 0x4c), tuft = C565(0x3f, 0x88, 0x3c), dirt = C565(0x7a, 0x56, 0x3a);
-  if (night) {
-    top = lerp565(top, dark, 13, 16); bot = lerp565(bot, dark, 11, 16);
-    farC = lerp565(farC, dark, 10, 16); nearC = lerp565(nearC, dark, 11, 16); trunk = lerp565(trunk, dark, 10, 16);
-    grass = lerp565(grass, dark, 9, 16); tuft = lerp565(tuft, dark, 9, 16); dirt = lerp565(dirt, dark, 9, 16);
-  }
-  for (int y = 0; y < RUN_GROUND_Y; y += 10)
-    gfx->fillRect(0, y, 466, 10, lerp565(top, bot, y, RUN_GROUND_Y));
-
-  gfx->fillRect(0, 286, 466, RUN_GROUND_Y - 286, farC);
-  for (int x = -((int)(dist * 0.2f) % 92) - 46; x < 520; x += 92) {
-    gfx->fillTriangle(x, 176, x - 34, 250, x + 34, 250, farC);
-    gfx->fillTriangle(x, 212, x - 44, 290, x + 44, 290, farC);
-  }
-  for (int x = -((int)(dist * 0.45f) % 190) - 95; x < 560; x += 190) {
-    gfx->fillRect(x - 9, 270, 18, RUN_GROUND_Y - 270, trunk);
-    gfx->fillTriangle(x, 150, x - 42, 226, x + 42, 226, nearC);
-    gfx->fillTriangle(x, 190, x - 56, 280, x + 56, 280, nearC);
-  }
-
-  gfx->fillRect(0, RUN_GROUND_Y, 466, 14, grass);
-  gfx->fillRect(0, RUN_GROUND_Y + 14, 466, 466 - RUN_GROUND_Y - 14, dirt);
-  for (int x = -((int)dist % 64); x < 480; x += 64) {
-    gfx->fillRect(x, RUN_GROUND_Y - 5, 5, 8, tuft);
-    gfx->fillRect(x + 28, RUN_GROUND_Y + 6, 12, 4, tuft);
-  }
-#endif
 }
 
 // one obstacle's pixel art (sprites.py), with the art's left edge at x and its outline on the grass:
@@ -5453,7 +4475,6 @@ void drawRunObstacle(const RunObstacle &o, bool night) {  // the art is the same
 void renderRun() {
   if (pet.ceremony || !pmd.loaded) { closeRun(); return; }
   uint32_t now = millis();
-  if (runOverT && now - runOverT > 4000 V2_AND(false)) { closeRun(); gameEndToMenu(); return; }  // (V2: it waits)
 
   if (introPaused()) {
     runLast = now;  // under its card the run waits
@@ -5491,13 +4512,11 @@ void renderRun() {
   char b[24];
   snprintf(b, sizeof(b), "%us", (unsigned)run.t);
   gfx->setTextColor(ink);
-#if UI_V2
   if (runOverT) {  // V2: the result in a panel over the dimmed run
     char rec[24];
     snprintf(rec, sizeof(rec), T(S_RECORD_FMT), pet.runHi);
     v2GameResult(gameLabel(2), nullptr, b, runNewHi, rec, run.t >= 30 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
   } else
-#endif
   if (runOverT) {
     setSize(5);
     setCur(centerX(b, 5), 62);
@@ -5626,7 +4645,7 @@ void surfDuelHandle(const BuddyMsg &m) {
 // sends where you are; false when they've been silent too long (they've gone: the duel closes)
 bool surfDuelTick(uint32_t now) {
   if (!buddyGameReady()) surfDuelT = now;  // "get ready" counts from when both have pressed Ready, GO!
-  if (now - surfSendT >= SURF_DUEL_SEND_MS V2_AND(!surfDuelDoneT || now - surfDuelDoneT < 3000)) {  // (V2: its end waits, quiet)
+  if (now - surfSendT >= SURF_DUEL_SEND_MS && (!surfDuelDoneT || now - surfDuelDoneT < 3000)) {  // (V2: its end waits, quiet)
     surfSendT = now;
     surfDuelSend();
   }
@@ -5700,26 +4719,8 @@ void drawSurfDuelText(uint32_t now) {
 
 // the water, rushing up: deep blue, broad swells, and streaks of foam at the water's speed
 void drawSurfWater(float dist, bool night) {
-#if UI_V2
   (void)night;
   v2SurfWater(dist, v2HourTod());  // V2: bands, crests and specks, graded by the hour
-#else
-  uint16_t deep = night ? C565(0x12, 0x2c, 0x5c) : C565(0x2a, 0x86, 0xd2);
-  uint16_t swell = night ? C565(0x18, 0x38, 0x6c) : C565(0x38, 0x96, 0xdc);
-  uint16_t streak = night ? C565(0x5a, 0x86, 0xb8) : C565(0xa8, 0xe0, 0xf8);
-  gfx->fillScreen(deep);
-  int off = (int)dist;
-  for (int k = 0; k < 6; k++) {  // the swells, deeper down: half as fast
-    int y = ((k * 92 - off / 2) % 552 + 552) % 552 - 46;
-    gfx->fillRect(0, SNAP2(y), 466, 28, swell);
-  }
-  for (int k = 0; k < 22; k++) {
-    int y = ((k * 53 - off) % 566 + 566) % 566 - 50;
-    int x = 30 + (k * 151) % 400, w = 14 + (k * 7) % 22;
-    gfx->fillRect(SNAP2(x), SNAP2(y), w, 4, streak);
-    if (k % 3 == 0) gfx->fillRect(SNAP2(x + w + 8), SNAP2(y + 2), 6, 4, streak);
-  }
-#endif
 }
 
 // the foam a board leaves behind it, up the screen: a V opening from its tail
@@ -5773,14 +4774,7 @@ void renderSurf() {
     return;
   }
   uint32_t now = millis();
-  if (surfDuel) {
-    if (!surfDuelTick(now)) return;  // they've gone
-    if (surfDuelDoneT && now - surfDuelDoneT > SURF_DUEL_DONE_MS V2_AND(false)) { surfDuelEnd(); return; }  // (V2: the ends wait)
-  } else if (surfOverT && now - surfOverT > 4000 V2_AND(false)) {
-    closeSurf();
-    gameEndToMenu();
-    return;
-  }
+  if (surfDuel && !surfDuelTick(now)) return;  // they've gone
 
   if (introPaused() || (surfDuel && now - surfDuelT < SURF_DUEL_READY_MS)) {
     surfLast = now;  // under its card (or while getting ready) the water waits
@@ -5815,7 +4809,7 @@ void renderSurf() {
     if (r.on)
       for (int i = 0; i < 3; i++)
         if (r.lanes >> i & 1) drawSurfRock(surfRockX(r, i), (int)r.y, night);
-  if (surfDuel V2_AND(!surfDuelDoneT)) {  // the buddy: level with yours while you both surf, falling behind once they've crashed
+  if (surfDuel && !surfDuelDoneT) {  // the buddy: level with yours while you both surf, falling behind once they've crashed
     float want = surfTheirX;  // where they are, but never hidden right behind yours: alongside, as Pikachu rides
     if (fabsf(want - surf.x) < 70) want = surf.x + (surf.x < SURF_CX ? 70 : -70);
     float step = 600.0f * 0.04f, d = want - surfTheirShownX;
@@ -5826,30 +4820,24 @@ void renderSurf() {
   } else if (surf.pikaY < SURF_PIKA_GONE_Y) {
     drawSurfRider(surfPika, SPR_SURF_BOARD_P, 3, (int)surf.pikaX, (int)surf.pikaY, PMD_IDLE, 2, now, night);
   }
-#if UI_V2
   if (!surfDuel || !surfDuelDoneT)  // V2: at a duel's end the two stand face to face instead (v2SurfDuelResult())
-#endif
   drawSurfRider(pmd, SPR_SURF_BOARD, 4, (int)surf.x, SURF_PET_Y, surf.dead ? PMD_HURT : PMD_IDLE, surfScale, now, night);
 
   char b[24];
   if (surfDuel) {
-#if UI_V2
     if (surfDuelDoneT) v2SurfDuelResult();  // V2: as the other games with a buddy end, PLAY AGAIN! and the X
     else
-#endif
     drawSurfDuelText(now);
     drawIntroCard();
     gfx->flush();
     return;
   }
   snprintf(b, sizeof(b), "%us", (unsigned)surf.t);
-#if UI_V2
   if (surfOverT) {  // V2: the result in a panel over the dimmed water
     char rec[24];
     snprintf(rec, sizeof(rec), T(S_RECORD_FMT), pet.surfHi);
     v2GameResult(gameLabel(4), nullptr, b, surfNewHi, rec, surf.t >= 30 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
   } else
-#endif
   if (surfOverT) {  // the result over the water, under yours
     surfText(b, 5, 214, UI_WHITE);
     if (surfNewHi) {
@@ -5903,17 +4891,6 @@ void drawCardStat(int y, const char *label, uint16_t val, uint16_t maxBar, uint1
   if (fw > bw) fw = bw;
   gfx->fillRoundRect(bx, y + 2, bw, 11, 3, UI_TRACK);
   if (fw > 2) gfx->fillRoundRect(bx, y + 2, fw, 11, 3, color);
-}
-
-// the Party Boost after a stat's number, in the boost's green
-void drawStatBonus(int y, uint16_t val, int bon) {
-  if (!bon) return;
-  char num[8], plus[8];
-  snprintf(num, sizeof(num), "%u", val);
-  snprintf(plus, sizeof(plus), "+%d", bon);
-  gfx->setTextColor(C565(0x1e, 0x7d, 0x3c));
-  setCur(330 + textW(num, 2) + 6, y);
-  printT(plus);
 }
 
 // ---------- the time screen (swipe down) ----------
@@ -5991,7 +4968,6 @@ void drawBigTime(int h24, int m) {
   snprintf(t, sizeof(t), "%d:%02d", clock12Hour(h24), m);
   // centred as one group, whatever the digits: "4:27 PM" and "12:05 AM" alike. The widths leave out the
   // blank column after the last letter, so what shows is what's centred
-#if UI_V2
   {  // V2: sizes 8 and 4, even, so each font pixel lands whole on the Knomi (7 and 3 were soft); their bottoms level
     int tw = textW(t, 8) - 8, aw = textW("AM", 4) - 4, gap = 12;
     int x0 = CX - (tw + gap + aw) / 2;
@@ -6003,17 +4979,6 @@ void drawBigTime(int h24, int m) {
     setCur(x0 + tw + gap, 132);
     printT(h24 < 12 ? "AM" : "PM");
   }
-#else
-  int tw = textW(t, 7) - 7, aw = textW("AM", 3) - 3, gap = 12;
-  int x0 = CX - (tw + gap + aw) / 2;
-  if (t[0] == '1') x0 -= 4;  // a 1 is drawn a column in from its left edge: half that column back
-  setSize(7);
-  setCur(x0, 108);
-  printT(t);
-  setSize(3);
-  setCur(x0 + tw + gap, 136);
-  printT(h24 < 12 ? "AM" : "PM");
-#endif
   classicFontEnd(cjk);
 }
 
@@ -6034,37 +4999,9 @@ void tzPickerOpen() {
 }
 
 void renderTzPicker() {
-#if UI_V2
   v2TzPicker();
   gfx->flush();
   return;
-#endif
-  gfx->fillScreen(UI_BG_DAY);
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(T(S_TIME_ZONE), 3), 44);
-  printT(T(S_TIME_ZONE));
-  uint32_t utc = clockUtc() ? clockUtc() : rtcEpoch();
-  uint32_t l = clockLocalIn(tzPickIdx, utc);
-  drawBigTime((l / 3600) % 24, (l / 60) % 60);
-  const char *city = TIME_ZONES[tzPickIdx].city;
-  setSize(3);
-  setCur(centerX(city, 3), TZ_CITY_Y);
-  printT(city);
-  char off[16];
-  fmtUtcOffset(off, sizeof(off), (int32_t)(l - utc));
-  gfx->setTextColor(UI_MUTED);
-  setSize(2);
-  setCur(centerX(off, 2), TZ_CITY_Y + 40);
-  printT(off);
-  drawPageArrows(tzPickIdx, TIME_ZONE_COUNT, TZ_ARROW_Y);
-  gfx->fillRoundRect(133, 340, 200, 48, 14, UI_BAR_OK);
-  gfx->setTextColor(UI_BG_DAY);
-  setSize(3);
-  setCur(CX - 18, 352);
-  printT("OK");
-  drawCloseButton();
-  gfx->flush();
 }
 
 void tzPickStep(int d) {
@@ -6093,28 +5030,7 @@ void tzPickerTap(int16_t x, int16_t y) {
   }
 }
 
-// the locked time screen's button: the city, opening the picker
-void drawTzButton() {
-  char b[32];
-  int i = clockTzIndex();
-  snprintf(b, sizeof(b), "%s >", TIME_ZONES[i >= 0 ? i : TIME_ZONE_DEFAULT].city);
-  gfx->fillRoundRect(TZ_BTN_X, TZ_BTN_Y, TZ_BTN_W, TZ_BTN_H, 12, UI_WHITE);
-  gfx->drawRoundRect(TZ_BTN_X, TZ_BTN_Y, TZ_BTN_W, TZ_BTN_H, 12, UI_INK);
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(b, 2), TZ_BTN_Y + 14);
-  printT(b);
-}
 #endif
-
-void drawClockBtn(int x, int y, const char *l) {
-  gfx->fillRoundRect(x, y, 58, 58, 12, UI_WHITE);
-  gfx->drawRoundRect(x, y, 58, 58, 12, UI_INK);
-  gfx->setTextColor(UI_INK);
-  setSize(4);
-  setCur(x + 17, y + 15);
-  printT(l);
-}
 
 // language pills centered on y; fills the active one
 #define LANG_PILL_Y 296
@@ -6124,27 +5040,14 @@ void drawClockBtn(int x, int y, const char *l) {
 static const char *const LANG_CODES[LANG_COUNT] = { "ES", "EN", "FR", "DE", "IT", "PT", "JA", "KO" };
 
 #ifdef BOARD_KNOMI_V2
-// page dots of the time/settings screen
-void drawClockDots() {
-  gfx->fillCircle(CX - 9, 24, 4, clockPage == 0 ? UI_INK : UI_TRACK);
-  gfx->fillCircle(CX + 9, 24, 4, clockPage == 1 ? UI_INK : UI_TRACK);
-}
 
 // password keyboard key at those coordinates, -1 if none
 int wifiKeyAt(int16_t x, int16_t y) {
-#if UI_V2
   return v2KbAt(wifiKbLayer, x, y);  // V2: the key's character, or one of its own codes
-#endif
-  if (x < KB_X || y < KB_Y) return -1;
-  int col = (x - KB_X) / KB_W, row = (y - KB_Y) / KB_H;
-  if (col >= KB_COLS || row >= 5) return -1;
-  return row * KB_COLS + col;
 }
 
 #define WIFI_ROWS 5
-#if UI_V2
 static_assert(WIFI_ROWS == V2_SLIDE_WIFI_ROWS, "slide_v2.h counts the Wi-Fi list's pages with this");
-#endif
 #define WIFI_ROW_Y 88
 #define WIFI_ROW_H 48
 
@@ -6166,13 +5069,11 @@ void settingsTap(int16_t x, int16_t y) {
       }
       break;
     case WS_LIST: {
-#if UI_V2
       if (int a = pageArrowAt(x, y, wifiListPage, (wifiSetupNetCount() + WIFI_ROWS - 1) / WIFI_ROWS, V2_PAGE_ARROW_Y)) {
         sfxPlay(SFX_TAP);  // V2: the side buttons turn the list's pages
         wifiListPage += a;
         break;
       }
-#endif
       int pages = (wifiSetupNetCount() + WIFI_ROWS - 1) / WIFI_ROWS;
       if (y >= WIFI_ROW_Y && y < WIFI_ROW_Y + WIFI_ROWS * WIFI_ROW_H) {
         sfxPlay(SFX_TAP);
@@ -6188,26 +5089,7 @@ void settingsTap(int16_t x, int16_t y) {
       break;
     }
     case WS_PASS: {
-#if UI_V2
       v2WifiKbTap(x, y);  // V2: its own keys
-      break;
-#endif
-      if (y < 80) { wifiSetupBackToList(); break; }  // "< network": back to the list
-      int i = wifiKeyAt(x, y);
-      if (i < 0) break;
-      if (i < KB_CHAR_KEYS) {
-        char c = kbLayerChar(wifiKbLayer, i);
-        if (c) wifiSetupType(c);
-      } else if (i == KB_CHAR_KEYS) {
-        wifiKbLayer = (wifiKbLayer + 1) % KB_LAYER_COUNT;
-      } else if (i == KB_CHAR_KEYS + 1) {
-        wifiSetupDelete();
-      } else if (wifiSetupCanSubmit()) {
-        sfxPlay(SFX_TAP);
-        wifiSetupSubmit();
-      } else {
-        sfxPlay(SFX_DENY);  // fewer than 8 characters
-      }
       break;
     }
     default: break;
@@ -6364,13 +5246,11 @@ void renderSettings() {
   gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
   gfx->setTextColor(UI_INK);
   WifiSetupState ws = wifiSetupState();
-#if UI_V2
   if (ws != WS_OFF) {  // V2: the list, the password's keyboard and how it's going, on the dimmed room
     v2WifiScreen(ws);
     gfx->flush();
     return;
   }
-#endif
   if (ws == WS_LIST) { renderWifiList(); gfx->flush(); return; }
   if (ws == WS_PASS) { renderWifiKeyboard(); gfx->flush(); return; }
   if (ws != WS_OFF) {
@@ -6384,67 +5264,18 @@ void renderSettings() {
     return;
   }
 
-#if UI_V2
   v2Settings();  // V2: a panel on the dimmed room
   gfx->flush();
   return;
-#endif
-  drawClockDots();
-  setSize(3);
-  setCur(centerX(T(S_SETTINGS), 3), 56);
-  printT(T(S_SETTINGS));
-  setSize(2);
-  setCur(centerX("Wi-Fi", 2), 100);
-  printT("Wi-Fi");
-  const char *ssid = clockWifiSsid();
-  setCur(centerX(ssid[0] ? ssid : "---", 2), 124);
-  printT(ssid[0] ? ssid : "---");
-  uint8_t st = clockWifiStatus();
-  gfx->setTextColor(st == 1 ? UI_BAR_OK : st == 2 ? UI_BAR_BAD : UI_TRACK);
-  const char *stText = st == 1 ? T(S_WIFI_SYNCED) : st == 2 ? T(S_WIFI_NOCONN) : T(S_WIFI_TRYING);
-  setCur(centerX(stText, 2), 148);
-  printT(stText);
-  gfx->fillRoundRect(96, SET_WIFI_BTN_Y, 274, SET_BTN_H, 12, TYPE_ACCENT[TY_WATER]);
-  gfx->setTextColor(UI_WHITE);
-  setCur(centerX(T(S_WIFI_CHANGE), 2), SET_WIFI_BTN_Y + 14);
-  printT(T(S_WIFI_CHANGE));
-
-  // Wi-Fi updates: check, or install the new version once one is found
-  OtaState os = otaState();
-  char ub[48];
-  if (otaChecking) strlcpy(ub, T(S_WIFI_SEARCH), sizeof(ub));
-  else if (os == OTA_AVAILABLE) snprintf(ub, sizeof(ub), T(S_UPD_TO_FMT), otaNewVersion());
-  else strlcpy(ub, T(S_UPD_CHECK), sizeof(ub));
-  gfx->fillRoundRect(96, UPD_BTN_Y, 274, SET_BTN_H, 12, os == OTA_AVAILABLE ? UI_BAR_OK : TYPE_ACCENT[TY_WATER]);
-  gfx->setTextColor(UI_WHITE);
-  setCur(centerX(ub, 2), UPD_BTN_Y + 14);
-  printT(ub);
-  // auto-update: its name and a switch, green and to the right when on
-  int lw = textW(T(S_AUTO_UPDATE), 2), x0 = CX - (lw + 14 + 60) / 2, sy = AUTO_ROW_Y + (AUTO_ROW_H - 30) / 2;
-  gfx->setTextColor(UI_INK);
-  setCur(x0, AUTO_ROW_Y + (AUTO_ROW_H - 16) / 2);
-  printT(T(S_AUTO_UPDATE));
-  gfx->fillRoundRect(x0 + lw + 14, sy, 60, 30, 15, autoUpdate ? UI_BAR_OK : UI_TRACK);
-  gfx->fillCircle(x0 + lw + 14 + (autoUpdate ? 45 : 15), sy + 15, 11, UI_WHITE);
-  if (!otaChecking && (os == OTA_LATEST || os == OTA_FAILED)) {
-    const char *m = os == OTA_LATEST ? T(S_UPD_LATEST) : T(S_UPD_FAILED);
-    gfx->setTextColor(os == OTA_LATEST ? UI_BAR_OK : UI_BAR_BAD);
-    setCur(centerX(m, 2), AUTO_ROW_Y + AUTO_ROW_H + 12);
-    printT(m);
-  }
-  drawCloseButton();
-  gfx->flush();
 }
 #endif
 
 void renderClock() {
-#if UI_V2
   if (clockPage == V2_ABOUT_PAGE) {  // V2: About, the last page (about_v2.h)
     v2About();
     gfx->flush();
     return;
   }
-#endif
 #ifdef BOARD_KNOMI_V2
   if (clockPage == 1) {
     renderSettings();
@@ -6457,90 +5288,7 @@ void renderClock() {
     return;
   }
 #endif
-#if UI_V2
   v2Clock(LANG_CODES[gLang]);  // V2: the time in a panel on the dimmed room
-  gfx->flush();
-  return;
-#endif
-  bool locked = clockLocked();
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  const char *title = locked ? T(S_CLOCK) : T(S_SET_TIME);
-  setCur(centerX(title, 3), 44);
-  printT(title);
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
-  drawClockDots();
-#endif
-
-  if (locked) {  // network time or the computer's: shown as it runs, with where it comes from
-    uint32_t e = rtcEpoch();
-    drawBigTime((e / 3600) % 24, (e / 60) % 60);
-    const char *st = clockTzUi ? T(S_SET_BY_WIFI) : T(S_SET_AUTO);
-    gfx->setTextColor(UI_BAR_OK);
-    setSize(2);
-    setCur(centerX(st, 2), clockTzUi ? TIME_STATUS_Y : TIME_STATUS_Y + 16);
-    printT(st);
-#ifdef BOARD_KNOMI_V2
-    if (clockTzUi) {
-      gfx->setTextColor(UI_MUTED);
-      setSize(2);
-      setCur(centerX(T(S_TIME_ZONE), 2), TZ_LABEL_Y);
-      printT(T(S_TIME_ZONE));
-      drawTzButton();
-    }
-#endif
-  } else {
-    drawBigTime(clockH, clockM);
-    drawClockBtn(104, 190, "-");  // hour -
-    drawClockBtn(170, 190, "+");  // hour +
-    drawClockBtn(252, 190, "-");  // min -
-    drawClockBtn(318, 190, "+");  // min +
-    setSize(2);
-    gfx->setTextColor(UI_TRACK);
-    setCur(120, 256);
-    printT(T(S_HOUR));
-    setCur(276, 256);
-    printT(T(S_MIN));
-  }
-
-  // sound switch (left of the language row)
-  bool snd = audioEnabled();
-  const char *sl = snd ? T(S_SND_ON) : T(S_SND_OFF);
-  gfx->fillRoundRect(34, LANG_PILL_Y, 96, LANG_PILL_H, 8, snd ? UI_BAR_OK : UI_WHITE);
-  gfx->drawRoundRect(34, LANG_PILL_Y, 96, LANG_PILL_H, 8, UI_INK);
-  gfx->setTextColor(snd ? UI_BG_DAY : UI_INK);
-  setSize(2);
-  setCur(34 + (96 - textW(sl, 2)) / 2, LANG_PILL_Y + 8);
-  printT(sl);
-
-  // language selector: a pill that cycles through the 6 languages on tap
-  gfx->fillRoundRect(LANG_PILL_X, LANG_PILL_Y, LANG_PILL_W, LANG_PILL_H, 8, UI_WHITE);
-  gfx->drawRoundRect(LANG_PILL_X, LANG_PILL_Y, LANG_PILL_W, LANG_PILL_H, 8, UI_INK);
-  char lp[10];
-  snprintf(lp, sizeof(lp), "%s >", LANG_CODES[gLang]);
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(LANG_PILL_X + (LANG_PILL_W - textW(lp, 2)) / 2, LANG_PILL_Y + 8);
-  printT(lp);
-
-  if (!locked) {
-    gfx->fillRoundRect(133, 340, 200, 48, 14, UI_BAR_OK);
-    gfx->setTextColor(UI_BG_DAY);
-    setSize(3);
-    setCur(CX - 18, 352);
-    printT("OK");
-  }
-
-  drawCloseButton();
-
-  // firmware version (discreet, at the very bottom)
-  char ver[28];
-  snprintf(ver, sizeof(ver), "PokeKnomiGochi v%s", FW_VERSION);
-  gfx->setTextColor(UI_TRACK);
-  setSize(1);
-  setCur(centerX(ver, 1), 449);
-  printT(ver);
   gfx->flush();
 }
 
@@ -6551,12 +5299,10 @@ void clockTap(int16_t x, int16_t y) {
     return;
   }
 #endif
-#if UI_V2
   if (clockPage == V2_ABOUT_PAGE) {  // V2: About: its X, the coin, the links (about_v2.h)
     v2AboutTap(x, y);
     return;
   }
-#endif
   if (closeHit(x, y) && wifiSetupState() == WS_OFF) {  // as swiping up does: nothing set
     sfxPlay(SFX_TAP);
     wifiSetupStop();
@@ -6576,12 +5322,10 @@ void clockTap(int16_t x, int16_t y) {
     return;
   }
 #endif
-#if UI_V2
   if (clockPage == 0 && clockLocked()) {  // V2: the time zone, the sound and the language rows (about_v2.h)
     v2SettingsTap(x, y);
     return;
   }
-#endif
   if (!clockLocked() && y >= 190 && y <= 248) {  // row of +/- buttons
     clockEdited = true;
     if (x >= 104 && x < 162) clockH = (clockH + 23) % 24;
@@ -6606,20 +5350,6 @@ void clockTap(int16_t x, int16_t y) {
   if (!clockLocked() && y >= 340 && y <= 388 && x >= 133 && x <= 333) { applyClock(); return; }
 }
 
-// flame + streak number at the top left
-void drawStreakBadge() {
-  if (pet.streak < 1) return;
-  int x = 26, y = 16;
-  gfx->fillTriangle(x + 8, y, x + 1, y + 17, x + 15, y + 17, UI_BAR_BAD);
-  gfx->fillTriangle(x + 8, y + 7, x + 4, y + 17, x + 12, y + 17, UI_BAR_WARN);
-  char s[6];
-  snprintf(s, sizeof(s), "%u", pet.streak);
-  gfx->setTextColor(inkColor());
-  setSize(2);
-  setCur(x + 22, y + 2);
-  printT(s);
-}
-
 // temporary banner: new medal or streak milestone. It drops in from the top with a medal on a
 // ribbon above it (a flame for a streak), settles with a little bounce, sparkles, and goes back up.
 #define CELEB_X 73
@@ -6629,7 +5359,6 @@ void drawStreakBadge() {
 #define CELEB_BOX_H 96
 #define CELEB_IN_MS 600
 #define CELEB_OUT_MS 350
-#define MEDAL_DARK C565(0xc0, 0x84, 0x10)
 
 // how far above its place the banner is now (0 = in place), from how long it has left
 int celebOffset() {
@@ -6674,46 +5403,7 @@ void drawCelebration() {
     l2 = buf;
   }
   if (!l1 || !l2) return;
-  int dy = -celebOffset(), by = CELEB_BOX_Y + dy;
-#if UI_V2
-  v2MedalBanner(l1, l2, medal, dy);  // V2: a pixel medal on its ribbon, the news in a panel
-  return;
-#endif
-  gfx->fillRoundRect(CELEB_X, by, CELEB_W, CELEB_BOX_H, 16, UI_BAR_WARN);
-  gfx->drawRoundRect(CELEB_X, by, CELEB_W, CELEB_BOX_H, 16, UI_INK);
-  gfx->drawRoundRect(CELEB_X + 4, by + 4, CELEB_W - 8, CELEB_BOX_H - 8, 12, MEDAL_GOLD);
-  // the ribbon, then the medal hanging from it over the banner's top edge
-  int my = by - 4, top = CELEB_TOP + dy;
-  uint16_t ribL = medal ? C565(0xd8, 0x3a, 0x3a) : C565(0xe8, 0x6a, 0x1c), ribR = medal ? C565(0x3a, 0x6c, 0xd8) : C565(0xd8, 0x3a, 0x3a);
-  gfx->fillTriangle(CX - 30, top, CX - 12, top, CX + 2, my - 10, ribL);
-  gfx->fillTriangle(CX - 30, top, CX + 2, my - 10, CX - 14, my - 10, ribL);
-  gfx->fillTriangle(CX + 30, top, CX + 12, top, CX - 2, my - 10, ribR);
-  gfx->fillTriangle(CX + 30, top, CX - 2, my - 10, CX + 14, my - 10, ribR);
-  gfx->fillCircle(CX, my, 30, UI_INK);
-  gfx->fillCircle(CX, my, 28, MEDAL_GOLD);
-  gfx->drawCircle(CX, my, 21, MEDAL_DARK);
-  if (medal) {
-    fillStar(CX, my + 1, 17, MEDAL_DARK);
-    fillStar(CX, my, 15, C565(0xff, 0xf0, 0xb0));
-  } else {  // a streak: a flame, round at the bottom and pointed at the top
-    gfx->fillCircle(CX, my + 6, 12, UI_BAR_BAD);
-    gfx->fillTriangle(CX + 2, my - 20, CX - 12, my + 4, CX + 12, my + 4, UI_BAR_BAD);
-    gfx->fillCircle(CX, my + 9, 6, C565(0xff, 0xe0, 0x60));
-    gfx->fillTriangle(CX + 1, my - 4, CX - 6, my + 8, CX + 6, my + 8, C565(0xff, 0xe0, 0x60));
-  }
-  if (dy == 0) {  // settled: it shines
-    uint32_t now = millis();
-    drawSparkles(CELEB_X, by, CELEB_X + CELEB_W, by + CELEB_BOX_H, now);
-    uint32_t beat = now % 1200;  // a glint crossing the medal
-    if (beat < 400) drawSparkle(CX - 16 + (int)(32 * beat / 400), my - 12 + (int)(16 * beat / 400), 5);
-  }
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(l1, 3), by + 34);
-  printT(l1);
-  setSize(2);
-  setCur(centerX(l2, 2), by + 68);
-  printT(l2);
+  v2MedalBanner(l1, l2, medal, -celebOffset());  // V2: a pixel medal on its ribbon, the news in a panel
 }
 
 // a tap on the banner: a medal opens the achievements at its page, to see it in green; either way
@@ -6729,11 +5419,9 @@ bool celebrationTap(int16_t x, int16_t y) {
         cardOpen = cardAch = true;
         cardPage = achPageOf(i);
         achDetail = -1;
-#if UI_V2
         cardPage = 0;
         achDetail = i;  // V2: straight to the new medal's card in the trophy room
         achGroup = v2TrophyGroup(i);  // (its X goes back to its group's shelf)
-#endif
         break;
       }
   }
@@ -6741,28 +5429,11 @@ bool celebrationTap(int16_t x, int16_t y) {
   return true;
 }
 
-// medals on the card: badge with label, colored if earned
-void drawMedalBadge(int x, int y, int i) {
-  bool got = pet.hasMedal(1UL << i);
-  gfx->fillRoundRect(x, y, 100, 24, 6, got ? UI_BAR_OK : UI_TRACK);
-  if (!got) gfx->drawRoundRect(x, y, 100, 24, 6, UI_TRACK);
-  gfx->setTextColor(got ? UI_BG_DAY : 0x9492);
-  setSize(2);
-  setCur(x + (100 - textW(medalLabel(i), 2)) / 2, y + 5);
-  printT(medalLabel(i));
-}
-
-// page 0: profile (large portrait, identity, streak, bond, berry)
 // how high a sprite reaches when drawn on groundY: the top of what it fills, at drawPmdActM's scale
 int pmdTopY(const PmdMon &m, int groundY, uint8_t maxS) {
   const PmdAct &a = m.acts[PMD_IDLE];
   if (!a.frames) return groundY - 120;
-#if UI_V2
   uint8_t s = pmdScale(m, maxS);
-#else
-  uint8_t s = a.h ? 170 / a.h : 5;
-  s = s < 2 ? 2 : s > maxS ? maxS : s;
-#endif
   while (s > 2 && a.h * s > 250) s--;
   int top = a.h;
   for (int r = 0; r < a.h && top == a.h; r++)
@@ -6771,150 +5442,9 @@ int pmdTopY(const PmdMon &m, int groundY, uint8_t maxS) {
   return groundY - ((a.base ? a.base : a.h) - top) * s;
 }
 
-void renderCardProfile() {
-  const DexEntry &d = DEX_TBL[pet.speciesId];
-  const char *nm = pet.nick[0] ? pet.nick : dexName(pet.speciesId);
-  char head[32];
-  snprintf(head, sizeof(head), T(S_NAME_FMT), pet.shiny ? "*" : "", nm, pet.level());
-  gfx->setTextColor(d.accent);
-  // auto-shrink: at size 3 long names don't fit in the narrow strip at
-  // the top of the round screen, so they got cut off at the edge. The width is
-  // MEASURED with textW(): strlen() counts bytes, and in a UTF-8 row there is not one byte
-  // per character nor do they all have the same width. With the classic font textW() returns
-  // strlen()*6*size, i.e. exactly the previous count: it doesn't move a pixel in
-  // the six Latin languages (11 characters at size 3 are those 198 px).
-  setSize(3);
-  int hts = (textW(head, 3) <= 198) ? 3 : 2;
-  // the name sits halfway between the top of the circle and the top of the Pokemon
-  int blockH = 8 * hts + (pet.nick[0] ? 26 : 0);
-  int spriteTop = pmd.loaded ? pmdTopY(pmd, 206, 4) : 120;
-  int ny = (24 + spriteTop - 10 - blockH) / 2;
-  if (ny < 34) ny = 34;
-  setSize(hts);
-  int hw = textW(head, hts);
-  setCur(CX - (hw + 24) / 2, ny);  // room for the pencil after it
-  printT(head);
-  drawMap(SPR_PENCIL, 10, CX + (hw + 24) / 2 - 20, ny + 8 * hts / 2 - 10, 2, false);  // the name can be changed
-  cardNameBottom = ny + blockH;
-  if (pet.nick[0]) {  // real species under the nickname
-    const char *sp = dexName(pet.speciesId);
-    char par[32];
-    snprintf(par, sizeof(par), "(%s)", sp);
-    gfx->setTextColor(UI_TRACK);
-    setSize(2);
-    setCur(centerX(par, 2), ny + 8 * hts + 6);   // measured, not counted in bytes
-    printT(par);
-  }
-
-  // large animated portrait
-  if (pmd.loaded) drawPmdAct(PMD_IDLE, CX, 206, millis(), true, false, 4);
-
-  // streak with flame
-  int sx = 138, sy = 224;
-  gfx->fillTriangle(sx + 8, sy, sx + 1, sy + 18, sx + 15, sy + 18, UI_BAR_BAD);
-  gfx->fillTriangle(sx + 8, sy + 7, sx + 4, sy + 18, sx + 12, sy + 18, UI_BAR_WARN);
-  char rl[40];  // in Japanese it loses digits at 30 from 100 days on
-  snprintf(rl, sizeof(rl), T(S_STREAK_FMT), pet.streak, pet.bestStreak);
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(sx + 24, sy + 2);
-  printT(rl);
-
-  drawCardStat(258, T(S_VIN), pet.bond, 100, C565(0xd4, 0x52, 0x7e));
-
-  const char *berry = !pet.berryKnown ? T(S_BERRY_UNK)
-                      : pet.lovesBerry(0) ? T(S_BERRY_RED)
-                      : pet.lovesBerry(1) ? T(S_BERRY_BLUE)
-                                          : T(S_BERRY_GREEN);
-  char info[48];
-  snprintf(info, sizeof(info), T(S_INFO_FMT), berry,
-           (unsigned long)(pet.ageMinutes / 1440));
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  if (pet.berryKnown) {  // the favorite berry's own icon before its name
-    static const char *const *const BERRY_ICON[3] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP };
-    int iw = textW(info, 2), x0 = CX - (iw + 42) / 2;
-    drawMap(BERRY_ICON[pet.lovesBerry(0) ? 0 : pet.lovesBerry(1) ? 1 : 2], HOME_ICON_N, x0, 286, 2, false);
-    setCur(x0 + 42, 296);
-  } else {
-    setCur(centerX(info, 2), 296);
-  }
-  printT(info);
-}
-
-// page 1: stats (4 bars + train button)
-void renderCardStats() {
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(T(S_BATTLE), 3), 48);
-  printT(T(S_BATTLE));  // the page's title: "BATTLE STATS"
-
-  int bon = partyBoostOn() ? PARTY_STAT_BONUS : 0;  // friends around: what wild battles use
-  drawCardStat(118, T(S_STAT_ATK), pet.atkStat() + bon, 260, UI_BAR_BAD);
-  drawStatBonus(118, pet.atkStat() + bon, bon);
-  drawCardStat(160, T(S_STAT_DEF), pet.defStat() + bon, 260, 0x4C98);
-  drawStatBonus(160, pet.defStat() + bon, bon);
-  drawCardStat(202, T(S_STAT_SPE), pet.speStat() + bon, 260, UI_BAR_WARN);
-  drawStatBonus(202, pet.speStat() + bon, bon);
-  drawCardStat(244, T(S_STAT_WGT), pet.weight, 100, 0xB3C8);
-
-#ifndef BOARD_KNOMI_V2  // on the Knomi, battle opens with the physical button
-  gfx->fillRoundRect(96, 300, 274, 40, 12, UI_BAR_BAD);
-  gfx->setTextColor(UI_BG_DAY);
-  setSize(2);
-  setCur(centerX(T(S_BTL_START), 2), 311);
-  printT(T(S_BTL_START));
-#endif
-  setSize(2);
-  char wins[40];  // "VITTORIE IN BATTAGLIA: 65535" and a Japanese line run past 24
-  snprintf(wins, sizeof(wins), T(S_WINS_FMT), pet.battleWins);
-  gfx->setTextColor(UI_INK);
-  int ww = textW(wins, 2), x0 = CX - (ww + 32) / 2;  // a trophy, then the battles won
-#ifdef BOARD_KNOMI_V2
-  const int wy = 300;  // under the bars, clear of the page dots
-#else
-  const int wy = 270;  // above the battle button
-#endif
-  drawMap(SPR_TROPHY, 12, x0, wy - 4, 2, false);
-  setCur(x0 + 32, wy);
-  printT(wins);
-}
-
-// page 2: training, which adds to ATK, DEF and SPD on top of what levels give, 0..100 each,
-// with what trains each one written under its bar; and weight, which food adds and play burns
-// (not a goal, so no MAX)
-void drawCardTrainRow(int y, const char *label, uint8_t tr, uint16_t color, const char *how, bool maxes) {
-  drawCardStat(y, label, tr, 100, color);
-  if (maxes && tr >= 100) {  // full: MAX in place of the number
-    gfx->fillRect(330, y, 60, 16, UI_BG_DAY);
-    gfx->setTextColor(color);
-    setCur(330, y);
-    printT("MAX");
-  }
-  gfx->setTextColor(lerp565(UI_TRACK, UI_INK, 11, 16));
-  setCur(96, y + 22);  // under its own bar, clear of the next row
-  printT(how);
-}
-
-void renderCardTraining() {
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(T(S_TRAINING), 3), 48);
-  printT(T(S_TRAINING));
-  setSize(2);
-  drawCardTrainRow(110, T(S_STAT_ATK), pet.trAtk, UI_BAR_BAD, T(S_TRAIN_HOW_ATK), true);
-  drawCardTrainRow(166, T(S_STAT_DEF), pet.trDef, 0x4C98, T(S_TRAIN_HOW_DEF), true);
-  drawCardTrainRow(222, T(S_STAT_SPE), pet.trSpe, UI_BAR_WARN, T(S_TRAIN_HOW_SPE), true);
-  drawCardTrainRow(278, T(S_STAT_WGT), pet.weight, 0xB3C8, T(S_TRAIN_HOW_WGT), false);
-}
-
-// pages 2 and 3: the pet's medals, then the trainer's, with descriptive label
 // The achievements, off to the right of home: the pet's medals, the trainer's, the zones'. At most
 // 6 a page in a 2x3 grid centred under the title, so none is cut off by the round screen.
 #define ACH_PER_PAGE 6
-#define ACH_BOX_W 196
-#define ACH_BOX_H 52
-#define ACH_GAP 10
 // page p: its group (first medal, how many in all, title) and which of them it shows
 static void achPage(uint8_t p, int &first, int &count, StrId &title, int &from, int &n) {
   static const struct { uint8_t first, count; StrId title; } G[4] = {
@@ -6949,192 +5479,11 @@ uint8_t achPageOf(int i) {
   return 0;
 }
 
-static void drawCheck(int x, int y, uint16_t c) {  // a check mark, 3 px thick
-  for (int o = 0; o < 3; o++) {
-    gfx->drawLine(x, y + 8 + o, x + 6, y + 14 + o, c);
-    gfx->drawLine(x + 6, y + 14 + o, x + 17, y + 2 + o, c);
-  }
-}
-
-// where box k of a page of n medals sits: two columns, an odd one out in the middle, centred under the title
-static void achBoxPos(int k, int n, int &x, int &y) {
-  int rows = (n + 1) / 2, top = (92 + 360 - (rows * ACH_BOX_H + (rows - 1) * ACH_GAP)) / 2;
-  bool alone = k == n - 1 && n % 2;
-  x = alone ? CX - ACH_BOX_W / 2 : CX - ACH_BOX_W - ACH_GAP / 2 + (k % 2) * (ACH_BOX_W + ACH_GAP);
-  y = top + (k / 2) * (ACH_BOX_H + ACH_GAP);
-}
-
-// the medal under a tap on the open achievements page (and its box), or -1
-int achMedalAtBox(int16_t x, int16_t y, int &bx, int &by) {
-  int first, count, from, n;
-  StrId title;
-  achPage(cardPage, first, count, title, from, n);
-  for (int k = 0; k < n; k++) {
-    achBoxPos(k, n, bx, by);
-    if (x >= bx - 4 && x < bx + ACH_BOX_W + 4 && y >= by - 4 && y < by + ACH_BOX_H + 4) return from + k;
-  }
-  return -1;
-}
 int achMedalAt(int16_t x, int16_t y) {
-#if UI_V2
   return v2TrophyAt(x, y);  // V2: the medals' things in the trophy room
-#endif
-  int bx, by;
-  return achMedalAtBox(x, y, bx, by);
-}
-
-// a medal's card: the medal on its ribbon (gold with a star once earned, grey before), its name, whether
-// it's earned, and how to earn it. The X goes back to the medals.
-void renderMedalDetail(int i) {
-  bool got = pet.hasMedal(1UL << i);
-  const uint16_t greyL = C565(0xc8, 0xc4, 0xcc), greyD = C565(0x9a, 0x96, 0xa4);
-  int my = 108, top = 30;
-  uint16_t ribL = got ? C565(0xd8, 0x3a, 0x3a) : greyL, ribR = got ? C565(0x3a, 0x6c, 0xd8) : greyD;
-  gfx->fillTriangle(CX - 34, top, CX - 14, top, CX + 2, my - 14, ribL);
-  gfx->fillTriangle(CX - 34, top, CX + 2, my - 14, CX - 16, my - 14, ribL);
-  gfx->fillTriangle(CX + 34, top, CX + 14, top, CX - 2, my - 14, ribR);
-  gfx->fillTriangle(CX + 34, top, CX - 2, my - 14, CX + 16, my - 14, ribR);
-  gfx->fillCircle(CX, my, 34, UI_INK);
-  gfx->fillCircle(CX, my, 32, got ? MEDAL_GOLD : greyL);
-  gfx->drawCircle(CX, my, 24, got ? MEDAL_DARK : greyD);
-  fillStar(CX, my + 1, 19, got ? MEDAL_DARK : greyD);
-  fillStar(CX, my, 17, got ? C565(0xff, 0xf0, 0xb0) : C565(0xe6, 0xe4, 0xea));
-  // its name (one line, two if long), whether it's earned, and how: one block, centred between the medal and the X
-  const char *how = medalHow(i);
-  int n = drawWrapped(medalDesc(i), 3, 380, 0, 30, false);
-  int lines = drawWrapped(how, 2, 336, 0, 24, false), w = 336;
-  while (w > 120 && drawWrapped(how, 2, w - 12, 0, 24, false) == lines) w -= 12;  // even lines
-  const int below = my + 48, above = CLOSE_Y - CLOSE_R - 12;
-  int block = n * 30 - 9 + 10 + 16 + 24 + lines * 24 - 8;
-  int y = below + (above - below - block) / 2;
-  if (y < below) y = below;
-  gfx->setTextColor(UI_INK);
-  drawWrapped(medalDesc(i), 3, 380, y, 30, true);
-  y += n * 30 - 9 + 10;
-  gfx->setTextColor(got ? UI_BAR_OK : UI_MUTED);
-  setSize(2);
-  const char *st = got ? T(S_MEDAL_GOT) : T(S_MEDAL_TODO);
-  setCur(centerX(st, 2), y);
-  printT(st);
-  gfx->setTextColor(UI_INK);
-  drawWrapped(how, 2, w, y + 16 + 24, 24, true);
-}
-
-void renderAchievements(uint8_t p) {
-  int first, count, from, n;
-  StrId title;
-  achPage(p, first, count, title, from, n);
-  int got = 0;
-  for (int i = first; i < first + count; i++) got += pet.hasMedal(1UL << i);
-  char head[40];
-  snprintf(head, sizeof(head), T(title), got, count);
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(head, 3), 48);
-  printT(head);
-
-  setSize(2);
-  for (int k = 0; k < n; k++) {
-    int i = from + k, x, y;
-    achBoxPos(k, n, x, y);
-    bool g = pet.hasMedal(1UL << i);
-    gfx->fillRoundRect(x, y, ACH_BOX_W, ACH_BOX_H, 10, g ? UI_BAR_OK : UI_TRACK);
-    if (g) drawCheck(x + 12, y + ACH_BOX_H / 2 - 9, UI_WHITE);
-    gfx->setTextColor(g ? UI_BG_DAY : 0x8410);
-    // the name, on two lines when it doesn't fit on one
-    const char *d = medalDesc(i);
-    int tx = x + 38, avail = ACH_BOX_W - 44;
-    if (textW(d, 2) <= avail) {
-      setCur(tx, y + ACH_BOX_H / 2 - 8);
-      printT(d);
-    } else {
-      char a[40], b[40];
-      strlcpy(a, d, sizeof(a));
-      char *cut = nullptr;
-      for (char *c = a; *c; c++)
-        if (*c == ' ') {
-          *c = 0;
-          if (textW(a, 2) <= avail) cut = c;
-          *c = ' ';
-        }
-      if (cut) {
-        *cut = 0;
-        strlcpy(b, cut + 1, sizeof(b));
-      } else {
-        b[0] = 0;
-      }
-      setCur(tx, y + 8);
-      printT(a);
-      setCur(tx, y + 28);
-      printT(b);
-    }
-  }
-}
-
-// the card's last page: progress (level, evolution, mistakes) — surfaces mechanics
-// that used to be invisible (how long until level-up/evolution and why)
-void renderCardProgress() {
-  const DexEntry &d = DEX_TBL[pet.speciesId];
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(T(S_PROGRESS), 3), 44);
-  printT(T(S_PROGRESS));
-
-  // large level
-  char lv[10];
-  snprintf(lv, sizeof(lv), T(S_LVL_FMT), pet.level());
-  setSize(5);
-  setCur(centerX(lv, 5), 86);
-  printT(lv);
-
-  // progress bar to the next level (1 level = 60 min of play); full, and MAX, at the top level
-  bool top = pet.level() >= LEVEL_MAX;
-  uint8_t into = pet.ageMinutes % MINUTES_PER_LEVEL;
-  int bx = 93, bw = 280, by = 158, bh = 22;
-  gfx->fillRoundRect(bx, by, bw, bh, 6, UI_TRACK);
-  int fw = top ? bw - 4 : (bw - 4) * into / MINUTES_PER_LEVEL;
-  if (fw > 0) gfx->fillRoundRect(bx + 2, by + 2, fw, bh - 4, 5, UI_BAR_OK);
-  char nx[32];
-  if (top) strlcpy(nx, "MAX", sizeof(nx));
-  else snprintf(nx, sizeof(nx), T(S_NEXT_LVL_FMT), MINUTES_PER_LEVEL - into, pet.level() + 1);
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(nx, 2), by + 32);
-  printT(nx);
-
-  // evolution status
-  gfx->setTextColor(UI_TRACK);
-  setCur(centerX(T(S_EVO_LABEL), 2), 230);
-  printT(T(S_EVO_LABEL));
-  char evoBuf[32];
-  const char *evo;
-  uint16_t evoCol = UI_INK;
-  if (d.evolvesTo == 0) {
-    evo = T(S_FINAL_FORM);
-  } else {
-    int needed = d.evolveLevel + pet.careMistakes;
-    if (pet.level() >= needed) {
-      if (pet.lowestStat() >= 40) { evo = T(S_EVO_READY); evoCol = UI_BAR_OK; }
-      else { evo = T(S_EVO_BLOCKED); evoCol = UI_BAR_BAD; }
-    } else {
-      snprintf(evoBuf, sizeof(evoBuf), T(S_EVO_IN_FMT), needed - pet.level());
-      evo = evoBuf;
-    }
-  }
-  gfx->setTextColor(evoCol);
-  setCur(centerX(evo, 2), 256);
-  printT(evo);
-
-  // care mistakes (delay evolution)
-  char ms[24];
-  snprintf(ms, sizeof(ms), T(S_MISTAKES_FMT), pet.careMistakes);
-  gfx->setTextColor(pet.careMistakes > 0 ? UI_BAR_BAD : UI_INK);
-  setCur(centerX(ms, 2), 312);
-  printT(ms);
 }
 
 void renderCard() {
-#if UI_V2
   if (!cardAch) v2Card();  // V2: the card's pages on the dimmed room
   else if (achDetail >= 0) v2MedalCard(achDetail);  // a medal's card
   else if (achGroup >= 0) v2TrophyShelf(achGroup);    // a group of the room on its shelf
@@ -7144,111 +5493,37 @@ void renderCard() {
   }
   gfx->flush();
   return;
-#endif
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  if (cardAch && achDetail >= 0) {  // a medal's card: no page dots, just the X back
-    renderMedalDetail(achDetail);
-    drawCloseButton();
-    gfx->flush();
-    return;
-  }
-  if (cardAch) renderAchievements(cardPage);
-  else if (cardPage == 0) renderCardProfile();
-  else if (cardPage == 1) renderCardStats();
-  else if (cardPage == 2) renderCardTraining();
-  else renderCardProgress();
-
-  // page indicator + help
-  int pages = cardPageCount();
-  for (int i = 0; i < pages; i++) {
-    int dx = CX + (2 * i - (pages - 1)) * 13;
-    if (i == cardPage) gfx->fillCircle(dx, 374, 5, UI_INK);
-    else gfx->drawCircle(dx, 374, 4, UI_INK);
-  }
-  drawCloseButton();
-  gfx->flush();
 }
 
 // ---------- keyboard for renaming ----------
 
-static const char KB_KEYS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-";  // 28 + DEL + OK = 30
 
 void openKeyboard() {
   kbOpen = true;
   strncpy(nameBuf, pet.nick, sizeof(nameBuf) - 1);
   nameBuf[sizeof(nameBuf) - 1] = 0;
   nameLen = strlen(nameBuf);
-#if UI_V2
   v2NameKbOpen();  // V2: capitals for an empty name's first letter
-#endif
 }
 
 void renderKeyboard() {
-#if UI_V2
   v2NameKb();  // V2: as big as the screen allows, QWERTY
   gfx->flush();
   return;
-#endif
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(T(S_NAME), 2), 56);
-  printT(T(S_NAME));
-  // current buffer
-  gfx->fillRoundRect(83, 84, 300, 40, 8, UI_WHITE);
-  gfx->drawRoundRect(83, 84, 300, 40, 8, UI_INK);
-  setSize(3);
-  setCur(95, 94);
-  printT(nameLen ? nameBuf : "_");
-
-  for (int i = 0; i < 30; i++) {
-    int x = KB_X + (i % KB_COLS) * KB_W, y = KB_Y + (i / KB_COLS) * KB_H;
-    bool special = (i >= 28);
-    gfx->fillRoundRect(x, y, KB_W - 6, KB_H - 6, 6, special ? UI_BAR_WARN : UI_WHITE);
-    gfx->drawRoundRect(x, y, KB_W - 6, KB_H - 6, 6, UI_INK);
-    gfx->setTextColor(UI_INK);
-    setSize(2);
-    if (i < 28) {
-      setCur(x + KB_W / 2 - 9, y + KB_H / 2 - 10);
-      printT(KB_KEYS[i]);
-    } else {
-      const char *lab = (i == 28) ? "<-" : "OK";
-      setCur(x + KB_W / 2 - 15, y + KB_H / 2 - 10);
-      printT(lab);
-    }
-  }
-  gfx->flush();
 }
 
 void keyboardTap(int16_t x, int16_t y) {
-#if UI_V2
   v2NameKbTap(x, y);  // V2: its own keys (and an X to leave without renaming)
   return;
-#endif
   // filter BEFORE dividing: with x/y below KB_X/KB_Y the subtraction is negative
   // and integer division truncates toward zero (not toward -inf), so col/row
   // would come out 0 instead of negative and the filter below wouldn't catch it
-  if (x < KB_X || y < KB_Y) return;
-  int col = (x - KB_X) / KB_W, row = (y - KB_Y) / KB_H;
-  if (col >= KB_COLS || row >= 5) return;
-  int i = row * KB_COLS + col;
-  if (i >= 30) return;
-  if (i == 28) {  // delete
-    if (nameLen) nameBuf[--nameLen] = 0;
-  } else if (i == 29) {  // OK
-    pet.rename(nameBuf);
-    kbOpen = false;
-  } else if (nameLen < sizeof(nameBuf) - 1) {
-    nameBuf[nameLen++] = KB_KEYS[i];
-    nameBuf[nameLen] = 0;
-  }
 }
 
 // ---------- pokedex gallery ----------
 
 #define GAL_X 73
 #define GAL_Y 72
-#define GAL_DOTS_Y 400   // a grid's page dots, just under it, well clear of the close button
 #define GAL_CLOSE_Y 432  // and the close button under them
 #define GAL_CELL 80
 
@@ -7271,40 +5546,8 @@ void drawThumb(const uint8_t *b, int x, int y, int s, bool sil) {
 
 // type, evolution and fun fact of an already-found species
 void drawDexInfo(int16_t dex, bool withFact = true) {
-#if UI_V2
   v2DexInfo(dex, withFact);  // V2: the type chip, then the next form and the fact in a panel
   return;
-#endif
-  const DexEntry &d = DEX_TBL[dex];
-  setSize(2);
-  const char *ty = TYPE_NAME[d.type];
-  int w = textW(ty, 2) + 24;
-  gfx->fillRoundRect(CX - w / 2, 250, w, 24, 8, d.accent);
-  gfx->setTextColor(UI_WHITE);
-  setCur(centerX(ty, 2), 255);
-  printT(ty);
-
-  char line[40];
-  gfx->setTextColor(UI_INK);
-  if (d.evolvesTo) {  // the next form is not revealed until found
-    snprintf(line, sizeof(line), "Lv.%u > %s", d.evolveLevel, pet.isRegistered(d.evolvesTo) ? dexName(d.evolvesTo) : "???");
-    setCur(centerX(line, 2), 282);
-    printT(line);
-  } else {
-    setCur(centerX(T(S_FINAL_FORM), 2), 282);
-    printT(T(S_FINAL_FORM));
-  }
-
-  if (!withFact) return;
-  gfx->setTextColor(UI_INK);
-  const char *p = DEX_FACT[dex];
-  for (int y = 308; *p && y <= 380; y += 24) {
-    int skip, n = wrapNext(p, 29, skip);
-    snprintf(line, sizeof(line), "%.*s", n, p);
-    setCur(centerX(line, 2), y);
-    printT(line);
-    p += skip;
-  }
 }
 
 // a Pokedex entry's sprites: the regular one, and the shiny beside it when both are caught (a
@@ -7372,12 +5615,10 @@ void drawDexArt(PmdMon &a, uint8_t starsA, PmdMon *b, uint8_t starsB) {
   dexArtCount = n;
   for (int i = 0; i < n; i++) {
     int x = b ? (i ? CX + 84 : CX - 84) : CX;
-#if UI_V2
     {  // V2: what it draws centred, not its frame (Fedor: "The pokemon isnt centered"), as the grids do
       int t2, b2, l2, r2;
       if (pmdBoxAll(*m[i], PMD_IDLE, t2, b2, l2, r2)) x -= ((l2 + r2 + 1) - m[i]->acts[PMD_IDLE].w) * s / 2;
     }
-#endif
     int hop = 0;
     bool patted = dexPatSlot == i && pat < DEX_PAT_MS;
     if (patted && pat < 700) hop = (int)(16 * fabsf(sinf(pat * 3.14159f / 350)));  // two hops
@@ -7390,12 +5631,8 @@ void drawDexArt(PmdMon &a, uint8_t starsA, PmdMon *b, uint8_t starsB) {
     box[2] = x + half;
     box[3] = ground + down;
     gPmdForceScale = s;
-#if UI_V2
     uint8_t view = v2SpinAct(*m[i], now);  // V2: it turns round, standing still in each view
     drawPmdActM(*m[i], view, x, ground - hop, view == PMD_IDLE ? now : 0, true, false, 8);
-#else
-    drawPmdActM(*m[i], PMD_IDLE, x, ground - hop, now, true, false, 8);
-#endif
     gPmdForceScale = 0;
     drawStars(x, starY, DEX_STAR_R, i ? starsB : starsA);
     if (patted) {  // the heart pops in beside its head and floats up, under the name
@@ -7408,37 +5645,11 @@ void drawDexArt(PmdMon &a, uint8_t starsA, PmdMon *b, uint8_t starsB) {
 
 // a Pokedex entry, full screen (the Pokedex and the zones' grids); galleryPmd holds its sprite
 void renderDexDetail(int16_t dex) {
-#if UI_V2
     v2MenuBackdrop();  // V2: the dimmed room, the number and the name on the board
-#else
-    gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-#endif
     const DexEntry &d = DEX_TBL[dex];
     bool reg = pet.isRegistered(dex);
-#if UI_V2
     (void)d;
     v2DexBoard(dex, reg);
-#else
-    char num[8];
-    snprintf(num, sizeof(num), "N.%03d", dex);  // the number, small, over the name
-    gfx->setTextColor(UI_INK);
-    setSize(2);
-    setCur(centerX(num, 2), 36);
-    printT(num);
-    // the name, big and bold: a size smaller when it is too long (measured, not counted in bytes)
-    const char *name = reg ? dexName(dex) : "???";
-    gfx->setTextColor(reg ? d.accent : UI_INK);
-    setSize(4);  // CJK measures at the size set
-    int gts = textW(name, 4) <= 260 ? 4 : 3;
-    setSize(gts);
-    int nx = centerX(name, gts), ny = gts == 4 ? 56 : 60;
-    setCur(nx, ny);
-    printT(name);
-    if (!gCjkFont) {  // drawn twice, a pixel apart: bolder (printT already does it for CJK)
-      setCur(nx + 1, ny);
-      printT(name);
-    }
-#endif
     if (reg && galleryPmd.loaded && galleryShinyPmd.loaded) {  // both forms, side by side
       drawDexArt(galleryPmd, pet.starsOf(dex, false), &galleryShinyPmd, pet.starsOf(dex, true));  // each form its own stars
       drawDexInfo(dex);
@@ -7446,39 +5657,25 @@ void renderDexDetail(int16_t dex) {
       uint8_t stars = pet.starsOf(dex, !pet.hasForm(dex, false));
       if (galleryPmd.loaded) drawDexArt(galleryPmd, stars, nullptr, 0);
       else {
-#if UI_V2
         if (const uint8_t *t = thumbs.get(dex)) drawThumbFit(t, CX, 158, 200, 120, 3, false, 0, nullptr);  // V2: centred
-#else
-        if (const uint8_t *t = thumbs.get(dex)) drawThumb(t, CX - GAL_CELL, 96, 3, false);
-#endif
         drawStars(CX, 237, DEX_STAR_R, stars);
       }
       drawDexInfo(dex);
     } else if (galleryPmd.loaded) {
-#if UI_V2
       {  // V2: its silhouette centred on what it draws
         int t2, b2, l2, r2, sx = CX;
         if (pmdBoxAll(galleryPmd, PMD_IDLE, t2, b2, l2, r2))
           sx -= ((l2 + r2 + 1) - galleryPmd.acts[PMD_IDLE].w) * pmdScale(galleryPmd, 6) / 2;
         drawPmdActM(galleryPmd, PMD_IDLE, sx, 300, 0, true, true, 6);
       }
-#else
-      drawPmdActM(galleryPmd, PMD_IDLE, CX, 300, 0, true, true, 6);  // static silhouette ("?" style)
-#endif
     } else if (const uint8_t *t = thumbs.get(dex)) {
-#if UI_V2
       drawThumbFit(t, CX, 170, 220, 160, 4, true, 0, nullptr);  // V2: centred
-#else
-      drawThumb(t, CX - GAL_CELL, 135, 4, true);
-#endif
     }
-#if UI_V2
     {
       int pos, n;
       v2DexEntryPos(dex, pos, n);
       drawPageArrows(pos, n, V2_PAGE_ARROW_Y);  // V2: on to the next entry, back to the last
     }
-#endif
     drawCloseButton();  // a tap anywhere goes back too
     gfx->flush();
 }
@@ -7590,26 +5787,11 @@ bool drawDexCell(int16_t dex, int slot, int x, int y, int cell) {
   return false;
 }
 
-// a grid's header: the count, small, over the title
-void drawDexGridHead(const char *count, const char *title, int countY) {
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(count, 2), countY);
-  printT(count);
-  setSize(3);
-  setCur(centerX(title, 3), countY + 20);
-  printT(title);
-}
-
 // "Page 1 of 17", small, under a grid
 void drawDexGridPage(int page, int pages, int y) {
   char b[32];
   snprintf(b, sizeof(b), T(S_PAGE_OF_FMT), page + 1, pages);
-#if UI_V2
   gfx->setTextColor(V2_ON_DARK);  // V2: on the dimmed room
-#else
-  gfx->setTextColor(C565(0x6b, 0x6a, 0x60));
-#endif
   setSize(2);  // before measuring (CJK)
   setCur(centerX(b, 2), y);
   printT(b);
@@ -7617,12 +5799,8 @@ void drawDexGridPage(int page, int pages, int y) {
 
 // a page arrow: a round grey button like the X, a white triangle pointing left (dir -1) or right (1)
 void drawPageArrow(int cx, int cy, int dir) {
-#if UI_V2
   v2PageArrow(cx, cy, dir);  // V2: a blue pixel button
   return;
-#endif
-  gfx->fillCircle(cx, cy, CLOSE_R, C565(0x8e, 0x8c, 0x96));
-  gfx->fillTriangle(cx + dir * 10, cy, cx - dir * 7, cy - 11, cx - dir * 7, cy + 11, UI_WHITE);
 }
 bool pageArrowHit(int16_t x, int16_t y, int cx, int cy) {
   int dx = x - cx, dy = y - cy;
@@ -7671,18 +5849,10 @@ void renderGallery() {
   }
   dexGridSync(dex);
 
-#if UI_V2
   v2MenuBackdrop();  // V2: the dimmed room, the board, the squares in a light panel
-#else
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-#endif
   char count[12];
   snprintf(count, sizeof(count), "%u/151", pet.registeredCount());
-#if UI_V2
   v2GridHead(T(S_DEX_TITLE), count, DEXG_X, DEXG_Y, DEXG_CELL, 3);
-#else
-  drawDexGridHead(count, T(S_DEX_TITLE), 30);
-#endif
 
   galleryAnim = false;
   for (int i = 0; i < DEXG_PAGE && dex[i]; i++)
@@ -7695,9 +5865,7 @@ void renderGallery() {
 
 void galleryTap(int16_t x, int16_t y) {
   if (galleryDetail) {
-#if UI_V2
     if (v2DexEntryArrowTap(x, y)) return;  // V2: the next entry or the last
-#endif
     if (dexArtPet(x, y)) return;  // its sprite: a pat, as at home
     galleryDetail = 0;            // anywhere else: back to the grid
     galleryUnload();
@@ -7732,103 +5900,14 @@ void galleryTap(int16_t x, int16_t y) {
 #define PICK_BTN_H 56
 
 void renderEggPick() {
-#if UI_V2
   v2PickScreen();  // V2: the Pokedex's look, only the forms you can raise; the entry, CHOOSE, the question (starter_v2.h)
   gfx->flush();
   return;
-#endif
-  if (eggPickDetail) {  // animated: always redrawn
-    const DexEntry &d = DEX_TBL[eggPickDetail];
-    gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-    gfx->setTextColor(d.accent);
-    const char *name = dexName(eggPickDetail);
-    setSize(3);
-    setCur(centerX(name, 3), 56);
-    printT(name);
-    uint8_t stars = pet.starsOf(eggPickDetail, eggPickShiny);  // it hatches with these
-    if (galleryPmd.loaded) drawDexArt(galleryPmd, stars, nullptr, 0);
-    else {
-      if (const uint8_t *t = thumbs.getForm(eggPickDetail, eggPickShiny)) drawThumb(t, CX - GAL_CELL, 96, 3, false);
-      if (eggPickShiny) drawShinyMark(CX - 84, 102, 168);
-      drawStars(CX, 237, DEX_STAR_R, stars);
-    }
-    drawDexInfo(eggPickDetail, false);
-    gfx->fillRoundRect(CX - 110, PICK_BTN_Y, 220, PICK_BTN_H, 14, C565(0x1e, 0x7d, 0x3c));
-    gfx->setTextColor(UI_WHITE);
-    setSize(3);
-    setCur(centerX(T(S_CHOOSE_BTN), 3), PICK_BTN_Y + 16);
-    printT(T(S_CHOOSE_BTN));
-    drawCloseButton();
-    gfx->flush();
-    return;
-  }
-
-  if (!eggPickDirty) return;  // the grid is static
-  eggPickDirty = false;
-
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  drawOwnedGrid(T(S_CHOOSE_POKEMON), eggPickPage);
-  gfx->flush();
-}
-
-// grid of the egg choices, without gaps: each form on its own, the shiny one with its sparkle
-void drawOwnedGrid(const char *title, int page) {
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(title, 2), 50);
-  printT(title);
-  for (int i = 0; i < 16; i++) {
-    bool shiny;
-    int16_t dex = pet.eggChoiceAt(page * 16 + i, shiny);
-    if (!dex) break;
-    int x = GAL_X + (i % 4) * GAL_CELL, y = GAL_Y + (i / 4) * GAL_CELL;
-    if (const uint8_t *t = thumbs.getForm(dex, shiny)) drawThumb(t, x, y, 2, false);
-    if (shiny) drawShinyMark(x, y, GAL_CELL);
-  }
-  int pages = (pet.eggChoiceCount() + 15) / 16;
-  if (pages > 1) {
-    for (int i = 0; i < pages; i++) {
-      int dotX = CX + (i * 2 - (pages - 1)) * 7;
-      if (i == page) gfx->fillCircle(dotX, GAL_DOTS_Y, 4, UI_INK);
-      else gfx->drawCircle(dotX, GAL_DOTS_Y, 3, UI_INK);
-    }
-  }
-}
-
-int16_t ownedGridAt(int16_t x, int16_t y, int page, bool &shiny) {
-  if (x < GAL_X || y < GAL_Y) return 0;
-  int c = (x - GAL_X) / GAL_CELL, r = (y - GAL_Y) / GAL_CELL;
-  if (c > 3 || r > 3) return 0;
-  return pet.eggChoiceAt(page * 16 + r * 4 + c, shiny);
 }
 
 void eggPickTap(int16_t x, int16_t y) {
-#if UI_V2
   v2PickTap(x, y);  // V2 (starter_v2.h)
   return;
-#endif
-  if (eggPickDetail) {
-    if (y >= PICK_BTN_Y && y < PICK_BTN_Y + PICK_BTN_H && abs(x - CX) <= 110) {
-      pet.chooseEgg(eggPickDetail, eggPickShiny);
-      sfxPlay(SFX_TAP);
-    } else if (closeHit(x, y)) {
-      sfxPlay(SFX_TAP);
-    } else {
-      return;
-    }
-    eggPickDetail = 0;
-    eggPickPage = 0;
-    eggPickDirty = true;
-    galleryUnload();
-    return;
-  }
-  bool shiny;
-  int16_t dex = ownedGridAt(x, y, eggPickPage, shiny);
-  if (!dex) return;
-  sfxPlay(SFX_TAP);
-  eggPickDetail = dex;
-  eggPickShiny = shiny;
-  galleryPmd.load(dex, shiny);  // the regular form can still hatch shiny: that stays a surprise
 }
 
 // ---------- buddy: another PokeKnomiGochi on the same wifi ----------
@@ -8054,11 +6133,9 @@ void buddyHandle(const BuddyMsg &m, uint32_t now) {
     }
   }
 
-#if UI_V2
   // V2: the buddy's PLAY AGAIN! (a new invitation) while our end of that game is on show: it goes, and they're
   // asked as any invitation asks (an older version, its end gone by itself, gets the same one resent)
   if (m.type == BM_INVITE && m.session != bsId && v2GameEnd() == V2_AGAIN_YB) v2BuddyGameClose(false);
-#endif
   if (m.type == BM_INVITE) {
     if (bsState == BS_IDLE) {
       bool free = onMainScreen() && !pet.isEgg() && !pet.sleeping && !pet.ceremony && !choiceKind &&
@@ -8248,7 +6325,6 @@ void buddyTick(uint32_t now) {
   }
   if (bsState == BS_SYNC && now - bsT > BUDDY_REPLY_MS) buddyEndSession();
   if (tradeOpen && trPhase != TR_DONE && now - trT > 90000UL) tradeClose(true);  // nobody responds
-  if (tradeOpen && trPhase == TR_DONE && now - trT > 3500 V2_AND(false)) tradeClose(false);  // (V2: "Got ...!" waits for its X)
   if (tradeOpen && trPhase == TR_WAITC && trTheirConfirm) tradeFinish();
 
   if (now - bsResendT < BUDDY_RESEND_MS) return;
@@ -8302,16 +6378,12 @@ void drawBuddyPet(uint32_t now) {
     k++;  // party slot: in arrival-slot order, after yours
     if (!buddyPmd[i].loaded) continue;
     uint8_t act = ((now + i * 1300) / 5000) % 2 && buddyPmd[i].has(PMD_HOP) ? PMD_HOP : PMD_IDLE;
-#if UI_V2
     bool walk = v2Walking && buddyPmd[i].has(PMD_WALKD);  // V2: buddies walk beside yours, a little out of step
     if (walk) act = PMD_WALKD;
     int bx = partyBuddyX(n, k), gy = v2GroundAt(bx);  // on the hill's curve (scene_v2.h)
     v2PetShadow(bx, gy - 4 + v2Bob, 30);
     V2_HOVER_RISE(bx - partyHalf(n), gy - partyTall(n), 2 * partyHalf(n), partyTall(n));  // under the mouse: it rises off its shadow (hover_v2.h)
     drawPmdActM(buddyPmd[i], act, bx, gy + v2Bob, walk ? v2WalkT() + i * 300 : now, true, false, partyOthersScale(n));
-#else
-    drawPmdActM(buddyPmd[i], act, partyBuddyX(n, k), PET_GROUND, now, true, false, partyOthersScale(n));
-#endif
   }
   if (n == 1 && (now / 900) % 4 == 0) drawMap(SPR_HEART, 32, 286, PET_GROUND - 150, 1, false);  // they get along
 }
@@ -8335,16 +6407,7 @@ void drawBuddyTop() {
     setCur(centerX(buddyNote, 2), BUDDY_PILL_Y + 8);
     printT(buddyNote);
   } else if (partyPillShown()) {  // a buddy or a visitor around: the Party Boost button
-#if UI_V2
     (void)b;  // V2: the round button, drawn behind the Pokemon by the home (v2PartyBadge)
-#else
-    snprintf(b, sizeof(b), "%s +%d", T(S_PARTY_BOOST), PARTY_STAT_BONUS);
-    int w = textW(b, 2) + 24;
-    gfx->fillRoundRect(CX - w / 2, BUDDY_PILL_Y, w, BUDDY_PILL_H, 12, C565(0x1e, 0x7d, 0x3c));
-    gfx->setTextColor(UI_WHITE);
-    setCur(centerX(b, 2), BUDDY_PILL_Y + 8);
-    printT(b);
-#endif
   }
 }
 
@@ -8353,12 +6416,8 @@ void drawBuddyTop() {
 bool visitorAt(int16_t x, int16_t y) {
   if (visitPhase != VP_HANG || pet.isEgg() || pet.sleeping || pet.ceremony) return false;
   int n = partyOthers(), vx = partyBuddyX(n, partyBuddies() + 1);
-#if UI_V2
   int gy = v2GroundAt(vx);  // V2: standing on the hill's curve
   return abs(x - vx) < partyHalf(n) && y > gy - partyTall(n) && y < gy;
-#else
-  return abs(x - vx) < partyHalf(n) && y > PET_GROUND - partyTall(n) && y < PET_GROUND;
-#endif
 }
 
 int buddyAt(int16_t x, int16_t y) {
@@ -8367,12 +6426,8 @@ int buddyAt(int16_t x, int16_t y) {
   for (int i = 0; i < BUDDY_MAX; i++) {
     if (!bPeers[i].on) continue;
     k++;
-#if UI_V2
     int gy = v2GroundAt(partyBuddyX(n, k));  // V2: standing on the hill's curve
     if (abs(x - partyBuddyX(n, k)) < partyHalf(n) && y > gy - partyTall(n) && y < gy) return i;
-#else
-    if (abs(x - partyBuddyX(n, k)) < partyHalf(n) && y > PET_GROUND - partyTall(n) && y < PET_GROUND) return i;
-#endif
   }
   return -1;
 }
@@ -8420,21 +6475,13 @@ void drawFriendStats(PmdMon &mon, const char *name, uint8_t level, const char *e
 }
 
 void drawPageDots(int pages, int cur) {  // as on the card
-#if UI_V2
   v2PageOf(pages, cur);  // V2: above the X
   return;
-#endif
-  for (int i = 0; i < pages; i++) {
-    int dx = CX + (2 * i - (pages - 1)) * 13;
-    if (i == cur) gfx->fillCircle(dx, 374, 5, UI_INK);
-    else gfx->drawCircle(dx, 374, 4, UI_INK);
-  }
 }
 
 // a buddy: page 0 its stats and Pokedex, page 1 Battle/Trade/Play
 void renderBuddyMenu() {
   if (!bPeers[bCur].on) { buddyMenuOpen = false; return; }
-#if UI_V2
   if (buddyPage == 0) {  // V2: its stats on the dimmed bedroom (Battle/Trade/Play is drawn over the home)
     int caught = 0;
     for (int d = 1; d <= 151; d++) caught += buddyRegHas(bPeers[bCur].reg, d);
@@ -8442,7 +6489,6 @@ void renderBuddyMenu() {
     gfx->flush();
     return;
   }
-#endif
   gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
   char b[44];
   if (buddyPage == 0) {
@@ -8484,15 +6530,8 @@ void drawCountBadge(int cx, int cy, int n) {
   gfx->fillCircle(cx, cy, 13, UI_BAR_BAD);
   gfx->drawCircle(cx, cy, 13, UI_WHITE);
   gfx->setTextColor(UI_WHITE);
-#if UI_V2
   v2BadgeNum(cx, cy, b);  // V2: centred on the disc (scene_v2.h)
-#else
-  setCur(cx - textW(b, 2) / 2 + 1, cy - 7);
-  printT(b);
-#endif
 }
-
-void drawCandyCount(int x, int y, int n) { drawCountBadge(x + 52, y + 4, n); }
 
 // closing the buddy view: back to Party Boost if it came from there
 void buddyMenuClose() {
@@ -8539,12 +6578,9 @@ bool partyPillShown() {  // not over a note, nor the visitor's hello and goodbye
   return partyBoostOn() && !timeLeft(buddyNoteUntil) && visitPhase != VP_ANNOUNCE && visitPhase != VP_LEAVE;
 }
 bool partyPillAt(int16_t x, int16_t y) {
-#if UI_V2  // V2: the round button, and a little round it (V2_PB_*)
+  // V2: the round button, and a little round it (V2_PB_*)
   int dx = x - V2_PB_X, dy = y - V2_PB_Y;
   return partyPillShown() && dx * dx + dy * dy <= (V2_PB_R + 8) * (V2_PB_R + 8);
-#else
-  return partyPillShown() && y >= BUDDY_PILL_Y - 6 && y <= BUDDY_PILL_Y + BUDDY_PILL_H + 6 && x >= 60 && x <= 406;
-#endif
 }
 
 void renderParty() {
@@ -8564,77 +6600,13 @@ void renderParty() {
     BtlFighter f = btlMakeWild(visitDex, lvl, btlWildGene(8));
     char m[24];
     snprintf(m, sizeof(m), T(S_VISIT_MIN_FMT), (unsigned)(pet.visitMin ? pet.visitMin : 1));
-#if UI_V2
     v2VisitorStats(lvl, f.maxHp, f.atk, f.def, f.spe);  // V2: as a buddy's stats page
     gfx->flush();
     return;
-#endif
-    drawFriendStats(visitPmd, dexName(visitDex), lvl, m, f.maxHp, f.atk, f.def, f.spe);
-    drawMap(SPR_CANDY, HOME_ICON_N, CX - 44, 322, 2, false);  // it brought a candy
-    gfx->setTextColor(UI_INK);
-    setCur(CX + 0, 333);
-    printT("x1");
-    drawCloseButton();
-    gfx->flush();
-    return;
   }
-#if UI_V2
   v2Party(who, n, partyRowY(), partyRowStep());  // V2: the rows in a panel on the dimmed bedroom
   gfx->flush();
   return;
-#endif
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(T(S_PARTY_BOOST), 3), 48);
-  printT(T(S_PARTY_BOOST));
-  setSize(2);
-
-  // who is here: tap a buddy for its menu; the visitor shows how long it stays
-  const uint16_t green = C565(0x1e, 0x7d, 0x3c);
-  int step = partyRowStep(), x0 = CX - PARTY_ROW_W / 2, y0 = partyRowY();
-  for (int r = 0; r < n; r++) {
-    int y = y0 + r * step, h = step - 6;
-    bool visitor = who[r] < 0;
-    gfx->fillRoundRect(x0, y, PARTY_ROW_W, h, 12, visitor ? UI_BG_DAY : UI_WHITE);
-    gfx->drawRoundRect(x0, y, PARTY_ROW_W, h, 12, visitor ? UI_TRACK : green);
-    int16_t dex = visitor ? visitDex : bPeers[who[r]].dex;
-    if (const uint8_t *th = thumbs.get(dex)) drawThumb(th, x0 - 12, y + h / 2 - GAL_CELL / 2 + 4, 2, false);
-    gfx->setTextColor(UI_INK);
-    setCur(x0 + 58, y + h / 2 - 7);
-    printT(partyRowName(r));
-    gfx->setTextColor(green);  // each opens its stats
-    setCur(x0 + PARTY_ROW_W - 14 - textW(">", 2), y + h / 2 - 7);
-    printT(">");
-    if (visitor) {  // and how long the visitor stays
-      char b[24];
-      snprintf(b, sizeof(b), T(S_VISIT_MIN_FMT), (unsigned)(pet.visitMin ? pet.visitMin : 1));
-      gfx->setTextColor(lerp565(UI_TRACK, UI_INK, 11, 16));
-      setCur(x0 + PARTY_ROW_W - 34 - textW(b, 2), y + h / 2 - 7);
-      printT(b);
-    }
-  }
-
-  // what it gives, like the stats pages
-  int by = y0 + n * step + 14;
-  gfx->setTextColor(UI_INK);
-  setCur(86, by);
-  printT(T(S_BOOST_ENERGY));
-  gfx->setTextColor(green);
-  char save[8];
-  snprintf(save, sizeof(save), "-%d%%", PARTY_ENERGY_SAVE_PCT);
-  setCur(380 - textW(save, 2), by);
-  printT(save);
-  char st[24];
-  snprintf(st, sizeof(st), "%s %s %s", T(S_STAT_ATK), T(S_STAT_DEF), T(S_STAT_SPE));
-  gfx->setTextColor(UI_INK);
-  setCur(86, by + 28);
-  printT(st);
-  snprintf(st, sizeof(st), "+%d", PARTY_STAT_BONUS);
-  gfx->setTextColor(green);
-  setCur(380 - textW(st, 2), by + 28);
-  printT(st);
-  drawCloseButton();
-  gfx->flush();
 }
 
 void partyTap(int16_t x, int16_t y) {
@@ -8672,13 +6644,11 @@ void partyTap(int16_t x, int16_t y) {
 bool buddyTradeOk() { return pet.tradeableCount() > 0 && buddyTradeable(bPeers[bCur]) > 0; }
 
 void buddyMenuTap(int16_t x, int16_t y) {
-#if UI_V2
   if (int a = pageArrowAt(x, y, buddyPage, 2, V2_PAGE_ARROW_Y)) {  // V2: the side buttons turn its pages, as a swipe would
     sfxPlay(SFX_TAP);
     onSwipe(a < 0 ? 1 : -1);
     return;
   }
-#endif
   if (closeHit(x, y)) {
     sfxPlay(SFX_TAP);
     buddyMenuClose();
@@ -8705,65 +6675,12 @@ static const uint8_t PLAY_KINDS[] = { BK_VOLLEY, BK_SHOWDOWN, BK_SURF };
 #define PLAY_GAME_COUNT (int)(sizeof(PLAY_GAMES) / sizeof(PLAY_GAMES[0]))
 #define PLAY_TILE_Y 222
 static const int16_t PLAY_X[PLAY_GAME_COUNT] = { 97, 233, 369 };  // a little wider than the Games grid: their names are long
-uint16_t *playArt = nullptr;
-
-uint16_t playColor(int i) {
-  static const uint16_t C[PLAY_GAME_COUNT] = { TYPE_ACCENT[TY_GRASS], TYPE_ACCENT[TY_PSYCHIC], TYPE_ACCENT[TY_WATER] };
-  return C[i];
-}
 
 // each game's window: Volley's court (the game's, deep green), Who's That? Showdown's burst, PikaSurf
 // with the buddy alongside
 void playGlimpsesPaint() {
-#if UI_V2
   v2PaintPlayLabels();  // V2: the three cartridges' labels
   return;
-#endif
-  if (!playArt) playArt = (uint16_t *)ps_malloc(PLAY_GAME_COUNT * GAME_ART * GAME_ART * sizeof(uint16_t));
-  if (!playArt) return;
-  uint32_t now = millis();
-  int hh = sceneHour();
-  bool night = hh < 6 || hh >= 20;
-  int16_t theirs = bPeers[bCur].dex;
-  // Poke Ball Volley: the game's own court (so the two always match), its net at the top, the ball in
-  // the air over yours
-  drawCourtScene();
-  drawMap(SPR_HOME_BALL, HOME_ICON_N, 246, 128, 3, false);
-  if (pmd.loaded) {
-    gPmdForceScale = 2;
-    drawPmdAct(PMD_IDLE, 222, 252, now, true, false, 2);
-    gPmdForceScale = 0;
-  }
-  gameGlimpseGrab(playArt, 233, VB_TOP + 92);
-  // Who's That? Showdown: two silhouettes face off in a pink burst
-  gfx->fillScreen(C565(0xb8, 0x3c, 0x78));
-  for (int i = 0; i < 16; i += 2) {
-    float a0 = i * 6.28318f / 16, a1 = (i + 1) * 6.28318f / 16;
-    gfx->fillTriangle(233, 240, 233 + (int)(400 * cosf(a0)), 240 + (int)(400 * sinf(a0)),
-                      233 + (int)(400 * cosf(a1)), 240 + (int)(400 * sinf(a1)), C565(0xf0, 0x8c, 0xc0));
-  }
-  gfx->fillCircle(233, 244, 70, C565(0xff, 0xd6, 0xec));
-  int box[4];
-  if (const uint8_t *t = thumbs.get(pet.speciesId)) drawThumbFit(t, 196, 250, 64, 64, 2, true, 0, box);
-  if (buddyDexOk(theirs))
-    if (const uint8_t *t = thumbs.get(theirs)) drawThumbFit(t, 272, 250, 64, 64, 2, true, 0, box);
-  setSize(3);
-  gfx->setTextColor(UI_INK);
-  setCur(CX - 16, 176);
-  printT("VS");
-  gameGlimpseGrab(playArt + GAME_ART * GAME_ART, 233, 240);
-  // PikaSurf: yours on its board, the buddy's Pokemon alongside on Pikachu's, a rock coming up
-  drawSurfWater(300.0f, night);
-  drawSurfRock(262, 316, night);
-  drawSurfWake(272, 190, now, night);
-  drawMap(SPR_SURF_BOARD_P, 24, 236, 190, 3, false);
-  if (buddyDexOk(theirs))
-    if (const uint8_t *t = thumbs.get(theirs)) drawThumb(t, 272 - 32, 166, 2, false);
-  if (pmd.loaded) {
-    uint8_t fit = pmdFitScale(pmd, PMD_IDLE, 76, 76);
-    drawSurfRider(pmd, SPR_SURF_BOARD, 4, 194, 214, PMD_IDLE, fit > 3 ? 3 : fit, now, night);
-  }
-  gameGlimpseGrab(playArt + 2 * GAME_ART * GAME_ART, 233, 250);
 }
 
 void openPlayMenu() {
@@ -8772,38 +6689,14 @@ void openPlayMenu() {
 }
 
 int playGameAt(int16_t x, int16_t y) {
-#if UI_V2
   return v2CartAt(x, y, V2_PLAY_XY, PLAY_GAME_COUNT);  // V2: a cartridge on the TV
-#endif
-  for (int i = 0; i < PLAY_GAME_COUNT; i++) {
-    int dx = x - PLAY_X[i], dy = y - PLAY_TILE_Y;
-    if ((abs(dx) < GAME_ICON_R + 8 && abs(dy) < GAME_ICON_R + 8) || (abs(dx) < 60 && dy > 0 && dy < GAME_ICON_R + 48)) return i;
-  }
-  return -1;
 }
 
 void renderPlayMenu() {
   if (!bPeers[bCur].on) { playMenuOpen = false; return; }
-#if UI_V2
   v2PlayTv();  // V2: the old TV with three cartridges
   gfx->flush();
   return;
-#endif
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  gfx->setTextColor(UI_INK);
-  setSize(3);
-  setCur(centerX(T(S_PLAY_TOGETHER), 3), 76);
-  printT(T(S_PLAY_TOGETHER));
-  setSize(2);
-  gfx->setTextColor(UI_MUTED);
-  setCur(centerX(buddyName(), 2), 118);
-  printT(buddyName());
-  for (int i = 0; i < PLAY_GAME_COUNT; i++) {
-    drawTile(playArt ? playArt + i * GAME_ART * GAME_ART : nullptr, PLAY_X[i], PLAY_TILE_Y, GAME_ICON_R, playColor(i));
-    drawTileLabel(T(PLAY_GAMES[i]), PLAY_X[i], PLAY_TILE_Y + GAME_ICON_R + TILE_FRAME + 6);
-  }
-  drawCloseButton();
-  gfx->flush();
 }
 
 void playMenuTap(int16_t x, int16_t y) {
@@ -8829,7 +6722,6 @@ void playMenuTap(int16_t x, int16_t y) {
 #define SD_ROUND_MS 10000UL  // nobody answers in time: nobody gets it
 #define SD_GRACE_MS 700UL    // after a right answer, how long to wait for a faster one still on its way
 #define SD_REVEAL_MS 2600UL
-#define SD_DONE_MS 6000UL
 
 uint8_t sdMine() { return sdHost ? sdHostScore : sdGuestScore; }
 uint8_t sdTheirs() { return sdHost ? sdGuestScore : sdHostScore; }
@@ -8981,7 +6873,6 @@ void sdTick(uint32_t now) {
         sdSendT = now;
         sdSend(BM_RESULT, sdWho, 0);
       }
-      if (t > SD_DONE_MS V2_AND(false)) sdClose();  // (V2: it waits for PLAY AGAIN! or the X)
       break;
   }
 }
@@ -9008,16 +6899,11 @@ void sdTap(int16_t x, int16_t y) {
 void renderShowdown() {
   if (!sdOpen) return;
   introPaused();  // finishes the card's exit
-#if UI_V2
   v2BurstScene(true);  // V2: the burst in pinks
-#else
-  gfx->fillScreen(TYPE_ACCENT[TY_PSYCHIC]);  // to the edge: no black ring
-#endif
   gfx->setTextColor(UI_WHITE);
   char b[48];
   // the score: you on the left, the buddy on the right
   setSize(2);
-#if UI_V2
   if (sdPhase == SD_DONE) {  // V2: the news on a ribbon, the two face to face, the score in a panel
     if (sdMine() > sdTheirs()) strlcpy(b, T(S_SD_WIN), sizeof(b));
     else if (sdMine() < sdTheirs()) snprintf(b, sizeof(b), T(S_SD_LOSE_FMT), buddyName());
@@ -9027,15 +6913,8 @@ void renderShowdown() {
     return;
   }
   v2ScorePanel(sdMine(), sdTheirs(), 30);  // V2: the score in a panel
-#else
-  snprintf(b, sizeof(b), "%s %u : %u %s", T(S_SD_YOU_LBL), sdMine(), sdTheirs(), buddyName());
-  setCur(centerX(b, 2), 44);
-  printT(b);
-#endif
   if (sdPhase == SD_DONE) {
-#if UI_V2
     gfx->setTextColor(UI_INK);  // on the burst's light middle
-#endif
     snprintf(b, sizeof(b), "%u : %u", sdMine(), sdTheirs());
     setSize(6);
     setCur(centerX(b, 6), 150);
@@ -9050,16 +6929,9 @@ void renderShowdown() {
     return;
   }
   if (sdPhase == SD_READY) {
-#if UI_V2
     gfx->setTextColor(UI_INK);
-#endif
     const char *w = buddyGameReady() ? T(S_SD_READY) : T(S_BUDDY_WAITING);  // waiting for their Ready, GO!
-#if UI_V2
     v2SmallPanel(w, 214);  // V2: in a small panel
-#else
-    setCur(centerX(w, 2), 220);
-    printT(w);
-#endif
     drawIntroCard();
     gfx->flush();
     return;
@@ -9073,17 +6945,12 @@ void renderShowdown() {
   } else {
     snprintf(b, sizeof(b), "%u/%u", sdRound + 1, SD_ROUNDS);
   }
-#if UI_V2
   if (!reveal) {  // V2: the round with its countdown beside it (nobody answering in time: nobody gets it)
     uint32_t e = millis() - sdAskT;
     v2RoundClock(b, 76, e >= SD_ROUND_MS ? 0 : (int)((SD_ROUND_MS - e + 999) / 1000));
   } else {
     v2SmallPanel(b, 76);  // V2: who got it in a small panel
   }
-#else
-  setCur(centerX(b, 2), 72);
-  printT(b);
-#endif
   gPmdForceScale = pmdFitScale(quizPmd, PMD_IDLE, 300, 166);
   drawPmdActM(quizPmd, PMD_IDLE, CX, 262, reveal ? millis() : 0, true, !reveal, 8);
   gPmdForceScale = 0;
@@ -9095,14 +6962,7 @@ void renderShowdown() {
     if (reveal && sdOpts[i] == sdAnswer) bg = UI_BAR_OK;
     else if (i == sdMyPick && sdOpts[i] != sdAnswer) bg = UI_BAR_BAD;
     else if (locked) bg = UI_TRACK;  // answered: out until the round ends
-#if UI_V2
     v2QuizOption(83 + inset, y, 300 - 2 * inset, SD_OPT_H, dexName(sdOpts[i]), bg == UI_TRACK ? C565(0x8e, 0x8c, 0x96) : bg);  // V2
-#else
-    gfx->fillRoundRect(83 + inset, y, 300 - 2 * inset, SD_OPT_H, 10, bg);
-    gfx->setTextColor(bg == UI_WHITE || bg == UI_TRACK ? UI_INK : UI_WHITE);
-    setCur(centerX(dexName(sdOpts[i]), 2), y + 15);
-    printT(dexName(sdOpts[i]));
-#endif
   }
   drawIntroCard();
   gfx->flush();
@@ -9115,7 +6975,6 @@ void renderShowdown() {
 #define VB_READY_MS 1800UL
 #define VB_SERVE_MS 1300UL  // the ball sits on your Pokemon for a moment, then off it goes
 #define VB_POINT_MS 1800UL
-#define VB_DONE_MS 6000UL
 
 void vbSend(BuddyType type, bool ack, uint8_t seq) {
   BuddyMsg m = buddyMsg(type);
@@ -9300,7 +7159,6 @@ void vbTick(uint32_t now) {
     case VB_AWAY:
       break;
     case VB_DONE:
-      if (t > VB_DONE_MS V2_AND(false)) vbClose();  // (V2: it waits for PLAY AGAIN! or the X)
       break;
   }
   vbStepT = now;
@@ -9313,26 +7171,13 @@ void renderVolley() {
   char b[48];
   gfx->setTextColor(UI_WHITE);
   setSize(2);
-#if UI_V2
   if (vbPhase != VB_DONE) v2ScorePanel(vbMine, vbTheirs, 30);  // V2: the score in a panel over the net
-#else
-  snprintf(b, sizeof(b), "%s %u : %u %s", T(S_SD_YOU_LBL), vbMine, vbTheirs, buddyName());
-  setCur(centerX(b, 2), 36);
-  printT(b);
-#endif
   // your Pokemon is the paddle
   gPmdForceScale = 2;
-#if UI_V2
   if (vbPhase != VB_DONE) v2PetShadow((int)vbPadX, VB_GROUND_Y, 26);  // V2: its soft shadow on the court (none at its end)
-#else
-  int vbH = sceneHour();
-  gfx->fillRoundRect((int)vbPadX - 26, VB_GROUND_Y - 5, 52, 10, 5, sceneShade(C565(0x1c, 0x50, 0x28), vbH < 6 || vbH >= 20));  // its shadow on the court
-#endif
   uint8_t act = vbPadVX > 40 ? PMD_WALKR : vbPadVX < -40 ? PMD_WALKL : PMD_IDLE;
   if (!pmd.has(act)) act = PMD_IDLE;
-#if UI_V2
   if (vbPhase != VB_DONE)  // V2: at its end the two stand face to face instead (v2BuddyResult())
-#endif
   drawPmdAct(act, (int)vbPadX, VB_GROUND_Y, millis(), true, false, 2);
   gPmdForceScale = 0;
   // the home screen's Poke Ball: 18 px drawn x4 (a little over the 64 px it hits with), and x2 on the paddle
@@ -9355,7 +7200,6 @@ void renderVolley() {
       line = b;
     }
   }
-#if UI_V2
   if (line) v2SmallPanel(line, 186);  // V2: in a small panel
   if (vbPhase == VB_DONE) {  // V2: as Showdown's end, over the dimmed court
     if (vbMine > vbTheirs) strlcpy(b, T(S_SD_WIN), sizeof(b));
@@ -9365,13 +7209,6 @@ void renderVolley() {
     gfx->flush();
     return;
   }
-#else
-  if (line) {
-    gfx->setTextColor(UI_WHITE);
-    setCur(centerX(line, 2), 190);
-    printT(line);
-  }
-#endif
   if (vbPhase == VB_DONE) {
     gfx->fillRoundRect(CX - 150, 130, 300, 150, 18, UI_BG_DAY);
     gfx->setTextColor(UI_INK);
@@ -9390,89 +7227,15 @@ void renderVolley() {
 }
 
 void renderTrade() {
-#if UI_V2  // V2: on the dimmed bedroom
+  // V2: on the dimmed bedroom
   if (trPhase == TR_PICK) v2TradePick(trPage, (pet.formCount() + 15) / 16, bPeers[bCur].reg);
   else if (trPhase == TR_DONE) v2TradeDone(trTheirs, trTheirsShiny);
   else v2TradeReview(trMine, trMineShiny, pet.starsOf(trMine, trMineShiny), trTheirs, trTheirsShiny, trTheirsStars, trPhase == TR_REVIEW);
   gfx->flush();
   return;
-#endif
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-  if (trPhase == TR_PICK) {
-    // every form you have, a shiny one glowing; yours can't be traded. Green dot: the buddy
-    // is missing that species
-    gfx->setTextColor(UI_INK);
-    setSize(2);
-    setCur(centerX(T(S_TRADE_PICK), 2), 50);
-    printT(T(S_TRADE_PICK));
-    for (int i = 0; i < 16; i++) {
-      bool shiny;
-      int16_t dex = pet.formAt(trPage * 16 + i, shiny);
-      if (!dex) break;
-      int x = GAL_X + (i % 4) * GAL_CELL, y = GAL_Y + (i / 4) * GAL_CELL;
-      if (const uint8_t *t = thumbs.getForm(dex, shiny)) drawThumb(t, x, y, 2, !pet.canTrade(dex, shiny));
-      if (shiny) drawShinyMark(x, y, GAL_CELL);
-      if (!buddyRegHas(bPeers[bCur].reg, dex)) gfx->fillCircle(x + 66, y + 66, 7, UI_BAR_OK);
-    }
-    int pages = (pet.formCount() + 15) / 16;
-    for (int i = 0; pages > 1 && i < pages; i++) {
-      int dotX = CX + (i * 2 - (pages - 1)) * 7;
-      if (i == trPage) gfx->fillCircle(dotX, GAL_DOTS_Y, 4, UI_INK);
-      else gfx->drawCircle(dotX, GAL_DOTS_Y, 3, UI_INK);
-    }
-    drawCloseButtonAt(GAL_CLOSE_Y);  // backing out of the trade, as in the Pokedex
-    gfx->flush();
-    return;
-  }
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  if (trPhase == TR_DONE) {
-    char b[44];
-    snprintf(b, sizeof(b), T(S_TRADE_GOT_FMT), dexName(trTheirs));
-    if (const uint8_t *t = thumbs.getForm(trTheirs, trTheirsShiny)) drawThumb(t, CX - GAL_CELL / 2 - 40, 120, 4, false);
-    if (trTheirsShiny) drawShinyMark(CX - 84, 116, 168);
-    catchBanner(b, C565(0x1e, 0x7d, 0x3c));
-    gfx->flush();
-    return;
-  }
-  // what you give on the left, what you receive on the right (not yet known: a question mark)
-  setCur(136 - textW(T(S_TRADE_GIVE), 2) / 2, 92);
-  printT(T(S_TRADE_GIVE));
-  setCur(330 - textW(T(S_TRADE_GET), 2) / 2, 92);
-  printT(T(S_TRADE_GET));
-  if (const uint8_t *t = thumbs.getForm(trMine, trMineShiny)) drawThumb(t, 136 - GAL_CELL / 2, 124, 3, false);
-  if (trMineShiny) drawShinyMark(136 - 62, 120, 124);
-  setCur(136 - textW(dexName(trMine), 2) / 2, 216);
-  printT(dexName(trMine));
-  drawStars(136, 248, 7, pet.starsOf(trMine, trMineShiny));
-  if (trTheirs) {
-    if (const uint8_t *t = thumbs.getForm(trTheirs, trTheirsShiny)) drawThumb(t, 330 - GAL_CELL / 2, 124, 3, false);
-    if (trTheirsShiny) drawShinyMark(330 - 62, 120, 124);
-    setCur(330 - textW(dexName(trTheirs), 2) / 2, 216);
-    printT(dexName(trTheirs));
-    drawStars(330, 248, 7, trTheirsStars);
-  } else {
-    setSize(5);
-    setCur(330 - textW("?", 5) / 2, 146);
-    printT("?");
-    setSize(2);
-  }
-  if (trPhase == TR_REVIEW) {
-    gfx->fillRoundRect(CX - 110, PICK_BTN_Y - 40, 220, PICK_BTN_H, 14, C565(0x1e, 0x7d, 0x3c));
-    gfx->setTextColor(UI_WHITE);
-    setCur(centerX(T(S_BUDDY_TRADE), 2), PICK_BTN_Y - 21);
-    printT(T(S_BUDDY_TRADE));
-    drawCloseButton();
-  } else {
-    setCur(centerX(T(S_BUDDY_WAITING), 2), PICK_BTN_Y);
-    printT(T(S_BUDDY_WAITING));
-    drawCloseButton();  // waiting for the buddy can always be given up
-  }
-  gfx->flush();
 }
 
 void tradeTap(int16_t x, int16_t y) {
-#if UI_V2
   if (trPhase == TR_PICK) {
     if (int a = pageArrowAt(x, y, trPage, (pet.formCount() + 15) / 16, V2_PAGE_ARROW_Y)) {  // V2: the side buttons turn the page
       sfxPlay(SFX_TAP);
@@ -9481,7 +7244,6 @@ void tradeTap(int16_t x, int16_t y) {
     }
     v2TradeTap(x, y);  // V2's squares are smaller: a tap in one lands in V1's
   }
-#endif
   if (trPhase == TR_PICK) {
     if (y < 66 || closeHitAt(x, y, GAL_CLOSE_Y)) {  // the close button (or the header) = exit, as in the Pokedex
       sfxPlay(SFX_TAP);
@@ -9518,11 +7280,9 @@ void tradeTap(int16_t x, int16_t y) {
   } else if (trPhase != TR_DONE && closeHit(x, y)) {  // waiting for the buddy: the X backs out
     sfxPlay(SFX_TAP);
     tradeClose(true);
-#if UI_V2
   } else if (trPhase == TR_DONE && closeHit(x, y)) {  // V2: what came stays up till its X
     sfxPlay(SFX_TAP);
     tradeClose(false);
-#endif
   }
 }
 
@@ -9532,7 +7292,7 @@ void tradeTap(int16_t x, int16_t y) {
 #define ZONE_GRID_X 107
 #define ZONE_CELL 84
 #define ZONE_PAGE DEXG_PAGE
-#if UI_V2  // V2: the grid in a panel under the board, Search under it, the page as dots above the X at 422
+// V2: the grid in a panel under the board, Search under it, the page as dots above the X at 422
 #define ZONE_BTN_X 98   // V2: Search as wide as the grid's white panel, rims and all (Fedor)
 #define ZONE_BTN_W 271
 #define ZONE_GRID_Y 72
@@ -9541,15 +7301,6 @@ void tradeTap(int16_t x, int16_t y) {
 #define ZONE_PAGE_Y 386
 #define ZONE_CLOSE_Y V2_CLOSE_Y
 static_assert(ZONE_BTN_Y - 2 == V2_SLIDE_ZONE_Y && DEXG_PAGE_Y - 2 == V2_SLIDE_DEX_Y, "slide_v2.h keeps these still");
-#else
-#define ZONE_BTN_X 123
-#define ZONE_BTN_W 220
-#define ZONE_GRID_Y 76
-#define ZONE_BTN_Y 334
-#define ZONE_BTN_H 44
-#define ZONE_PAGE_Y 384
-#define ZONE_CLOSE_Y 430  // a little lower than elsewhere, to make room for the page
-#endif
 
 // two rows of three: the five zones, then Wild Encounter (a wild Pokemon from anywhere, like the
 // Knomi's button; the apps and the web have none), met at home: its window is your Pokemon's own
@@ -9572,9 +7323,7 @@ void openZones() {
   }
   if (zoneArt) zoneHomeDraw(zoneArt + ZONE_RANDOM * ZONE_ART * ZONE_ART);  // each time: day or night, its Pokemon
   zoneScreen = ZS_PICK;
-#if UI_V2
   v2IslePage = 0;  // V2: the island's page first (Knomi Tower is the second)
-#endif
 }
 
 // the entry opened from a zone's grid, like the Pokedex's (0 = the grid)
@@ -9585,9 +7334,7 @@ void zoneDetailClose() {
 }
 
 void zoneBack() {
-#if UI_V2
   if (zoneScreen == ZS_TOWER) { towerBack(); return; }  // V2: Knomi Tower goes back a step
-#endif
   sfxPlay(SFX_TAP);
   if (zoneDetail) {
     zoneDetailClose();
@@ -9599,7 +7346,6 @@ void zoneBack() {
 }
 
 void zoneTurnPage(int dir) {
-#if UI_V2
   if (zoneScreen == ZS_PICK) {  // V2: Travel's two pages, the island and Knomi Tower's islet
     if ((dir > 0) != (v2IslePage != 0)) sfxPlay(SFX_TAP);
     v2IslePage = dir > 0 ? 1 : 0;
@@ -9609,7 +7355,6 @@ void zoneTurnPage(int dir) {
     v2DexEntryStep(dir);
     return;
   }
-#endif
   if (zoneScreen != ZS_ZONE || zoneDetail) return;
   int pages = (zoneSize(zoneCur) + ZONE_PAGE - 1) / ZONE_PAGE;
   int np = (int)zonePage + dir;
@@ -9646,13 +7391,9 @@ void zoneBattleEnded() {
 }
 
 void zoneTap(int16_t x, int16_t y) {
-#if UI_V2
   if (zoneScreen == ZS_TOWER) { towerTap(x, y); return; }  // V2: Knomi Tower
-#endif
   if (zoneDetail) {
-#if UI_V2
     if (v2DexEntryArrowTap(x, y)) return;  // V2: the next entry or the last
-#endif
     if (dexArtPet(x, y)) return;  // its sprite: a pat
     zoneDetailClose();            // anywhere else: back to the zone
     return;
@@ -9662,21 +7403,15 @@ void zoneTap(int16_t x, int16_t y) {
     return;
   }
   if (zoneScreen == ZS_PICK) {
-#if UI_V2
     if (v2TravelTap(x, y)) return;  // V2: the page arrows, and Knomi Tower on the second page
-#endif
     int z = zonePickAt(x, y);
     if (z < 0) return;
     sfxPlay(SFX_TAP);
     if (z == ZONE_RANDOM) {
       zoneScreen = ZS_NONE;
-#if UI_V2
       bFromIsland = true;  // V2: its end comes back to the island
       startBattle();
       if (!battleOpen) bFromIsland = false, zoneScreen = ZS_PICK;  // without a sprite there is no battle
-#else
-      startBattle();  // its end comes back home, as from the button
-#endif
       return;
     }
     zoneCur = z;
@@ -9703,19 +7438,6 @@ void zoneTap(int16_t x, int16_t y) {
   dexDetailLoad(dex);
 }
 
-// a round window onto a picture (art: (2r) x (2r)), with an ink rim; without the picture, a plain disc
-void drawRoundArt(const uint16_t *art, int cx, int cy, int r, uint16_t fallback) {
-  if (art) {
-    for (int dy = -r; dy < r; dy++) {
-      int half = (int)sqrtf(r * r - (dy + 0.5f) * (dy + 0.5f));
-      gfx->draw16bitRGBBitmap(cx - half, cy + dy, (uint16_t *)art + (dy + r) * 2 * r + r - half, half * 2, 1);
-    }
-  } else {
-    gfx->fillCircle(cx, cy, r, fallback);
-  }
-  for (int i = 0; i < 3; i++) gfx->drawCircle(cx, cy, r + i - 1, UI_INK);
-}
-
 void zoneDrawIcon(uint8_t z) {
   uint16_t plain = z == ZONE_RANDOM ? C565(0xd8, 0x2a, 0x2a) : ZONE_COLOR[z];
   drawTile(zoneArt ? zoneArt + z * ZONE_ART * ZONE_ART : nullptr, ZONE_XY[z][0], ZONE_XY[z][1], ZONE_ICON_R, plain);
@@ -9730,14 +7452,7 @@ void zoneHomeDraw(uint16_t *art) {
 
 // the pick under a tap (its window or its name): a zone, ZONE_RANDOM, or -1
 int zonePickAt(int16_t x, int16_t y) {
-#if UI_V2
   return v2IsleAt(x, y);  // V2: a wedge of the round island, or the Wild patch in the middle
-#endif
-  for (int z = 0; z < ZONE_PICKS; z++) {
-    int dx = x - ZONE_XY[z][0], dy = y - ZONE_XY[z][1];
-    if ((abs(dx) < ZONE_ICON_R + 8 && abs(dy) < ZONE_ICON_R + 8) || (abs(dx) < 62 && dy > 0 && dy < ZONE_ICON_R + 44)) return z;
-  }
-  return -1;
 }
 
 void renderZones() {
@@ -9747,7 +7462,6 @@ void renderZones() {
     return;
   }
   char b[32];
-#if UI_V2
   if (zoneScreen == ZS_TOWER) {  // V2: Knomi Tower (tower_v2.h)
     towerRender();
     gfx->flush();
@@ -9759,9 +7473,6 @@ void renderZones() {
     return;
   }
   v2ZoneBack(zoneCur);  // a zone: its scene dimmed behind its grid
-#else
-  gfx->fillScreen(UI_BG_DAY);  // to the edge: no black ring
-#endif
   gfx->setTextColor(UI_INK);
   setSize(3);
   if (zoneScreen == ZS_PICK) {
@@ -9803,12 +7514,8 @@ void renderZones() {
   for (int i = 0; i < DEXG_PAGE; i++) dex[i] = zoneMember(zoneCur, zonePage * ZONE_PAGE + i);
   dexGridSync(dex);
   snprintf(b, sizeof(b), "%d/%d", pet.zoneCaught(zoneCur), zoneSize(zoneCur));
-#if UI_V2
   char zb[32];
   v2GridHead(v2Caps(T(ZONE_NAME[zoneCur]), zb, sizeof(zb)), b, ZONE_GRID_X, ZONE_GRID_Y, ZONE_CELL, 3);  // V2: the board, a white panel
-#else
-  drawDexGridHead(b, T(ZONE_NAME[zoneCur]), 26);
-#endif
   for (int i = 0; i < DEXG_PAGE && dex[i]; i++) {
     int x = ZONE_GRID_X + (i % DEXG_COLS) * ZONE_CELL, y = ZONE_GRID_Y + (i / DEXG_COLS) * ZONE_CELL;
     drawDexCell(dex[i], i, x, y, ZONE_CELL);
@@ -9819,93 +7526,29 @@ void renderZones() {
       printT("*");
     }
   }
-#if UI_V2
   v2LabelButton(ZONE_BTN_X + 3, ZONE_BTN_Y + 3, ZONE_BTN_X + ZONE_BTN_W - 3, ZONE_BTN_Y + ZONE_BTN_H - 3,
                 v2Caps(T(S_ZONE_SEARCH), zb, sizeof(zb)), ZONE_COLOR[zoneCur]);  // V2: SEARCH as a V2 button; the page as dots
   int zpages = (zoneSize(zoneCur) + ZONE_PAGE - 1) / ZONE_PAGE;
   v2PageOf(zpages, zonePage, ZONE_PAGE_Y);
-#else
-  gfx->fillRoundRect(ZONE_BTN_X, ZONE_BTN_Y, ZONE_BTN_W, ZONE_BTN_H, 14, ZONE_COLOR[zoneCur]);
-  gfx->setTextColor(UI_WHITE);
-  setSize(2);
-  setCur(centerX(T(S_ZONE_SEARCH), 2), ZONE_BTN_Y + 14);
-  printT(T(S_ZONE_SEARCH));
-  int zpages = (zoneSize(zoneCur) + ZONE_PAGE - 1) / ZONE_PAGE;
-  drawDexGridPage(zonePage, zpages, ZONE_PAGE_Y);
-#endif
   drawPageArrows(zonePage, zpages, PAGE_ARROW_Y);
   drawCloseButtonAt(ZONE_CLOSE_Y);  // how to leave, as on the zone picker
   gfx->flush();
 }
 
-void drawBattery() {
-  int pc = batPercent();
-  if (pc < 0) return;  // no battery connected
-  int x = CX - 14, y = 12, w = 24, h = 11;
-  bool charging = batCharging();
-  uint16_t col = charging ? UI_BAR_OK
-                 : (pc >= 40) ? inkColor()
-                 : (pc >= 15) ? UI_BAR_WARN
-                              : UI_BAR_BAD;
-  gfx->drawRoundRect(x, y, w, h, 2, col);
-  gfx->fillRect(x + w, y + 3, 3, 5, col);  // terminal
-  if (charging) {
-    // charging bolt (zigzag) instead of the level bar
-    uint16_t bolt = C565(0xff, 0xd9, 0x4a);
-    int bx = x + w / 2;
-    gfx->fillTriangle(bx + 3, y + 1, bx - 4, y + 6, bx + 1, y + 6, bolt);
-    gfx->fillTriangle(bx - 1, y + 5, bx + 4, y + 5, bx - 3, y + 10, bolt);
-  } else {
-    int fw = (w - 4) * pc / 100;
-    if (fw > 0) gfx->fillRect(x + 2, y + 2, fw, h - 4, col);
-  }
-}
-
 // the name, big and bold, with the level (if any) small over it, like a Pokedex entry's number; the
 // status under it
 void drawHeader(const char *name, uint16_t nameColor, const char *msg, const char *level) {
-#if UI_V2
   v2Header(name, nameColor, msg, level);
   return;
-#endif
-  drawBattery();
-  if (level) {
-    gfx->setTextColor(inkColor());
-    setSize(2);
-    setCur(centerX(level, 2), 30);
-    printT(level);
-  }
-  gfx->setTextColor(nameColor);
-  // Japanese and Korean draw sizes 2 and 3 alike: the name goes a size up there when it fits, so it
-  // stays bigger than the level (as the Pokedex entry does)
-  int ns = 3;
-  if (gCjkFont) {
-    setSize(4);  // CJK measures at the size set
-    if (textW(name, 4) <= 260) ns = 4;
-  }
-  setSize(ns);
-  int nx = centerX(name, ns), ny = ns == 4 ? 48 : 52;
-  setCur(nx, ny);
-  printT(name);
-  if (!gCjkFont) {  // drawn twice, a pixel apart: bolder (printT already does it for CJK)
-    setCur(nx + 1, ny);
-    printT(name);
-  }
-  gfx->setTextColor(inkColor());
-  setSize(2);
-  setCur(centerX(msg, 2), 90);
-  printT(msg);
 }
 
 // ceremony animation (10s): farewell = bow with hearts and it
 // walks away; runaway = it gets scared and runs off. Replaces the idle.
 void drawCeremony() {
-#if UI_V2
   if (pmd.loaded) {  // V2: it walks away up the hill and over it, hearts or rain, the goodbye panel (starter_v2.h)
     v2Departure();
     return;
   }
-#endif
   if (!pmd.loaded) { drawPet(); return; }  // fallback if there is no PMD sprite
   uint32_t now = millis();
   float t = pet.ceremonyT();               // 0..1 over the 10s
@@ -9965,12 +7608,10 @@ void drawCeremony() {
 
 // decision dialog (2 stacked buttons): evolve/keep or say goodbye/stay together
 void drawChoiceDialog() {
-#if UI_V2
   if (choiceKind == 3) {  // V2: "Start over?" says what it erases
     v2ResetDialog();
     return;
   }
-#endif
   const char *q, *o1, *o2;
   uint16_t c1, c2, t1, t2;
   if (choiceKind == 1) {  // evolution
@@ -9991,134 +7632,39 @@ void drawChoiceDialog() {
     q = T(S_FAR_Q); o1 = T(S_FAR_GO); o2 = T(S_FAR_STAY);
     c1 = UI_BAR_WARN; t1 = UI_INK; c2 = UI_BAR_OK; t2 = UI_WHITE;
   }
-#if UI_V2
   v2ChoiceDialog(q, o1, c1, t1, o2, c2, t2);  // V2: a panel over the dimmed home, V2 buttons in V1's boxes
   return;
-#endif
-  gfx->fillRoundRect(73, 156, 320, 188, 16, UI_WHITE);
-  gfx->drawRoundRect(73, 156, 320, 188, 16, UI_INK);
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(q, 2), 176);
-  printT(q);
-  gfx->fillRoundRect(93, 206, 280, 52, 12, c1);     // action button
-  gfx->setTextColor(t1);
-  setCur(centerX(o1, 2), 224);
-  printT(o1);
-  gfx->fillRoundRect(93, 268, 280, 52, 12, c2);     // keep/stay button
-  gfx->setTextColor(t2);
-  setCur(centerX(o2, 2), 286);
-  printT(o2);
 }
 
 // big red CTA button for evolving (pulses to draw attention)
 void drawEvolveButton() {
-#if UI_V2
   v2CtaButton(EVO_BTN_X, EVO_BTN_Y, EVO_BTN_W, EVO_BTN_H, T(S_EVO_TAP), C565(0xe8, 0x50, 0x3a), UI_WHITE, 1000);  // V2
   char nn[32];
   v2LabelButton(EVO_NO_X, EVO_NO_Y, EVO_NO_X + EVO_NO_W, EVO_NO_Y + EVO_NO_H, v2Caps(T(S_NOT_NOW), nn, sizeof(nn)),
                 C565(0x8e, 0x8c, 0x96));  // NOT NOW, in the grey of V1's grey buttons
-  return;
-#endif
-  uint32_t now = millis();
-  int p = (int)(5 * sinf(now * 0.006f));  // pulses: -5..5
-  int x = EVO_BTN_X - p, y = EVO_BTN_Y - p, w = EVO_BTN_W + 2 * p, h = EVO_BTN_H + 2 * p;
-  gfx->fillRoundRect(x, y, w, h, 18, UI_BAR_BAD);
-  gfx->drawRoundRect(x, y, w, h, 18, UI_WHITE);
-  gfx->drawRoundRect(x + 2, y + 2, w - 4, h - 4, 16, UI_WHITE);
-  gfx->setTextColor(UI_WHITE);
-  setSize(3);
-  const char *t = T(S_EVO_TAP);
-  setCur(centerX(t, 3), y + h / 2 - 11);
-  printT(t);
 }
 
 // gold farewell CTA button: "<name> wants to tell you something..."
 void drawFarewellButton() {
-#if UI_V2
-  {  // V2: a gold V2 button under the pet
-    char fb[52];
-    snprintf(fb, sizeof(fb), T(S_FAREWELL_BTN), pet.nick[0] ? pet.nick : dexName(pet.speciesId));
-    v2CtaButton(FAR_BTN_X, FAR_BTN_Y, FAR_BTN_W, FAR_BTN_H, fb, C565(0xf0, 0xc0, 0x4a), UI_INK, 1250);
-    return;
-  }
-#endif
-  uint32_t now = millis();
-  int p = (int)(4 * sinf(now * 0.005f));
-  int x = FAR_BTN_X - p, y = FAR_BTN_Y - p, w = FAR_BTN_W + 2 * p, h = FAR_BTN_H + 2 * p;
-  gfx->fillRoundRect(x, y, w, h, 16, UI_BAR_WARN);
-  gfx->drawRoundRect(x, y, w, h, 16, UI_INK);
-  char buf[52];
-  const char *nm = pet.nick[0] ? pet.nick : dexName(pet.speciesId);
-  snprintf(buf, sizeof(buf), T(S_FAREWELL_BTN), nm);
-  gfx->setTextColor(UI_INK);
-  setSize(2);
-  setCur(centerX(buf, 2), y + h / 2 - 8);
-  printT(buf);
+  // V2: a gold V2 button under the pet
+  char fb[52];
+  snprintf(fb, sizeof(fb), T(S_FAREWELL_BTN), pet.nick[0] ? pet.nick : dexName(pet.speciesId));
+  v2CtaButton(FAR_BTN_X, FAR_BTN_Y, FAR_BTN_W, FAR_BTN_H, fb, C565(0xf0, 0xc0, 0x4a), UI_INK, 1250);
 }
 
 // grim runaway CTA button from neglect: "<name> feels abandoned..."
 // (sad ending: dark blue-gray, slow muted pulse)
 void drawRunawayButton() {
-#if UI_V2
-  {  // V2: a dark slate V2 button under the pet, slow
-    char rb[52];
-    snprintf(rb, sizeof(rb), T(S_RUNAWAY_BTN), pet.nick[0] ? pet.nick : dexName(pet.speciesId));
-    v2CtaButton(FAR_BTN_X, FAR_BTN_Y, FAR_BTN_W, FAR_BTN_H, rb, C565(0x3a, 0x44, 0x5a), C565(0xc8, 0xd2, 0xe0), 2000);
-    return;
-  }
-#endif
-  uint32_t now = millis();
-  int p = (int)(3 * sinf(now * 0.003f));
-  int x = FAR_BTN_X - p, y = FAR_BTN_Y - p, w = FAR_BTN_W + 2 * p, h = FAR_BTN_H + 2 * p;
-  gfx->fillRoundRect(x, y, w, h, 16, C565(0x3a, 0x44, 0x5a));
-  gfx->drawRoundRect(x, y, w, h, 16, C565(0x70, 0x80, 0x98));
-  char buf[52];
-  const char *nm = pet.nick[0] ? pet.nick : dexName(pet.speciesId);
-  snprintf(buf, sizeof(buf), T(S_RUNAWAY_BTN), nm);
-  gfx->setTextColor(C565(0xc8, 0xd2, 0xe0));
-  setSize(2);
-  setCur(centerX(buf, 2), y + h / 2 - 8);
-  printT(buf);
+  // V2: a dark slate V2 button under the pet, slow
+  char rb[52];
+  snprintf(rb, sizeof(rb), T(S_RUNAWAY_BTN), pet.nick[0] ? pet.nick : dexName(pet.speciesId));
+  v2CtaButton(FAR_BTN_X, FAR_BTN_Y, FAR_BTN_W, FAR_BTN_H, rb, C565(0x3a, 0x44, 0x5a), C565(0xc8, 0xd2, 0xe0), 2000);
 }
 
 // epic evolution animation: radial halo + spinning rays + accelerating blink of the
 // sprite + sparks shooting out + final flash
 void drawEvolveFX(uint32_t now) {
-#if UI_V2
   return;  // V2: drawn over everything at the end of the home's frame (v2EvolveFX)
-#endif
-  float t = pet.evolveT();          // 0..1
-  int cx = CX, cy = PET_GROUND - 96;
-
-  // radial halo that grows and pulses
-  int halo = 36 + (int)(t * 150) + (int)(8 * sinf(now * 0.02f));
-  for (int k = 0; k < 4; k++) {
-    int r = halo - k * 7;
-    if (r > 0) gfx->drawCircle(cx, cy, r, UI_WHITE);
-  }
-  // spinning rays from the pet's center
-  float base = now * 0.004f;
-  for (int i = 0; i < 12; i++) {
-    float a = base + i * (float)(PI / 6);
-    int len = 90 + (int)(70 * (0.5f + 0.5f * sinf(now * 0.012f + i)));
-    gfx->drawLine(cx, cy, cx + (int)(cosf(a) * len), cy + (int)(sinf(a) * len), UI_WHITE);
-  }
-  // blink between the PREVIOUS and the NEW form (silhouettes), accelerating; at the
-  // end (t>0.9) it holds on the new one for the reveal flash
-  int period = 60 + (int)(220 * (1.0f - t));
-  bool showOld = t < 0.9f && evoPmd.loaded && ((now / period) % 2) == 0;
-  if (showOld) drawPmdActM(evoPmd, PMD_IDLE, cx, PET_GROUND, 0, true, true, 5);
-  else drawPmdAct(PMD_IDLE, cx, PET_GROUND, 0, true, true, 5);
-  // sparks shooting out
-  for (int i = 0; i < 10; i++) {
-    float a = i * (float)(PI / 5) + t * 4.0f;
-    int d = (int)((now / 14 + i * 33) % 200);
-    int sx = cx + (int)(cosf(a) * d), sy = cy + (int)(sinf(a) * d);
-    gfx->fillRect(sx - 2, sy - 2, 5, 5, (i & 1) ? C565(0xff, 0xe0, 0x70) : UI_WHITE);
-  }
-  // final flash before revealing the new form
-  if (t > 0.9f) gfx->fillCircle(cx, cy, (int)(300 * (t - 0.9f) / 0.1f), UI_WHITE);
 }
 
 void drawPet() {
@@ -10220,12 +7766,7 @@ void drawBath() {
   uint32_t left = bathUntil - now;
   // the rubber duck, sitting on the ground the whole bath, rocking a little
   int duckX = bathDuckLeft ? (int)beh.x + BATH_DUCK_GAP : (int)beh.x - BATH_DUCK_GAP - 14 * BATH_DUCK_S;  // it follows the pet
-#if UI_V2
   v2BathDuck(duckX, PET_GROUND - 12 * BATH_DUCK_S - ((now / 300) % 2) * 2, bathDuckLeft);  // V2: the V2 duck, facing its Pokemon
-#else
-  drawMap(bathDuckLeft ? SPR_BATH_DUCK : SPR_BATH_DUCK_R, 14, duckX,
-          PET_GROUND - 13 * BATH_DUCK_S - ((now / 300) % 2) * 2, BATH_DUCK_S, false);
-#endif
   if (left > 800) {
     // drops fall over the pet and splash where they land, each fall a little to one side;
     // soap bubbles swell up around it, sway and drift up
@@ -10239,13 +7780,7 @@ void drawBath() {
         if (el < 500) r = r * (int)el / 500;  // they swell in
         if (r < 2) continue;
         int bx = (int)beh.x + d.x + (int)(sinf(t + d.ph) * 6), by = d.y - (int)(el / 90);
-#if UI_V2
         v2Bubble(bx, by, r);  // V2: a pixel bubble
-#else
-        gfx->fillCircle(bx, by, r, UI_WHITE);
-        gfx->drawCircle(bx, by, r, 0x7E3D);
-        gfx->fillCircle(bx - r / 3, by - r / 3, r / 4 > 1 ? r / 4 : 1, UI_BG_DAY);
-#endif
         continue;
       }
       uint32_t p = el * d.v / 100 + d.ph;  // px fallen since the bath began
@@ -10373,29 +7908,15 @@ void drawSparkles(int left, int top, int right, int bottom, uint32_t now) {
 void drawPmdActM(PmdMon &m, uint8_t actId, int cx, int groundY, uint32_t t, bool loop, bool sil, uint8_t maxS) {
   const PmdAct &a = m.acts[actId];
   if (!a.frames) return;
-#if UI_V2
   uint8_t sBase = pmdScale(m, maxS);  // V2: a big one by its height too (sdmon.cpp)
-#else
-  uint8_t sBase = m.acts[PMD_IDLE].h ? 170 / m.acts[PMD_IDLE].h : 5;
-  if (sBase < 2) sBase = 2;
-  if (sBase > maxS) sBase = maxS;
-#endif
   uint8_t s = sBase;
-#if UI_V2
   while (s > 2 && (a.base > a.top ? a.base - a.top : a.h) * s > 250) s--;  // V2: by what it draws, not its box
-#else
-  while (s > 2 && a.h * s > 250) s--;  // actions with a large frame (attack)
-#endif
   if (gPmdForceScale) s = gPmdForceScale;
   uint8_t fi = pmdFrameAt(a, t, loop);
   const uint8_t *fr = a.data + (uint32_t)fi * a.w * a.h;
   // anchor by the feet (a.base), not by the canvas height: that way actions
   // with different padding (Hurt, Eat...) all end up at the same ground height
-#if UI_V2
   int x0 = SNAP2(cx - a.w * s / 2), y0 = SNAP2(groundY - pmdFrameRise(a, fi, s));  // V2: each frame on its own feet
-#else
-  int x0 = SNAP2(cx - a.w * s / 2), y0 = SNAP2(groundY - (a.base ? a.base : a.h) * s);  // sharp on the Knomi
-#endif
   int left = a.w, right = -1, top = -1;  // what it fills, for the sparkles
   for (int r = 0; r < a.h; r++) {
     const uint8_t *row = fr + r * a.w;
@@ -10417,11 +7938,7 @@ void drawPmdAct(uint8_t actId, int cx, int groundY, uint32_t t, bool loop, bool 
 // sprites are capped by height, so a tall buddy of the same species would otherwise come out the
 // same size as yours. Yours at least step 3; theirs one step below, down to the smallest (2).
 uint8_t partyMineScale(int n) {
-#if UI_V2
   uint8_t s = pmdScale(pmd, 5);
-#else
-  uint8_t s = pmd.acts[PMD_IDLE].h ? 170 / pmd.acts[PMD_IDLE].h : 5;
-#endif
   if (s < 3) s = 3;
   uint8_t cap = partyScale(n, true);
   return s > cap ? cap : s;
@@ -10436,7 +7953,6 @@ void behNext() {
   uint32_t now = millis();
   beh.t0 = now;
   int r = random(100);
-#if UI_V2
   // V2: it doesn't wander off to the sides. It walks toward you, the world sliding by behind it (walk_v2.h),
   // for 10 to 20 s, then rests at least 8 to 16 s before the next walk
   if (beh.mode == 1) v2RestUntil = now + 8000 + random(8000);
@@ -10446,7 +7962,6 @@ void behNext() {
     return;
   }
   if (r < 35) r = 35 + random(65);  // not the walk to the side below
-#endif
   if (r < 35 && (pmd.has(PMD_WALKL) || pmd.has(PMD_WALKR))) {
     beh.mode = 1;  // walk
     beh.targetX = 150 + random(176);
@@ -10473,9 +7988,7 @@ void behNext() {
 }
 
 void drawPetPMD() {
-#if UI_V2
   if (v2Arrival()) return;  // V2: a new one walking in from behind the hill (starter_v2.h)
-#endif
   uint32_t now = millis();
 
   if (pet.evolving()) {
@@ -10498,7 +8011,6 @@ void drawPetPMD() {
   } else {
     // happy: the planner decides (idle / walk / gesture); in a row of buddies it stays put
     if (now > beh.until) behNext();
-#if UI_V2
     // V2: a walk is toward you (it stands while something stops it), buddies and visitors walking beside it
     if (beh.mode == 1) {
       act = v2Walking ? PMD_WALKD : PMD_IDLE;
@@ -10506,38 +8018,12 @@ void drawPetPMD() {
       act = (beh.mode == 2) ? beh.act : PMD_IDLE;
       loop = false;
     }
-#else
-    if (partyOthers() && beh.mode == 1) beh.mode = 0;
-    if (beh.mode != 1) walkLast = 0;  // when walking again, the time stopped isn't counted
-    if (beh.mode == 1) {
-      float d = beh.targetX - beh.x;
-      if (fabsf(d) < 4) {
-        behNext();
-        act = PMD_IDLE;
-      } else {
-        // 30 px/s by design (3 px per frame at 10 fps), measuring real time: with fewer frames
-        // per second it walks just as fast
-        uint32_t dt = walkLast ? now - walkLast : 100;
-        uint32_t cap = frameIntervalMs(powerCtx(now)) + 100;  // a bigger gap (another screen in between) is not a long step
-        if (dt > cap) dt = cap;
-        walkLast = now;
-        float step = 30.0f * dt / 1000.0f;
-        if (step > fabsf(d)) step = fabsf(d);  // a slow frame doesn't overshoot the destination
-        beh.x += d > 0 ? step : -step;
-        act = (d > 0) ? PMD_WALKR : PMD_WALKL;
-      }
-    } else {
-      act = (beh.mode == 2) ? beh.act : PMD_IDLE;
-      loop = false;
-    }
-#endif
     if (!pmd.has(act)) act = PMD_IDLE;
   }
 
   int n = partyOthers();
   int px = n ? PARTY_MINE_X : (int)beh.x;
   if (n) gPmdForceScale = partyMineScale(n);
-#if UI_V2
   int shRx = n ? 30 : 42;  // V2: a soft shadow on the grass under it...
   if (pmd.acts[PMD_IDLE].footW) {  // ...reaching past its legs where they stand wide (Ivysaur, Venusaur: hidden under it)
     uint8_t ss = gPmdForceScale ? gPmdForceScale : pmdScale(pmd, partyScale(n, true));
@@ -10548,9 +8034,6 @@ void drawPetPMD() {
   bool walkD = act == PMD_WALKD;  // walking toward you: in step with the world (walk_v2.h)
   drawPmdAct(act, px, PET_GROUND + v2Bob - v2FeedHop(), walkD ? v2WalkT() : now - beh.t0, loop || act == PMD_IDLE || walkD, false,
              partyScale(n, true));
-#else
-  drawPmdAct(act, px, PET_GROUND, now - beh.t0, loop || act == PMD_IDLE, false, partyScale(n, true));
-#endif
   gPmdForceScale = 0;
 
   if (pet.showHeart()) drawMap(SPR_HEART, 32, px + (n > 2 ? 20 : 50), PET_GROUND - (n > 2 ? 140 : 190), n > 2 ? 1 : 2, false);
@@ -10604,63 +8087,7 @@ void overlayMouth(const Species &sp, int x, int y, int s, bool open) {
 }
 
 void drawPoops() {
-#if UI_V2
   v2DrawPoops(pet.poops, partyOthers() > 0);  // V2: its own, on the grass round your Pokemon (scene_v2.h)
-#else
-  for (int i = 0; i < pet.poops; i++) {
-    drawMap(SPR_POOP, 32, 36 + i * 46, HOME_PANEL_Y - 68, 2, false);  // just over the panel
-  }
-#endif
-}
-
-void drawBars() {
-  drawBar(78, HOME_PANEL_Y + 6, T(S_BAR_FOOD), pet.fullness);
-  drawBar(244, HOME_PANEL_Y + 6, T(S_BAR_JOY), pet.joy);
-  drawBar(78, HOME_PANEL_Y + 34, T(S_BAR_ENE), pet.energy);
-  drawBar(244, HOME_PANEL_Y + 34, T(S_BAR_HYG), pet.hygiene);
-}
-
-// Gap between the label and its bar in the needs row. It was fixed
-// at 48 px, exactly what 4 Latin letters take at scale 2, with no margin. The
-// Japanese labels are wider (ごきげん is 4 kana, ~64 px) and ran
-// into the bar. It is derived from the longest label, with 48 as the floor
-// so nothing changes in Latin languages.
-// Requires text size 2 to be already set, because textW() needs it.
-static int barLabelGap() {
-  const StrId ids[] = { S_BAR_FOOD, S_BAR_JOY, S_BAR_ENE, S_BAR_HYG };
-  int width = 0;
-  for (StrId id : ids) {
-    int w = textW(T(id), 2);
-    if (w > width) width = w;
-  }
-  // below the original threshold it stays EXACTLY 48, so nothing moves in
-  // Latin languages; above it, space is added so the label can breathe
-  return width <= 48 ? 48 : width + 8;
-}
-
-void drawBar(int x, int y, const char *label, uint8_t val) {
-  gfx->setTextColor(inkColor());
-  setSize(2);
-  setCur(x, y);
-  printT(label);
-  int gap = barLabelGap();
-  // the two columns start at 78 and 244: the first one's bar has to
-  // end before the second one's label, and both are drawn the same width
-  int bw = 232 - (78 + gap);
-  if (bw > 100) bw = 100;   // with Latin labels it comes out 100, as it was
-  int bx = x + gap, bh = 15;
-  uint16_t fill = (val >= 50) ? UI_BAR_OK : (val >= 25) ? UI_BAR_WARN : UI_BAR_BAD;
-  gfx->fillRoundRect(bx, y, bw, bh, 4, UI_TRACK);
-  int fw = (bw - 4) * val / 100;
-  if (fw > 0) gfx->fillRoundRect(bx + 2, y + 2, fw, bh - 4, 3, fill);
-}
-
-// the icons on their own, no box; while sleeping only LIGHT works, the rest are shadows
-void drawButtons() {
-  for (int i = 0; i < BTN_COUNT; i++) {
-    bool off = pet.sleeping && i != BTN_LIGHT;
-    drawMap(buttons[i].icon, HOME_ICON_N, buttons[i].cx - BTN_HALF, buttons[i].cy - BTN_HALF, 3, off);
-  }
 }
 
 const char *eggMsg() {
@@ -10672,7 +8099,6 @@ const char *eggMsg() {
 }
 
 const char *statusMsg() {
-#if UI_V2
   // V2: more lines (Fedor). A state with more than one takes turns, 20 s each; when all is well, the happy ones take
   // turns with whatever fits the moment: full, just washed, late at night, the morning
   uint32_t turn = millis() / 20000;
@@ -10697,37 +8123,15 @@ const char *statusMsg() {
   if (h >= 22 || (h >= 0 && h < 5)) pool[n++] = S_ST_SLEEPY;
   if (h >= 6 && h < 9) pool[n++] = S_ST_MORNING;
   return T(pool[turn % n]);
-#else
-  if (pet.evolving()) return T(S_EVOLVING);
-  if (bathUntil) return "Splish splash!";  // universal onomatopoeia
-  if (pet.sleeping) return "Zzz...";
-  if (pet.eating()) return T(S_EATING);
-  if (pet.showHeart()) return T(S_LIKES);
-  if (pet.fullness < 25) return T(S_HUNGRY);
-  if (pet.hygiene < 25) return T(S_NEEDS_BATH);
-  if (pet.energy < 25) return T(S_EXHAUSTED);
-  if (pet.joy < 25) return T(S_SAD);
-  if (pet.weight > 60) return T(S_CHUBBY);
-  if (pet.shiny && pet.ageMinutes < 15) return T(S_IS_SHINY);
-  return T(S_HAPPY);
-#endif
 }
 
 // ---------- the close button ----------
 // One round X, at the bottom in the middle, closes whatever it's on: the menus, the card, the
 // Pokedex, the zones, the clock. (Swipes still work too; games in play keep swiping up to quit.)
 void drawCloseButtonAt(int cy) {  // a gray disc with a white X
-#if UI_V2
   (void)cy;
   v2CloseX();  // V2: the red pixel X, always at (233, 422)
   return;
-#endif
-  gfx->fillCircle(CX, cy, CLOSE_R, C565(0x8e, 0x8c, 0x96));
-  const int a = 9;
-  for (int o = -1; o <= 1; o++) {
-    gfx->drawLine(CX - a + o, cy - a, CX + a + o, cy + a, UI_WHITE);
-    gfx->drawLine(CX + a + o, cy - a, CX - a + o, cy + a, UI_WHITE);
-  }
 }
 void drawCloseButton() { drawCloseButtonAt(CLOSE_Y); }
 // Much more generous than what's drawn, mostly sideways and below where nothing else is: at the
@@ -10778,12 +8182,10 @@ void drawMapTurned(const char *const *map, int n, int s, float deg, float px, fl
 
 // the game screens' tap, by whichever is open (same order as handleTouch checks them)
 void gameTap(int16_t x, int16_t y) {
-#if UI_V2
   if (v2GameEnd()) {  // V2: any game's end: PLAY AGAIN! or the X
     if (int k = v2GameEndTap(x, y)) v2GameEndDo(k);
     return;
   }
-#endif
   if (sdOpen) sdTap(x, y);
   else if (vbOpen) vbTap();
   else if (battleOpen) battleTap(x, y);
@@ -10814,7 +8216,6 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return false;
   }
   // --- game screens (handleTouch's first branch) ---
-#if UI_V2
   if (int by = v2GameEnd()) {  // V2: a game's end: PLAY AGAIN! and the X
     int k = v2GameEndTap(x, y);
     if (k == 1) return pressSet(t, V2_AGAIN_X0, by, V2_AGAIN_X1 - V2_AGAIN_X0, V2_AGAIN_H, T(S_PLAY_AGAIN));
@@ -10825,12 +8226,9 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     }
     return k == 2 && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
   }
-#endif
   if (battleOpen) {
     if (bPhase == BP_RESULT && closeHit(x, y)) return pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
-#if UI_V2
     if (bPhase == BP_AIM) return v2PickPress(x, y, t);  // V2: THROW, or a ball (master_v2.h)
-#endif
     if (bPhase != BP_CHOOSE) return false;
     if (y >= 392 && x >= 160 && x <= 306) return !bRunFailed && pressSet(t, 160, 394, 146, 38, T(S_BTL_RUN));
     if (y < 344 || y > 386) return false;
@@ -10857,67 +8255,40 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   }
   if (gamesMenuOpen) {
     int g = gameAt(x, y);
-#if UI_V2
     if (g < 0) return v2PressNav(x, y, t, 0, 0, 0, true);  // V2: its X
-#endif
     if (g < 0) return false;
-#if UI_V2
     int k = v2CartOfGame(g);  // V2: round the cartridge
     return pressSet(t, V2_CART_XY[k][0] - 5, V2_CART_XY[k][1] - 5, 115, 140, gameLabel(g));
-#endif
-    return pressSet(t, GAME_XY[g][0] - GAME_ICON_R, GAME_XY[g][1] - GAME_ICON_R, 2 * GAME_ICON_R, 2 * GAME_ICON_R, gameLabel(g));
   }
-#if UI_V2
   if (zoneScreen == ZS_TOWER) return towerPressAt(x, y, t);  // V2: Knomi Tower: its buttons, the Pokemon to pick, the X (tower_v2.h)
-#endif
   if (zoneScreen == ZS_PICK) {
-#if UI_V2
     if (int r = v2TravelPressAt(x, y, t)) return r > 0;  // V2: Travel's page arrow, and Knomi Tower's page (tower_v2.h)
-#endif
     int z = zonePickAt(x, y);
-#if UI_V2
     if (z < 0) return v2PressNav(x, y, t, 0, 0, 0, true);  // V2: Travel's X
-#endif
     if (z < 0) return false;
-#if UI_V2
     int16_t bx, by, bw;
     v2IsleTagBox(z, bx, by, bw);  // V2: round the wedge's tag
     return pressSet(t, bx, by, bw, 44, z == ZONE_RANDOM ? T(S_RANDOM_BATTLE) : T(ZONE_NAME[z]));
-#endif
-    return pressSet(t, ZONE_XY[z][0] - ZONE_ICON_R, ZONE_XY[z][1] - ZONE_ICON_R, 2 * ZONE_ICON_R, 2 * ZONE_ICON_R,
-                    z == ZONE_RANDOM ? T(S_RANDOM_BATTLE) : T(ZONE_NAME[z]));
   }
   if (zoneScreen) {
-#if UI_V2
     if (zoneDetail) return v2PressDexEntry(x, y, t);  // V2: an entry's side buttons and its X
-#endif
     if (zoneDetail) return false;  // an entry: tap anywhere to go back
     if (y >= ZONE_BTN_Y && y < ZONE_BTN_Y + ZONE_BTN_H && x >= ZONE_BTN_X && x < ZONE_BTN_X + ZONE_BTN_W)
       return pressSet(t, ZONE_BTN_X, ZONE_BTN_Y, ZONE_BTN_W, ZONE_BTN_H, T(S_ZONE_SEARCH));
     if (int d = pageArrowAt(x, y, zonePage, (zoneSize(zoneCur) + ZONE_PAGE - 1) / ZONE_PAGE, PAGE_ARROW_Y))
       return pressSet(t, CX + d * pageArrowDx(PAGE_ARROW_Y) - CLOSE_R, PAGE_ARROW_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, d < 0 ? "<" : ">");
-#if UI_V2
     if (v2PressNav(x, y, t, 0, 0, 0, true, ZONE_CLOSE_Y)) return true;  // V2: its X
-#endif
     return false;  // Pokedex grids (here and below) swipe between pages: a slow swipe must not pick a square
   }
   if (gameOpen || runOpen || surfOpen || dungeonOpen || vbOpen) return false;  // aiming, jumping, surfing, walking, volleying: no buttons
 
   // --- everything else (same order as onTap) ---
   if (pet.awaitingStarter()) {
-#if UI_V2
     if (int b = v2StarterBtnAt(x, y))  // V2: the question's YES and BACK
       return pressSet(t, V2_SQ_BTN_X[b - 1][0], V2_SQ_BTN_Y, V2_SQ_BTN_X[b - 1][1] - V2_SQ_BTN_X[b - 1][0], V2_SQ_BTN_H, T(b == 1 ? S_YES : S_BACK_BTN));
     return false;
-#endif
-    for (int i = 0; i < 3; i++) {
-      int ry = STARTER_ROW_Y + i * (STARTER_ROW_H + STARTER_ROW_GAP);
-      if (pressIn(x, y, 70, ry, 326, STARTER_ROW_H)) return pressSet(t, 70, ry, 326, STARTER_ROW_H, dexName(STARTER_DEX[i]));
-    }
-    return false;
   }
   if (pet.awaitingEggPick()) {
-#if UI_V2
     if (int b = v2PickBtnAt(x, y)) {  // V2: the question's YES and BACK, CHOOSE, the X
       if (b <= 2) return pressSet(t, V2_SQ_BTN_X[b - 1][0], V2_SQ_BTN_Y, V2_SQ_BTN_X[b - 1][1] - V2_SQ_BTN_X[b - 1][0], V2_SQ_BTN_H, T(b == 1 ? S_YES : S_BACK_BTN));
       if (b == 3) return pressSet(t, CX - 97, V2_PICK_BTN_Y, 194, V2_PICK_BTN_H, T(S_CHOOSE_BTN));
@@ -10926,13 +8297,6 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     if (!eggPickDetail) {
       if (int d = pageArrowAt(x, y, eggPickPage, v2PickPages(), v2PickArrowY()))  // (level with its grid)
         return pressSet(t, CX + d * pageArrowDx(v2PickArrowY()) - CLOSE_R, v2PickArrowY() - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, d < 0 ? "<" : ">");
-    }
-    return false;
-#endif
-    if (eggPickDetail) {
-      if (y >= PICK_BTN_Y && y < PICK_BTN_Y + PICK_BTN_H && abs(x - CX) <= 110)
-        return pressSet(t, CX - 110, PICK_BTN_Y, 220, PICK_BTN_H, T(S_CHOOSE_BTN));
-      if (closeHit(x, y)) return pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
     }
     return false;
   }
@@ -10945,9 +8309,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   }
   if (buddyMenuOpen) {
     if (closeHit(x, y)) return pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
-#if UI_V2
     if (v2PressNav(x, y, t, buddyPage, 2, V2_PAGE_ARROW_Y, false)) return true;  // V2: its side buttons
-#endif
     if (buddyPage == 0) return false;
     if (abs(x - CX) > 130 || y < BUDDY_ROW_Y || y >= BUDDY_ROW_Y + BUDDY_ROWS * BUDDY_ROW_STEP) return false;
     int row = (y - BUDDY_ROW_Y) / BUDDY_ROW_STEP;
@@ -10955,18 +8317,14 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   }
   if (playMenuOpen) {
     int i = playGameAt(x, y);
-#if UI_V2
     if (i >= 0) return pressSet(t, V2_PLAY_XY[i][0] - 5, V2_PLAY_XY[i][1] - 5, 115, 140, T(PLAY_GAMES[i]));  // V2: round the cartridge
-#endif
     if (i >= 0)
       return pressSet(t, PLAY_X[i] - GAME_ICON_R, PLAY_TILE_Y - GAME_ICON_R, 2 * GAME_ICON_R, 2 * GAME_ICON_R, T(PLAY_GAMES[i]));
     if (closeHit(x, y)) return pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
     return false;
   }
   if (tradeOpen) {
-#if UI_V2
     if (trPhase == TR_PICK && v2PressNav(x, y, t, trPage, (pet.formCount() + 15) / 16, V2_PAGE_ARROW_Y, false)) return true;
-#endif
     if (trPhase == TR_PICK)
       return closeHitAt(x, y, GAL_CLOSE_Y) && pressSet(t, CX - CLOSE_R, GAL_CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
     if (trPhase == TR_DONE) return false;
@@ -10977,41 +8335,25 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return false;
   }
   if (galleryOpen) {
-#if UI_V2
     if (galleryDetail) return v2PressDexEntry(x, y, t);  // V2: an entry's side buttons and its X
-#endif
     if (galleryDetail) return false;
     if (int d = pageArrowAt(x, y, galleryPage, DEX_PAGES, PAGE_ARROW_Y))
       return pressSet(t, CX + d * pageArrowDx(PAGE_ARROW_Y) - CLOSE_R, PAGE_ARROW_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, d < 0 ? "<" : ">");
-#if UI_V2
     if (v2PressNav(x, y, t, 0, 0, 0, true, GAL_CLOSE_Y)) return true;  // V2: its X
-#endif
     return false;
   }
   if (kbOpen) {
-#if UI_V2
     V2Key k;  // V2: round the key under the finger
     int c = v2KbAt(v2NameLayer, x, y, &k);
     if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
     return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2NameLayer, buf));
-#endif
-    if (x < KB_X || y < KB_Y) return false;
-    int col = (x - KB_X) / KB_W, row = (y - KB_Y) / KB_H;
-    if (col >= KB_COLS || row >= 5) return false;
-    int i = row * KB_COLS + col;
-    if (i == 28) strlcpy(buf, "<-", sizeof(buf));
-    else if (i == 29) strlcpy(buf, "OK", sizeof(buf));
-    else { buf[0] = KB_KEYS[i]; buf[1] = 0; }
-    return pressSet(t, KB_X + col * KB_W, KB_Y + row * KB_H, KB_W - 6, KB_H - 6, buf);
   }
   if (clockOpen) {
-#if UI_V2
     if (tzPickOpen && clockPage == 0 && closeHit(x, y)) return v2PressNav(x, y, t, 0, 0, 0, true);  // the picker's X
     if (clockPage == V2_ABOUT_PAGE && v2AboutQr) return v2AboutPress(x, y, t);  // V2: a link's QR code: its X
     if (!tzPickOpen && wifiSetupState() == WS_OFF && v2PressNav(x, y, t, clockPage, V2_CLOCK_PAGES, V2_PAGE_ARROW_Y, true)) return true;
     if (clockPage == V2_ABOUT_PAGE) return v2AboutPress(x, y, t);  // V2: the links (about_v2.h)
     if (clockPage == 0 && !tzPickOpen && clockLocked()) return v2SettingsPress(x, y, t);  // V2: the rows
-#endif
 #ifdef BOARD_KNOMI_V2
     if (clockPage == 1) {
       WifiSetupState ws = wifiSetupState();
@@ -11024,7 +8366,6 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       if (ws == WS_OFF && pressIn(x, y, 96, AUTO_ROW_Y, 274, AUTO_ROW_H)) return pressSet(t, 96, AUTO_ROW_Y, 274, AUTO_ROW_H, T(S_AUTO_UPDATE));
       if (ws != WS_LIST) return false;  // the password keyboard has its own preview
       int n = wifiSetupNetCount();
-#if UI_V2
       if (int d = pageArrowAt(x, y, wifiListPage, (n + WIFI_ROWS - 1) / WIFI_ROWS, V2_PAGE_ARROW_Y))  // V2: the side buttons
         return pressSet(t, CX + d * pageArrowDx(V2_PAGE_ARROW_Y) - CLOSE_R, V2_PAGE_ARROW_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, d < 0 ? "<" : ">");
       if (y >= WIFI_ROW_Y && y < WIFI_ROW_Y + WIFI_ROWS * WIFI_ROW_H) {  // the V2 rows: narrower
@@ -11033,19 +8374,6 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       }
       if (y >= 334 && y <= 376) return x >= 170 && x <= 296 && pressSet(t, 179, 337, 109, 35, "SCAN");
       return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
-#endif
-      if (y >= WIFI_ROW_Y && y < WIFI_ROW_Y + WIFI_ROWS * WIFI_ROW_H) {
-        int r = (y - WIFI_ROW_Y) / WIFI_ROW_H, idx = wifiListPage * WIFI_ROWS + r;
-        if (idx >= n) return false;
-        return pressSet(t, 62, WIFI_ROW_Y + r * WIFI_ROW_H, 342, WIFI_ROW_H - 6, wifiSetupNet(idx));
-      }
-      if (y >= 334 && y <= 376) {
-        if (x < 170) return pressSet(t, 96, 334, 70, 40, "<");
-        if (x > 296) return pressSet(t, 300, 334, 70, 40, ">");
-        return pressSet(t, 176, 334, 114, 40, "SCAN");
-      }
-      if (y > 376 && y < 440) return pressSet(t, 150, 384, 166, 40, T(S_CANCEL));
-      return false;
     }
     if (tzPickOpen && clockPage == 0) {  // the picker: its arrows and OK
       if (int d = pageArrowAt(x, y, tzPickIdx, TIME_ZONE_COUNT, TZ_ARROW_Y))
@@ -11079,20 +8407,14 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return false;
   }
   if (pet.ceremony) return false;
-#if UI_V2
   if (cardOpen) {  // V2: the card's side buttons and X; the trophy room's
     if (!cardAch) return v2PressNav(x, y, t, cardPage, cardPageCount(), V2_PAGE_ARROW_Y, true);
     return v2PressTrophies(x, y, t);
   }
-#endif
   if (cardOpen) {
     if (cardAch && achDetail >= 0) {  // a medal's card: its X
       if (closeHit(x, y)) return pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
       return false;
-    }
-    if (cardAch V2_AND(false)) {  // a medal (V2: the trophy room has no boxes to light up: a tap anywhere opens page 1)
-      int bx, by, i = achMedalAtBox(x, y, bx, by);
-      if (i >= 0) return pressSet(t, bx, by, ACH_BOX_W, ACH_BOX_H, medalDesc(i));
     }
 #ifndef BOARD_KNOMI_V2
     if (!cardAch && cardPage == 1 && pressIn(x, y, 96, 300, 274, 40)) return pressSet(t, 96, 300, 274, 40, T(S_BTL_START));
@@ -11103,18 +8425,13 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     const StrId *o;
     static const StrId EVO[2] = { S_EVO_TAP, S_EVO_KEEP }, RESET[2] = { S_RESET_GO, S_RESET_KEEP },
                        YESNO[2] = { S_YES, S_NO }, RUN[2] = { S_RUNAWAY_CARE, S_RUNAWAY_GO }, FAR[2] = { S_FAR_GO, S_FAR_STAY };
-#if UI_V2
     static const StrId RESET2[2] = { S_RESET_KEEP, S_RESET_GO };  // V2: asking once more, KEEP comes first
     o = choiceKind == 1 ? EVO : choiceKind == 3 ? (v2ResetSure ? RESET2 : RESET) : choiceKind == 5 ? YESNO : choiceKind == 4 ? RUN : FAR;
-#else
-    o = choiceKind == 1 ? EVO : choiceKind == 3 ? RESET : choiceKind == 5 ? YESNO : choiceKind == 4 ? RUN : FAR;
-#endif
     if (pressIn(x, y, 93, 206, 280, 52)) return pressSet(t, 93, 206, 280, 52, T(o[0]));
     if (pressIn(x, y, 93, 268, 280, 52)) return pressSet(t, 93, 268, 280, 52, T(o[1]));
     return false;
   }
   if (confirmUntil) {
-#if UI_V2
     if (pressIn(x, y, V2_REL_X0, V2_REL_Y0, V2_REL_X1 - V2_REL_X0, V2_REL_Y1 - V2_REL_Y0))  // V2: RELEASE and KEEP
       return pressSet(t, V2_REL_X0, V2_REL_Y0, V2_REL_X1 - V2_REL_X0, V2_REL_Y1 - V2_REL_Y0, T(S_RELEASE_BTN));
     if (pressIn(x, y, V2_KEEP_X0, V2_REL_Y0, V2_KEEP_X1 - V2_KEEP_X0, V2_REL_Y1 - V2_REL_Y0))
@@ -11122,15 +8439,10 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     if (pet.canEvolveNow() && pressIn(x, y, V2_HEVO_X0, V2_HEVO_Y0, V2_HEVO_X1 - V2_HEVO_X0, V2_HEVO_Y1 - V2_HEVO_Y0))
       return pressSet(t, V2_HEVO_X0, V2_HEVO_Y0, V2_HEVO_X1 - V2_HEVO_X0, V2_HEVO_Y1 - V2_HEVO_Y0, T(S_EVO_TAP));
     return false;
-#endif
-    if (pressIn(x, y, 118, 252, 100, 52)) return pressSet(t, 118, 252, 100, 52, T(S_YES));
-    if (pressIn(x, y, 248, 252, 100, 52)) return pressSet(t, 248, 252, 100, 52, T(S_NO));
-    return false;
   }
   if (feedMenuUntil) {
     static const char *const *const ICON[4] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP, SPR_CANDY };
     int count = pet.canHaveCandy() ? 4 : 3;
-#if UI_V2
     (void)count;
     int item = v2FeedAt(x, y);  // V2: the seats along their arc over the icons
     if (item < 0) return false;
@@ -11138,23 +8450,14 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     v2FeedSeat(item, cx, cy);
     if (item >= v2FeedFoods()) return pressSet(t, cx - h, cy - h, 2 * h, 2 * h, T(S_REPEL));
     return pressSet(t, cx - h, cy - h, 2 * h, 2 * h, nullptr, ICON[item]);
-#else
-    int x0 = CX - count * 33;
-    if (y < FEED_Y || y > FEED_Y + 64 || x < x0 || x > x0 + count * 66) return false;
-    int item = (x - x0) / 66;
-    if (item >= count) item = count - 1;
-    return pressSet(t, x0 + item * 66, FEED_Y, 66, 64, nullptr, ICON[item]);
-#endif
   }
   if (pet.isEgg()) return false;
   if (homeModal()) {  // a medal, evolving or the goodbye is up: only its own button lights
     const char *nm = pet.nick[0] ? pet.nick : dexName(pet.speciesId);
     if (!pet.showMedal() && !pet.showMilestone() && pet.wantEvolveButton() && pressIn(x, y, EVO_BTN_X, EVO_BTN_Y, EVO_BTN_W, EVO_BTN_H))
       return pressSet(t, EVO_BTN_X, EVO_BTN_Y, EVO_BTN_W, EVO_BTN_H, T(S_EVO_TAP));
-#if UI_V2
     if (!pet.showMedal() && !pet.showMilestone() && pet.wantEvolveButton() && pressIn(x, y, EVO_NO_X, EVO_NO_Y, EVO_NO_W, EVO_NO_H))
       return pressSet(t, EVO_NO_X, EVO_NO_Y, EVO_NO_W, EVO_NO_H, T(S_NOT_NOW));  // V2: NOT NOW
-#endif
     if (!pet.showMedal() && !pet.showMilestone() && !pet.wantEvolveButton() && pressIn(x, y, FAR_BTN_X, FAR_BTN_Y, FAR_BTN_W, FAR_BTN_H)) {
       snprintf(buf, sizeof(buf), T(S_FAREWELL_BTN), nm);
       return pressSet(t, FAR_BTN_X, FAR_BTN_Y, FAR_BTN_W, FAR_BTN_H, buf);
@@ -11162,11 +8465,8 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return false;
   }
   if (partyPillAt(x, y)) {
-#if UI_V2  // V2: the round button's square, outlined round (pressOverlay); the copy by the finger has its words
+    // V2: the round button's square, outlined round (pressOverlay); the copy by the finger has its words
     pressSet(t, V2_PB_X - V2_PB_R, V2_PB_Y - V2_PB_R, 2 * V2_PB_R, 2 * V2_PB_R, T(S_PARTY_BOOST));
-#else
-    pressSet(t, 60, BUDDY_PILL_Y, 346, BUDDY_PILL_H, T(S_PARTY_BOOST));
-#endif
     t.soft = true;  // it lies where swipes down start
     return true;
   }
@@ -11175,12 +8475,8 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     int n = partyOthers(), k = 0;
     for (int i = 0; i <= bt; i++) k += bPeers[i].on;
     const char *nm = buddyNameOf(bt);
-#if UI_V2
     int gy = v2GroundAt(partyBuddyX(n, k));  // V2: standing on the hill's curve
     pressSet(t, partyBuddyX(n, k) - partyHalf(n), gy - partyTall(n), 2 * partyHalf(n), partyTall(n), nm);
-#else
-    pressSet(t, partyBuddyX(n, k) - partyHalf(n), PET_GROUND - partyTall(n), 2 * partyHalf(n), partyTall(n), nm);
-#endif
     t.soft = true;  // buddies sit where swipes start: they give way to them
     return true;
   }
@@ -11199,49 +8495,32 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
 // Drawn last on every frame (from the canvas flush): the outline on the control and its
 // large copy beside the finger, in the Wi-Fi keyboard's colours.
 void pressOverlay() {
-#if UI_V2
   v2SlideFrame();  // V2: a page turning slides; each paged menu's frame kept for it (slide_v2.h)
-#endif
-#if UI_V2 && defined(BOARD_HOST)
+#if defined(BOARD_HOST)
   v2HoverOverlay();  // V2 on a computer and the web: the control under the mouse lifted (hover_v2.h)
 #endif
   if (!pressOn) return;
   const PressTarget &t = pressT;
   const uint16_t ring = TYPE_ACCENT[TY_WATER];
-#if UI_V2  // V2: a round control's outline is a circle (its corners half its side)
+// V2: a round control's outline is a circle (its corners half its side)
 #define PRESS_RING_R(t) (t.label == T(S_PARTY_BOOST) && t.w == t.h ? t.w / 2 + 3 : 12)
-#else
-#define PRESS_RING_R(t) 12
-#endif
   for (int i = 0; i < 4; i++) gfx->drawRoundRect(t.x - 3 - i, t.y - 3 - i, t.w + 6 + 2 * i, t.h + 6 + 2 * i, PRESS_RING_R(t) + i, ring);
   if (t.icon) {
-#if UI_V2
     const int s = 6, side = HOME_ICON_N * s + 24;  // V2: 6x, so its cells land whole on the Knomi (5x didn't)
-#else
-    const int s = 5, side = HOME_ICON_N * s + 24;  // only the home buttons and the food menu carry an icon
-#endif
     PressBox b = pressPopupBox(tXl, tYl, side + 16, side + 16);
     gfx->fillRoundRect(b.x, b.y, b.w, b.h, 16, ring);
     gfx->fillRoundRect(b.x + 8, b.y + 8, side, side, 12, UI_WHITE);
-#if UI_V2
     if (t.icon == SPR_V2_HOME_GB) {  // the Game Boy, in its own colours
       v2GbIcon(SNAP2(b.x + 20), SNAP2(b.y + 20), s);
       return;
     }
-#endif
     drawMap(t.icon, HOME_ICON_N, b.x + 20, b.y + 20, s, false);
     return;
   }
   if (!t.label || !t.label[0]) return;
-#if UI_V2
   uint8_t size = 4;  // V2: 4 or 2, even sizes, crisp on the Knomi
   setSize(size);
   if (textW(t.label, size) > 340) setSize(size = 2);
-#else
-  uint8_t size = 5;
-  setSize(size);
-  while (size > 2 && textW(t.label, size) > 340) setSize(--size);
-#endif
   int16_t tw = textW(t.label, size), th = (gCjkFont ? 16 : 8) * gTextSize;
   PressBox b = pressPopupBox(tXl, tYl, tw + 40, th + 36);
   gfx->fillRoundRect(b.x, b.y, b.w, b.h, 16, ring);

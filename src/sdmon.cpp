@@ -1,8 +1,6 @@
 #include "sdmon.h"
 #include "pin_config.h"
-#if UI_V2
 #include <new>  // (placement new: PmdSide)
-#endif
 #ifdef BOARD_HOST
 #include "../host/host_pak.h"
 #elif defined(BOARD_KNOMI_V2)
@@ -15,10 +13,8 @@
 bool sdReady = false;
 bool sdDirty = false;
 SdThumbs thumbs;
-#if UI_V2
 uint16_t gPmdNoPal[256];
 PmdAct gPmdNoActs[PMD_NACTS];
-#endif
 
 bool PmdMon::load(uint8_t dexNum, bool shiny) {
   unload();
@@ -43,13 +39,11 @@ bool PmdMon::load(uint8_t dexNum, bool shiny) {
     return false;
   }
   f.close();
-#if UI_V2
   side = (PmdSide *)ps_malloc(sizeof(PmdSide));  // its palette and actions, in PSRAM (sdmon.h)
   if (!side) { unload(); return false; }
   new (side) PmdSide();
   pal = side->pal;
   acts = side->acts;
-#endif
 
   uint8_t nActs = blob[4];
   memcpy(&palCount, blob + 5, 2);
@@ -58,7 +52,6 @@ bool PmdMon::load(uint8_t dexNum, bool shiny) {
 
   const uint8_t *p = blob + 7 + palCount * 2;
   const uint8_t *end = blob + size;
-#if UI_V2
   // V2's walk rows come after the counted actions, in a tail that 1.51's loader never reads ("TPKX", u8 n,
   // then n more actions laid out the same), and after it the back views ("TPKY", the same again), which 2.0.5's
   // loader never reads (it stops at an action it doesn't know: a Knomi gone back to it still loads these packs).
@@ -69,7 +62,6 @@ bool PmdMon::load(uint8_t dexNum, bool shiny) {
       nActs = p[4];
       p += 5;
     }
-#endif
   for (uint8_t i = 0; i < nActs && p + 4 <= end; i++) {
     uint8_t id = p[0], w = p[1], h = p[2], nf = p[3];
     p += 4;
@@ -96,14 +88,11 @@ bool PmdMon::load(uint8_t dexNum, bool shiny) {
         bool any = false;
         for (int c = 0; c < w && !any; c++)
           if (fr[r * w + c] != 0xFF) any = true;
-#if UI_V2
         if (any) a.low[f] = r + 1;  // this frame's own feet
-#endif
         if (any) { if (r + 1 > base) base = r + 1; break; }
       }
     }
     a.base = base;
-#if UI_V2
     a.top = h;  // the highest row with something in it, in any frame
     for (uint8_t f = 0; f < nf; f++) {
       const uint8_t *fr = a.data + (uint32_t)f * w * h;
@@ -171,21 +160,15 @@ bool PmdMon::load(uint8_t dexNum, bool shiny) {
       for (uint8_t f = 0; f < nf; f++) a.low[f] = a.low[f] > sink ? a.low[f] - sink : 1;
       a.base = a.base > sink ? a.base - sink : 1;
     }
-#endif
   }
-#if UI_V2
   }
-#endif
   loaded = true;
   this->shiny = shinyFile;
-#if UI_V2
   dex = dexNum;
-#endif
   Serial.printf("loaded %s (%u KB)\n", path, size / 1024);
   return true;
 }
 
-#if UI_V2
 // how tall each one is, in tenths of a metre (the Pokedex's heights): its size on screen (pmdScale)
 static const uint8_t DEX_DM[151] = {
   7, 10, 20, 6, 11, 17, 5, 10, 16, 3, 7, 11, 3, 6, 10, 3, 11, 15, 3, 7,                // 1-20
@@ -212,7 +195,6 @@ uint8_t pmdScale(const PmdMon &m, uint8_t maxS) {
   while (big > s && tall * big > 150) big--;
   return big > s ? (uint8_t)big : s;
 }
-#endif
 
 void PmdMon::unload() {
   loaded = shiny = false;
@@ -220,7 +202,6 @@ void PmdMon::unload() {
     free(blob);
     blob = nullptr;
   }
-#if UI_V2
   if (side) {  // (PmdSide has nothing to destroy)
     free(side);
     side = nullptr;
@@ -228,12 +209,6 @@ void PmdMon::unload() {
   pal = gPmdNoPal;
   acts = gPmdNoActs;
   palCount = 0;
-#else
-  for (auto &a : acts) {
-    a.w = a.h = a.frames = a.base = 0;
-    a.data = nullptr;
-  }
-#endif
   loaded = false;
 }
 

@@ -1,4 +1,4 @@
-// V2: the radial menu (Fedor). scene_v2.h includes this at its end, so it's only there with UI_V2 on.
+// V2: the radial menu (Fedor). scene_v2.h includes this at its end.
 //
 // A hold on your Pokemon (V2_RADIAL_HOLD_MS, the finger still) opens a ring round the screen in four: Settings
 // above, Medals to the right, Stats below and the Pokedex to the left, where the home's swipes put them. Its middle

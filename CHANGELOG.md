@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Tidied up under the hood:** the original game's look (1.x), kept until now behind a build switch, is gone with its code, about 3,200 lines, along with old screenshots and tools nobody used. Nothing you see or play changes, and the Knomi's firmware is a little smaller.
+
 ## [2.2.0] - 2026-11-13
 
 - **The game is now Catch 151** (it was PokeKnomiGochi). The apps are **Catch 151 for Knomi, Mac, Windows and Web**, with a new pixel-art logo and icon: on the About page, atop the web page, and as the apps' icons. The online Pokédex is the **Catch 151 Dex**.

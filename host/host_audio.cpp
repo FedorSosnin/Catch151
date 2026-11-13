@@ -8,10 +8,8 @@
 #include "sfx_notes.h"
 #include <Preferences.h>
 #include <atomic>
-#if UI_V2
 #include "music_synth.h"
 #include "cry.h"
-#endif
 
 #define SAMPLE_RATE HOST_AUDIO_RATE
 #define QUEUE_LEN 8
@@ -21,7 +19,6 @@ static std::atomic<bool> gSleeping{false};
 static uint8_t gQueue[QUEUE_LEN];
 static std::atomic<uint32_t> gHead{0}, gTail{0};
 
-#if UI_V2
 // the music: the game says which track its screen wants (musicWant), the audio thread plays it. Silent with the Music
 // switch off, while the pet sleeps, and while the window is hidden (SOUND off leaves it playing)
 static MusicPlayer gMusic;
@@ -83,20 +80,11 @@ int hostMusicVolume(void) { return gMusLv; }
 void hostSetMusicVolume(int v) { musicSetVolume((uint8_t)v); }
 void hostMusicHidden(bool hidden) { gMusicHidden = hidden; }
 uint8_t hostMusicWanted() { return gMusicWant; }  // (for the tests)
-#else
-uint8_t hostMusicWanted() { return 0; }
-bool hostMusicEnabled(void) { return false; }
-void hostSetMusicEnabled(bool) {}
-int hostMusicVolume(void) { return 0; }
-void hostSetMusicVolume(int) {}
-void hostMusicHidden(bool) {}
-#endif
 
 void audioBegin() {
   Preferences p;
   p.begin(SAVE_NS, true);
   gOn = p.getBool("snd", true);
-#if UI_V2
   gMusicOn = p.getBool("mus", true);
   uint8_t sv = p.getUChar("sndv", 3), mv = p.getUChar("musv", 3);
   gSndLv = sv >= 1 && sv <= 3 ? sv : 3;
@@ -105,7 +93,6 @@ void audioBegin() {
   gMusGain = LEVEL_GAIN[gMusLv];
   gMusic.begin(SAMPLE_RATE);
   gVoice.begin(SAMPLE_RATE);
-#endif
   p.end();
 }
 
@@ -141,14 +128,12 @@ static const SfxDef *gDef = nullptr;
 static uint8_t gNote = 0;
 static int gDone = 0, gTotal = 0, gHalf = 0, gPhase = 0;
 static bool gHigh = true;
-#if UI_V2
 // V2: each tone's frequency is kept to a fraction of a sample (a 32-bit phase that wraps), so high notes stay in
 // tune; a legato effect's notes run into each other (sfxLegato(): the tap)
 static uint32_t gStep = 0, gAcc = 0;
 static bool gLegato = false;
 #define V2_ATTACK (SAMPLE_RATE * 4 / 1000)  // the ramps, as long as at 16 kHz
 #define V2_DECAY (SAMPLE_RATE * 6 / 1000)
-#endif
 
 static void startNote() {
   const Note &n = gDef->n[gNote];
@@ -156,13 +141,10 @@ static void startNote() {
   gHalf = n.f ? SAMPLE_RATE / (2 * n.f) : 0;
   gDone = gPhase = 0;
   gHigh = true;
-#if UI_V2
   gStep = n.f ? (uint32_t)(((uint64_t)n.f << 32) / SAMPLE_RATE) : 0;
   if (!gLegato || gNote == 0) gAcc = 0;
-#endif
 }
 
-#if UI_V2
 // an effect's sample with the music added under it (playing: an effect sounds, so the music ducks): the effect and
 // the cry at SOUND's level, the music at its own
 static inline int16_t withMusic(int16_t s, bool playing) {
@@ -180,10 +162,8 @@ static inline int16_t withMusic(int16_t s, bool playing) {
   int32_t v = (int32_t)lrintf((s + voice * 32767.0f) * gSndGain + m * 32767.0f);
   return (int16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
 }
-#endif
 
 extern "C" void hostAudioRender(int16_t *out, int frames) {
-#if UI_V2
   {
     bool quiet = !gMusicOn;
     uint8_t want = quiet || gSleeping || gMusicHidden ? (uint8_t)MUS_NONE : gMusicWant.load(std::memory_order_relaxed);
@@ -193,28 +173,20 @@ extern "C" void hostAudioRender(int16_t *out, int frames) {
       gVoiceReady.store(false, std::memory_order_release);
     }
   }
-#endif
   for (int i = 0; i < frames; i++) {
     if (!gDef) {
       uint32_t tail = gTail.load(std::memory_order_relaxed);
       if (tail == gHead.load(std::memory_order_acquire)) {
-#if UI_V2
         out[i] = withMusic(0, false);
-#else
-        out[i] = 0;
-#endif
         continue;
       }
       gDef = &SFX[gQueue[tail % QUEUE_LEN]];
-#if UI_V2
       gLegato = sfxLegato(gQueue[tail % QUEUE_LEN]);
-#endif
       gTail.store(tail + 1, std::memory_order_release);
       gNote = 0;
       startNote();
     }
     int16_t s = 0;
-#if UI_V2
     if (gStep) {
       bool first = gNote == 0, last = gNote + 1 >= gDef->len;
       int32_t amp = 5000;
@@ -225,15 +197,6 @@ extern "C" void hostAudioRender(int16_t *out, int frames) {
       gAcc += gStep;
     }
     s = withMusic(s, true);
-#else
-    if (gHalf) {
-      const int16_t amp = 5000;
-      s = gHigh ? amp : -amp;
-      if (gDone < 64) s = (int16_t)(s * gDone / 64);                                // attack
-      else if (gDone > gTotal - 96) s = (int16_t)(s * (gTotal - gDone) / 96);       // decay
-      if (++gPhase >= gHalf) { gPhase = 0; gHigh = !gHigh; }
-    }
-#endif
     out[i] = s;
     if (++gDone >= gTotal) {
       if (++gNote >= gDef->len) gDef = nullptr;

@@ -1,4 +1,4 @@
-// V2: the Repel (Fedor). scene_v2.h includes this at its end, so it's only there with UI_V2 on.
+// V2: the Repel (Fedor). scene_v2.h includes this at its end.
 //
 // A spray in the backpack, beside the berries and the candy. Used, it runs for REPEL_MIN of the game's minutes
 // (pet.useRepel()): wild encounters keep weaker Pokemon away (none below your level, nor any species whose base stats

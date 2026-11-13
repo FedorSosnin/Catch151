@@ -1,5 +1,5 @@
-// V2 step 6: choosing a new Pokemon, with no egg. scene_v2.h includes this at its end, so it's only there with
-// UI_V2 on. Fedor: the four starters for the first game and after every ending until a goodbye has been offered
+// V2 step 6: choosing a new Pokemon, with no egg. scene_v2.h includes this at its end.
+// Fedor: the four starters for the first game and after every ending until a goodbye has been offered
 // (a final form on its 4th day); from then on any base form in the Pokedex (pet.canPickFromDex()).
 
 // ----- the question that slides up from the bottom: "Choose PIKACHU?" YES / BACK (Fedor's "are you sure?") -----

@@ -1,4 +1,4 @@
-// V2 step 5: the menus. scene_v2.h includes this at its end, so it's only there with UI_V2 on.
+// V2 step 5: the menus. scene_v2.h includes this at its end.
 //
 // Every menu sits on the bedroom with the lights down (rooms_px.py bedroom(), rooms2_px.py dim()), its window
 // showing the hour's sky. On it: a wooden name board for the title (sign()), white panels (v2Panel), V2
@@ -2469,9 +2469,11 @@ static void v2GameResult(const char *title, const char *top, const char *big, bo
 
 // a game's how-to card (rooms2_px.py howto()): its name on a board, how to play in a panel, READY, GO! where
 // V1's button is (where its tap is); the whole card drops in and flies off as V1's did, (cx, cy) its middle
+#define CARD_TEXT_W 264  // how to play: the widest line (test_tools.py checks every language fits)
+#define CARD_LINE_H 22   // and its lines, 8 of them in the panel's 176 px
 static void v2IntroCard(int cx, int cy, bool dim, const char *title, const char *how) {
   if (dim) v2DimFrame(115);
-  int dx = cx - CX, dy = cy - CY;
+  int dx = cx - CX;
   char b[40];
   setSize(2);
   v2Caps(title, b, sizeof(b));
@@ -2486,9 +2488,9 @@ static void v2IntroCard(int cx, int cy, bool dim, const char *title, const char 
   setCur(cx - textW(b, 2) / 2, by + 6);
   printT(b);
   v2Panel(86 + dx, cy - 128, 380 + dx, cy + 140, 12);
-  int n = drawWrappedAt(how, 2, 264, cx, 0, 22, false);
+  int n = drawWrappedAt(how, 2, CARD_TEXT_W, cx, 0, CARD_LINE_H, false);
   gfx->setTextColor(UI_INK);
-  drawWrappedAt(how, 2, 264, cx, cy - 110 + (176 - (n * 22 - 6)) / 2, 22, true);
+  drawWrappedAt(how, 2, CARD_TEXT_W, cx, cy - 110 + (176 - (n * CARD_LINE_H - 6)) / 2, CARD_LINE_H, true);
   char go[32];
   v2LabelButton(CX - 117 + dx, cy + 79, CX + 117 + dx, cy + 125, v2Caps(T(S_READY_GO), go, sizeof(go)), C565(0x58, 0xb8, 0x68));
 }

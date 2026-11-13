@@ -1,5 +1,5 @@
-// V2: Settings' first page tidied, and the About page, its last (scene_v2.h includes this at its end, so it's only
-// there with UI_V2 on). Fedor: "We also need to make an about page with my logo on it but in a pixel art style to
+// V2: Settings' first page tidied, and the About page, its last (scene_v2.h includes this at its end).
+// Fedor: "We also need to make an about page with my logo on it but in a pixel art style to
 // match the game. Maybe a way to get to the repo but also my youtube channel. We can move the version to this area
 // too. Will give us room to make the clock, sound, Language, and start over screen look better. It seems all over the
 // place right now."

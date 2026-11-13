@@ -66,35 +66,6 @@ TEST(egg, does_not_hatch_while_choosing_starter) {
   CHECK_EQ(p.speciesId, (int16_t)7);
 }
 
-#if !UI_V2  // 1.51's egg: V2 has none (the starter or the pick is yours at once: v2pick below)
-TEST(egg, hatches_on_its_own_after_3_minutes) {
-  mockNvsReset();
-  Pet p;
-  p.begin();
-  p.chooseStarter(1);
-  advance(p, 2);
-  CHECK(p.isEgg());
-  advance(p, 1);
-  CHECK(!p.isEgg());
-  CHECK_EQ(p.speciesId, (int16_t)1);
-}
-
-TEST(egg, three_taps_hatch) {
-  mockNvsReset();
-  Pet p;
-  p.begin();
-  p.chooseStarter(4);
-  p.eggTap();
-  CHECK_EQ(p.eggCracks(), (uint8_t)1);
-  CHECK(p.isEgg());
-  p.eggTap();
-  CHECK_EQ(p.eggCracks(), (uint8_t)2);
-  CHECK(p.isEgg());
-  p.eggTap();
-  CHECK(!p.isEgg());
-  CHECK_EQ(p.speciesId, (int16_t)4);
-}
-#endif
 
 TEST(egg, hatching_rolls_genes_and_resets_the_individual) {
   Pet p;
@@ -207,9 +178,6 @@ TEST(feed, asleep_or_egg_does_not_eat) {
   Pet e;
   mockNvsReset();
   e.begin();
-#if !UI_V2
-  e.chooseStarter(4);  // (V2: the egg is only the wait for a starter)
-#endif
   e.fullness = 40;
   e.feedBerry(0);
   CHECK_EQ(e.fullness, (uint8_t)40);
@@ -478,12 +446,8 @@ TEST(evolve, evolve_button_is_postponed_when_declined) {
   CHECK_MSG(!p.wantEvolveButton(), "'keep form' removes the button");
   CHECK_MSG(p.canEvolveNow(), "but the evolution is still available");
   p.ageMinutes = 16 * 60;  // an hour later
-#if UI_V2
   CHECK_MSG(!p.wantEvolveButton(), "V2: kept is kept (Fedor): an hour doesn't bring the button back");
   CHECK_MSG(p.canEvolveNow(), "holding it still offers EVOLVE");
-#else
-  CHECK(p.wantEvolveButton());  // it is offered again
-#endif
 }
 
 TEST(evolve, declined_at_level_100_is_offered_again_an_hour_later) {
@@ -494,14 +458,9 @@ TEST(evolve, declined_at_level_100_is_offered_again_an_hour_later) {
   p.declineEvolve();
   CHECK(!p.wantEvolveButton());
   p.ageMinutes += 60;
-#if UI_V2
   CHECK_MSG(!p.wantEvolveButton(), "V2: not even at the top level");
-#else
-  CHECK_MSG(p.wantEvolveButton(), "the level can't rise any more, but an hour still brings it back");
-#endif
 }
 
-#if UI_V2
 TEST(evolve, v2_kept_form_stays_kept_through_a_restart_and_holding_it_still_evolves) {
   Pet p;
   makePet(p, 25);  // PIKACHU, which some would rather keep than have a RAICHU (Fedor)
@@ -538,7 +497,6 @@ TEST(evolve, v2_the_next_form_and_a_new_pokemon_are_asked_again) {
   p.ageMinutes = 35 * 60;
   CHECK(p.wantEvolveButton());
 }
-#endif
 
 // ---------------------------------------------------------------- stats
 TEST(stats, formula_base_by_genes_plus_level_and_training) {
@@ -968,19 +926,11 @@ static int shinyCount(uint8_t ending, int rounds) {
   return shinies;
 }
 
-#if UI_V2
 TEST(v2pick, no_shiny_roll_a_shiny_only_when_picked) {  // V2 (Fedor): "no shiny odds"
   CHECK_EQ(shinyCount(CER_FAREWELL, 500), 0);
   CHECK_EQ(shinyCount(CER_RELEASE, 500), 0);
   CHECK_EQ(shinyCount(CER_RUNAWAY, 500), 0);
 }
-#else
-TEST(egg, letting_go_gives_a_25_percent_shiny_chance) {
-  CHECK_RANGE(shinyCount(CER_FAREWELL, 2000), 400, 600);
-  CHECK_RANGE(shinyCount(CER_RELEASE, 2000), 400, 600);
-  CHECK_MSG(shinyCount(CER_RUNAWAY, 2000) < 150, "a runaway does not get the prize");
-}
-#endif
 
 TEST(egg, after_a_runaway_there_is_no_choice) {
   Pet p;
@@ -1002,11 +952,7 @@ TEST(egg, first_game_is_still_the_starter) {
 TEST(egg, choice_stops_time_and_survives_a_reboot) {
   Pet p;
   makePet(p, 25);
-#if UI_V2
   p.startFarewell();  // (V2: a goodbye opens the Pokedex pick; before one, it's the starters: v2pick below)
-#else
-  p.release();
-#endif
   p.newEgg();
   uint32_t age = p.ageMinutes;
   mockSetMillis(10 * PET_TICK_MS);
@@ -1077,7 +1023,6 @@ TEST(egg, runaway_penalizes_rarity) {
   }
 }
 
-#if UI_V2
 // ---------------------------------------------------------------- V2: the starters, then the Pokedex (Fedor)
 // "For the first game, we get the 4 starters and we will get the 4 starters UNTIL a player has kept a pokemon
 // for 4 days and was offered to swap it or keep it. In which case they can now choose from any non evolved
@@ -1359,7 +1304,6 @@ TEST(v2pick, an_older_saves_goodbye_counts_and_its_egg_hatches) {
   CHECK_MSG(!p.isEgg(), "V2 has no egg: it hatches");
   CHECK_EQ(p.speciesId, (int16_t)4);
 }
-#endif
 
 // ---------------------------------------------------------------- streak
 TEST(streak, first_care_of_the_day_counts) {
@@ -1482,15 +1426,9 @@ TEST(medals, total_accumulates_across_pets) {
   p.newEgg();
   p.chooseStarter(144);  // ARTICUNO, another final form
   p.eggTap(); p.eggTap(); p.eggTap();
-#if UI_V2
   CHECK_MSG(p.medals == MED_FINAL && p.totalMedals == 1, "V2: a care medal is earned once, kept through the next");
-#else
-  CHECK_MSG(p.medals == MED_FINAL, "the individual's medals are reset");
-  CHECK_MSG(p.totalMedals == 2, "the player's total is kept");
-#endif
 }
 
-#if UI_V2
 TEST(medals, v2_a_save_from_before_gets_back_the_care_medals_its_records_prove) {
   Pet a;
   makePet(a, 4);
@@ -1512,7 +1450,6 @@ TEST(medals, v2_a_save_from_before_gets_back_the_care_medals_its_records_prove) 
   advance(b, 1);
   CHECK_MSG(!(b.newMedal & back), "and not won again on the way back up");
 }
-#endif
 
 TEST(medals, trainer_medals_come_from_the_dex_and_outlive_the_pet) {
   Pet p;
@@ -1832,22 +1769,6 @@ TEST(offline, under_two_minutes_does_nothing) {
   CHECK_EQ(p.fullness, (uint8_t)80);
 }
 
-#if !UI_V2  // V2 has no egg to hatch while away
-TEST(offline, egg_hatches_while_you_are_away) {
-  Pet p;
-  makePet(p, 4);
-  p.newEgg();  // there is a pokedex already: no starter prompt
-  CHECK(!p.awaitingStarter());
-  p.setClock(1000u * 86400);
-  p.syncClock(1000u * 86400 + 600);  // 10 minutes: still waiting for the choice
-  CHECK(p.isEgg());
-  p.chooseEgg(4);
-  p.setClock(1000u * 86400);
-  p.syncClock(1000u * 86400 + 600);
-  CHECK(!p.isEgg());
-  CHECK_EQ(p.speciesId, (int16_t)4);
-}
-#endif
 
 TEST(offline, sleeping_rests_while_off_too) {
   Pet p;
@@ -2282,7 +2203,6 @@ TEST(trade, only_the_form_you_raise_stays) {
   CHECK_EQ(p.tradeableCount(), (uint16_t)1);
 }
 
-#if UI_V2
 #include "../src/tower.h"
 // ---------------------------------------------------------------- Knomi Tower (pet.cpp's part)
 TEST(tower, friends_cheer_after_lost_climbs_until_a_new_best) {
@@ -2315,4 +2235,3 @@ TEST(tower, challenges_are_kept_and_new_only_once) {
   q.begin();
   CHECK_EQ((int)q.towerChal, TOWER_CH_NOFAINT | TOWER_CH_BASE);
 }
-#endif

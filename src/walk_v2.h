@@ -1,4 +1,4 @@
-// V2 step 4: the walk. scene_v2.h includes this at its end, so it's only there with UI_V2 on.
+// V2 step 4: the walk. scene_v2.h includes this at its end.
 //
 // At rest on the home screen the Pokemon sometimes walks toward you (PMD Walk row 0: PMD_WALKD) while the
 // world slides away behind it, as walk.py draws it (walk-field-band.gif, walk-beach.gif): grass and flowers

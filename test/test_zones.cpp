@@ -78,11 +78,7 @@ TEST(Zones, a_missing_rare_one_turns_up) {
   zoneCatchAllBut(p, Z_BEACH, 124);  // only Jynx is missing
   int hits = 0, N = 6000;
   for (int i = 0; i < N; i++) hits += p.pickZoneSpecies(Z_BEACH, 60) == 124;
-#if UI_V2
   CHECK_MSG(hits > N / 5 && hits < N * 2 / 5, "about 29 in 100");
-#else
-  CHECK_MSG(hits < N / 25, "about 1.7 in 100");
-#endif
 }
 
 // the legendary can turn up on any Search, an empty Pokedex or a full one, about 1 in 100

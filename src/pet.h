@@ -1,7 +1,6 @@
 #pragma once
 #include <Arduino.h>
 #include <Preferences.h>
-#include "ui_v2.h"
 #include "savename.h"  // the save's storage name
 
 // 1 tick = 1 game minute. Lower this value to test faster
@@ -36,7 +35,6 @@
 #define CEREMONY_MS 10000UL                // duration of the goodbye on screen
 #define CELEBRATE_MS 5000UL                // a new medal or streak milestone on screen
 #define FAREWELL_AGE_MIN (3UL * 24 * 60)   // says goodbye after 3 game days (in final form)
-#if UI_V2
 #define MASTER_FIGHTS 100  // V2: fights won for a Master Ball (Fedor: REALLY rare)
 #define ULTRA_FIGHTS 25    // ...and for an Ultra Ball (Fedor)
 #define ULTRA_MAX 99
@@ -44,7 +42,6 @@
 #define REPEL_PLAY_S 600  // V2: seconds of minigames played for a Repel (Fedor: 10 minutes; it was 20, and 10 at first)
 #define REPEL_MIN 3       // how long one lasts, in the game's minutes (Fedor: 3; 10 was long)
 #define REPEL_MAX 99
-#endif
 #define SHINY_AFTER_GOODBYE 4              // 1 in 4 after a goodbye or release
 #define RUNAWAY_TICKS 60                   // runs away after 1 h with EVERYTHING at zero
 // Time (docs/HOW_IT_WORKS.md, "Time"): the game counts its own minutes, and only a clock the player
@@ -87,19 +84,13 @@ enum : uint32_t {
   MED_ZONE_MANSION = 1UL << 20, MED_ZONE_FIELD = 1UL << 21,
   // the end game: 3, 5 and 10 Pokemon raised to level 100 (lv100Count)
   MED_LV100_3 = 1UL << 22, MED_LV100_5 = 1UL << 23, MED_LV100_10 = 1UL << 24,
-#if UI_V2
   // V2: Knomi Tower beaten, its Legend won (tower_v2.h); its badge goes in the case with the zones' badges
   MED_TOWER = 1UL << 25,
-#endif
 };
 #define MED_PET_COUNT 8  // medals 0..7 belong to the individual, the rest to the trainer (V2: all kept, earned once)
 #define MED_FIRST_ZONE 17  // MED_ZONE_FOREST's bit: the zone medals have their own card page
 #define MED_FIRST_LV100 22  // MED_LV100_3's bit: the level 100 medals too
-#if UI_V2
 #define MED_COUNT 26  // (V2: with Knomi Tower's)
-#else
-#define MED_COUNT 25
-#endif
 #define LEVEL_MAX 100  // past it a Pokemon would be too strong to battle: it stays at 100
 // Every form in the Pokedex has 1-3 stars: its genes, kept simple. A raised one's are the band of its
 // genes' average (90-96, 97-103, 104-110); a catch rolls them: 1 star 50%, 2 stars 35%, 3 stars 15%
@@ -268,7 +259,6 @@ public:
   bool canFarewellNow() const;  // final form + 7 days: ready to say goodbye (button)
   bool canRunawayNow() const;   // total abandonment 1h: ready to run away (sad button)
   // the user decides in a dialog; "keep/stay together" postpones and re-offers later
-#if UI_V2
   // V2: "keep form" keeps it (Fedor: "For those that dont want to evolve ... it will be very annoying to getting
   // asked again"): this form's button doesn't come back by itself. Held (the release question), it has EVOLVE while
   // it can, and the hint says so for a few seconds. The next form is asked about once again, when it's ready
@@ -281,16 +271,10 @@ public:
   }
   int16_t evoKept = 0;          // the form "keep form" was chosen for (0: none); saved
   uint32_t evoHintUntil = 0;    // just kept: the home says how to evolve it later
-#else
-  bool wantEvolveButton() const { return canEvolveNow() && ageMinutes >= evoAskAgain; }
-  bool wantFarewellButton() const { return canFarewellNow() && !farewellQuiet; }
-  void declineEvolve() { evoAskAgain = ageMinutes + MINUTES_PER_LEVEL; }  // offered again an hour later
-#endif
   void declineFarewell() {  // "stay together": not offered again (holding the pet brings it back)
     farewellQuiet = true;
     save();
   }
-#if UI_V2
   // V2 (Fedor): fights pay. Every wild, Travel or tower battle won (a loss doesn't count) fills two bars a step:
   // ULTRA_FIGHTS of them earn an Ultra Ball, which triples the catch chance of a throw that hits, and MASTER_FIGHTS
   // a Master Ball, which always catches what it hits. They stack, and the bars and the balls are the trainer's:
@@ -339,17 +323,12 @@ public:
   void towerLost();  // all three fainted: a loss, as a battle's (and the friends cheer the next climb, until the Legend)
   uint8_t towerChalDone(uint8_t got);  // a climb's challenges: the new ones (and they're kept)
   void towerSave() { save(); }  // a pick, the Hall of Fame: kept at once
-#endif
   // first game: the player picks a starter (Bulbasaur/Charmander/Squirtle)
   bool awaitingStarter() const { return starterPick; }
-#if UI_V2
   // V2: one of the four starters, every time until a goodbye has been offered (pickOk). No egg: it's yours at
   // once, its shiny form if you own it and picked it
   void chooseStarter(int16_t dex, bool shinyForm = false);
   bool canPickFromDex() const { return pickOk; }
-#else
-  void chooseStarter(int16_t dex) { eggTarget = dex; starterPick = eggPick = false; save(); }
-#endif
   // after a goodbye or release the next egg is chosen from those already registered
   bool awaitingEggPick() const { return eggPick; }
   bool chooseEgg(int16_t dex, bool shinyForm = false);  // a shiny form hatches shiny
@@ -359,11 +338,7 @@ public:
   bool eggChoice(int16_t dex, bool shinyForm) const;
   int16_t eggChoiceAt(int idx, bool &shinyForm) const;  // the idx-th of those by dex number, regular first; 0 if none
   uint16_t eggChoiceCount() const;
-#if UI_V2
   void factoryReset() { prefs.clear(); saveForgetOld(); }  // V2: and the save from before the rename
-#else
-  void factoryReset() { prefs.clear(); }  // wipes the NVS (test: serial command WIPE)
-#endif
   void dbgRunawayReady() { fullness = joy = energy = hygiene = 0; neglectTicks = RUNAWAY_TICKS; }  // test
   // with MINUTES_PER_LEVEL=60 the level is hours of age; "stay together" keeps a Pokemon as long as
   // you like, so it would keep rising: it stops at LEVEL_MAX (a Pokemon already past it comes back to it)
@@ -432,12 +407,10 @@ private:
   bool farewellQuiet = false;  // chose "stay together" once: the goodbye isn't offered by itself again
   bool starterPick = false;     // first game: waiting for the player to pick a starter
   bool eggPick = false;         // new egg: waiting for the player to pick from the pokedex
-#if UI_V2
   // V2 (Fedor): a goodbye has been offered once (a final form 3 days old): every new Pokemon after that is picked
   // from the Pokedex, not from the four starters
   bool pickOk = false;
   uint16_t repelMs = 0;  // the part of a second played not counted yet (not saved)
-#endif
   uint8_t neglectTicks = 0;
   void careMinute(bool asleep);
   uint32_t ceremonyUntil = 0;

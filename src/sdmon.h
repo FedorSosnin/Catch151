@@ -1,6 +1,5 @@
 #pragma once
 #include <Arduino.h>
-#include "ui_v2.h"
 
 // Animated TPK1 sprite (legacy format, fallback path). The project uses
 // PMD/TPK2 (PmdMon) for everything; this path stays inactive if there is no NNN.bin on the SD.
@@ -21,28 +20,23 @@ struct SdMon {
 enum : uint8_t {
   PMD_IDLE = 0, PMD_WALKL, PMD_WALKR, PMD_SLEEP, PMD_EAT, PMD_HURT,
   PMD_ATTACK, PMD_POSE, PMD_HOP, PMD_NOD, PMD_BREATH, PMD_SIT,
-#if UI_V2
   PMD_WALKD, PMD_WALKU,  // V2: walking toward you and away (Walk rows 0 and 4), from the pack's tail
   PMD_WALKDR, PMD_WALKUR, PMD_WALKUL, PMD_WALKDL,  // ...and the diagonals (rows 1, 3, 5, 7), for the Pokedex's turn
   PMD_IDLEUR, PMD_ATTACKUR, PMD_HURTUR,  // V2: from behind, facing up-right (row 3): yours in a battle, facing the foe
-#endif
   PMD_NACTS
 };
 
 struct PmdAct {
   uint8_t w = 0, h = 0, frames = 0;
   uint8_t base = 0;  // row+1 of the lowest pixel (anchor by the feet, not the canvas)
-#if UI_V2
   uint8_t top = 0;       // V2: the highest row with something in it, in any frame (its height is base - top)
   uint8_t low[24] = {};  // V2: each frame's own lowest row + 1: every frame stands on its own feet (pmdFrameY)
   uint8_t footW = 0;     // V2: how far apart its legs stand, in its own pixels, where it stands by its legs (sdmon.cpp)
-#endif
   uint16_t ms[24];
   const uint8_t *data = nullptr;  // frames * w * h in the blob
 };
 
 // multi-action PMD sprite loaded from SD into PSRAM
-#if UI_V2
 // V2: a sprite's palette and actions, kept in PSRAM beside its frames while it's loaded (PmdMon::side)
 struct PmdSide {
   uint16_t pal[256];
@@ -50,15 +44,11 @@ struct PmdSide {
 };
 extern uint16_t gPmdNoPal[256];          // an unloaded sprite's: all zero, never written
 extern PmdAct gPmdNoActs[PMD_NACTS];
-#endif
 struct PmdMon {
   bool loaded = false;
   bool shiny = false;  // the shiny sprite was loaded: it gets sparkles
-#if UI_V2
   uint8_t dex = 0;  // V2: the species, for its size (pmdScale)
-#endif
   uint16_t palCount = 0;
-#if UI_V2
   // V2: the palette and the actions (2 KB, with the walks and each frame's feet) live in PSRAM with the frames while
   // it's loaded, not in the internal RAM that Wi-Fi and the buddy relay's TLS need: twenty of these took 40 KB of it,
   // and the relay's handshake left 6 KB free. Unloaded, they point at an empty set, read as before
@@ -70,18 +60,12 @@ struct PmdMon {
   PmdMon(const PmdMon &) = delete;  // (side is its own)
   PmdMon &operator=(const PmdMon &) = delete;
   ~PmdMon() { unload(); }
-#else
-  uint16_t pal[256];
-  uint8_t *blob = nullptr;
-  PmdAct acts[PMD_NACTS];
-#endif
 
   bool load(uint8_t dexNum, bool shiny = false);
   void unload();
   bool has(uint8_t a) const { return loaded && a < PMD_NACTS && acts[a].frames > 0; }
 };
 
-#if UI_V2
 // V2: how far above the ground a frame's top goes. Each frame stands on its own feet: anchored by the lowest
 // pixel of all its frames, the ones whose feet sat higher in the box (Rattata's walk rises and falls 12 rows,
 // Eevee bounds, Venusaur breathes) floated a row's worth at 3 to 5 times the size, up to 60 px over their
@@ -92,7 +76,6 @@ inline int pmdFrameRise(const PmdAct &a, uint8_t f, uint8_t s) {
   return low * s + (hop > 12 ? 12 : hop);
 }
 uint8_t pmdScale(const PmdMon &m, uint8_t maxS);  // V2: a sprite's size, the same wherever it's drawn (sdmon.cpp)
-#endif
 
 // gallery thumbnails (whole thumbs.bin in PSRAM)
 struct SdThumbs {

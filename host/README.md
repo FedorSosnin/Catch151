@@ -40,7 +40,6 @@ The anchor starts as the system clock and moves to a time server as soon as the 
 ```bash
 mac/build_app.sh     # build/mac/PokeMacGochi.app
 mac/build_dmg.sh     # build/mac/Catch151.dmg (Catch 151.app inside), for a release
-mac/make_icon.sh     # regenerates mac/AppIcon.icns from a frame of the game (throwaway save)
 ```
 
 This produces `build/mac/PokeMacGochi.app`. It needs the Xcode Command Line Tools and python3. There is no App Store build and no signing beyond a local ad hoc signature.

@@ -1,6 +1,5 @@
 #pragma once
 #include <Arduino.h>
-#include "ui_v2.h"
 
 // Supported languages. Arduino_GFX's 5x7 font is a full CP437 table
 // (256 glyphs), so accents, umlauts and enyes DO exist: they go as a single byte in
@@ -16,11 +15,7 @@ enum Lang : uint8_t { LANG_ES = 0, LANG_EN, LANG_FR, LANG_DE, LANG_IT, LANG_PT,
 extern Lang gLang;  // active language (defined in i18n.cpp)
 
 // String IDs. The order must match the STRINGS table in i18n.cpp.
-#if UI_V2
 #define STRID_BASE uint16_t  // V2: more than 256 strings
-#else
-#define STRID_BASE uint8_t
-#endif
 enum StrId : STRID_BASE {
   // pet status (statusMsg)
   S_EVOLVING, S_EATING, S_LIKES, S_HUNGRY, S_NEEDS_BATH,
@@ -108,7 +103,6 @@ enum StrId : STRID_BASE {
   S_DUEL_LOSE, S_DUEL_WAIT_FMT, S_DUEL_CRASHED_FMT,  // PikaSurf with a buddy: out first; waiting; they're out
   S_HOW_VB, S_HOW_VB_KEYS, S_HOW_SD, S_HOW_DUEL, S_HOW_DUEL_KEYS,  // Play together's cards, like the games' ones
   S_AUTO_UPDATE,  // settings: the switch that lets a new version go in by itself
-#if UI_V2
   S_RESET_BTN, S_RESET_WARN,  // V2: the clock page's START OVER, and what "Start over?" erases
   S_CART_VOLLEY, S_CART_SHOWDOWN, S_PLAY_WITH_FMT,  // V2: Play together's cartridge titles ("\n" breaks a line), "with %s"
   S_PLAY_AGAIN,  // V2: the button at the end of a game
@@ -142,7 +136,6 @@ enum StrId : STRID_BASE {
   S_NOT_NOW,    // V2: the grey button under EVOLVE! on the home
   S_EVO_TRYING_FMT,  // V2: the hold's EVOLVE box heading: "Your CATERPIE is trying to evolve!"
   S_MUSIC,           // V2: the settings page's Music row (a computer and the web)
-#endif
   STR_COUNT
 };
 

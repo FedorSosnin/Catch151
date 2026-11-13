@@ -194,11 +194,7 @@ static NSString *const kPrefOriginY = @"windowY";
 
 // ---- sound: requests PCM from the host layer on the audio thread ----
 #define AUDIO_BUFFERS 3
-#if UI_V2
 #define AUDIO_FRAMES 1536  // ~32 ms per buffer at 48 kHz
-#else
-#define AUDIO_FRAMES 512  // ~32 ms per buffer at 16 kHz
-#endif
 
 static void audioCallback(void *, AudioQueueRef q, AudioQueueBufferRef buf) {
   hostAudioRender((int16_t *)buf->mAudioData, AUDIO_FRAMES);
@@ -606,7 +602,7 @@ static NSCursor *fingerCursor(bool pressed) {
   NSMenuItem *mute = [menu addItemWithTitle:@"Mute Sound" action:@selector(toggleMute:) keyEquivalent:@""];
   mute.target = self;
   mute.state = hostSoundEnabled() ? NSControlStateValueOff : NSControlStateValueOn;
-#if UI_V2  // V2's music: the same setting as the Music row on the settings page, off or its level
+  // V2's music: the same setting as the Music row on the settings page, off or its level
   NSMenuItem *music = [menu addItemWithTitle:@"Music" action:nil keyEquivalent:@""];
   NSMenu *musicLevels = [[NSMenu alloc] init];
   NSArray *levelNames = @[ @"Off", @"Low", @"Medium", @"High" ];
@@ -618,7 +614,6 @@ static NSCursor *fingerCursor(bool pressed) {
     it.state = on ? NSControlStateValueOn : NSControlStateValueOff;
   }
   music.submenu = musicLevels;
-#endif
   NSString *upd = gUpdating     ? @"Updating…"
                   : !gNewVersion ? @"Check for Updates…"
                   : [NSString stringWithFormat:canUpdateInPlace() ? @"Update to Version %@…" : @"Download Version %@…", gNewVersion];
