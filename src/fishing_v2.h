@@ -784,8 +784,10 @@ static void fsArcBuild() {
               room = v2Seg(V2_BAR_RIN - 7, V2_BAR_ROUT + 7, FS_ARC_A1, FS_ARC_A0);
   int n = 0;
   for (int pass = 0; pass < 2; pass++) {
+    // (on the 2 px grid, each cell a Knomi pixel: they started at CX, an odd x, so every cell fell across two of the
+    // Knomi's pixels and the arc came out blurred, Fedor: "blurry")
     for (int y = 0; y < V2_W; y += 2)
-      for (int x = CX; x < V2_W; x += 2) {
+      for (int x = CX & ~1; x < V2_W; x += 2) {
         float dx = x + 1 - CX, dy = y + 1 - CY, r2 = dx * dx + dy * dy, r = sqrtf(r2);
         if (r < V2_BAR_RIN - 7 || r > V2_BAR_ROUT + 7 || !v2In(room, dx, dy, r2)) continue;
         float a = atan2f(dy, dx) * 57.29578f, f = (FS_ARC_A0 - a) / (FS_ARC_A0 - FS_ARC_A1) * 200;  // (past an end: 0 or 200)
@@ -802,10 +804,48 @@ static void fsArcBuild() {
     }
   }
 }
+#ifdef BOARD_HOST
+// On a computer and the web, where the canvas shows 2 to 4 times bigger, the arc is drawn a pixel at a time with soft
+// edges, as the need bars are there (v2ArcCover()), so it's as clean as they are at every size (Fedor: "sharpen and
+// clean up its lines on all sizes and builds"; its 2 px cells came out in steps). Its pixels are worked out once: how
+// far along the arc each is (f, as the cells' 0..200; s, how much f a pixel is there) and how much of it the bar, its
+// dark edge and the notch's room cover (0..256)
+struct FsArcPx { int16_t x, y; float f, s, r; uint16_t bar, edge, room; };
+static FsArcPx *fsArcPx = nullptr;
+static int fsArcPxN = 0;
+static void fsArcPxBuild() {
+  if (fsArcPx) return;
+  const float rm = (V2_BAR_RIN + V2_BAR_ROUT) / 2.0f, h = (V2_BAR_ROUT - V2_BAR_RIN) / 2.0f;
+  const V2Arc bar = v2ArcOf(rm, h, FS_ARC_A1, FS_ARC_A0), edge = v2ArcOf(rm, h + 3, FS_ARC_A1, FS_ARC_A0),
+              room = v2ArcOf(rm, h + 7, FS_ARC_A1, FS_ARC_A0);
+  int n = 0;
+  for (int pass = 0; pass < 2; pass++) {
+    for (int y = 0; y < V2_W; y++)
+      for (int x = CX; x < V2_W; x++) {
+        float fx = x + 0.5f - CX, fy = y + 0.5f - CY;
+        int cr = v2ArcCover(room, fx, fy);
+        if (!cr) continue;
+        if (pass) {
+          float r = hypotf(fx, fy), a = atan2f(fy, fx) * 57.29578f, f = (FS_ARC_A0 - a) / (FS_ARC_A0 - FS_ARC_A1) * 200;
+          fsArcPx[n] = { (int16_t)x, (int16_t)y, f < 0 ? 0 : f > 200 ? 200 : f,
+                         200 / ((FS_ARC_A0 - FS_ARC_A1) * 0.01745329f * r),  // (f a pixel along the arc, there)
+                         r, (uint16_t)v2ArcCover(bar, fx, fy), (uint16_t)v2ArcCover(edge, fx, fy), (uint16_t)cr };
+        }
+        n++;
+      }
+    if (!pass) {
+      fsArcPx = (FsArcPx *)ps_malloc(n * sizeof(FsArcPx));
+      if (!fsArcPx) return;
+      fsArcPxN = n;
+      n = 0;
+    }
+  }
+}
+// how much of a pixel a shape covers, from how far inside its edge the pixel's middle is (px; < 0 outside)
+static inline int fsCover(float in) { return in >= 0.5f ? 256 : in <= -0.5f ? 0 : (int)((in + 0.5f) * 256); }
+#endif
 // the arc now: tension pct in the zones lo..hi, the green brighter on the beat
 static void fsArcDraw(float pct, int lo, int hi, bool beat) {
-  fsArcBuild();
-  if (!fsArc) return;
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
   const uint16_t ink = sc565(0x1B1B25), white = UI_WHITE;
   uint16_t dim[3] = { sc565(0x2E4A72), sc565(beat ? 0x3E7A4A : 0x2E5A3A), sc565(0x7A3A3A) };
@@ -813,6 +853,33 @@ static void fsArcDraw(float pct, int lo, int hi, bool beat) {
   uint16_t litT[3] = { sc565(scMix(0x7CC4EA, 0xFFFFFF, .35)), sc565(scMix(beat ? 0x8AE08A : 0x58B868, 0xFFFFFF, .35)),
                        sc565(scMix(0xE8503A, 0xFFFFFF, .35)) };
   float p2 = pct * 2;
+#ifdef BOARD_HOST
+  // the same shapes as the Knomi's cells below, their sizes in pixels (a cell's f is 1.65 px along the arc): the dark
+  // edge and the bar in its zones' colours with dark seams between them, then the notch, dark round it, white in it
+  fsArcPxBuild();
+  if (!fsArcPx) return;
+  for (int i = 0; i < fsArcPxN; i++) {
+    const FsArcPx &c = fsArcPx[i];
+    const float px = 1 / c.s, g = fabsf(c.f - p2) * px;  // px: pixels to one f here; g: pixels from the notch's middle
+    uint16_t &q = fb[c.y * V2_W + c.x];
+    uint16_t p = v2Blend(q, ink, c.edge);
+    if (c.bar) {
+      int z = c.f < 2 * lo ? 0 : c.f < 2 * hi ? 1 : 2;
+      uint16_t col = c.f <= p2 ? (c.r > V2_BAR_ROUT - 4 ? litT[z] : lit[z]) : dim[z];
+      int seam = fsCover(1.0f * px - fabsf(c.f - 2 * lo) * px), seam2 = fsCover(1.0f * px - fabsf(c.f - 2 * hi) * px);
+      col = v2Blend(col, ink, seam > seam2 ? seam : seam2);
+      p = v2Blend(p, col, c.bar);
+    }
+    p = v2Blend(p, ink, fsCover(4.4f * px - g) * c.room >> 8);
+    int w = fsCover(2.0f * px - g) * c.edge >> 8, w2 = fsCover(1.0f * px - g) * c.room >> 8;
+    q = v2Blend(p, white, w > w2 ? w : w2);
+  }
+  setSize(2);
+  v2BarLabel(fb, T(S_FISH_LINE), -45, UI_WHITE);
+  return;
+#endif
+  fsArcBuild();
+  if (!fsArc) return;
   for (int i = 0; i < fsArcN; i++) {
     const FsArcCell &c = fsArc[i];
     float m = fabsf(c.f - p2);
