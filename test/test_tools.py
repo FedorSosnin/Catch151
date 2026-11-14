@@ -73,6 +73,45 @@ class TestSoundtrackPage(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(ROOT, 'web', 'music', f)), f)
 
 
+class TestEffectTables(unittest.TestCase):
+    """Every sound effect (audio.h's Sfx) has its row in each table keyed by it: its notes (sfx_notes.h), the web's
+    buzz (webgame/shell.html BUZZ) and a Windows controller's rumble (windows/main.cpp kBuzz). A row missing puts the
+    rest a step out: Reel Fishing's bite would buzz like its hook."""
+
+    def test_one_row_per_effect(self):
+        def read(*p):
+            with open(os.path.join(ROOT, *p), encoding='utf-8') as f:
+                return f.read()
+        enum = read('src', 'audio.h')
+        enum = enum[enum.index('enum Sfx'):enum.index('SFX_COUNT')]
+        n = len(re.findall(r'^\s*(SFX_[A-Z0-9_]+)', enum, re.M))
+        notes = read('src', 'sfx_notes.h')
+        notes = notes[notes.index('SFX[SFX_COUNT] = {'):]
+        notes = notes[:notes.index('};')]
+        self.assertEqual(len(re.findall(r'\{N_[A-Z0-9_]+,', notes)), n, 'sfx_notes.h SFX')
+        buzz = read('webgame', 'shell.html')
+        buzz = buzz[buzz.index('const BUZZ = [') + len('const BUZZ = ['):]
+        depth, items, cur = 0, 0, ''
+        for ch in buzz:
+            if ch == '[':
+                depth += 1
+            elif ch == ']':
+                if depth == 0:
+                    break
+                depth -= 1
+            if ch == ',' and depth == 0:
+                items += 1
+                cur = ''
+            else:
+                cur += ch
+        items += 1 if cur.strip() else 0
+        self.assertEqual(items, n, 'shell.html BUZZ')
+        rumble = read('windows', 'main.cpp')
+        rumble = rumble[rumble.index('static const Buzz kBuzz[] = {'):]
+        rumble = rumble[:rumble.index('\n};')]
+        self.assertEqual(len(re.findall(r'\{\d+, \{[\d, ]*\}, 0x?[0-9A-Fa-f]*\}', rumble)), n, 'windows kBuzz')
+
+
 class TestTimeZones(unittest.TestCase):
     """The Knomi's time zones (timezones.h): every POSIX rule gives the same UTC offset as the real zone
     (the system's tz database), hour by hour for three years, summer time included."""
