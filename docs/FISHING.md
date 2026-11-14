@@ -170,7 +170,8 @@ Magikarp.
 
 ## Score, goals and rewards
 
-- **The score is the total weight** of what you landed in 5 casts, to a tenth of a kg.
+- **The score is the total weight** of what you landed in 5 casts, to a tenth of a kg (decided, Fedor: "Yes, weight",
+  over points by rarity).
 - **Goal lines** (Fedor: "get over a set amount of weight"): bronze 50 kg, silver 150 kg, gold 300 kg, shown as a bar
   with three markers on the result (mockup 14). As a rough guide: five small ones make bronze, a few middling and big
   ones make silver, and gold takes the giant or several heavy ones.
@@ -265,10 +266,12 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
 
 ## Questions for Fedor
 
-1. **Scoring:** total weight against bronze, silver and gold lines (my pick, as mocked), or points by rarity?
-2. **The goal lines:** are 50, 150 and 300 kg about right?
-3. **The giant:** one in every game (fair, as mocked), or rare and random (more of a surprise, more luck)?
-4. **Showing the pace:** the blob swells on the beat (easier), or you only feel it from the notch (harder)?
-5. **Too soon:** does tapping on a nibble lose the cast (the classic rule), or only scare that fish off?
-6. **The Game Boy:** is 3 + 3 cartridges all right (mockup 1)?
-7. **The Knomi's backlight flash** at the bite: yes?
+Decided so far: the name (Reel Fishing), blobs, tap to reel at each weight's pace, the weigh-in and release, no medals
+for now, the two songs with the fight song following the fish, and scoring by total weight.
+
+1. **The goal lines:** are 50, 150 and 300 kg about right?
+2. **The giant:** one in every game (fair, as mocked), or rare and random (more of a surprise, more luck)?
+3. **Showing the pace:** the blob swells on the beat (easier), or you only feel it from the notch (harder)?
+4. **Too soon:** does tapping on a nibble lose the cast (the classic rule), or only scare that fish off?
+5. **The Game Boy:** is 3 + 3 cartridges all right (mockup 1)?
+6. **The Knomi's backlight flash** at the bite: yes?
