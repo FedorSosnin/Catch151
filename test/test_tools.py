@@ -62,7 +62,7 @@ class TestSoundtrackPage(unittest.TestCase):
             page = f.read()
         block = re.search(r'const TRACKS = \[(.*?)\n\];', page, re.S).group(1)
         names = [n.replace("\\'", "'") for n in re.findall(r"^  \['((?:[^'\\]|\\.)*)', ", block, re.M)]
-        self.assertEqual(len(games), 28)
+        self.assertEqual(len(games), 30)
         self.assertEqual(names, games, 'web/music/index.html: TRACKS must follow src/music_data.h')
         zones = re.findall(r"^  \['(\w+)', (\d+), (\d+), ", page, re.M)
         self.assertEqual([z[0] for z in zones], ['Forest', 'Beach', 'Cave', 'Mansion', 'Field'])
@@ -71,6 +71,45 @@ class TestSoundtrackPage(unittest.TestCase):
             self.assertEqual(games[int(battle)], name + ' Battle')
         for f in ('music.wasm', 'music-worklet.js', 'brand/catch151-soundtrack.svg'):
             self.assertTrue(os.path.exists(os.path.join(ROOT, 'web', 'music', f)), f)
+
+
+class TestEffectTables(unittest.TestCase):
+    """Every sound effect (audio.h's Sfx) has its row in each table keyed by it: its notes (sfx_notes.h), the web's
+    buzz (webgame/shell.html BUZZ) and a Windows controller's rumble (windows/main.cpp kBuzz). A row missing puts the
+    rest a step out: Reel Fishing's bite would buzz like its hook."""
+
+    def test_one_row_per_effect(self):
+        def read(*p):
+            with open(os.path.join(ROOT, *p), encoding='utf-8') as f:
+                return f.read()
+        enum = read('src', 'audio.h')
+        enum = enum[enum.index('enum Sfx'):enum.index('SFX_COUNT')]
+        n = len(re.findall(r'^\s*(SFX_[A-Z0-9_]+)', enum, re.M))
+        notes = read('src', 'sfx_notes.h')
+        notes = notes[notes.index('SFX[SFX_COUNT] = {'):]
+        notes = notes[:notes.index('};')]
+        self.assertEqual(len(re.findall(r'\{N_[A-Z0-9_]+,', notes)), n, 'sfx_notes.h SFX')
+        buzz = read('webgame', 'shell.html')
+        buzz = buzz[buzz.index('const BUZZ = [') + len('const BUZZ = ['):]
+        depth, items, cur = 0, 0, ''
+        for ch in buzz:
+            if ch == '[':
+                depth += 1
+            elif ch == ']':
+                if depth == 0:
+                    break
+                depth -= 1
+            if ch == ',' and depth == 0:
+                items += 1
+                cur = ''
+            else:
+                cur += ch
+        items += 1 if cur.strip() else 0
+        self.assertEqual(items, n, 'shell.html BUZZ')
+        rumble = read('windows', 'main.cpp')
+        rumble = rumble[rumble.index('static const Buzz kBuzz[] = {'):]
+        rumble = rumble[:rumble.index('\n};')]
+        self.assertEqual(len(re.findall(r'\{\d+, \{[\d, ]*\}, 0x?[0-9A-Fa-f]*\}', rumble)), n, 'windows kBuzz')
 
 
 class TestTimeZones(unittest.TestCase):
@@ -472,7 +511,8 @@ class TestHowToPlayCards(unittest.TestCase):
     character at size 2; the CJK one (unifont, at 1x there) 8 px for ASCII and 16 for the rest."""
 
     IDS = ('S_HOW_BERRY', 'S_HOW_BERRY_KEYS', 'S_HOW_WHO', 'S_HOW_RUN', 'S_HOW_DN', 'S_HOW_DN_KEYS',
-           'S_HOW_SURF', 'S_HOW_SURF_KEYS', 'S_HOW_VB', 'S_HOW_VB_KEYS', 'S_HOW_SD', 'S_HOW_DUEL', 'S_HOW_DUEL_KEYS')
+           'S_HOW_SURF', 'S_HOW_SURF_KEYS', 'S_HOW_VB', 'S_HOW_VB_KEYS', 'S_HOW_SD', 'S_HOW_DUEL', 'S_HOW_DUEL_KEYS',
+           'S_HOW_FISH', 'S_HOW_FISH_KEYS')
     MAX_LINES = 8  # the panel's 176 px at CARD_LINE_H
 
     @classmethod

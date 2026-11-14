@@ -107,6 +107,7 @@ class MusicPlayer {
     ms_ = 1000.0f / rate;
   }
   uint8_t playing() const { return st_.track; }
+  void fightTempo(float f) { fightTempo_ = f > 0.2f && f < 3.0f ? f : 1.0f; }  // (Reel Fishing: musicTempo())
 
   // the track to play: the one playing fades out first (fast: when the sound was switched off)
   void want(uint8_t track, bool fast = false) {
@@ -126,6 +127,7 @@ class MusicPlayer {
 
  private:
   float rate_ = 48000, ms_ = 1000.0f / 48000;
+  float fightTempo_ = 1.0f;
   MusicState st_;
   uint8_t want_ = MUS_NONE;
   bool fast_ = false;
@@ -140,7 +142,11 @@ class MusicPlayer {
            (t >= MUS_ZONE_FOREST && t <= MUS_ZONE_FIELD);
   }
 
-  double spt() const { return rate_ * 60.0 / (MUSIC_SONGS[st_.track - 1].bpm * MS_TICKS_PER_BEAT); }
+  // samples a tick; Reel Fishing's fight song at the hooked fish's pace (fightTempo)
+  double spt() const {
+    double bpm = MUSIC_SONGS[st_.track - 1].bpm * (st_.track == MUS_FISH_FIGHT ? fightTempo_ : 1.0f);
+    return rate_ * 60.0 / (bpm * MS_TICKS_PER_BEAT);
+  }
 
   // follows want_: fades the one playing out, then starts the next (resumed where it was if it was left lately)
   void step() {

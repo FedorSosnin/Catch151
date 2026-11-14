@@ -834,6 +834,14 @@ void Pet::surfResult(uint16_t secs) {
   save();
 }
 
+// Reel Fishing: the record, and exercise as the other games give it (50 kg plays like a short game, 300 kg a long one)
+void Pet::fishResult(uint16_t kg10) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (kg10 > fishHi) fishHi = kg10;
+  exerciseReward(kg10 / 200 > 255 ? 255 : kg10 / 200);
+  save();
+}
+
 void Pet::friendlyBattle(bool won) {
   if (ceremony != CER_NONE || isEgg()) return;
   joy = clamp100(joy + (won ? 15 : 8));
@@ -1217,6 +1225,7 @@ void Pet::save() {
   prefs.putUShort("ghi", gameHi);
   prefs.putUShort("rhi", runHi);
   prefs.putUShort("sfhi", surfHi);
+  prefs.putUShort("fshi", fishHi);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
   prefs.putUInt("cdyd", candyDay);
@@ -1324,6 +1333,7 @@ void Pet::load() {
   gameHi = prefs.getUShort("ghi", 0);
   runHi = prefs.getUShort("rhi", 0);
   surfHi = prefs.getUShort("sfhi", 0);
+  fishHi = prefs.getUShort("fshi", 0);
   dungeonHi = prefs.getUChar("dhi", 0);
   candyToday = prefs.getUChar("cdyn", 0);
   candyDay = prefs.getUInt("cdyd", 0);

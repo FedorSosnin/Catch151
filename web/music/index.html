@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="brand/catch151-icon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="brand/catch151-icon-32.png">
 <link rel="apple-touch-icon" href="brand/catch151-icon-180.png">
-<meta name="description" content="Catch 151's soundtrack: 28 original chiptunes written for the game, a home tune, a theme and a battle for each zone of Knomi Island, the tower, the minigames, played live by the game's own four-voice synth.">
+<meta name="description" content="Catch 151's soundtrack: 30 original chiptunes written for the game, a home tune, a theme and a battle for each zone of Knomi Island, the tower, the minigames, played live by the game's own four-voice synth.">
 <!-- The game's music, played by the game's own player: music.wasm (tools/build_music_page.sh) in music-worklet.js.
      The list below follows the songs' order in src/music.h (test/test_tools.py checks it against src/music_data.h). -->
 <style>
@@ -104,7 +104,7 @@
 <body>
 <header>
   <h1><img src="brand/catch151-soundtrack.svg" width="332" height="46" alt="Catch 151 Soundtrack"></h1>
-  <p class="lede">28 original chiptunes written for Catch 151: a home tune, a theme and a battle for every zone of Knomi Island,
+  <p class="lede">30 original chiptunes written for Catch 151: a home tune, a theme and a battle for every zone of Knomi Island,
   the tower, the legends and the minigames. They play here the way they play in the game, live, from the game's own
   music player, looping forever. Tap one to listen.</p>
 </header>
@@ -139,7 +139,7 @@
     <p><b>Every tune is original.</b> Nothing here comes from any other game. Each song is written as notes, a melody, a
     harmony, a bassline and a drum pattern over its chords, in
     <a href="https://github.com/FedorSosnin/Catch151/blob/main/tools/music/songs.py">tools/music/songs.py</a>, checked bar
-    by bar, and turned into the few bytes the game plays (all 28 songs fit in about 40 KB).</p>
+    by bar, and turned into the few bytes the game plays (all 30 songs fit in about 43 KB).</p>
     <p><b>The sound of the old handhelds.</b> There are no recordings or samples anywhere: a small synthesizer in the game
     makes every note as it plays, with the four voices those consoles had:</p>
     <ul>
@@ -217,6 +217,8 @@ const TRACKS = [
   ['Cave', 'Drops in the dark, each answered by its echo'],
   ['Mansion', 'A slow music box, a little out of tune with itself'],
   ['Field', 'Out in the open, a route in the old handhelds\' voices'],
+  ['Reel Fishing', 'Reel Fishing, at the pier: a lazy swing, waiting for a bite'],
+  ['On the Line', 'Reel Fishing, a fish on the line: driving, played at the fish\'s pace to tap along to'],
 ];
 const ZONES = [  // the zones, their two songs and their colours on the island map
   ['Forest', 23, 6, '#3f8a4c', 'zone-forest', 'A battle in the Forest: Charizard and a wild Paras among the pines'],
@@ -225,7 +227,7 @@ const ZONES = [  // the zones, their two songs and their colours on the island m
   ['Mansion', 26, 9, '#2e2758', 'zone-mansion', 'A battle at the Mansion: a wild Koffing at night'],
   ['Field', 27, 10, '#8fce7a', 'zone-field', 'A battle in the Field: a wild Fearow by the farmhouse'],
 ];
-const GROUPS = { isle: [4], home: [0, 1, 2, 3], tower: [5, 12, 11, 13, 14], games: [15, 19, 16, 17, 18, 20], moments: [21, 22] };
+const GROUPS = { isle: [4], home: [0, 1, 2, 3], tower: [5, 12, 11, 13, 14], games: [15, 19, 16, 17, 18, 20, 28, 29], moments: [21, 22] };
 
 const PLAY = '<svg viewBox="0 0 16 16"><path d="M4 2v12l10-6z"/></svg>';
 const order = [];  // every song in the page's order, for next and previous

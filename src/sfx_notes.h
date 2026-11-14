@@ -23,11 +23,27 @@ static const Note N_SHAKE1[] = {{523, 110}};  // the count to three, rising
 static const Note N_SHAKE2[] = {{659, 110}};
 static const Note N_SHAKE3[] = {{784, 110}};
 
+// Reel Fishing's
+static const Note N_FISH_CAST[]   = {{1568, 20}, {1319, 20}, {1047, 20}, {880, 25}, {698, 30}};
+static const Note N_FISH_PLIP[]   = {{1760, 25}, {0, 10}, {1175, 40}};
+static const Note N_FISH_NIBBLE[] = {{2093, 18}};
+static const Note N_FISH_BITE[]   = {{196, 50}, {0, 15}, {1319, 70}, {1760, 110}};
+static const Note N_FISH_HOOK[]   = {{587, 30}, {784, 30}, {1047, 30}, {1397, 60}};
+static const Note N_FISH_REEL[]   = {{2637, 10}};
+static const Note N_FISH_WARN[]   = {{330, 40}, {311, 40}, {294, 60}};
+static const Note N_FISH_STRAIN[] = {{2349, 40}, {0, 30}, {2349, 40}};
+static const Note N_FISH_SLACK[]  = {{880, 40}, {784, 40}, {698, 40}, {587, 60}};
+static const Note N_FISH_SNAP[]   = {{3136, 15}, {1568, 15}, {392, 40}, {196, 80}};
+static const Note N_FISH_LANDED[] = {{784, 60}, {988, 60}, {1175, 60}, {1568, 160}};
+static const Note N_FISH_SCALE[]  = {{1047, 30}, {0, 40}, {1047, 30}, {0, 40}, {1568, 140}};
+
 struct SfxDef { const Note *n; uint8_t len; };
 static const SfxDef SFX[SFX_COUNT] = {
   {N_TAP, N_TAP_LEN}, {N_EAT, 3}, {N_PLAY, 2}, {N_HEART, 2}, {N_HATCH, 4},
   {N_EVOLVE, 5}, {N_MEDAL, 5}, {N_DENY, 2}, {N_BYE, 3}, {N_LEVEL, 2},
   {N_SHAKE1, 1}, {N_SHAKE2, 1}, {N_SHAKE3, 1},
+  {N_FISH_CAST, 5}, {N_FISH_PLIP, 3}, {N_FISH_NIBBLE, 1}, {N_FISH_BITE, 4}, {N_FISH_HOOK, 4}, {N_FISH_REEL, 1},
+  {N_FISH_WARN, 3}, {N_FISH_STRAIN, 3}, {N_FISH_SLACK, 4}, {N_FISH_SNAP, 4}, {N_FISH_LANDED, 4}, {N_FISH_SCALE, 5},
 };
 // an effect whose notes run into each other: no fade between them, the wave carried on, and its last note fading
 // to about half by its end (the tap)

@@ -556,6 +556,41 @@ s.section('A2', 8, ZFI_CA, ZFI_A, 'thirds', ZFI_B, [POP] * 7 + [POP_FILL], insts
           vols=(13, 7, 10, 7))
 s.form(['I'], ['A', 'B', 'A2', 'B'])
 
+# ------------------------------------------------------------------ Reel Fishing (MOCKUP: the game isn't built yet)
+# At the pier: a lazy swing in no hurry, a flute over plucked chords, a shaker like water slapping the posts, and
+# rests where the tune waits, as you wait for the float to go under
+s = add(song('FISH', 'Reel Fishing', 84, key=('G', 'major'), insts=('flute', 'gbpick', 'basspl'), vols=(12, 8, 13, 6)))
+FISH_DR = '12: k . S . . S r . S . . S'
+FISH_H = '12: 1 . 3 2 . 3 1 . 3 2 . 3'
+FISH_B = '12: R - - 5 - - R - - 5 - -'
+FISH_A = """
+  o5 d6 g12 b4 g6 a12 b4 | b6 a12 g4 e2 | e6 g12 o6 c4 e6 d12 c4 | o5 a2 r4 f+6 a12 |
+  b6 o6 d12 o5 b4 g6 b12 d4 | e6 g12 b4 o6 e4 o5 b4 | o6 c6 o5 b12 a4 f+6 g12 a4 | g2. r4 |"""
+FISH_CA = 'G | Em | C | D7 | G | Em | Am7 D7 | G'
+s.section('I', 2, 'G | D7', None, FISH_H, FISH_B, [FISH_DR, FISH_DR])
+s.section('A', 8, FISH_CA, FISH_A, FISH_H, FISH_B, [FISH_DR])
+s.section('B', 8, 'C | G | Am | D7 | C | G/B | Am7 D7 | G', """
+  o5 e4 g6 e12 c2 | d4 g6 b12 o6 d2 | c4 o5 b6 a12 e2 | f+4 a6 f+12 d4 r4 |
+  e6 g12 o6 c4 o5 g6 e12 c4 | d6 g12 b4 d2 | c6 e12 a4 f+6 a12 o6 c4 | o5 g2. r4 |""",
+          'thirds', FISH_B, [FISH_DR], insts=('flute', 'gbharm', 'basspl'), vols=(12, 6, 13, 6))
+s.form(['I'], ['A', 'B'])
+
+# On the line: driving and urgent, a minor key, the tune climbing in short runs; the game would play it at the hooked
+# fish's pace (the synth's tempo scaled), so you can tap along to it
+s = add(song('FISH_FIGHT', 'On the Line', 150, key=('E', 'minor'), insts=('lead', 'stab', 'bass'), vols=(13, 8, 15, 10)))
+FIGHT_B = '8: R R R R O R 5 R'
+FIGHT_A = """
+  o5 e8 g8 b8 e8 g8 b8 o6 e4 | e8 d8 c8 o5 g8 e8 g8 o6 c4 |
+  o5 f+8 a8 o6 d8 o5 a8 f+8 a8 o6 d8 e8 | d+4 o5 b4 f+4 a4 |"""
+s.section('I', 1, 'B7', None, STAB8, FIGHT_B, [DRIVE_FILL])
+s.section('A', 4, 'Em | C | D | B7', FIGHT_A, STAB8, FIGHT_B, [CRASH, DRIVE, DRIVE, DRIVE_FILL])
+s.section('B', 4, 'Am | Em | C | B7', """
+  o6 c4. o5 b8 a4 e4 | g4. f+8 e4 b4 | o6 c8 o5 g8 e8 g8 o6 c8 e8 g8 e8 | f+4 d+4 o5 b4 r4 |""",
+          STAB8, FIGHT_B, [DRIVE, DRIVE, DRIVE, DRIVE_FILL])
+s.section('A2', 4, 'Em | C | D | B7', FIGHT_A, 'thirds', FIGHT_B, [CRASH, DRIVE, DRIVE, DRIVE_FILL],
+          insts=('lead', 'soft25', 'bass'))
+s.form(['I'], ['A', 'B', 'A2', 'B'])
+
 # ------------------------------------------------------------------ how loud each plays
 # Measured (each voice's RMS: host/music_wav.cpp prints the mix's) so they all sit about 8 dB under the effects: the
 # home and the menus at -24.5 dBFS, the battles and the games at -24, the night and the goodbye softer, the jingles
@@ -567,6 +602,7 @@ GAINS = {
     'BERRY': 1.24, 'RUN': 0.88, 'SURF': 0.91, 'DUNGEON': 1.29, 'QUIZ': 1.41, 'VOLLEY': 0.89,
     'EVOLVE': 0.90, 'GOODBYE': 0.86,
     'ZONE_FOREST': 0.95, 'ZONE_BEACH': 1.10, 'ZONE_CAVE': 1.55, 'ZONE_MANSION': 1.50, 'ZONE_FIELD': 0.84,
+    'FISH': 1.16, 'FISH_FIGHT': 0.85,
 }
 
 

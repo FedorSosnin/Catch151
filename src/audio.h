@@ -17,6 +17,19 @@ enum Sfx : uint8_t {
   SFX_SHAKE1,   // the ball rocks: one...
   SFX_SHAKE2,   // ...two...
   SFX_SHAKE3,   // ...three
+  // Reel Fishing (fishing.h): each moment has its own (and its own buzz on a phone or a controller)
+  SFX_FISH_CAST,    // the rod swings
+  SFX_FISH_PLIP,    // the float lands
+  SFX_FISH_NIBBLE,  // a nibble: a soft tik
+  SFX_FISH_BITE,    // the bite: a plunk and a rising alarm
+  SFX_FISH_HOOK,    // struck in time
+  SFX_FISH_REEL,    // a tap reels: the click
+  SFX_FISH_WARN,    // a thrash is coming: a creak
+  SFX_FISH_STRAIN,  // too tight: a warning beep (again and again while it stays so)
+  SFX_FISH_SLACK,   // too slack: the line running out
+  SFX_FISH_SNAP,    // the line snaps
+  SFX_FISH_LANDED,  // landed: a fanfare
+  SFX_FISH_SCALE,   // the weigh-in: tick, tick, ding
   SFX_COUNT
 };
 
