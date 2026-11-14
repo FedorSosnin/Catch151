@@ -1629,7 +1629,7 @@ static int v2CartLines(const char *title, char out[3][32]) {
   }
   for (int i = 0; i < np && np < 3; i++) {
     int n = (int)strlen(part[i]), cut, skip = 0;
-    if (textW(part[i], 2) <= V2_CART_TXT_W) {  // it fits: only a one-line name of two joined words breaks ("PokeRun")
+    if (textW(part[i], 2) <= V2_CART_TXT_W) {  // it fits: only a one-line name of two joined words breaks ("PikaSurf")
       if (np > 1 || (cut = v2CartCut(part[i], n, true)) < 0) continue;
     } else if ((cut = v2CartCut(part[i], n, false)) >= 0) {
       skip = part[i][cut] == ' ';
@@ -1648,7 +1648,7 @@ static int v2CartLines(const char *title, char out[3][32]) {
   return np;
 }
 
-// the same for a title in Latin letters only (PokeRun, PikaSurf, PokeDungeon): the classic font in every
+// the same for a title in Latin letters only (Rock Hopper, PikaSurf, Dungeon Crawler): the classic font in every
 // language, so they look the same in Japanese and Korean. Returns whether to put the language's font back.
 static bool v2CartFont(const char *title) {
   for (const char *p = title; *p; p++)
@@ -1795,7 +1795,7 @@ static void v2PaintGameLabels() {
   printT("?");
   classicFontEnd(cjk);
   v2LblKeep(1);
-  // PokeRun: the forest's edge, Charmander over a log, speed lines behind it
+  // Rock Hopper: the forest's edge, Charmander over a log, speed lines behind it
   v2LblSky(0x9FD6F0, 0xD8EEE8, 30, 0x8A6A44, 0x6E5034);
   for (int x = 0; x < V2_LBL_W; x += 10) gfx->fillRect(x, 22 + (x / 10) % 2 * 2, 8, 8, sc565(0x3C8A4C));  // the pines' feet
   gfx->fillRect(50, 26, 19, 6, sc565(0x8A5A34));
@@ -1811,7 +1811,7 @@ static void v2PaintGameLabels() {
   v2LblThumb(25, 39, 36, false);
   for (int k = 0; k < 4; k++) gfx->fillRect(6 + k * 3, 38 - k, 5, 2, UI_WHITE);
   v2LblKeep(3);
-  // PokeDungeon: a stone wall over flagstones, Squirtle by a berry
+  // Dungeon Crawler: a stone wall over flagstones, Squirtle by a berry
   v2LblSky(0x55516E, 0x55516E, 18, 0x9A94B0, 0x847E9C);
   for (int x = 0; x < V2_LBL_W; x += 12) gfx->fillRect(x, 6 + (x / 12) % 2 * 6, 10, 4, sc565(0x6E6A84));  // the wall's stones
   for (int x = 6; x < V2_LBL_W; x += 16) gfx->fillRect(x, 18, 2, 24, sc565(0x6E6A84));                  // the floor's joints
@@ -1823,7 +1823,7 @@ static void v2PaintPlayLabels() {
   if (!v2LblStart()) return;
   if (v2LblKey[1] == 0) return;
   v2LblKey[1] = thumbs.loaded ? 0 : -1;
-  // Poke Ball Volley: the court, the ball over Charmander
+  // Volley Ball: the court, the ball over Charmander
   v2LblSky(0x7FBDE6, 0xD8EEE8, 30, 0x79BD4F, 0x5A9A3A);
   gfx->fillRect(38, 14, 2, 18, UI_WHITE);  // the net
   drawMap(SPR_HOME_BALL, HOME_ICON_N, 22, 4, 1, false);
@@ -1845,7 +1845,7 @@ static void v2PaintPlayLabels() {
 
 // ----- the two Game Boys -----
 static const int16_t V2_CART_XY[5][2] = { { 56, 100 }, { 180, 100 }, { 304, 100 }, { 118, 248 }, { 242, 248 } };
-static const uint8_t V2_CART_GAME[5] = { 0, 1, 2, 4, 3 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, PokeRun, PikaSurf, PokeDungeon)
+static const uint8_t V2_CART_GAME[5] = { 0, 1, 2, 4, 3 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler)
 // the colours the games came in: Green, Silver, Red, Yellow, Blue; Play together's Gold, Crystal, Yellow
 static const Rgb V2_CART_COL[5] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8 };
 static const int16_t V2_PLAY_XY[3][2] = { { 56, 150 }, { 180, 150 }, { 304, 150 } };

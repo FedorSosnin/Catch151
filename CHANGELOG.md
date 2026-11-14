@@ -8,6 +8,7 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 
 ## [Unreleased]
 
+- **Three games renamed:** PokeRun is now **Rock Hopper**, PokeDungeon is **Dungeon Crawler** and Poké Ball Volley is **Volley Ball**, in every language, on their cartridges and in the music. Your records and medals carry on.
 - **The soundtrack, online:** [all 28 songs](https://fedorsosnin.github.io/Catch151/music/), each zone's exploring and battle songs together with its picture, played live in the browser by the game's own synthesizer, with a scope for each of its four voices. The README tells how the music and the cries are made, all of it original.
 - **New app icons, drawn from the Catch 151 logo:** on a Mac it now sits on Apple's grid like other apps (no longer larger than its neighbours in the Dock), on an iPhone's home screen it's a full square that iOS rounds (no black corners), and Windows gets every size drawn crisp. The online Pokédex's iPhone icon is fixed the same way.
 - **Tidied up under the hood:** the original game's look (1.x), kept until now behind a build switch, is gone with its code, about 3,200 lines, along with old screenshots and tools nobody used. Nothing you see or play changes, and the Knomi's firmware is a little smaller.

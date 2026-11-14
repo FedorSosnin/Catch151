@@ -145,14 +145,14 @@ public:
   uint32_t newMedal = 0;   // just earned, to celebrate
   uint16_t lastMilestone = 0;  // streak milestone already celebrated
   uint16_t gameHi = 0;     // minigame record (the player's)
-  uint16_t runHi = 0;      // PokeRun record, in seconds
+  uint16_t runHi = 0;      // Rock Hopper record, in seconds
   uint16_t surfHi = 0;     // PikaSurf record, in seconds
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;
   uint8_t candyToday = 0;  // treats given on day candyDay
   uint32_t candyDay = 0;
   uint32_t candyGiftDay = 0;  // the day the visitor brought one more candy
-  uint8_t dungeonHi = 0;   // deepest floor of PokeDungeon
+  uint8_t dungeonHi = 0;   // deepest floor of Dungeon Crawler
   uint16_t battleWins = 0; // battles won by this individual
   uint32_t visitorDay = 0;  // last day with a visit
   int16_t visitDex = 0;     // today's visitor, while it has minutes left
@@ -172,8 +172,8 @@ public:
     return !isEgg() && (speciesId % 3) == color;  // hidden taste per species
   }
   void playResult(uint8_t score);  // minigame reward (trains SPE)
-  void runResult(uint16_t secs);   // PokeRun: same, every 4 s counts as one point
-  void surfResult(uint16_t secs);  // PikaSurf: the same as PokeRun
+  void runResult(uint16_t secs);   // Rock Hopper: same, every 4 s counts as one point
+  void surfResult(uint16_t secs);  // PikaSurf: the same as Rock Hopper
   void dungeonResult(uint8_t floor);
   int candiesLeft() const {  // today's candies still to have (the visitor's included)
     int limit = CANDY_PER_DAY + (today() != 0 && candyGiftDay == today() ? 1 : 0);

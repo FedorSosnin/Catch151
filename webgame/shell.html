@@ -60,7 +60,7 @@
 </head>
 <body>
 <img id="logo" src="logo.svg" width="174" height="46" alt="Catch 151">
-<div id="hint">Tap, hold and swipe the screen · ← → tilt · arrows walk in PokeDungeon · Space: wild battle · Space or ↑ throws on a catch</div>
+<div id="hint">Tap, hold and swipe the screen · ← → tilt · arrows walk in Dungeon Crawler · Space: wild battle · Space or ↑ throws on a catch</div>
 <script>  // a phone has no arrow keys or Space: it tilts
   if (matchMedia('(pointer: coarse)').matches) document.getElementById('hint').textContent = 'Tap, hold and swipe the screen · Tilt to aim';
 </script>
@@ -251,7 +251,7 @@ for (const ev of ['pointerup', 'pointercancel']) {
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('touchend', startTilt);  // a finished tap: the moment iPhones accept the question
 
-// ---- keys: arrows tilt (and walk in PokeDungeon), Space is the Knomi's button ----
+// ---- keys: arrows tilt (and walk in Dungeon Crawler), Space is the Knomi's button ----
 const keys = { left: false, right: false, up: false, down: false };
 function key(e, isDown) {
   if (e.key === 'ArrowLeft') keys.left = isDown;

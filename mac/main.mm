@@ -731,7 +731,7 @@ static NSAttributedString *aboutLine(NSString *label, NSString *text, NSString *
   switch (event.keyCode) {
     case 123: _left = down; [self applyKeys]; return true;   // left arrow
     case 124: _right = down; [self applyKeys]; return true;  // right arrow
-    case 126: _up = down; [self applyKeys]; return true;     // up arrow (PokeDungeon)
+    case 126: _up = down; [self applyKeys]; return true;     // up arrow (Dungeon Crawler)
     case 125: _down = down; [self applyKeys]; return true;   // down arrow
     case 49: hostButton(down); return true;                  // space
   }

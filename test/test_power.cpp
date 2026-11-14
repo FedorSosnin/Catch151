@@ -81,7 +81,7 @@ TEST(power, game_and_screen_off_take_priority_over_the_rest) {
   g.batPct = 5;
   CHECK_EQ((int)frameIntervalMs(g), 85);
   g.arcadeOpen = true;
-  CHECK_EQ((int)frameIntervalMs(g), 40);               // PokeRun runs in real time: smoother
+  CHECK_EQ((int)frameIntervalMs(g), 40);               // Rock Hopper runs in real time: smoother
   PowerCtx off = ctx(0);
   off.screenOff = true;
   CHECK_EQ((int)frameIntervalMs(off), 0);

@@ -36,7 +36,7 @@ void hostPointerHover(void);
 void hostPointerHoverAt(int x, int y);
 // Tilt keys; the game sees a ramp, not a jump, so it can be fine-tuned
 void hostTiltKeys(bool left, bool right);
-// Up and down arrows: with left and right (hostTiltKeys), PokeDungeon walks with all four
+// Up and down arrows: with left and right (hostTiltKeys), Dungeon Crawler walks with all four
 void hostArrowKeys(bool up, bool down);
 // A real tilt sensor, -1 (left) .. 1 (right), like the Knomi's accelerometer; NaN goes back to the keys
 void hostTiltSensor(float x);

@@ -32,7 +32,7 @@
 enum BuddyType : uint8_t {
   BM_HELLO = 1, BM_INVITE, BM_ACCEPT, BM_DECLINE, BM_FIGHTER, BM_MOVE, BM_OFFER, BM_CONFIRM, BM_LEAVE,
   BM_ROUND, BM_ANSWER, BM_RESULT,  // Who's That? Showdown (older firmware drops these: it sees past BM_END)
-  BM_VBALL, BM_VMISS,              // Poke Ball Volley: the ball over the net; a point
+  BM_VBALL, BM_VMISS,              // Volley Ball: the ball over the net; a point
   BM_SURF,                         // PikaSurf: where you are on the water, your time, and if you've crashed
   BM_READY,                        // any Play together game: pressed Ready, GO! on its card
   BM_END

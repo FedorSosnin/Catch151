@@ -1,4 +1,4 @@
-// PokeDungeon rules (dungeon.h).
+// Dungeon Crawler rules (dungeon.h).
 #include "framework.h"
 #include "shim/Arduino.h"
 #include "shim/Preferences.h"

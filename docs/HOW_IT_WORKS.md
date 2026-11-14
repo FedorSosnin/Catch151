@@ -36,12 +36,12 @@ Games don't raise anything if you quit by swiping up.
 | Game | 😊 | ⚡ | 🍖 | 💨 | Bond 💞 | Burns ⚖️ |
 |---|---|---|---|---|---|---|
 | 🍓 **Berry Drop** | +5, plus 2 per point | −10, more for high scores | **+5** | Yes | +2 | Yes |
-| 🏃 **PokeRun** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
+| 🏃 **Rock Hopper** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
 | 🏄 **PikaSurf** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
-| 🕳️ **PokeDungeon** | +5, plus 4 per floor | −10, more for deep dives | −5 | Yes | +2 | Yes |
+| 🕳️ **Dungeon Crawler** | +5, plus 4 per floor | −10, more for deep dives | −5 | Yes | +2 | Yes |
 | ❓ **Who's That?** | +3, plus 3 per right answer | | | | +1 | |
 
-Berry Drop, PokeRun, PikaSurf and PokeDungeon each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
+Berry Drop, Rock Hopper, PikaSurf and Dungeon Crawler each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
 
 At the end, **Play Again!** starts the same game again and the ✕ goes back to the games; a tap on the Repel bar under them opens the Repel's page on your Pokémon's card. Every second you actually play counts toward a Repel (see [Items](#items)): not the how-to card or the end, and only while you're touching, tilting or pressing keys, so sitting in the dungeon earns nothing. The games with a buddy count too.
 
@@ -95,7 +95,7 @@ Every form in the Pokédex (regular and shiny count apart) has 1–3 ★: its ge
 
 - **Winning a battle** adds attack training (+6 a win).
 - **Every 6 hours of good care** adds defense training (+1). Good care means every need stays at 40 or more. Hours asleep count too, and a need can dip under 40 for up to 15 minutes while it's awake (time to notice and feed it) before the 6 hours start over. The count is saved, so a restart or an update doesn't lose it.
-- **Mini games** add speed training: Berry Drop, PokeRun, PikaSurf and PokeDungeon add 1 for every 5 points.
+- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf and Dungeon Crawler add 1 for every 5 points.
 - **Weight** isn't training: every berry adds 4 and candy 12 (6 more if it was already 80% full). Games, battles and time burn it off. Over 50, energy drops twice as fast; 20 or less earns the Fit medal.
 
 Each kind of training stops at 100. Hold your Pokémon and tap **Stats** for the card, then two pages on: the **Training** page shows each one's bar, with **MAX** when it's full, and what trains it, plus a row for weight. Training belongs to the Pokémon: a new one starts from zero.
@@ -107,7 +107,7 @@ While at least one buddy or the daily visitor is on your screen:
 | Boost | |
 |---|---|
 | ⚡ **Energy drain** | A quarter less: it drops three minutes in four instead of every minute (overweight too) |
-| 💪 **ATK, DEF, SPD** | +2 each in wild battles and PokeDungeon (not in battles between buddies) |
+| 💪 **ATK, DEF, SPD** | +2 each in wild battles and Dungeon Crawler (not in battles between buddies) |
 
 It's the same with one friend or five, so extra devices don't stack it. Tap the round Party Boost button (two balloons and **+2**, to the right of your Pokémon) for the list of who's here. Tap a friend for its stats (level, HP, ATK, DEF, SPD, and a buddy's Pokédex count), then swipe to a buddy's Battle, Trade and Play menu. The ✕ goes back to the list.
 
@@ -123,7 +123,7 @@ Kept with you from one Pokémon to the next, up to 99 of each. Each has its own 
 | 🟣 **Master Ball** | Every 100 of those battles | Always catches the Pokémon it hits |
 | 🧴 **Repel** | Every 10 minutes of mini games actually played | Spray it from the backpack: for 3 of the game's minutes, weaker wild Pokémon stay away |
 
-At the end of each of those battles, both balls' bars come up in the middle of the screen and this battle's step fills in on each. Running away, battles with buddies and PokeDungeon don't count toward the balls. On the catch screen, the balls you hold sit in a row, each the button for its throw: with both a Master and an Ultra Ball, the Master Ball, the Poké Ball in the middle, then the Ultra Ball.
+At the end of each of those battles, both balls' bars come up in the middle of the screen and this battle's step fills in on each. Running away, battles with buddies and Dungeon Crawler don't count toward the balls. On the catch screen, the balls you hold sit in a row, each the button for its throw: with both a Master and an Ultra Ball, the Master Ball, the Poké Ball in the middle, then the Ultra Ball.
 
 While a Repel works, wild encounters, and zones you've caught everything in, bring no Pokémon below your Pokémon's level and no species whose base stats add up to less than yours (if that leaves nobody, the usual pick). In a zone you haven't finished, every Pokémon there except its legendary is equally likely, and the legendary keeps its 1 in 100. Shiny odds don't change. It runs out while the Knomi is off, too. The backpack shows a badge with its minutes left, and a Repel used while one runs does nothing.
 
@@ -303,7 +303,7 @@ These stay with you across every Pokémon you raise.
 | 💯 **Level 100** | Raise a Pokémon to level 100 |
 | 🤝 **First buddy** | Have a buddy's Pokémon on your screen |
 | 🎉 **Party of 5** | Have 4 buddies at once: 5 Pokémon on screen |
-| 🎮 **Playmate** | Play a game with a buddy (Who's That? Showdown or Poké Ball Volley) |
+| 🎮 **Playmate** | Play a game with a buddy (Who's That? Showdown or Volley Ball) |
 
 ### Zone medals and the tower
 

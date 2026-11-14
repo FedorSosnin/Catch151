@@ -256,7 +256,7 @@ TEST(surf, the_record_and_its_reward) {
   CHECK_EQ(p.surfHi, (uint16_t)52);
   p.surfResult(30);
   CHECK_EQ(p.surfHi, (uint16_t)52);
-  CHECK_MSG(p.runHi == run, "does not touch the PokeRun record");
+  CHECK_MSG(p.runHi == run, "does not touch the Rock Hopper record");
 }
 
 TEST(surf, a_duel_on_the_same_course) {

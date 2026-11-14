@@ -344,7 +344,7 @@ class TestDexPage(unittest.TestCase):
         self.assertEqual(t['levelCap'], 100)
         self.assertEqual(len(t['genes']), 4)
         self.assertEqual(t['genes'], sorted(t['genes']))
-        self.assertEqual([g[0] for g in t['games']], ['Berry Drop', 'PokeRun', 'PikaSurf', 'PokeDungeon'])
+        self.assertEqual([g[0] for g in t['games']], ['Berry Drop', 'Rock Hopper', 'PikaSurf', 'Dungeon Crawler'])
         for name, unit, per, gain in t['games']:
             self.assertTrue(unit and per > 0 and gain > 0, name)
 

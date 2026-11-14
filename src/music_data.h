@@ -2079,11 +2079,11 @@ static const MusicSong MUSIC_SONGS[MUS_COUNT - 1] = {
   { "Buddy Battle", 156.0f, 1.02f, 1, 192, 3072, { MS_BUDDY_0, MS_BUDDY_1, MS_BUDDY_2, MS_BUDDY_3 } },  // MUS_BUDDY
   { "Victory", 150.0f, 0.8f, 0, 288, 0, { MS_VICTORY_0, MS_VICTORY_1, MS_VICTORY_2, MS_VICTORY_3 } },  // MUS_VICTORY
   { "Berry Drop", 128.0f, 1.24f, 1, 192, 3072, { MS_BERRY_0, MS_BERRY_1, MS_BERRY_2, MS_BERRY_3 } },  // MUS_BERRY
-  { "PokeRun", 176.0f, 0.88f, 1, 192, 3072, { MS_RUN_0, MS_RUN_1, MS_RUN_2, MS_RUN_3 } },  // MUS_RUN
+  { "Rock Hopper", 176.0f, 0.88f, 1, 192, 3072, { MS_RUN_0, MS_RUN_1, MS_RUN_2, MS_RUN_3 } },  // MUS_RUN
   { "PikaSurf", 164.0f, 0.91f, 1, 192, 3072, { MS_SURF_0, MS_SURF_1, MS_SURF_2, MS_SURF_3 } },  // MUS_SURF
-  { "PokeDungeon", 104.0f, 1.29f, 1, 192, 1536, { MS_DUNGEON_0, MS_DUNGEON_1, MS_DUNGEON_2, MS_DUNGEON_3 } },  // MUS_DUNGEON
+  { "Dungeon Crawler", 104.0f, 1.29f, 1, 192, 1536, { MS_DUNGEON_0, MS_DUNGEON_1, MS_DUNGEON_2, MS_DUNGEON_3 } },  // MUS_DUNGEON
   { "Who's That?", 120.0f, 1.41f, 1, 192, 1536, { MS_QUIZ_0, MS_QUIZ_1, MS_QUIZ_2, MS_QUIZ_3 } },  // MUS_QUIZ
-  { "Volley", 144.0f, 0.89f, 1, 192, 3072, { MS_VOLLEY_0, MS_VOLLEY_1, MS_VOLLEY_2, MS_VOLLEY_3 } },  // MUS_VOLLEY
+  { "Volley Ball", 144.0f, 0.89f, 1, 192, 3072, { MS_VOLLEY_0, MS_VOLLEY_1, MS_VOLLEY_2, MS_VOLLEY_3 } },  // MUS_VOLLEY
   { "Evolution", 132.0f, 0.9f, 0, 288, 0, { MS_EVOLVE_0, MS_EVOLVE_1, MS_EVOLVE_2, MS_EVOLVE_3 } },  // MUS_EVOLVE
   { "Goodbye", 72.0f, 0.86f, 1, 0, 768, { MS_GOODBYE_0, MS_GOODBYE_1, MS_GOODBYE_2, MS_GOODBYE_3 } },  // MUS_GOODBYE
   { "Forest", 108.0f, 0.95f, 1, 192, 1536, { MS_ZONE_FOREST_0, MS_ZONE_FOREST_1, MS_ZONE_FOREST_2, MS_ZONE_FOREST_3 } },  // MUS_ZONE_FOREST
