@@ -115,6 +115,9 @@ static const ExpectedFmt EXPECTED[] = {
   { S_EVO_TRYING_FMT,  "%s" },  // V2: the hold's EVOLVE box, "Your CATERPIE is trying to evolve!" (menus_v2.h)
   { S_FISH_KG_FMT, "%u,%u" },   // Reel Fishing: a weight, kg and tenths
   { S_FISH_REC_FMT, "%u,%u" },
+  { S_FISH_SMALL_FMT, "%s" },   // the weigh-in: how big it is for its kind, its name
+  { S_FISH_FINE_FMT, "%s" },
+  { S_FISH_LARGE_FMT, "%s" },
 };
 static const int NUM_EXPECTED = (int)(sizeof(EXPECTED) / sizeof(EXPECTED[0]));
 

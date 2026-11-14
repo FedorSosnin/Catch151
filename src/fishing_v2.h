@@ -994,54 +994,93 @@ static void fsArcDraw(float pct, int lo, int hi, bool beat) {
   v2BarLabel(fb, T(S_FISH_LINE), -45, UI_WHITE);
 }
 
-// 21 (B): a gauge on the rim where the LINE bar was, the same bar (round ends, its dark edge), filling gold to how
-// heavy it is for its kind (from 0.8 to 1.2 times its Pokedex weight: the fish come in that range), marked in fifths
-static void fsGaugeDraw(float frac) {
+// The weigh-in's gauge (Fedor chose it, the mockups' B: "a cool animation of it getting to the weight of the pokemon",
+// on the left rim, since the LINE bar is on the right): the LINE bar mirrored, its round ends and dark edge, filling
+// gold from the bottom, and the same needle as its notch where the weight lands: 0 kg at the bottom, the heaviest fish
+// there can be at the top (Fedor), spaced out at the light end (by the square root) so a 5 kg fish still lifts it, with
+// a faint mark every 50 kg; lit for a moment when it gets there. Its pixels are the LINE bar's, across the middle
+// (x to 465 - x; a Knomi cell, 464 - x)
+static float fsGaugeAt(float kg10) { return sqrtf(kg10 / (float)fishHeaviestKg10()); }  // 0..1 up the gauge
+static void fsGaugeDraw(float pos, bool lit) {
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
-  const uint16_t ink = sc565(0x1B1B25), gold = sc565(0xF2C230), goldT = sc565(scMix(0xF2C230, 0xFFFFFF, .4)),
-                 dim = sc565(0x6A5A2A);
-  const float top = frac * 200;
+  const uint16_t ink = sc565(0x1B1B25), white = UI_WHITE, gold = sc565(lit ? 0xFFE27A : 0xF2C230),
+                 goldT = sc565(scMix(lit ? 0xFFE27A : 0xF2C230, 0xFFFFFF, .4)), dim = sc565(0x6A5A2A);
+  const float p2 = pos * 200;
+  float mark[5];  // the 50 kg marks, as f
+  for (int k = 0; k < 5; k++) mark[k] = fsGaugeAt((k + 1) * 500.0f) * 200;
 #ifdef BOARD_HOST
   fsArcPxBuild();
   if (!fsArcPx) return;
   for (int i = 0; i < fsArcPxN; i++) {
     const FsArcPx &c = fsArcPx[i];
-    uint16_t &q = fb[c.y * V2_W + c.x];
+    const float px = 1 / c.s, g = fabsf(c.f - p2) * px;  // pixels to one f here; pixels from the needle
+    uint16_t &q = fb[c.y * V2_W + (V2_W - 1 - c.x)];
     uint16_t p = v2Blend(q, ink, c.edge);
     if (c.bar) {
-      uint16_t col = c.f <= top ? (c.r > V2_BAR_ROUT - 4 ? goldT : gold) : dim;
-      float tick = fabsf(c.f - roundf(c.f / 40) * 40) / c.s;  // (px from the nearest fifth)
-      if (c.f > 2 && c.f < 198) col = v2Blend(col, ink, fsCover(1.0f - tick) * 3 / 4);
+      uint16_t col = c.f <= p2 ? (c.r > V2_BAR_ROUT - 4 ? goldT : gold) : dim;
+      for (float m : mark)
+        if (m < 198) col = v2Blend(col, ink, fsCover(0.7f - fabsf(c.f - m) * px) * 2 / 3);
       p = v2Blend(p, col, c.bar);
     }
-    q = p;
+    p = v2Blend(p, ink, fsCover(4.4f * px - g) * c.room >> 8);  // the needle, as the LINE bar's notch
+    int w = fsCover(2.0f * px - g) * c.edge >> 8, w2 = fsCover(1.0f * px - g) * c.room >> 8;
+    q = v2Blend(p, white, w > w2 ? w : w2);
   }
 #else
   fsArcBuild();
   if (!fsArc) return;
   for (int i = 0; i < fsArcN; i++) {
     const FsArcCell &c = fsArc[i];
+    float m = fabsf(c.f - p2);
     uint8_t k = c.k & 3;
-    if (k == 2) continue;
-    uint16_t col = k == 1 || (c.f % 40 == 0 && c.f > 0 && c.f < 200) ? ink : c.f <= top ? ((c.k & 4) ? goldT : gold) : dim;
-    uint16_t *q = fb + c.y * V2_W + c.x;
+    uint16_t col;
+    if (m <= 2.0f && (k != 2 || m <= 1.0f)) col = white;  // the needle
+    else if (m <= 4.4f) col = ink;
+    else if (k == 2) continue;
+    else if (k == 1) col = ink;
+    else {
+      bool marked = false;
+      for (float mk : mark) marked |= mk < 198 && fabsf(c.f - mk) < 0.6f;
+      col = marked ? ink : c.f <= p2 ? ((c.k & 4) ? goldT : gold) : dim;
+    }
+    uint16_t *q = fb + c.y * V2_W + (V2_W - 2 - c.x);
     q[0] = q[1] = q[V2_W] = q[V2_W + 1] = col;
   }
 #endif
   setSize(2);
-  v2BarLabel(fb, "KG", -45, UI_WHITE);
+  v2BarLabel(fb, "KG", 225, UI_WHITE);  // past its top end, as LINE's is
 }
-static void fsMockWeighGauge() {
+// The weigh-in, t s in: the fish in the air in its glow; the gauge filling (FS_FILL_S, easing in) to its weight, the
+// needle and the number counting up together; then a line saying how big it is for one of its kind (kindKg10 its
+// Pokedex weight: the fish come 0.8 to 1.2 times that). No scale and no card over the scene
+#define FS_FILL_S 1.2f
+static void fsWeighDraw(int16_t dex, bool shiny, uint16_t kg10, uint16_t kindKg10, float t) {
+  const uint8_t *th = thumbs.getForm(dex, shiny);
+  const int cx = CX + 16;
+  float frac = kindKg10 ? (kg10 / (float)kindKg10 - 0.8f) / 0.4f : 0.5f, p = t / FS_FILL_S;
+  frac = frac < 0 ? 0 : frac > 1 ? 1 : frac;
+  if (p > 1) p = 1;
+  const float e = 1 - (1 - p) * (1 - p) * (1 - p);
+  twGlow(cx, 168, 74, 0xFFF3B0, 150);
+  fsThumb(th, cx, 168 + fsThumbH(th, 3) / 2, 3);
+  fsGaugeDraw(fsGaugeAt(kg10 * e), p >= 1 && t - FS_FILL_S < 0.3f);
+  fsBoard(T(S_FISH_WEIGH), 44);
+  char w[24];
+  uint32_t shown = (uint32_t)(kg10 * e + 0.5f);
+  snprintf(w, sizeof(w), T(S_FISH_KG_FMT), (unsigned)(shown / 10), (unsigned)(shown % 10));
+  fsSay(w, cx, 244, 0xFFFFFF, 4);
+  if (p >= 1) {
+    char nm[40], line[80];
+    v2Caps(dexName(dex), nm, sizeof(nm));
+    snprintf(line, sizeof(line), T(frac < 0.34f ? S_FISH_SMALL_FMT : frac < 0.67f ? S_FISH_FINE_FMT : S_FISH_LARGE_FMT), nm);
+    fsSay(line, cx, 296, 0xFFE27A);
+  }
+  fsSay(T(S_FISH_BACK), CX, 376, 0xFFFFFF);
+}
+static void fsMockWeighGauge() {  // (the game's own, over and over: Staryu, 36.1 kg of a kind's 34.5)
   fsBack();
-  const uint8_t *t = thumbs.getForm(120, false);
   fsAngler(FS_TIP_X, FS_TIP_Y);
-  twGlow(CX - 10, 168, 74, 0xFFF3B0, 150);
-  fsThumb(t, CX - 10, 168 + fsThumbH(t, 3) / 2, 3);
-  fsGaugeDraw(0.7f);
-  fsBoard("STARYU!", 44);
-  fsSay("36.1 kg", CX - 10, 244, 0xFFFFFF, 4);
-  fsSay("A BIG ONE FOR A STARYU", CX - 10, 296, 0xFFE27A);
-  fsSay("BACK IN IT GOES!", CX, 376, 0xFFFFFF);
+  fsWeighDraw(120, false, 361, 345, (millis() % 2800) / 1000.0f);
 }
 // the rim's cells within 40 px of the edge, worked out once
 struct FsRimCell { int16_t x, y; uint8_t d; };
@@ -1377,22 +1416,10 @@ static void fsGame(uint32_t now) {
       }
       break;
     }
-    case FP_WEIGH: {
-      int16_t dex = fish.slot[fish.cast];
-      uint16_t kg = fish.slotKg10[fish.cast];
+    case FP_WEIGH: {  // (fsWeighDraw(): the gauge on the left rim filling to its weight)
       fsAngler(FS_TIP_X, FS_TIP_Y);
-      v2DimFrame(115);
-      fsBoard(T(S_FISH_WEIGH), 70);
-      v2Panel(108, 112, 358, 360, 12);
-      float p = fish.t / 0.8f;
-      fsScale(CX, 236, (int)(kg * (p > 1 ? 1 : p)), thumbs.getForm(dex, fish.slotShiny[fish.cast]));
-      char w[20];
-      snprintf(w, sizeof(w), T(S_FISH_KG_FMT), (unsigned)(kg / 10), (unsigned)(kg % 10));
-      setSize(4);
-      gfx->setTextColor(UI_INK);
-      setCur(centerX(w, 4), 322);
-      if (p >= 1) printT(w);
-      fsSay(T(S_FISH_BACK), CX, 376, 0xFFFFFF);
+      fsWeighDraw(fish.slot[fish.cast], fish.slotShiny[fish.cast], fish.slotKg10[fish.cast],
+                  FISH_KINDS[fish.b[fish.target].kind].kg10, fish.t);
       break;
     }
     case FP_AWAY: {

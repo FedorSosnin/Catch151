@@ -20,7 +20,7 @@
 #define FISH_SLIP_S 1.5f     // the line slack (the notch under the green) this long and it slips off
 #define FISH_WARN_S 0.4f     // a thrash is warned this long before it
 #define FISH_LANDED_S 1.2f   // the leap
-#define FISH_WEIGH_S 2.2f    // the weigh-in (a tap moves on after FISH_WEIGH_TAP_S)
+#define FISH_WEIGH_S 2.8f    // the weigh-in: its gauge fills, then says how big (a tap moves on after FISH_WEIGH_TAP_S)
 #define FISH_WEIGH_TAP_S 0.6f
 #define FISH_AWAY_S 1.6f     // got away, too slow
 #define FISH_SOON_S 1.0f     // TOO SOON! shows this long; the cast goes on
@@ -93,6 +93,12 @@ static const FishKind FISH_KINDS[] = {
   { 130, 2350, FC_GIANT, 4 },  // Gyarados
 };
 #define FISH_KIND_N ((int)(sizeof(FISH_KINDS) / sizeof(FISH_KINDS[0])))
+// the heaviest a fish can be (a kind's weight, 1.2 times at most): the top of the weigh-in's gauge
+inline uint32_t fishHeaviestKg10() {
+  uint32_t m = 0;
+  for (int i = 0; i < FISH_KIND_N; i++) m = FISH_KINDS[i].kg10 > m ? FISH_KINDS[i].kg10 : m;
+  return m * 6 / 5;
+}
 
 // the water always holds these: 3 small, 2 middling, 1 big (or now and then a heavy one), and the giant's place,
 // filled for one cast in every game (casts 3 to 5)
