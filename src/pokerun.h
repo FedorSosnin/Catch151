@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-// PokeRun: rules without hardware (test/test_minigames.cpp). Logical pixels of the 466 canvas and seconds.
+// Rock Hopper: rules without hardware (test/test_minigames.cpp). Logical pixels of the 466 canvas and seconds.
 // Difficulty is tuned with these constants.
 
 #define RUN_GROUND_Y 340

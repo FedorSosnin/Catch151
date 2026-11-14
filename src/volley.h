@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <math.h>
 
-// Poke Ball Volley, the physics (tested on the PC). Each player's screen is their half of the
+// Volley Ball, the physics (tested on the PC). Each player's screen is their half of the
 // court: their Pokemon at the bottom is the paddle, the sides are walls, and the top edge is the
 // net. A ball that flies off the top comes in at the top of the buddy's screen, mirrored (they
 // face each other). It speeds up a little every moment it flies and keeps most of it after a point, so a

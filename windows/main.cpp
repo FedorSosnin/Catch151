@@ -484,7 +484,7 @@ static void startVibration() {
 // ---- tilt, like the Knomi's accelerometer and a phone's: a motion sensor that Windows knows about (a
 // tablet's or a handheld's) tilts the game as the device tilts, and a controller's left stick tilts it
 // smoothly (with the gyro mapped to that stick, in Armoury Crate on a ROG Ally, tilting moves the
-// stick). The stick and the D-pad also walk in PokeDungeon. Without either: the arrow keys, as before.
+// stick). The stick and the D-pad also walk in Dungeon Crawler. Without either: the arrow keys, as before.
 // Both only while this window is the active one, so playing something else doesn't move the pet. ----
 #define TILT_FULL_G 0.5  // sin(30 degrees): tilting 30 degrees is all the way, as on a phone
 #define PAD_SCAN_MS 2000 // with no controller, the slots are asked again this often (an empty one is slow)
@@ -834,7 +834,7 @@ static bool handleKey(WPARAM vk, bool down) {
   switch (vk) {
     case VK_LEFT: gLeft = down; applyKeys(); return true;
     case VK_RIGHT: gRight = down; applyKeys(); return true;
-    case VK_UP: gUp = down; applyKeys(); return true;     // PokeDungeon
+    case VK_UP: gUp = down; applyKeys(); return true;     // Dungeon Crawler
     case VK_DOWN: gDown = down; applyKeys(); return true;
     case VK_SPACE: hostButton(down); return true;
   }

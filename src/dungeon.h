@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "battle.h"
 
-// PokeDungeon: turn-based rules without hardware (test/test_dungeon.cpp). The player takes a step and
+// Dungeon Crawler: turn-based rules without hardware (test/test_dungeon.cpp). The player takes a step and
 // then each rival acts. Moving into an occupied tile is attacking with the best move against that
 // rival, with the same formula as battle, so training the pet shows here.
 

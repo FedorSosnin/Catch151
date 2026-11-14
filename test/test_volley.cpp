@@ -1,4 +1,4 @@
-// Poke Ball Volley physics (volley.h).
+// Volley Ball physics (volley.h).
 #include "framework.h"
 #include "shim/Arduino.h"
 #include "../src/volley.h"

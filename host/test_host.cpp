@@ -585,7 +585,7 @@ static void testGame() {
   runTicks(150);
   CHECK(hostTiltValue() == 0.0f);
 
-  // all four arrows give a step's direction, the last one pressed winning (PokeDungeon)
+  // all four arrows give a step's direction, the last one pressed winning (Dungeon Crawler)
   int8_t dx = 0, dy = 0;
   CHECK(!hostArrowDir(&dx, &dy));
   hostArrowKeys(true, false);
@@ -644,12 +644,12 @@ static void testGame() {
   runTicks(500);
   CHECK(gameOpen && introCard == -1);
 
-  // a game that ends goes back to the games menu, not home: PokeRun, with no jumps, ends on the first
+  // a game that ends goes back to the games menu, not home: Rock Hopper, with no jumps, ends on the first
   // obstacle; a tap on the result closes it (V2: its X; PLAY AGAIN! runs it again)
   gameOpen = false;
   hostSerialPush("GAMES");
   runTicks(300);
-  tapAt(316, 128);  // PokeRun's tile (V2: its cartridge, from 299)
+  tapAt(316, 128);  // Rock Hopper's tile (V2: its cartridge, from 299)
   runTicks(500);
   tapAt(233, 335);  // Ready, GO!
   for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);  // until it has ended
@@ -672,7 +672,7 @@ static void testGame() {
     cardPage = 0;
     hostSerialPush("GAMES");
     runTicks(300);
-    tapAt(316, 128);  // PokeRun again
+    tapAt(316, 128);  // Rock Hopper again
     runTicks(500);
     tapAt(233, 335);
     for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);
@@ -1019,7 +1019,7 @@ static void testGame() {
     v2HostBackdrop(0, 0);
     CHECK(fb[200 * 466 + 20] == 0xA388);   // Berry Drop: the left trunk's lit edge, #a07040
     v2HostBackdrop(1, 0);
-    CHECK(fb[340 * 466 + 100] == 0x7DE9);  // PokeRun: the track's lit grass on the game's ground line, #79bd4f
+    CHECK(fb[340 * 466 + 100] == 0x7DE9);  // Rock Hopper: the track's lit grass on the game's ground line, #79bd4f
     v2HostBackdrop(2, 0);
     CHECK(fb[60 * 466 + 100] == 0x2BD9);   // PikaSurf: the deep water, #2f78c8
     v2HostBackdrop(3, 0);

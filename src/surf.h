@@ -5,7 +5,7 @@
 // PikaSurf: rules without hardware (test/test_minigames.cpp). Logical pixels of the 466 canvas and seconds.
 // Your Pokemon surfs down the screen on a board, near the top, and the water rushes up past it. Rocks come
 // up from the bottom in rows across three lanes, one or two to a row (never all three), faster and closer
-// together as in PokeRun. Pikachu surfs alongside and never touches one; after a little while he is just
+// together as in Rock Hopper. Pikachu surfs alongside and never touches one; after a little while he is just
 // faster, pulls ahead and is gone off the bottom. One rock and the run is over.
 #define SURF_CX 233
 #define SURF_PET_Y 150         // where yours rides: the middle of its board
@@ -15,7 +15,7 @@
 #define SURF_SPAWN_Y 600.0f    // rows start well below the screen, so Pikachu sees them coming even far ahead...
 #define SURF_GONE_Y -50.0f     // ...and are gone above it
 #define SURF_SPEED_START 200.0f  // px/s the water rushes up
-#define SURF_SPEED_GAIN 5.0f     // gained each second, as in PokeRun
+#define SURF_SPEED_GAIN 5.0f     // gained each second, as in Rock Hopper
 #define SURF_SPEED_MAX 640.0f
 #define SURF_GAP_START 1.5f      // seconds between rows
 #define SURF_GAP_MIN 0.8f

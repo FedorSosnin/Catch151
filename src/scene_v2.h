@@ -1325,8 +1325,8 @@ static uint16_t v2LightAccent(uint16_t c) {
 
 // ---------- step 3: the games' backgrounds ----------
 // The home scenes' style (the 4 px grid, dithered bands, lit edges), drawn as the mockups' games_px.py
-// draws them; PokeDungeon's tiles are rooms_px.py's and the battle's bases rooms2_px.py's (battle_hud).
-// The game layouts don't move: where a mockup and the game differ (PokeRun's ground, Volley's court, where
+// draws them; Dungeon Crawler's tiles are rooms_px.py's and the battle's bases rooms2_px.py's (battle_hud).
+// The game layouts don't move: where a mockup and the game differ (Rock Hopper's ground, Volley's court, where
 // the fighters stand), the picture is moved to fit the game.
 
 #define SC_NONE 0xFF000000u  // no colour: an oval without a lit top row or without an underside
@@ -1426,7 +1426,7 @@ static void scTilt(int tod) {
   scGradeTod = 0;
 }
 
-// PokeRun: a dithered sky, two rows of pines (a pale far row, a big near row), a dirt track with a lit grass
+// Rock Hopper: a dithered sky, two rows of pines (a pale far row, a big near row), a dirt track with a lit grass
 // edge, pebbles (g_run). The game's ground line is RUN_GROUND_Y, 18 px under the mockup's track, so the land
 // moves down with it. The sky, its clouds and the hills behind come from the buffer; the pines and the track
 // are drawn every frame, each sliding at its own speed as the run goes on (as V1's two rows of pines did).
@@ -1726,7 +1726,7 @@ static void v2TiltScene() { uint8_t t = v2HourTod(); v2Cached(100 + t, scTilt, t
 static void v2CourtScene() { uint8_t t = v2HourTod(); v2Cached(108 + t, scCourt, t); }
 static void v2BurstScene(bool pink) { v2Cached(pink ? 113 : 112, scBurst, pink ? 1 : 0); }
 
-// PokeDungeon's tiles (dn_tile in rooms_px.py): flagstones lit along the top and left and shaded on the
+// Dungeon Crawler's tiles (dn_tile in rooms_px.py): flagstones lit along the top and left and shaded on the
 // bottom and right, now and then a crack or moss; walls dark on top with specks and, where floor lies under
 // them, a face of bricks lit along its top, a few with a flickering torch; the stairs as a stairwell going down to
 // the warm, flickering light of the floor below (Fedor: in the dungeon's look, and standing out).
@@ -1856,7 +1856,7 @@ static void v2LineBox(const char *s, int y) {
 
 #ifdef BOARD_HOST
 // For the screenshot tool: one background on its own at an hour (0 day, 1 dusk, 2 night), to set beside
-// its mockup. 0 Berry Drop, 1 PokeRun, 2 PikaSurf, 3 Volley, 4 Who's That?, 5 Showdown, 6 the wild battle,
+// its mockup. 0 Berry Drop, 1 Rock Hopper, 2 PikaSurf, 3 Volley, 4 Who's That?, 5 Showdown, 6 the wild battle,
 // 7 the Forest battle, 8 the Field's catch, 9 a dungeon room.
 void v2HostBackdrop(int which, int tod) {
   scScreen();

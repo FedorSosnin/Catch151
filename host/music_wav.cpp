@@ -25,8 +25,8 @@ static const char *const TRACK_WHERE[MUS_COUNT] = {
   "Knomi Island", "Knomi Tower, outside and between floors", "A battle in the Forest",
   "A battle at the Beach", "A battle in the Cave", "A battle in the Mansion", "A battle in the Field",
   "A legendary Pokemon, and the tower's Legend", "A tower floor's guardian", "A battle with a buddy",
-  "A battle won, a catch: once", "Berry Drop", "PokeRun", "PikaSurf", "PokeDungeon", "Who's That? and Showdown",
-  "Poke Ball Volley", "While it evolves: once", "A goodbye", "Travel: in the Forest", "Travel: at the Beach",
+  "A battle won, a catch: once", "Berry Drop", "Rock Hopper", "PikaSurf", "Dungeon Crawler", "Who's That? and Showdown",
+  "Volley Ball", "While it evolves: once", "A goodbye", "Travel: in the Forest", "Travel: at the Beach",
   "Travel: in the Cave", "Travel: in the Mansion", "Travel: in the Field",
 };
 

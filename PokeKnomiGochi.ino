@@ -242,7 +242,7 @@ uint8_t gPmdForceScale = 0;  // if not 0, fixed scale for the next sprite
 #define SNAP2(v) ((v) & ~1)
 #define CLOSE_Y 422  // the round X: its centre on most screens
 #define CLOSE_R 24   // its radius (the page arrows are the same)
-#define DN_TILE 64  // PokeDungeon's tiles (the games menu draws a room too)
+#define DN_TILE 64  // Dungeon Crawler's tiles (the games menu draws a room too)
 QuizPhase quizPhase = QP_ASK;
 uint32_t quizT = 0;
 uint8_t quizRound = 0, quizScore = 0;
@@ -318,7 +318,7 @@ int8_t sdMyPick = -1, sdTheirPick = -1;
 uint16_t sdMyMs = 0, sdTheirMs = 0;
 bool sdTheirIn = false;
 uint32_t sdT = 0, sdAskT = 0, sdFirstRightT = 0, sdSendT = 0;
-// Poke Ball Volley (volley.h): the ball is on one board at a time; over the net it goes to the other
+// Volley Ball (volley.h): the ball is on one board at a time; over the net it goes to the other
 enum VbPhase : uint8_t { VB_READY, VB_PLAY, VB_AWAY, VB_SERVE, VB_POINTED, VB_DONE };
 bool vbOpen = false, vbHost = false, vbRewarded = false, vbMineLast = false;
 VbPhase vbPhase = VB_READY;
@@ -1023,7 +1023,7 @@ void handleSerial() {
       buddyFake = true;
     }
     Serial.println("DONE");
-  } else if (line == "VBBOT" && pet.noSave) {  // Poke Ball Volley plays by itself (testing)
+  } else if (line == "VBBOT" && pet.noSave) {  // Volley Ball plays by itself (testing)
     vbBot = !vbBot;
     Serial.println("DONE");
   } else if (line.startsWith("STARS ") && pet.noSave) {  // "STARS dex [S] n": a form's stars, 1-3 (testing)
@@ -1327,7 +1327,7 @@ void handleTouch() {
 #endif
 
   // games: the touch is resolved on finger lift, so that swiping up exits
-  // without pressing anything on the way. Only the PokeRun jump fires on touch-down: there every ms counts.
+  // without pressing anything on the way. Only the Rock Hopper jump fires on touch-down: there every ms counts.
   if (battleOpen || quizOpen || gamesMenuOpen || gameOpen || runOpen || surfOpen || dungeonOpen || zoneScreen || sdOpen || vbOpen) {
     if (pressed) { tXl = x; tYl = y; }  // tXl: aim with the finger where there is no accelerometer
     // in the dungeon, keeping the finger down keeps walking
@@ -4176,7 +4176,7 @@ void drawCatchScene() {
   v2TiltScene();  // V2: the clearing between two big trees, in the 8-bit style
 }
 
-// Poke Ball Volley's court, from above: your half, the net along the top where the ball crosses to
+// Volley Ball's court, from above: your half, the net along the top where the ball crosses to
 // your buddy's screen, the side lines where it bounces and the attack line.
 void drawCourtScene() {
   v2CourtScene();  // V2: the mown court, the net's tape on VB_TOP
@@ -4560,7 +4560,7 @@ void renderRun() {
 // ---------- PikaSurf ----------
 // Yours surfs down the screen near the top, the water rushing up past it; rocks come up in three lanes
 // and Pikachu rides alongside until he pulls ahead (surf.h). Steered like Berry Drop: tilting, the arrow
-// keys, or a finger held where it should go. One rock and it's over, as in PokeRun.
+// keys, or a finger held where it should go. One rock and it's over, as in Rock Hopper.
 void startSurf() {
   if (pet.isEgg() || pet.sleeping || pet.ceremony || !pmd.loaded) { sfxPlay(SFX_DENY); return; }
   surfStart(surf, esp_random());
@@ -6973,7 +6973,7 @@ void renderShowdown() {
   gfx->flush();
 }
 
-// ---------- Poke Ball Volley: the ball goes from one screen to the other ----------
+// ---------- Volley Ball: the ball goes from one screen to the other ----------
 // The ball lives on one board at a time and is simulated there (volley.h). Over the net it is
 // handed to the buddy (BM_VBALL); a miss is a point for them (BM_VMISS), and the one who missed
 // serves next. Both are resent until acknowledged, and any newer message counts as one too.

@@ -37,9 +37,9 @@ enum DexTrainKind : uint8_t { DEX_TRAIN_BERRY, DEX_TRAIN_RUN, DEX_TRAIN_SURF, DE
 struct DexTrainGame { DexTrainKind kind; const char *name, *unit; uint8_t per, gain; };
 static const DexTrainGame DEX_TRAIN_GAMES[] = {
   { DEX_TRAIN_BERRY, "Berry Drop", "points", 5, 1 },
-  { DEX_TRAIN_RUN, "PokeRun", "seconds", 20, 1 },
+  { DEX_TRAIN_RUN, "Rock Hopper", "seconds", 20, 1 },
   { DEX_TRAIN_SURF, "PikaSurf", "seconds", 20, 1 },
-  { DEX_TRAIN_DUNGEON, "PokeDungeon", "floors", 5, 2 },
+  { DEX_TRAIN_DUNGEON, "Dungeon Crawler", "floors", 5, 2 },
 };
 #define DEX_TRAIN_MAX 100   // each kind of training stops here (Pet::clamp100)
 #define DEX_GENE_MIN 90     // a Pokemon's genes, % of its base stats (Pet::hatch())

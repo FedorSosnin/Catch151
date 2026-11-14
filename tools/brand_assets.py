@@ -464,6 +464,7 @@ def main():
         f.write(header(logo_large()))
     save(name(), 'catch151-name')
     save(row(badge(20, 'dex'), name(), board('DEX', GOLD, GOLD_L)), 'catch151-dex')
+    save(row(badge(20, 'game'), name(), board('SOUNDTRACK')), 'catch151-soundtrack', scales=(2,))  # web/music
     for dev in ('KNOMI', 'MAC', 'WINDOWS', 'WEB'):
         save(row(badge(20, 'game'), name(), board('FOR ' + dev)), 'catch151-for-' + dev.lower(), scales=(2,))
     save_icon('game', 'catch151-icon')

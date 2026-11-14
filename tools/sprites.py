@@ -448,7 +448,7 @@ def icon_play():
     return g.rows()
 
 
-# PokeRun's obstacles, in the same style as the Pokemon: shaded shapes with an outline. Each sits on
+# Rock Hopper's obstacles, in the same style as the Pokemon: shaded shapes with an outline. Each sits on
 # the bottom of its square and is drawn at 3x, about the size of its hit box in pokerun.h.
 def run_rock():
     g = G(12)

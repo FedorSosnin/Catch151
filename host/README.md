@@ -64,7 +64,7 @@ The save lives in `~/Library/Application Support/PokeMacGochi` (the game's old n
 |---|---|
 | Click, hold, swipe | Touch |
 | Left and right arrows | Tilt |
-| All four arrows | Walk in PokeDungeon |
+| All four arrows | Walk in Dungeon Crawler |
 | Space | The Knomi's button: tap for a wild battle, 1-3 s for screen off, 10 s to ask about erasing the save |
 | Drag the Pokéball ring | Move the window (the ring grows under the mouse; the screen is only for touching, with the mouse as a finger) |
 | Right-click, or the Pokéball in the menu bar | About, Show/Hide, Size, CRT Screen, Mute Sound (the game's own sound setting) and Quit |

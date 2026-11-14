@@ -4,7 +4,8 @@
   python3 tools/music/songs.py           writes src/music_data.h, and prints what in the songs doesn't fit
   python3 tools/music/songs.py --check   only checks that src/music_data.h is up to date
 
-Then `make -C host music` plays every song into build/music/*.wav, to listen to.
+Then `make -C host music` plays every song into build/music/*.wav, to listen to, and tools/build_music_page.sh
+rebuilds the soundtrack page's player (web/music/), so the page plays the songs as they are now.
 
 All of it is original: no tune here comes from any other game. compose.py explains the notation.
 """
@@ -375,8 +376,8 @@ s.section('A2', 8, BER_CA, BER_A, 'thirds', '8: R . O . R . O .', [BERRY_DR] * 7
           insts=('pluck', 'pluck12', 'bass'))
 s.form(['I'], ['A', 'B', 'A2', 'B'])
 
-# PokeRun: running
-s = add(song('RUN', 'PokeRun', 176, key=('D', 'major'), insts=('lead', 'pluck12', 'bass'), vols=(13, 7, 15, 10)))
+# Rock Hopper: running
+s = add(song('RUN', 'Rock Hopper', 176, key=('D', 'major'), insts=('lead', 'pluck12', 'bass'), vols=(13, 7, 15, 10)))
 RUN_DR = '16: k . h . s . h . k . h . s . h h'
 RUN_A = """
   o5 a8 f+8 a8 o6 d8 o5 a8 f+8 d8 f+8 | g8 b8 o6 d8 o5 b8 g4 b4 | a8 o6 c+8 e8 c+8 o5 a4 e4 | f+4 a4 o6 d2 |
@@ -411,8 +412,8 @@ s.section('A2', 8, SURF_CA, SURF_A, 'thirds', SURF_B, [CRASH] + [SURF_DR] * 6 + 
           insts=('pluck', 'pluck12', 'bass'))
 s.form(['I'], ['A', 'B', 'A2', 'B'])
 
-# PokeDungeon: down the stairs, sparse
-s = add(song('DUNGEON', 'PokeDungeon', 104, key=('D', 'dorian'), insts=('bell25', 'soft', 'bass'), vols=(14, 6, 14, 8)))
+# Dungeon Crawler: down the stairs, sparse
+s = add(song('DUNGEON', 'Dungeon Crawler', 104, key=('D', 'dorian'), insts=('bell25', 'soft', 'bass'), vols=(14, 6, 14, 8)))
 DUN_DR = '16: k . . . . . r . . . k . . . r .'
 DUN_B = '8: R . . R . . R .'
 s.section('I', 2, 'Dm | Dm', None, None, DUN_B, [DUN_DR, DUN_DR])
@@ -441,7 +442,7 @@ s.section('B', 8, 'Bb | C7 | Am | Dm | Gm7 | C7 | F | C7', """
 s.form(['I'], ['A', 'B'])
 
 # Volley: sporty, a clap on two and four
-s = add(song('VOLLEY', 'Volley', 144, key=('A', 'major'), insts=('lead50', 'stab', 'bass'), vols=(13, 8, 15, 10)))
+s = add(song('VOLLEY', 'Volley Ball', 144, key=('A', 'major'), insts=('lead50', 'stab', 'bass'), vols=(13, 8, 15, 10)))
 VOL_DR = '16: k . h . x . h . k . h . x . h k'
 VOL_FILL = '16: k . h . x . h . x x x x x . c .'
 VOL_A = """

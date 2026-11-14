@@ -8,6 +8,7 @@
   <a href="https://github.com/FedorSosnin/Catch151/releases?q=win-v&expanded=true"><img src="https://img.shields.io/badge/download-Windows%20PC-0078d4" alt="Download Catch 151 for Windows"></a>
   <a href="https://catch151.3dprintsos.com"><img src="https://img.shields.io/badge/play-in%20your%20browser-de2121" alt="Play Catch 151 in your browser"></a>
   <a href="https://fedorsosnin.github.io/Catch151/sprites/"><img src="https://img.shields.io/badge/online-Catch_151_Dex-d4a017" alt="The online Catch 151 Dex"></a>
+  <a href="https://fedorsosnin.github.io/Catch151/music/"><img src="https://img.shields.io/badge/listen-the%20soundtrack-8a5a30" alt="Listen to Catch 151's soundtrack"></a>
   <a href="relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
 </p>
 
@@ -42,7 +43,7 @@
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
 
-<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Five mini games.** Berry Drop, PokeRun, PikaSurf, PokeDungeon and Who's That Pokémon?, on cartridges in a Game Boy. **Play Again!** at the end.
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Five mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Who's That Pokémon?, on cartridges in a Game Boy. **Play Again!** at the end.
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
 
@@ -50,7 +51,7 @@
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
 
-<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 28 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.)
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 28 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Settings, Medals, Stats and the Pokédex.
 
@@ -93,8 +94,8 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Choose your starter** | **Throw, drop, one, two, three** | **Evolution** |
 | ![A hold on Pikachu opens a ring of Settings, Medals, Stats and the Pokédex; sliding to Medals opens the trophy room](docs/images/v2/radial.gif) | ![The backpack's band slides up out of the bag, its tail pointing into it, and berries drop onto Pikachu, who hops](docs/images/v2/feed.gif) | ![Charizard's Pokédex entry, the Pokémon turning round](docs/images/v2/pokedex-spin.gif) |
 | **Hold it for a menu** | **Berries from the backpack** | **Every entry turns round** |
-| ![PikaSurf: Squirtle surfing down the rushing water beside Pikachu, dodging rocks](docs/images/v2/pikasurf.gif) | ![PokeDungeon: Squirtle exploring the cave, meeting wild Pokémon](docs/images/v2/dungeon.gif) | ![PokeRun: Charmander jumping over logs and rocks in the forest](docs/images/v2/pokerun.gif) |
-| **PikaSurf** | **PokeDungeon** | **PokeRun** |
+| ![PikaSurf: Squirtle surfing down the rushing water beside Pikachu, dodging rocks](docs/images/v2/pikasurf.gif) | ![Dungeon Crawler: Squirtle exploring the cave, meeting wild Pokémon](docs/images/v2/dungeon.gif) | ![Rock Hopper: Charmander jumping over logs and rocks in the forest](docs/images/v2/pokerun.gif) |
+| **PikaSurf** | **Dungeon Crawler** | **Rock Hopper** |
 
 ### Screens
 
@@ -106,13 +107,13 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Battle wild Pokémon** | **Pick a ball and throw** | **Catch them, 1 to 3 ★** |
 | ![The Pokédex at 55 of 151, with stars and sparkling shinies](docs/images/v2/pokedex.png) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](docs/images/v2/zone.png) |
 | **Fill the Pokédex** | **Travel Knomi Island** | **See what's missing** |
-| ![The games: five cartridges on a Game Boy's screen](docs/images/v2/games.png) | ![PokeRun's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
+| ![The games: five cartridges on a Game Boy's screen](docs/images/v2/games.png) | ![Rock Hopper's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
 | **Five mini games** | **How to play, before each game** | **Play Again!** |
 | ![Who's That Pokémon? A silhouette, three names and ten seconds on the clock](docs/images/v2/quiz.png) | ![The trophy room: 11 of 26 medals](docs/images/v2/trophy-room.png) | ![The shiny medal's card: a gem under a spotlight, earned](docs/images/v2/medal-card.png) |
 | **Who's That Pokémon?** | **The trophy room** | **How to earn each medal** |
 | ![The backpack's band out of the bag: three berries, a candy and a Repel](docs/images/v2/backpack.png) | ![Gengar in the bath, with bubbles and a duck](docs/images/v2/bath.png) | ![A new medal dropping in on a ribbon](docs/images/v2/medal-banner.png) |
 | **The backpack** | **Bath time** | **New medals** |
-| ![Pikachu walking with Eevee and Squirtle visiting, and the Party Boost button](docs/images/v2/buddies.png) | ![A buddy's menu over the home: Battle, Trade, Play](docs/images/v2/buddy-menu.png) | ![Play together: Poké Ball Volley, Showdown and PikaSurf for two](docs/images/v2/play-together.png) |
+| ![Pikachu walking with Eevee and Squirtle visiting, and the Party Boost button](docs/images/v2/buddies.png) | ![A buddy's menu over the home: Battle, Trade, Play](docs/images/v2/buddy-menu.png) | ![Play together: Volley Ball, Showdown and PikaSurf for two](docs/images/v2/play-together.png) |
 | **Buddies visit** | **Battle, trade or play** | **Games for two** |
 | ![Say goodbye? Goodbye or Stay together](docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](docs/images/v2/release.png) | ![Settings: Wi-Fi, Check for update and Auto-update](docs/images/v2/settings.png) |
 | **One day, a goodbye** | **Let it go** | **Updates over Wi-Fi** |
@@ -133,6 +134,36 @@ Walk out along Travel's new pier to **Knomi Tower**: eight floors, each guarded 
 | **A tip after every lost climb** | **Friends cheer you on** | **Tower Master and the Hall of Fame** |
 
 How it all works, floor by floor: [Knomi Tower](docs/HOW_IT_WORKS.md#knomi-tower).
+
+## Original music and sound
+
+Everything you hear in Catch 151 was made for it. **All 28 songs are original**: none comes from any other game. A home
+tune that slows down at night, Knomi Tower, the legends, every minigame, evolving and saying goodbye, and two songs for
+every zone of Knomi Island, one while you explore it and one for its wild battles. Pick one to hear it:
+
+<table align="center">
+<tr>
+<td align="center" width="20%"><a href="https://fedorsosnin.github.io/Catch151/music/#forest"><img src="docs/images/v2/zone-forest.png" width="128" alt="A battle in the Forest"></a><br><b>Forest</b><br><a href="https://fedorsosnin.github.io/Catch151/music/#forest">▶&nbsp;Exploring</a><br><a href="https://fedorsosnin.github.io/Catch151/music/#forest-battle">▶&nbsp;Battle</a></td>
+<td align="center" width="20%"><a href="https://fedorsosnin.github.io/Catch151/music/#beach"><img src="docs/images/v2/zone-beach.png" width="128" alt="A battle at the Beach"></a><br><b>Beach</b><br><a href="https://fedorsosnin.github.io/Catch151/music/#beach">▶&nbsp;Exploring</a><br><a href="https://fedorsosnin.github.io/Catch151/music/#beach-battle">▶&nbsp;Battle</a></td>
+<td align="center" width="20%"><a href="https://fedorsosnin.github.io/Catch151/music/#cave"><img src="docs/images/v2/zone-cave.png" width="128" alt="A battle in the Cave"></a><br><b>Cave</b><br><a href="https://fedorsosnin.github.io/Catch151/music/#cave">▶&nbsp;Exploring</a><br><a href="https://fedorsosnin.github.io/Catch151/music/#cave-battle">▶&nbsp;Battle</a></td>
+<td align="center" width="20%"><a href="https://fedorsosnin.github.io/Catch151/music/#mansion"><img src="docs/images/v2/zone-mansion.png" width="128" alt="A battle at the Mansion"></a><br><b>Mansion</b><br><a href="https://fedorsosnin.github.io/Catch151/music/#mansion">▶&nbsp;Exploring</a><br><a href="https://fedorsosnin.github.io/Catch151/music/#mansion-battle">▶&nbsp;Battle</a></td>
+<td align="center" width="20%"><a href="https://fedorsosnin.github.io/Catch151/music/#field"><img src="docs/images/v2/zone-field.png" width="128" alt="A battle in the Field"></a><br><b>Field</b><br><a href="https://fedorsosnin.github.io/Catch151/music/#field">▶&nbsp;Exploring</a><br><a href="https://fedorsosnin.github.io/Catch151/music/#field-battle">▶&nbsp;Battle</a></td>
+</tr>
+</table>
+
+- **Written as notes.** Each song is a melody, a harmony, a bassline and a drum pattern over its chords, written out in
+  [`tools/music/songs.py`](tools/music/songs.py), checked bar by bar, and compiled into a few bytes: all 28 fit in
+  about 40 KB.
+- **Played like the old handhelds.** There are no recordings or samples. A small synthesizer in the game
+  ([`src/music_synth.h`](src/music_synth.h)) makes every note as it plays, with the four voices those consoles had: two
+  pulse waves for the tune and the harmony, a stepped triangle or 4-bit wave for the bass, and noise for the drums.
+- **A cry for every Pokémon**, made the same way and worked out from the Pokémon itself: its size and speed set the
+  pitch, its type the rasp and the trill, and a family sounds alike ([`src/cry.h`](src/cry.h)). None is copied from any
+  game. Hear all 151 in the [Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/).
+
+**[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)** in your browser. The page runs the game's
+own synthesizer and songs, built for the web ([`host/music_web.cpp`](host/music_web.cpp), about 70 KB), so it plays
+exactly what the game plays, looping the way the game loops, with a scope for each of the four voices.
 
 ## Install
 
@@ -236,7 +267,7 @@ Three items you earn by playing, kept with you from one Pokémon to the next (up
 | **Master Ball** | Every 100 battles you win | Always catches the Pokémon it hits. |
 | **Repel** | Every 10 minutes of mini games | Spray it from the backpack: for 3 minutes, weaker wild Pokémon stay away. |
 
-Running away, battles with buddies and PokeDungeon don't count toward the balls. Ultra and Master Balls sit beside your Poké Balls on the catch screen while you have them (with both, the Poké Ball in the middle); one that misses isn't used up. While a Repel works, wild Pokémon below your Pokémon's level, or with lower base stats, stay away, and in a zone you haven't finished, every Pokémon there except its legendary is equally likely; shiny odds don't change. The backpack shows a badge with its minutes left. Only time spent actually playing counts toward a Repel: sitting in a game without touching it earns nothing.
+Running away, battles with buddies and Dungeon Crawler don't count toward the balls. Ultra and Master Balls sit beside your Poké Balls on the catch screen while you have them (with both, the Poké Ball in the middle); one that misses isn't used up. While a Repel works, wild Pokémon below your Pokémon's level, or with lower base stats, stay away, and in a zone you haven't finished, every Pokémon there except its legendary is equally likely; shiny odds don't change. The backpack shows a badge with its minutes left. Only time spent actually playing counts toward a Repel: sitting in a game without touching it earns nothing.
 
 <p align="center"><img src="docs/images/v2/card-ultra.png" width="240" alt="The card's Ultra Ball page: the ball hovering in a gold glow, what it does, and 9 of 25 battles toward the next"> <img src="docs/images/v2/card-master.png" width="240" alt="The card's Master Ball page"> <img src="docs/images/v2/card-repel.png" width="240" alt="The card's Repel page"></p>
 
@@ -259,7 +290,7 @@ Your Pokémon's ATK, DEF and SPD grow as it levels up, and training adds more on
 
 - **Winning a battle** adds attack training.
 - **Every 6 hours of good care** (every need at 40 or more) adds defense training. Sleep counts, and a need can dip under 40 for up to 15 minutes before the 6 hours start over.
-- **Mini games** (Berry Drop, PokeRun, PikaSurf, PokeDungeon) add speed training.
+- **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler) add speed training.
 - **Weight** isn't training: food adds it (candy the most), and games, battles and time burn it off. Over 50, your Pokémon tires twice as fast.
 
 Each kind of training stops at 100. The card's **Training** page (**Stats** in the ring, then two pages on) shows how far along each one is, with **MAX** when it's full, and your Pokémon's weight. Once attack training is maxed, a win says so instead of adding more. A new Pokémon starts training from zero.
@@ -282,8 +313,8 @@ Tap the tower on Travel's second page, then **CLIMB!** with a full energy bar. Y
 
 Tap the **handheld** icon, on the left, for the mini games: cartridges on a Game Boy's screen, each label a little scene from its game. When one starts, a card drops in over it with how to play; press **Ready, GO!** or swipe the card away to start. They train speed, and the time you play counts toward your next Repel. At the end, **Play Again!** starts it again, the ✕ goes back to the games, and the Repel bar opens the Repel's page. **Swipe up from the lower half of the screen to quit any game**, with nothing earned.
 
-- **PokeDungeon:** explore a cave floor by floor. Tap toward where you want to step, or hold to keep walking. Walk into a wild Pokémon to attack it with your own best move, pick up Razz, Oran and Pinap Berries to heal, and find the stairs down. A better-trained Pokémon gets deeper.
-- **PokeRun:** tap to jump over rocks, bushes, fallen logs, stumps and mushrooms in a forest that keeps getting faster. How long can you last?
+- **Dungeon Crawler:** explore a cave floor by floor. Tap toward where you want to step, or hold to keep walking. Walk into a wild Pokémon to attack it with your own best move, pick up Razz, Oran and Pinap Berries to heal, and find the stairs down. A better-trained Pokémon gets deeper.
+- **Rock Hopper:** tap to jump over rocks, bushes, fallen logs, stumps and mushrooms in a forest that keeps getting faster. How long can you last?
 - **PikaSurf:** your Pokémon surfs down the rushing water on a board; tilt, drag it or use the arrow keys to dodge the rocks coming up in three lanes. Pikachu surfs alongside and never hits one, until he pulls ahead out of sight. It keeps speeding up, and one rock ends the run.
 - **Who's That Pokémon?:** name the silhouette, ten rounds per game, never the same Pokémon twice. Each one has ten seconds on the clock: run out and it counts as wrong, and the answer shows.
 - **Berry Drop:** in the woods under two tall berry trees, tilt left and right, or drag your Pokémon with a finger, to catch falling berries. They fall faster with every catch, with no top speed, so every game ends.
@@ -300,7 +331,7 @@ If another Catch 151 joins the same Wi-Fi network, its Pokémon comes over and w
 - **Trade:** each of you picks a Pokémon from your Pokédex, and a green dot marks ones your buddy doesn't have yet. Once you both confirm, you swap: the one you gave leaves your Pokédex. A shiny is its own square, so you can trade it and keep the regular one. Your own partner can't be traded, so with only one Pokémon, Trade is greyed out. Changed your mind? The **✕** backs out at any point before the swap, and nothing changes hands.
 - **Play:** games only buddies can play together, with joy and bond for both afterwards, a bit more for the winner, and the **Playmate** medal. Each opens under its how-to-play card, and starts once you've both pressed **Ready, GO!**
   - **Who's That? Showdown** shows you both the same silhouette at the same moment: the first to tap the right name gets the point, and a wrong tap is out for that round. 10 questions.
-  - **Poké Ball Volley:** your screen is your half of a volleyball court, with the net along the top, and your Pokémon is the paddle; tilt or drag to move, and it runs left and right with you, facing you when it stands still. A ball over the top of your screen drops in on your buddy's. Every shot curves and the ball slowly speeds up, so a match to 3 points lasts about a minute.
+  - **Volley Ball:** your screen is your half of a volleyball court, with the net along the top, and your Pokémon is the paddle; tilt or drag to move, and it runs left and right with you, facing you when it stands still. A ball over the top of your screen drops in on your buddy's. Every shot curves and the ball slowly speeds up, so a match to 3 points lasts about a minute.
   - **PikaSurf:** you both surf the same course at once, your buddy's Pokémon riding alongside yours. Whoever lasts longer wins; the first to crash waits for the other to finish, and then you're both back on Play together.
 
 ### Party Boost
@@ -308,7 +339,7 @@ If another Catch 151 joins the same Wi-Fi network, its Pokémon comes over and w
 Your Pokémon does better with company. While at least one buddy or the daily visitor is around:
 
 - **Energy drains a quarter slower.**
-- **+2 ATK, DEF and SPD** in wild battles and PokeDungeon.
+- **+2 ATK, DEF and SPD** in wild battles and Dungeon Crawler.
 
 It's the same boost however many friends are around. Tap the Party Boost button to see who's here and what you get. Tap a friend there to see its stats: level, HP, ATK, DEF and SPD, and a buddy's Pokédex count. Swipe from there to a buddy's Battle, Trade and Play menu, and the ✕ goes back to Party Boost. Tapping a buddy's Pokémon on the main screen still opens its menu first, with its stats a swipe away. While the boost is on, the Battle Stats page shows each stat with its **+2**. Battles between buddies don't use it, since both sides would have it.
 
@@ -436,7 +467,7 @@ The code also builds for the Waveshare ESP32-S3-Touch-AMOLED-1.75, a bigger roun
 
 - **Saves:** it saves in the browser by itself. Clearing the browser's data erases it, so use **Export save** now and then for a backup file, and **Import save** to bring a Pokémon back or move it to another browser. Coming from V1, your Pokémon comes along by itself, and V1's save stays as it was.
 - **One tab at a time:** a second tab offers **Play here**, which moves the game over after the first one saves.
-- **Controls:** tap, hold and swipe the screen, as on the Knomi (see [How to play](#how-to-play)). On a phone, tilt it to aim the ball and to steer in PikaSurf and Berry Drop; where the browser asks first, **Enable tilt** turns it on. On Android it also buzzes along with the sounds; **Vibration** turns that off (iPhone browsers can't vibrate). On a computer, the mouse is a finger that presses when you click, the left and right arrows tilt, all four arrows walk in PokeDungeon, Space is the Knomi's button, and on a catch the left and right arrows choose a ball and Space or the up arrow throws it.
+- **Controls:** tap, hold and swipe the screen, as on the Knomi (see [How to play](#how-to-play)). On a phone, tilt it to aim the ball and to steer in PikaSurf and Berry Drop; where the browser asks first, **Enable tilt** turns it on. On Android it also buzzes along with the sounds; **Vibration** turns that off (iPhone browsers can't vibrate). On a computer, the mouse is a finger that presses when you click, the left and right arrows tilt, all four arrows walk in Dungeon Crawler, Space is the Knomi's button, and on a catch the left and right arrows choose a ball and Space or the up arrow throws it.
 - **Size and CRT:** it opens Large, with the CRT screen on. **Size** makes it Small or Medium, like the Mac app, and on a small screen it shrinks to fit. **CRT** turns the effect off for the Knomi's own look; a browser without WebGL 2 shows that look by itself.
 - **Sound and Music:** **Sound** turns the effects and cries off and on, and **Music** steps the music down from High to Medium, Low and Off, each on its own. Settings in the ring has a level from 0 to 3 for each.
 - **Buddies:** browsers can't send the Knomi's local Wi-Fi messages, so they meet buddies through a small relay on the internet that only passes those same messages between devices on the same home network and stores nothing. Knomis and the Mac and Windows apps use it too, so they all meet each other.
@@ -454,7 +485,7 @@ The same game as a round window on your Mac desktop, in a Poké Ball ring with a
 
    Or, in Terminal: `xattr -dr com.apple.quarantine "/Applications/Catch 151.app"`
 
-**Controls:** click, hold and swipe like a touch screen. The left and right arrows tilt, for Berry Drop and throwing Poké Balls, and all four arrows walk in PokeDungeon. Space is the Knomi's button, for a wild battle; on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the red and white ring to move the window: it grows when the mouse is over it, so it's easy to grab, and the screen inside is only for touching, with the mouse as a finger. Right-click it, or click the Poké Ball in the menu bar, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit.
+**Controls:** click, hold and swipe like a touch screen. The left and right arrows tilt, for Berry Drop and throwing Poké Balls, and all four arrows walk in Dungeon Crawler. Space is the Knomi's button, for a wild battle; on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the red and white ring to move the window: it grows when the mouse is over it, so it's easy to grab, and the screen inside is only for touching, with the mouse as a finger. Right-click it, or click the Poké Ball in the menu bar, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit.
 
 **Size and CRT Screen:** it opens Large, with the CRT screen on. **Size** makes it Medium or Small, sharp at every size, and **CRT Screen** turns the effect off for the Knomi's own look.
 
@@ -474,7 +505,7 @@ The same game as a round window on your Windows desktop, in a Poké Ball ring wi
 2. Open it. Windows warns that it **protected your PC**, because the app isn't signed by a paid developer certificate. Click **More info**, then **Run anyway**. After that it opens normally.
 3. The first time, Windows Firewall may ask whether Catch 151 can use your network. Allow it on **private networks**, so buddies on your Wi-Fi can find you.
 
-**Controls:** the same as the Mac app. Click, hold and swipe like a touch screen; the left and right arrows tilt, all four arrows walk in PokeDungeon, and Space is the Knomi's button; on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the ring to move the window: it grows when the mouse is over it, and the screen inside is only for touching. Right-click it, or click the Poké Ball by the clock, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit. To start it with Windows, put a shortcut to it in the Startup folder (press Win+R and type `shell:startup`).
+**Controls:** the same as the Mac app. Click, hold and swipe like a touch screen; the left and right arrows tilt, all four arrows walk in Dungeon Crawler, and Space is the Knomi's button; on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the ring to move the window: it grows when the mouse is over it, and the screen inside is only for touching. Right-click it, or click the Poké Ball by the clock, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit. To start it with Windows, put a shortcut to it in the Startup folder (press Win+R and type `shell:startup`).
 
 It opens Large, with the CRT screen, like the Mac app: **Size** and **CRT Screen** in its menu change them.
 
@@ -482,7 +513,7 @@ Your pet, the sound, music and CRT settings, and the window's size and place are
 
 **Updates:** it checks for a new version when it opens and then every hour, counting the time the PC sleeps. With **Update Automatically** checked in its menu (on unless you turn it off), it installs the new version by itself once nobody has touched it for a minute on the home screen, and starts again on it. Turned off, it tells you once when one is out. From 1.13 on it updates itself, like the Knomi: click **Yes** (or **Update to Version …** in its menu) and it downloads the new version, checks its signature, and starts again on it a few seconds later. Your pet stays. On older versions, quit the app, download the new `Catch151.exe` and put it in place of the old one.
 
-**Tilt and controllers:** a controller's left stick tilts smoothly (for Berry Drop and aiming Poké Balls), and the stick or D-pad walks in PokeDungeon: the built-in one of a handheld PC like the ROG Ally, or an Xbox controller. If Windows has a motion sensor, as many tablets do, tilting the device tilts the game, like on a phone; **Tilt with the Device** in the menu turns that off. On a ROG Ally, set the gyro to act as the left joystick in Armoury Crate, and tilting the Ally tilts the game. The controller and the sensor only count while PokeWinGochi is the active window.
+**Tilt and controllers:** a controller's left stick tilts smoothly (for Berry Drop and aiming Poké Balls), and the stick or D-pad walks in Dungeon Crawler: the built-in one of a handheld PC like the ROG Ally, or an Xbox controller. If Windows has a motion sensor, as many tablets do, tilting the device tilts the game, like on a phone; **Tilt with the Device** in the menu turns that off. On a ROG Ally, set the gyro to act as the left joystick in Armoury Crate, and tilting the Ally tilts the game. The controller and the sensor only count while PokeWinGochi is the active window.
 
 **Vibration:** on a handheld PC with a built-in controller, like the ROG Ally, or with an Xbox controller connected, it buzzes softly with taps, meals, medals and catches. **Vibration** in the menu turns it off; it only shows when a controller is connected.
 

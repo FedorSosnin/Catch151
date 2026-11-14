@@ -14,6 +14,7 @@ multiple of it, with `image-rendering: pixelated`.
 | `catch151-large.*` | The same drawn larger (12 px letters, a 28 px icon), not scaled: the game's About page shows it |
 | `catch151-name.*` | The name alone |
 | `catch151-dex.*` | Its Pokédex: the sparkle icon, CATCH 151 and a gold DEX sign |
+| `catch151-soundtrack.svg`, `@2x.png` | Its soundtrack page (`web/music/`): the logo and a wooden SOUNDTRACK sign |
 | `catch151-for-knomi.svg`, `-mac`, `-windows`, `-web` (and `@2x.png`) | The game on a device: a wooden sign after the name |
 | `catch151-icon.svg`, `-16/32/48/64.png` | The game's icon, each size drawn at its own pixels |
 | `catch151-icon-192/512/1024.png` | The same for app icons: a design scaled whole (64 x 3, 64 x 8, 64 x 16) |
