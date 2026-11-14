@@ -51,7 +51,7 @@
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
 
-<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 28 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 30 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Settings, Medals, Stats and the Pokédex.
 
@@ -139,7 +139,7 @@ How it all works, floor by floor: [Knomi Tower](docs/HOW_IT_WORKS.md#knomi-tower
 
 https://github.com/user-attachments/assets/f82808d7-1e92-4fdf-b180-c83dea43f1dd
 
-Everything you hear in Catch 151 was made for it. **All 28 songs are original**: none comes from any other game. A home
+Everything you hear in Catch 151 was made for it. **All 30 songs are original**: none comes from any other game. A home
 tune that slows down at night, Knomi Tower, the legends, every minigame, evolving and saying goodbye, and two songs for
 every zone of Knomi Island, one while you explore it and one for its wild battles. Pick one to hear it:
 
@@ -154,8 +154,8 @@ every zone of Knomi Island, one while you explore it and one for its wild battle
 </table>
 
 - **Written as notes.** Each song is a melody, a harmony, a bassline and a drum pattern over its chords, written out in
-  [`tools/music/songs.py`](tools/music/songs.py), checked bar by bar, and compiled into a few bytes: all 28 fit in
-  about 40 KB.
+  [`tools/music/songs.py`](tools/music/songs.py), checked bar by bar, and compiled into a few bytes: all 30 fit in
+  about 43 KB.
 - **Played like the old handhelds.** There are no recordings or samples. A small synthesizer in the game
   ([`src/music_synth.h`](src/music_synth.h)) makes every note as it plays, with the four voices those consoles had: two
   pulse waves for the tune and the harmony, a stepped triangle or 4-bit wave for the bass, and noise for the drums.
