@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import trophies as T  # noqa: E402
-from trophies import Cv, C, K, WH, GOLD, WOOD, RED, BLUE, R, mask, part, pillow, glint  # noqa: E402
+from trophies import Cv, C, K, GOLD, WOOD, RED, BLUE, R, mask, part, pillow, glint  # noqa: E402
 
 FACE = R('#ffffff', '#fbf8ee', '#ece4d0', '#c8bea4', '#9a907a')
 CUT = C('#5a3206')                # a hollow cut in the gold: eyes
