@@ -57,6 +57,8 @@ static const FishClassDef FISH_CLASS[FC_N] = {
 // its pull is up to this share harder or softer, so the notch sinks at a different speed every beat and a tap goes in
 // when the line says, not on the count alone. The beat and the fight song stay steady
 #define FISH_TUG 0.25f
+// how many nibbles before the bite, in 100 casts: none (it bites, after a longer wait), one, two, three
+static const uint8_t FISH_NIBBLES_PCT[4] = { 20, 15, 35, 30 };
 
 // The fish: the Beach's water Pokemon (zones.h), their Pokedex weights (tenths of a kg), their size and where they
 // swim (1 the shallows, 2 open water, 4 the deep)
@@ -238,17 +240,23 @@ inline void fishPickTarget(FishState &s, float extra) {
     if (d < bd) bd = d, best = i;
   }
   s.target = (int8_t)best;
-  float wait = fishRange(s, 1.6f, 4.0f) + (bd > FISH_REACH ? (bd - FISH_REACH) / 40.0f + 1.0f : bd / 60.0f) + extra;
-  if (best >= 0 && best == s.eager) wait *= 0.5f;
-  if (best < 0) wait = 2.0f;  // nobody about yet: look again soon
-  s.biteAt = s.t + wait;
-  // up to three nibbles first, the last at least 0.7 s before the bite
-  s.nibbles = best >= 0 ? (uint8_t)(fishRand(s) % 4) : 0;
-  float room = wait - 0.9f - 0.7f;
-  if (room < 0.6f) s.nibbles = 0;
-  else if (s.nibbles * 0.9f > room) s.nibbles = (uint8_t)(room / 0.9f);
-  for (int k = 0; k < s.nibbles; k++) s.nibbleAt[k] = s.t + 0.9f + room * (k + fishRange(s, .2f, .8f)) / s.nibbles;
   s.nibbled = 0;
+  if (best < 0) {  // nobody about yet: look again soon
+    s.nibbles = 0;
+    s.biteAt = s.t + 2.0f;
+    return;
+  }
+  // it comes round to the hook, nibbles a few times, each after a pause of its own, and bites after one more; with no
+  // nibble at all it bites, but after a longer wait (Fedor: "a random amount of bobs ... Maybe 2 or 3 before it does, or
+  // sometimes it's on the first one, but it has to wait a little bit longer", so you don't know when it'll bite). The
+  // one with bubbles over it (eager) is quicker about all of it
+  const float pace = best == s.eager ? 0.6f : 1.0f;
+  float t = s.t + (fishRange(s, 1.0f, 2.2f) + (bd > FISH_REACH ? (bd - FISH_REACH) / 40.0f + 1.0f : bd / 60.0f) + extra) * pace;
+  uint32_t r = fishRand(s) % 100;
+  s.nibbles = 0;
+  while (s.nibbles < 3 && r >= FISH_NIBBLES_PCT[s.nibbles]) r -= FISH_NIBBLES_PCT[s.nibbles++];
+  for (int k = 0; k < s.nibbles; k++) s.nibbleAt[k] = t += fishRange(s, 0.6f, 1.6f) * pace;
+  s.biteAt = t + (s.nibbles ? fishRange(s, 0.8f, 1.8f) : fishRange(s, 1.6f, 3.0f)) * pace;
 }
 
 inline void fishStart(FishState &s, uint32_t seed) {

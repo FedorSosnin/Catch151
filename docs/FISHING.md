@@ -126,7 +126,10 @@ Rules that keep it fair:
 1. **The card**, then READY, GO! (as every game).
 2. **Pick and cast.** Tap the water by the blob you want. Near the pier is shallow (small ones), the middle is open
    water, the dark blue on the right is the deep (the heavy ones).
-3. **Wait** 2 to 8 seconds (less if you landed it close, or there are bubbles). Up to 3 nibbles come first.
+3. **Wait** for it: the fish comes round, then nibbles none, one, two or three times (20, 15, 35 and 30 casts in 100,
+   `FISH_NIBBLES_PCT`), each after a pause of its own (0.6 to 1.6 s), and bites 0.8 to 1.8 s after the last; with no
+   nibble it bites after a longer wait (Fedor, the third playtest: "a random amount of bobs", so you can't tell when).
+   Quicker if there are bubbles over it.
 4. **The bite.** Tap within the strike window: 0.9 s for small ones, 0.75 s middling, 0.6 s for the heavy ones.
    - Tap on a nibble or before the bite: TOO SOON. That fish is scared off (its blob darts away) but the cast goes on
      (Fedor: "Scare the fish off"): the float stays out and the next nearest blob comes to the hook, after a longer

@@ -127,6 +127,30 @@ TEST(fishing, nibbles_come_before_the_bite_and_a_strike_in_the_window_hooks_it) 
   }
 }
 
+// you can't tell when it'll bite: none, one, two or three nibbles first, each after a pause of its own, about as often
+// as FISH_NIBBLES_PCT says; the bite after the last, and with no nibble a longer wait
+TEST(fishing, how_many_nibbles_before_the_bite_varies) {
+  int count[4] = {}, n = 0;
+  for (uint32_t seed = 1; seed <= 600; seed++) {
+    FishState s;
+    fishStart(s, seed);
+    fishCastAt(s, 320);
+    runUntil(s, FP_WAIT);
+    if (s.target < 0) continue;
+    n++;
+    count[s.nibbles]++;
+    const float pace = s.target == s.eager ? 0.6f : 1.0f;
+    float at = s.t;
+    for (int k = 0; k < s.nibbles; k++) {
+      CHECK(s.nibbleAt[k] - at >= (k ? 0.6f : 1.0f) * pace - 1e-3f);
+      at = s.nibbleAt[k];
+    }
+    CHECK(s.biteAt - at >= (s.nibbles ? 0.8f : 1.0f + 1.6f) * pace - 1e-3f);
+  }
+  CHECK(n > 500);
+  for (int k = 0; k < 4; k++) CHECK_MSG(count[k] > n * FISH_NIBBLES_PCT[k] / 200 && count[k] < n * FISH_NIBBLES_PCT[k] * 2 / 100, "about as often as planned");
+}
+
 TEST(fishing, too_slow_to_strike_ends_the_cast) {
   FishState s;
   fishStart(s, 5);

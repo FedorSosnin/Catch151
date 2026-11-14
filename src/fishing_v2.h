@@ -313,9 +313,11 @@ static inline int fsCover(float in) { return in >= 0.5f ? 256 : in <= -0.5f ? 0 
 // st: 0 to come, 1 this one, -1 got away, else the dex landed
 #define FS_SLOT 40
 #define FS_SLOT_R 19     // the holder's radius, its edge 3 px more
-static void fsSlot(int cx, int cy, int16_t st, bool shiny) {
+// a round see-through holder in the band's ink, R px, its 3 px edge fainter or (ring) yellow
+static void fsDisc(int cx, int cy, int R, bool ringed) {
   const uint16_t ink = sc565(fsNight ? 0xFFFFFF : 0x1B1B25), ring = sc565(0xF8C030);
-  const int ra = fsNight ? 26 : V2_RIM_A, ta = fsNight ? 31 : V2_TRACK_A, R = FS_SLOT_R, E = R + 3;
+  const int ra = fsNight ? 26 : V2_RIM_A, ta = fsNight ? 31 : V2_TRACK_A, E = R + 3;
+  const int st = ringed ? 1 : 0;
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
 #ifdef BOARD_HOST
   for (int y = cy - E - 1; y <= cy + E + 1; y++)
@@ -339,6 +341,10 @@ static void fsSlot(int cx, int cy, int16_t st, bool shiny) {
       q[0] = q[1] = q[V2_W] = q[V2_W + 1] = c;
     }
 #endif
+}
+static void fsSlot(int cx, int cy, int16_t st, bool shiny) {
+  const int R = FS_SLOT_R;
+  fsDisc(cx, cy, R, st == 1);
   if (st <= 1) return;
   const uint8_t *t = thumbs.getForm(st, shiny);
   int h = fsThumbH(t, 1);
@@ -369,7 +375,15 @@ static void fsSlots(const int16_t *st, bool total = true) {
 // empty pier; tip: where the rod's tip is, (bx, by) how far it's bent
 #define FS_HAND_X 22     // the hand (fsRod puts the butt behind and below it, under the rim)
 #define FS_HAND_Y 160
-static void fsAngler(int tx, int ty, int bx = 0, int by = 0) { fsRod(FS_HAND_X, FS_HAND_Y, tx, ty, bx, by); }
+// The bend: each moment's (bx, by) read as how hard the line pulls (bx + by; under 0, springing back), the rod bowing
+// up off the straight line from the hand to the tip by that much, so its tip curves down toward the fish, as a loaded
+// rod does (Fedor: pulling up, it bent the wrong way, its tip pointing up: the push went straight down, which sagged
+// this long rod's middle)
+static void fsAngler(int tx, int ty, int bx = 0, int by = 0) {
+  float gx = FS_HAND_X - 14, gy = FS_HAND_Y + 12, dx = tx - gx, dy = ty - gy, L = hypotf(dx, dy);  // (fsRod()'s butt)
+  float k = (bx + by) * 0.8f, nx = dy / L, ny = -dx / L;  // px; the line's upper side
+  fsRod(FS_HAND_X, FS_HAND_Y, tx, ty, (int)(nx * k), (int)(ny * k));
+}
 #define FS_TIP_X 252  // the rod's tip, at rest
 #define FS_TIP_Y 88
 
@@ -685,6 +699,62 @@ static void fsMockWeigh() {
   fsSay("BACK IN IT GOES!", CX, 376, 0xFFFFFF);
 }
 
+// ---- the weigh-in, three ways to try (Fedor: "The scale just doesnt match and its not a great looking screen. Gotta
+// be another way to do it"). Each keeps the scene, with no white card over it: FISHMOCK 20, 21 and 22 ----
+// 20 (A): it hangs from the rod's tip under a brass spring scale, the way anglers weigh one, the pointer at its weight
+static void fsHangScale(int cx, int top, int h, float frac) {
+  scRect(cx - 10, top, cx + 9, top + h - 1, 0x1B1B25);  // the tube
+  scRect(cx - 8, top + 2, cx + 7, top + h - 3, 0xD8A848);
+  scRect(cx - 8, top + 2, cx - 5, top + h - 3, 0xF2D68A);
+  scRect(cx + 4, top + 2, cx + 7, top + h - 3, 0xA87A2C);
+  scRect(cx - 4, top + 6, cx + 3, top + h - 7, 0xF4ECD0);  // its window, marked
+  for (int y = top + 8; y < top + h - 8; y += 6) scRect(cx - 4, y, cx - 1, y + 1, 0x1B1B25);
+  int py = top + 8 + (int)((h - 18) * frac) / 2 * 2;
+  scRect(cx - 6, py, cx + 5, py + 1, 0xE8503A);  // the pointer
+  fsCircle(cx, top - 6, 6, 0x1B1B25, 2);  // the ring it hangs by
+  scRect(cx - 2, top + h, cx + 1, top + h + 9, 0xAAB0BC);  // the hook
+  scRect(cx - 8, top + h + 8, cx + 1, top + h + 11, 0xAAB0BC);
+  scRect(cx - 8, top + h + 2, cx - 5, top + h + 11, 0xAAB0BC);
+}
+static void fsMockWeighHang() {
+  fsBack();
+  const uint8_t *t = thumbs.getForm(120, false);  // Staryu, 36.1 kg
+  const int cx = 244, top = 98, h = 48;
+  fsAngler(cx, 76, 6, 6);
+  fsLine(cx, 76, cx, top - 12, 0, 0xF4F4F8);
+  fsHangScale(cx, top, h, 0.72f);
+  fsThumb(t, cx - 6, top + h + 14 + fsThumbH(t, 2), 2);
+  fsBoard("STARYU!", 44);
+  fsSay("36.1 kg", CX, 252, 0xFFFFFF, 4);
+  fsSay("BACK IN IT GOES!", CX, 376, 0xFFFFFF);
+}
+// 22 (C): no scale at all: its picture, big in a round see-through holder like the casts', its name on the sign over
+// it and its weight in a dark pill under it, as the total is
+static void fsMockWeighPhoto() {
+  fsBack();
+  const uint8_t *t = thumbs.getForm(120, false);
+  fsAngler(FS_TIP_X, FS_TIP_Y);
+  const int cx = CX, cy = 178, R = 70;
+  fsDisc(cx, cy, R, false);
+  fsThumb(t, cx, cy + fsThumbH(t, 3) / 2, 3);
+  for (int i = 0; i < 4; i++) {  // sparkles round it
+    static const int8_t SP[4][2] = { { -86, -52 }, { 80, -66 }, { 88, 30 }, { -78, 44 } };
+    int gx = SNAP2(cx + SP[i][0]), gy = SNAP2(cy + SP[i][1]);
+    scGridRect(gx, gy - 6, gx + 3, gy + 9, 0xFFFFFF);
+    scGridRect(gx - 6, gy, gx + 9, gy + 3, 0xFFFFFF);
+  }
+  fsBoard("STARYU!", 44);
+  const char *w = "36.1 kg";
+  setSize(3);
+  int tw = textW(w, 3), pw = tw + 32;
+  gfx->fillRoundRect(cx - pw / 2 - 3, 262, pw + 6, 40, 12, sc565(0x1B1B25));
+  gfx->fillRoundRect(cx - pw / 2, 265, pw, 34, 10, sc565(0x3A6FA0));
+  gfx->setTextColor(UI_WHITE);
+  setCur(cx - tw / 2, 272);
+  printT(w);
+  fsSay("BACK IN IT GOES!", CX, 376, 0xFFFFFF);
+}
+
 // 12: got away: the line snapped and hangs from the rod, the blob shooting off with a trail of bubbles
 static void fsMockAway() {
   fsBack();
@@ -924,6 +994,55 @@ static void fsArcDraw(float pct, int lo, int hi, bool beat) {
   v2BarLabel(fb, T(S_FISH_LINE), -45, UI_WHITE);
 }
 
+// 21 (B): a gauge on the rim where the LINE bar was, the same bar (round ends, its dark edge), filling gold to how
+// heavy it is for its kind (from 0.8 to 1.2 times its Pokedex weight: the fish come in that range), marked in fifths
+static void fsGaugeDraw(float frac) {
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  const uint16_t ink = sc565(0x1B1B25), gold = sc565(0xF2C230), goldT = sc565(scMix(0xF2C230, 0xFFFFFF, .4)),
+                 dim = sc565(0x6A5A2A);
+  const float top = frac * 200;
+#ifdef BOARD_HOST
+  fsArcPxBuild();
+  if (!fsArcPx) return;
+  for (int i = 0; i < fsArcPxN; i++) {
+    const FsArcPx &c = fsArcPx[i];
+    uint16_t &q = fb[c.y * V2_W + c.x];
+    uint16_t p = v2Blend(q, ink, c.edge);
+    if (c.bar) {
+      uint16_t col = c.f <= top ? (c.r > V2_BAR_ROUT - 4 ? goldT : gold) : dim;
+      float tick = fabsf(c.f - roundf(c.f / 40) * 40) / c.s;  // (px from the nearest fifth)
+      if (c.f > 2 && c.f < 198) col = v2Blend(col, ink, fsCover(1.0f - tick) * 3 / 4);
+      p = v2Blend(p, col, c.bar);
+    }
+    q = p;
+  }
+#else
+  fsArcBuild();
+  if (!fsArc) return;
+  for (int i = 0; i < fsArcN; i++) {
+    const FsArcCell &c = fsArc[i];
+    uint8_t k = c.k & 3;
+    if (k == 2) continue;
+    uint16_t col = k == 1 || (c.f % 40 == 0 && c.f > 0 && c.f < 200) ? ink : c.f <= top ? ((c.k & 4) ? goldT : gold) : dim;
+    uint16_t *q = fb + c.y * V2_W + c.x;
+    q[0] = q[1] = q[V2_W] = q[V2_W + 1] = col;
+  }
+#endif
+  setSize(2);
+  v2BarLabel(fb, "KG", -45, UI_WHITE);
+}
+static void fsMockWeighGauge() {
+  fsBack();
+  const uint8_t *t = thumbs.getForm(120, false);
+  fsAngler(FS_TIP_X, FS_TIP_Y);
+  twGlow(CX - 10, 168, 74, 0xFFF3B0, 150);
+  fsThumb(t, CX - 10, 168 + fsThumbH(t, 3) / 2, 3);
+  fsGaugeDraw(0.7f);
+  fsBoard("STARYU!", 44);
+  fsSay("36.1 kg", CX - 10, 244, 0xFFFFFF, 4);
+  fsSay("A BIG ONE FOR A STARYU", CX - 10, 296, 0xFFE27A);
+  fsSay("BACK IN IT GOES!", CX, 376, 0xFFFFFF);
+}
 // the rim's cells within 40 px of the edge, worked out once
 struct FsRimCell { int16_t x, y; uint8_t d; };
 static FsRimCell *fsRim = nullptr;
@@ -1455,6 +1574,9 @@ static void fishMockRender() {
     case 17: fsMockRoom(); break;
     case 18: fsMockShelf(); break;
     case 19: fsMockCard(); break;
+    case 20: fsMockWeighHang(); break;
+    case 21: fsMockWeighGauge(); break;
+    case 22: fsMockWeighPhoto(); break;
   }
 #endif
 }
