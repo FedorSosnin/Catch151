@@ -94,6 +94,22 @@ TEST(fishing, a_cast_lands_where_you_tap_and_the_nearest_fish_comes) {
   CHECK_EQ(fishCastAt(s, 300), 0u);  // one cast at a time
 }
 
+// near where you tap, never by the dock: within FISH_CAST_SPREAD either way, and from FISH_CAST_X0 out
+TEST(fishing, a_cast_lands_near_the_tap_and_out_from_the_dock) {
+  float lo = 1e9f, hi = -1e9f;
+  for (uint32_t seed = 1; seed <= 200; seed++) {
+    FishState s;
+    fishStart(s, seed);
+    CHECK(fishCastAt(s, 320) & FE_CAST);
+    CHECK(fabsf(s.floatX - 320) <= FISH_CAST_SPREAD);
+    lo = fminf(lo, s.floatX), hi = fmaxf(hi, s.floatX);
+    fishStart(s, seed);
+    fishCastAt(s, 180);  // (a tap by the pier)
+    CHECK(s.floatX >= FISH_CAST_X0);
+  }
+  CHECK_MSG(hi - lo > FISH_CAST_SPREAD, "they vary");
+}
+
 TEST(fishing, too_soon_scares_that_fish_off_and_the_cast_goes_on) {
   FishState s;
   fishStart(s, 21);

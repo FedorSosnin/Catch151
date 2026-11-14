@@ -10,8 +10,10 @@
 #define FISH_CASTS 5
 #define FISH_SURF_Y 208      // the water's surface
 #define FISH_PIER_X 168      // the pier's end
-#define FISH_CAST_X0 196     // where a cast can land: just past the pier...
+#define FISH_CAST_X0 236     // where a cast can land: out past the middle of the screen (Fedor: 196, just past the
+                             // pier, had it drop "so close to the dock")...
 #define FISH_CAST_X1 436     // ...to the far right
+#define FISH_CAST_SPREAD 24  // and within this either way of where you tap: no two casts quite the same
 #define FISH_SHALLOW_X 262   // the water's three parts: the shallows to here, open water to FISH_DEEP_X, then the deep
 #define FISH_DEEP_X 352
 #define FISH_HOOK_DY 52      // the hook under the float
@@ -304,6 +306,7 @@ inline uint32_t fishNextCast(FishState &s) {
 // a cast to x (a tap on the water; the button and the keys cast at the aim ring)
 inline uint32_t fishCastAt(FishState &s, float x) {
   if (s.phase != FP_AIM) return 0;
+  x += fishRange(s, -FISH_CAST_SPREAD, FISH_CAST_SPREAD);
   s.floatX = x < FISH_CAST_X0 ? FISH_CAST_X0 : x > FISH_CAST_X1 ? FISH_CAST_X1 : x;
   s.aimX = s.floatX;
   s.fromX = FISH_PIER_X + 84;
