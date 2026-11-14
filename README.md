@@ -71,6 +71,8 @@ The Mac and Windows apps and the browser game, as they open: in the Poké Ball r
 | **Battle wild Pokémon** | **Climb Knomi Tower** |
 | <img src="docs/images/v2/crt-island.webp" width="381" alt="Knomi Island with the CRT screen: five zones and the pier out to the tower"> | <img src="docs/images/v2/crt-starters.webp" width="381" alt="Choose your starter with the CRT screen: Bulbasaur, Charmander, Squirtle and Pikachu"> |
 | **Travel Knomi Island** | **Choose your partner** |
+| <img src="docs/images/v2/crt-fishing.webp" width="381" alt="Reel Fishing with the CRT screen: the float bobs, goes under with a ! and TAP!, then the fish is reeled in with QUICK TAPS! and the LINE bar on the right"> | <img src="docs/images/v2/crt-games.webp" width="381" alt="The games with the CRT screen: six cartridges on a Game Boy, each lifting as the mouse passes over it, the power light flickering"> |
+| **New: Reel Fishing** | **Six games on a Game Boy** |
 
 ## On the Knomi
 
