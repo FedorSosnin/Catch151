@@ -24,11 +24,11 @@ rsync -a --delete --exclude .git --exclude CNAME web/play/ $SITE/
 echo $DOMAIN > $SITE/CNAME
 cp webgame/SITE_README.md $SITE/README.md
 mkdir -p $SITE/images  # the README's pictures: V2's (docs/images/v2)
-for i in web-desktop.webp web-phone.webp walk-forest.gif battle.png catch.gif travel.gif pokedex.png games.png buddies.png \
-    buddy-menu.png radial.gif play-together.png quiz.png pikasurf.gif backpack.png card-profile.png pokedex-spin.gif \
-    trophy-room.png card-battle.png card-progress.png card-training.png party-boost.png friend-stats.png \
+for i in web-desktop.webp web-phone.webp walk-forest.gif battle.png catch.gif travel.gif pokedex.gif games.gif buddies.gif \
+    buddy-menu.png radial.gif play-together.gif quiz.gif pikasurf.gif backpack.png card-profile.png pokedex-spin.gif \
+    trophy-room.gif card-battle.png card-progress.png card-training.png party-boost.png friend-stats.png \
     knomi-gameboys.gif knomi-in-hand.jpg knomi-on-desk.jpg tower.png tower-lead.png tower-master.png \
-    fishing.gif fishing-weigh.png fishing-end.png; do
+    fishing.gif fishing-weigh.gif fishing-end.png; do
   cp docs/images/v2/$i $SITE/images/
 done
 touch $SITE/.nojekyll

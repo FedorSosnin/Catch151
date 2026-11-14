@@ -14,19 +14,19 @@
 |:--:|:--:|:--:|
 | ![Pikachu walking toward you through the Forest](images/walk-forest.gif) | ![Charizard's fire attack on a wild Pikachu](images/battle.png) | ![An Ultra Ball thrown at a running Pikachu: it hits, drops and holds](images/catch.gif) |
 | **Raise your Pokémon** | **Battle wild Pokémon** | **Catch what you beat** |
-| ![Reel Fishing: reeling a fish in to its beat, the LINE bar on the right](images/fishing.gif) | ![The weigh-in: a gold gauge fills to the fish's weight](images/fishing-weigh.png) | ![The end of a game: five weights and the total against bronze, silver and gold](images/fishing-end.png) |
+| ![Reel Fishing: reeling a fish in to its beat, the LINE bar on the right](images/fishing.gif) | ![The weigh-in: a gold gauge fills to the fish's weight](images/fishing-weigh.gif) | ![The end of a game: five weights and the total against bronze, silver and gold](images/fishing-end.png) |
 | **New: Reel Fishing** | **Weigh each one, then let it go** | **Bronze, silver or gold** |
 | ![Knomi Tower: eight floors and the Legend](images/tower.png) | ![Who goes first? Your team against a floor's guardian](images/tower-lead.png) | ![TOWER MASTER! The Hall of Fame and a Master Ball](images/tower-master.png) |
 | **Climb Knomi Tower** | **Your Pokémon and two friends** | **Beat Mewtwo at the top** |
-| ![Knomi Island: five zones to hunt in](images/travel.gif) | ![The Pokédex](images/pokedex.png) | ![Six mini games on a Game Boy](images/games.png) |
+| ![Knomi Island: five zones to hunt in](images/travel.gif) | ![The Pokédex](images/pokedex.gif) | ![Six mini games on a Game Boy](images/games.gif) |
 | **Choose where to hunt** | **Fill the Pokédex** | **Play mini games** |
-| ![Pikachu with Eevee and Squirtle visiting](images/buddies.png) | ![Battle, trade or play with a buddy](images/buddy-menu.png) | ![A hold on your Pokémon: Settings, Medals, Stats and the Pokédex](images/radial.gif) |
+| ![Pikachu with Eevee and Squirtle visiting](images/buddies.gif) | ![Battle, trade or play with a buddy](images/buddy-menu.png) | ![A hold on your Pokémon: Settings, Medals, Stats and the Pokédex](images/radial.gif) |
 | **Buddies come to play** | **Battle, trade or play with them** | **Hold it for a menu** |
-| ![Play together](images/play-together.png) | ![Who's That Pokémon?](images/quiz.png) | ![PikaSurf](images/pikasurf.gif) |
+| ![Play together](images/play-together.gif) | ![Who's That Pokémon?](images/quiz.gif) | ![PikaSurf](images/pikasurf.gif) |
 | **Play together** | **Who's That Pokémon?** | **PikaSurf** |
 | ![The backpack: berries, a candy and a Repel](images/backpack.png) | ![The card, with the favorite berry](images/card-profile.png) | ![A Pokédex entry turning round](images/pokedex-spin.gif) |
 | **Feed it from the backpack** | **Its card and favorite berry** | **Every entry turns round** |
-| ![The trophy room](images/trophy-room.png) | ![Battle stats and wins](images/card-battle.png) | ![Level and evolution progress](images/card-progress.png) |
+| ![The trophy room](images/trophy-room.gif) | ![Battle stats and wins](images/card-battle.png) | ![Level and evolution progress](images/card-progress.png) |
 | **A trophy room of medals** | **Stats and battle wins** | **How close it is to evolving** |
 
 ## On your phone

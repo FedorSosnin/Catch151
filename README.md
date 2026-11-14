@@ -21,6 +21,8 @@
 
 **No Knomi? [Play it in your browser](https://catch151.3dprintsos.com)** on a computer, phone or tablet, or get the [Mac app](#catch-151-for-mac) or the [Windows app](#catch-151-for-windows). **CRT effect:** each scanline a soft beam, a warm glow, a slightly curved glass for that nostalgia look.
 
+**[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**: 30 original chiptune songs, written for the game and played live in your browser by its own synthesizer, with a scope for each of the four voices. See [Original music and sound](#original-music-and-sound).
+
 **[Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/)**: all 151, regular and shiny, in every view the game has (standing, turning, walking, from behind, asleep, attacking and more), sorted by number or type, each credited to its artists. Each one's page says what the game's Pokédex says about it, with its stats and every move it learns; pick a few to see their match-ups, and tick the ones you have. Its **Catching** tab gives the chances of each star, 1★ to 3★, regular and shiny: of a catch, and of a Search in its zone or a Wild Encounter turning it up that way.
 
 ## What's in it
@@ -105,17 +107,17 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 |:--:|:--:|:--:|
 | ![The card's profile: Pikachu on the rug, its streak, bond, favorite berry and age](docs/images/v2/card-profile.png) | ![Battle stats: ATK, DEF, SPD and weight in bars, and the battle wins](docs/images/v2/card-battle.png) | ![Progress: the level, the time to the next, and when it evolves](docs/images/v2/card-progress.png) |
 | **Its card** | **Battle stats** | **How close it is to evolving** |
-| ![Charizard using a fire attack on a wild Pikachu](docs/images/v2/battle.png) | ![The catch: Master, Poké and Ultra Balls along the bottom, a Pokémon running](docs/images/v2/catch-aim.png) | ![Caught GENGAR! with three stars, new in the Pokédex](docs/images/v2/caught.png) |
+| ![Charizard using a fire attack on a wild Pikachu](docs/images/v2/battle.png) | ![The catch: Master, Poké and Ultra Balls along the bottom, a Pokémon running](docs/images/v2/catch-aim.png) | ![The ball holds with a sparkle, then Caught GENGAR! with three stars, new in the Pokédex](docs/images/v2/caught.gif) |
 | **Battle wild Pokémon** | **Pick a ball and throw** | **Catch them, 1 to 3 ★** |
-| ![The Pokédex at 55 of 151, with stars and sparkling shinies](docs/images/v2/pokedex.png) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](docs/images/v2/zone.png) |
+| ![The Pokédex at 54 of 151, with stars, the shinies sparkling](docs/images/v2/pokedex.gif) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](docs/images/v2/zone.png) |
 | **Fill the Pokédex** | **Travel Knomi Island** | **See what's missing** |
-| ![The games: six cartridges on a Game Boy's screen, Reel Fishing's orange one last, the power light lit](docs/images/v2/games.png) | ![Rock Hopper's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
+| ![The games: six cartridges on a Game Boy's screen, Reel Fishing's orange one last, the power light flickering](docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
 | **Six mini games** | **How to play, before each game** | **Play Again!** |
-| ![Who's That Pokémon? A silhouette, three names and ten seconds on the clock](docs/images/v2/quiz.png) | ![The trophy room: 11 of 26 medals](docs/images/v2/trophy-room.png) | ![The shiny medal's card: a gem under a spotlight, earned](docs/images/v2/medal-card.png) |
+| ![Who's That Pokémon? The clock counts down, a wrong name turns red and the answer shows: Nidoqueen](docs/images/v2/quiz.gif) | ![The trophy room: 9 of 26 medals, a gleam sweeping over the ones won](docs/images/v2/trophy-room.gif) | ![The shiny medal's card: a golden Pikachu under glass in a spotlight, sparkling, earned](docs/images/v2/medal-card.gif) |
 | **Who's That Pokémon?** | **The trophy room** | **How to earn each medal** |
-| ![The backpack's band out of the bag: three berries, a candy and a Repel](docs/images/v2/backpack.png) | ![Gengar in the bath, with bubbles and a duck](docs/images/v2/bath.png) | ![A new medal dropping in on a ribbon](docs/images/v2/medal-banner.png) |
+| ![The backpack's band out of the bag: three berries, a candy and a Repel](docs/images/v2/backpack.png) | ![Gengar in the bath: drops, bubbles and a rubber duck, then sparkling clean](docs/images/v2/bath.gif) | ![A new medal, DEX 10, dropping in on its ribbon over Gengar's home, then away](docs/images/v2/medal-banner.gif) |
 | **The backpack** | **Bath time** | **New medals** |
-| ![Pikachu walking with Eevee and Squirtle visiting, and the Party Boost button](docs/images/v2/buddies.png) | ![A buddy's menu over the home: Battle, Trade, Play](docs/images/v2/buddy-menu.png) | ![Play together: Volley Ball, Showdown and PikaSurf for two](docs/images/v2/play-together.png) |
+| ![Pikachu walking with Eevee and Squirtle visiting, and the Party Boost button](docs/images/v2/buddies.gif) | ![A buddy's menu over the home: Battle, Trade, Play](docs/images/v2/buddy-menu.png) | ![Play together with Pikachu: Volley Ball, Showdown and PikaSurf for two, the Game Boy's power light flickering](docs/images/v2/play-together.gif) |
 | **Buddies visit** | **Battle, trade or play** | **Games for two** |
 | ![Say goodbye? Goodbye or Stay together](docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](docs/images/v2/release.png) | ![Settings: Wi-Fi, Check for update and Auto-update](docs/images/v2/settings.png) |
 | **One day, a goodbye** | **Let it go** | **Updates over Wi-Fi** |
@@ -130,9 +132,9 @@ It all shows on the screen, so it plays as well on the Knomi, which has no speak
 
 | | | |
 |:--:|:--:|:--:|
-| ![Tap the water: the casts along the top, 248.1 kg so far, the fish as shadows and the giant's big one in the deep](docs/images/v2/fishing-cast.png) | ![The bite: the float pulled under, a ! over it, the screen's edge glowing and TAP!](docs/images/v2/fishing-bite.png) | ![Reeling a Seel in: the hooked shadow swelling on the beat and the LINE bar's needle in the green](docs/images/v2/fishing-reel.png) |
+| ![Tap the water: the casts along the top, 248.1 kg so far, the giant's big shadow in the deep, and the float flying out](docs/images/v2/fishing-cast.gif) | ![Two nibbles dip the float, then the bite: pulled under, a !, the screen's edge glowing, TAP! and the strike](docs/images/v2/fishing-bite.gif) | ![Reeling a Seel in: its shadow swelling on every beat, the LINE bar's needle jumping up with each tap and sinking back](docs/images/v2/fishing-reel.gif) |
 | **Pick a fish by its shadow** | **Strike when the float goes under** | **Reel it in to its beat** |
-| ![The giant on the line, SLOW AND STEADY, its green narrow at the top of the LINE bar](docs/images/v2/fishing-giant.png) | ![The weigh-in: a Seel over the pier, the gold gauge full, 96.5 kg, A BIG ONE FOR A SEEL!, then BACK IN IT GOES!](docs/images/v2/fishing-weigh.png) | ![The end: 439.3 kg from five fish, the bronze, silver and gold line, GOLD! NEW RECORD! and Play Again!](docs/images/v2/fishing-end.png) |
+| ![The giant on the line, SLOW AND STEADY: a huge shadow, a slow beat and a narrow green high on the LINE bar](docs/images/v2/fishing-giant.gif) | ![SEEL! leaps out, then the weigh-in: the gold gauge on the left fills, 96.5 kg, A BIG ONE FOR A SEEL!, BACK IN IT GOES!](docs/images/v2/fishing-weigh.gif) | ![The end: 439.3 kg from five fish, the bronze, silver and gold line, GOLD! NEW RECORD! and Play Again!](docs/images/v2/fishing-end.png) |
 | **A giant in every game** | **Weighed, then let go** | **Bronze, silver or gold** |
 
 How it all works: [Reel Fishing](docs/HOW_IT_WORKS.md#reel-fishing).
@@ -160,7 +162,10 @@ https://github.com/user-attachments/assets/f82808d7-1e92-4fdf-b180-c83dea43f1dd
 
 Everything you hear in Catch 151 was made for it. **All 30 songs are original**: none comes from any other game. A home
 tune that slows down at night, Knomi Tower, the legends, every minigame, evolving and saying goodbye, and two songs for
-every zone of Knomi Island, one while you explore it and one for its wild battles. Pick one to hear it:
+every zone of Knomi Island, one while you explore it and one for its wild battles. Reel Fishing has two: a lazy swing
+while you wait at the pier ([▶&nbsp;Reel Fishing](https://fedorsosnin.github.io/Catch151/music/#reel-fishing)), and
+[▶&nbsp;On the Line](https://fedorsosnin.github.io/Catch151/music/#on-the-line), which plays at the pace of the fish
+you're reeling in, one tap a beat. Pick a zone to hear its two:
 
 <table align="center">
 <tr>
