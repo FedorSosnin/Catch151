@@ -119,8 +119,8 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **The backpack** | **Bath time** | **New medals** |
 | ![Pikachu walking with Eevee and Squirtle visiting, and the Party Boost button](docs/images/v2/buddies.gif) | ![A buddy's menu over the home: Battle, Trade, Play](docs/images/v2/buddy-menu.png) | ![Play together with Pikachu: Volley Ball, Showdown and PikaSurf for two, the Game Boy's power light flickering](docs/images/v2/play-together.gif) |
 | **Buddies visit** | **Battle, trade or play** | **Games for two** |
-| ![Say goodbye? Goodbye or Stay together](docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](docs/images/v2/release.png) | ![Settings: Wi-Fi, Check for update and Auto-update](docs/images/v2/settings.png) |
-| **One day, a goodbye** | **Let it go** | **Updates over Wi-Fi** |
+| ![Say goodbye? Goodbye or Stay together](docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](docs/images/v2/release.png) | ![Settings: the clock, set automatically, Sound and Music each on a slider from 0 to 3, the language, and Start Over](docs/images/v2/settings.png) |
+| **One day, a goodbye** | **Let it go** | **Settings** |
 
 ## New: Reel Fishing
 
@@ -395,8 +395,6 @@ Changing the clock doesn't speed anything up. Time away only counts by network t
 ### Updates over Wi-Fi
 
 Once it's on Wi-Fi, the Knomi looks for a new version two minutes after it starts and then every hour, while the screen is dimmed. With **Auto-update** on (the switch on the second page of **Settings** in the ring; it's on unless you turn it off), it installs the new version by itself the next time nobody is using it: the screen dimmed on any page but a game, a battle or a question, between 7 am and 8 pm (10 am to 6 pm while your Pokémon sleeps). Knomis on 2.1.0 or older only install by themselves from the home screen with the Pokémon awake, so 2.1.1 may need one update by hand. To update by hand, open **Settings** in the ring, turn to the next page and tap **Check for update**. If a new version is out, the button changes to **Update to v…**: tap it and wait about a minute while it downloads and restarts. Your Pokémon, Pokédex and Wi-Fi are kept. If the new version ever fails to start, the Knomi goes back to the one it had.
-
-<p align="center"><img src="docs/images/v2/settings.png" alt="The settings page: Change Wi-Fi, Check for update, and the Auto-update switch, on" width="240"></p>
 
 On version 1.30 or older, **Update** could fail while buddies were connected through the internet relay: the two secure connections didn't fit in memory together. If yours says "Update failed", install 1.31 or newer once with the [web installer](https://fedorsosnin.github.io/Catch151/) and a USB cable, without ticking "Erase device". It keeps your Pokémon, and from then on updates over Wi-Fi work.
 
