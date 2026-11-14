@@ -113,19 +113,26 @@ A game takes about 40 to 90 seconds, like the others.
 ### The pace for each weight (Fedor: "different weight fish require different speed tapping")
 
 Each tap adds a pull, bigger for a heavier fish, and the line eases at a rate, slower for a heavier fish. The steady
-pace that holds the notch in the middle is the ease rate over the pull, so it falls as the weight goes up. First
-numbers, for the bots to tune:
+pace that holds the notch in the middle is the ease rate over the pull, so it falls as the weight goes up.
 
-| Weight | e.g. | Pace | Green band | Good taps to land it |
-|---|---|---|---|---|
-| Small, under 15 kg | Shellder, Krabby, Horsea, Magikarp, Poliwag | about 4 taps a second | wide (20 to 80%) | 10 |
-| Middling, 15 to 50 kg | Goldeen, Psyduck, Poliwhirl, Seadra, Staryu, Slowpoke, Seaking, Tentacool | about 3 | 25 to 78% | 14 |
-| Big, 50 to 100 kg | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | about 2 | 30 to 75% | 18 |
-| Heavy, 100 to 150 kg | Dewgong, Cloyster | about 1.5 | 36 to 72% | 22 |
-| Giant, 200 kg and up | Lapras, Gyarados | about 1 | 42 to 70% | 26 |
+**The fight song follows the fish** (Fedor, round 3: "Follow the fish"): one tap a beat. On the Line is written at
+150 bpm, and the game plays it at the hooked fish's pace, so on a computer you tap along to the music, and on the Knomi
+the hooked blob swells on that same beat. Each pace is a tempo, first numbers for the bots to tune:
 
-Four taps a second is about as fast as a child taps comfortably, so nothing asks for more. The Knomi's touch screen
-has to register that rate (a test below).
+| Weight | e.g. | Pace (one tap a beat) | The fight song | Green band | Good taps to land it |
+|---|---|---|---|---|---|
+| Small, under 15 kg | Shellder, Krabby, Horsea, Magikarp, Poliwag | 3.2 taps a second | 192 bpm (1.28x) | wide (20 to 80%) | 10 |
+| Middling, 15 to 50 kg | Goldeen, Psyduck, Poliwhirl, Seadra, Staryu, Slowpoke, Seaking, Tentacool | 2.5 | 150 bpm (as written) | 25 to 78% | 14 |
+| Big, 50 to 100 kg | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2 | 120 bpm (0.8x) | 30 to 75% | 18 |
+| Heavy, 100 to 150 kg | Dewgong, Cloyster | 1.6 | 96 bpm (0.64x) | 36 to 72% | 22 |
+| Giant, 200 kg and up | Lapras, Gyarados | 1.25 | 75 bpm (0.5x) | 42 to 70% | 26 |
+
+- The tempo changes only when a fish is hooked: the song starts at that fish's tempo and keeps it to the weigh-in.
+  It doesn't speed up or slow down during a thrash, where the right move is to ease off between beats.
+- In the synth, the tempo is one number (`spt()`, the samples a tick from the song's bpm), so this is a speed factor
+  next to it, set by `musicWant()`'s caller and cleared when the track changes. Pitch doesn't move.
+- About three taps a second is as fast as a child taps comfortably, so nothing asks for more. The Knomi's touch screen
+  has to register that rate (a test below).
 
 ## Controls
 
@@ -201,10 +208,9 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
     under. A 51-second loop after a 2-bar intro.
   - `MUS_FISH_FIGHT`, **On the Line**, once one's hooked: driving and urgent at 150 bpm in E minor, the bass in
     eighths, the tune climbing in short runs. A 27-second loop. Back to the pier's track after the weigh-in.
-  - **Its tempo follows the fish.** The synth's tempo is one number (`spt()`, from the song's bpm), so a speed factor
-    can let the fight track follow the pace: slower and heavier for a giant, faster for a small one. The music folder
-    has the fight track at 0.65 and 1.35 times to hear the idea (stretched there; the game would just play it slower
-    or faster).
+  - **Its tempo follows the fish** (decided): one tap a beat, from 75 bpm for a giant to 192 for a small one (the
+    pace table, above). The music folder has it at each weight's tempo (stretched there, keeping its pitch; the game
+    would just play it slower or faster).
   - To listen on a computer: `make -C host music ONLY=fish` writes `build/music/29_fish.wav` and `30_fish_fight.wav`.
   - They're on the soundtrack page's list too (`web/music/`, under The minigames, marked "the game is coming"), as
     its test wants every song of the game there. Merging this branch would put them on the public page.
@@ -241,12 +247,13 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
   a "kid" bot reacts in 400 to 700 ms and taps with a wobbly rhythm. Tune it so the perfect bot lands about 95% and
   makes gold most games, and the kid bot lands about 60% and makes silver about half the time.
 - **Host tests**: the effects table, `BUZZ` and `kBuzz` have a row per effect; the track count; holding Space reels
-  once.
+  once; the fight song plays at each weight's tempo, back to as written when the track changes.
 - **Screens**: `tools/host_shot` scripts for every moment at day, dusk and night, against these mockups.
 - **On the Knomi, by eye and finger**:
   - a nibble against a bite at arm's length;
   - the rim glow (red and blue) through the Knomi's dark rim; the backlight flash;
-  - that the touch screen and the button both register 4 taps a second, and a long press never turns the screen off;
+  - that the touch screen and the button both register 3 to 4 taps a second, and a long press never turns the screen
+    off;
   - the frame rate while reeling (the water is drawn every frame; it should stay at 20 fps or more).
 - **Muted on a Mac**: a whole game with the sound off has to feel just as fair.
 - **Web**: an Android phone buzzes at the bite, the thrashes and the snap; an iPhone doesn't and plays the same
@@ -265,5 +272,3 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
 5. **Too soon:** does tapping on a nibble lose the cast (the classic rule), or only scare that fish off?
 6. **The Game Boy:** is 3 + 3 cartridges all right (mockup 1)?
 7. **The Knomi's backlight flash** at the bite: yes?
-8. **The fight track's tempo:** should it follow the fish (slower for a giant, faster for a small one), or always
-   play at its own speed?
