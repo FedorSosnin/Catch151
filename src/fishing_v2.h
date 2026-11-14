@@ -119,6 +119,7 @@ static void fsScene() {
 // a thumbnail standing with its feet at (cx, feet), s px a pixel; flip: facing the other way; sil/silA: a see-through
 // shadow of it (a256)
 static int16_t fsClip[4] = { 0, 0, V2_W, V2_W };  // what fsThumb may draw in (x0, y0, x1, y1): a slot keeps a big one in
+static int16_t fsClipC[3] = { 0, 0, 0 };          // and within this circle (x, y, r; r 0: none)
 static void fsThumb(const uint8_t *b, int cx, int feet, int s, bool flip = false, Rgb sil = SC_NONE, int silA = 256) {
   if (!b) return;
   int w = b[0], h = b[1], n = b[2];
@@ -138,6 +139,10 @@ static void fsThumb(const uint8_t *b, int cx, int feet, int s, bool flip = false
       if (k == 0xFF) continue;
       int px = x0 + (flip ? r - x : x - l) * s, py = y0 + y * s;
       if (px < fsClip[0] || py < fsClip[1] || px + s > fsClip[2] || py + s > fsClip[3]) continue;
+      if (fsClipC[2]) {
+        int ex = 2 * px + s - 2 * fsClipC[0], ey = 2 * py + s - 2 * fsClipC[1];  // (twice its middle's offset)
+        if (ex * ex + ey * ey > 4 * fsClipC[2] * fsClipC[2]) continue;
+      }
       if (sil != SC_NONE) fsBlend(px, py, px + s - 1, py + s - 1, sil, silA);
       else gfx->fillRect(px, py, s, s, (uint16_t)(pal[k * 2] | (pal[k * 2 + 1] << 8)));
     }
@@ -296,38 +301,57 @@ static void fsLineArc(int pct, int lo = FS_SLACK, int hi = FS_SNAP) { fsArcDraw(
 static int fsKg10(int16_t dex) { return dex == 129 ? 112 : dex == 118 ? 146 : dex == 120 ? 361 : dex == 130 ? 2418 : 0; }
 static void fsKgText(char *b, int n, int kg10) { snprintf(b, n, "%d.%d kg", kg10 / 10, kg10 % 10); }
 
-// the casts along the top: the Pokemon where one was landed, a red X where it got away, the cast's number on those
-// to come (no Poke Balls: this isn't catching), a yellow edge on this one; under them the weight so far
+#ifdef BOARD_HOST
+// how much of a pixel a shape covers, from how far inside its edge the pixel's middle is (px; < 0 outside)
+static inline int fsCover(float in) { return in >= 0.5f ? 256 : in <= -0.5f ? 0 : (int)((in + 0.5f) * 256); }
+#endif
+// one cast's place along the top (Fedor: round, "the same dark transparent color" as the home screen's icon band, no
+// white, "No need for numbers ... Just the spaces and pokemon when you catch them"): a see-through holder in the band's
+// ink (v2BandInk(): dark by day, white at night), its 3 px edge fainter, and in it the Pokemon once one's landed; this
+// cast's edge is yellow. One that got away leaves its place empty. On the Knomi on its 2 px grid, a Knomi pixel a cell;
+// on a computer and the web a pixel at a time with soft edges, as the band is
 // st: 0 to come, 1 this one, -1 got away, else the dex landed
 #define FS_SLOT 40
+#define FS_SLOT_R 19     // the holder's radius, its edge 3 px more
+static void fsSlot(int cx, int cy, int16_t st, bool shiny) {
+  const uint16_t ink = sc565(fsNight ? 0xFFFFFF : 0x1B1B25), ring = sc565(0xF8C030);
+  const int ra = fsNight ? 26 : V2_RIM_A, ta = fsNight ? 31 : V2_TRACK_A, R = FS_SLOT_R, E = R + 3;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+#ifdef BOARD_HOST
+  for (int y = cy - E - 1; y <= cy + E + 1; y++)
+    for (int x = cx - E - 1; x <= cx + E + 1; x++) {
+      float d = hypotf(x + 0.5f - cx, y + 0.5f - cy);
+      int ce = fsCover(E - d), ci = fsCover(R - d);
+      if (!ce) continue;
+      uint16_t &p = fb[y * V2_W + x];
+      if (st == 1) p = v2Blend(p, ring, ce - ci);  // this cast: its edge yellow
+      else p = v2Blend(p, ink, ra * (ce - ci) >> 8);
+      if (ci) p = v2Blend(p, ink, (ra + ta) * ci >> 8);
+    }
+#else
+  for (int y = (cy - E) & ~1; y <= cy + E; y += 2)
+    for (int x = (cx - E) & ~1; x <= cx + E; x += 2) {
+      int dx = x + 1 - cx, dy = y + 1 - cy, d2 = dx * dx + dy * dy;
+      if (d2 > E * E) continue;
+      uint16_t c, *q = fb + y * V2_W + x;
+      if (d2 > R * R) c = st == 1 ? ring : v2Blend(q[0], ink, ra);
+      else c = v2Blend(q[0], ink, ra + ta);
+      q[0] = q[1] = q[V2_W] = q[V2_W + 1] = c;
+    }
+#endif
+  if (st <= 1) return;
+  const uint8_t *t = thumbs.getForm(st, shiny);
+  int h = fsThumbH(t, 1);
+  fsClipC[0] = cx, fsClipC[1] = cy, fsClipC[2] = R;
+  fsThumb(t, cx, cy + (h < 2 * R - 4 ? h / 2 : R - 3), 1);
+  fsClipC[2] = 0;
+}
+// the casts along the top (fsSlot()), and under them the weight so far
 static void fsSlots(const int16_t *st, bool total = true) {
   int x0 = CX - (5 * FS_SLOT + 4 * 6) / 2, y = 40, kg = 0;
   for (int i = 0; i < 5; i++) {
-    int x = x0 + i * (FS_SLOT + 6);
-    uint16_t edge = st[i] == 1 ? sc565(0xF8C030) : sc565(0x3A4A5A);
-    gfx->fillRoundRect(x - 3, y - 3, FS_SLOT + 6, FS_SLOT + 6, 9, sc565(0x1B1B25));
-    gfx->fillRoundRect(x - 1, y - 1, FS_SLOT + 2, FS_SLOT + 2, 8, edge);
-    gfx->fillRoundRect(x + 2, y + 2, FS_SLOT - 4, FS_SLOT - 4, 6, st[i] == -1 ? sc565(0xC8CCD8) : UI_WHITE);
-    if (st[i] == 0 || st[i] == 1) {
-      char nb[4];
-      snprintf(nb, sizeof(nb), "%d", i + 1);
-      setSize(2);
-      gfx->setTextColor(st[i] == 1 ? UI_INK : sc565(0xB8BCC8));
-      setCur(x + FS_SLOT / 2 - textW(nb, 2) / 2 + 1, y + 13);
-      printT(nb);
-    } else if (st[i] == -1) {
-      for (int k = 0; k < 14; k += 2) {
-        fsSq(x + 13 + k, y + 13 + k, 4, 0xE8503A);
-        fsSq(x + 27 - k, y + 13 + k, 4, 0xE8503A);
-      }
-    } else {
-      kg += fsKg10(st[i]);
-      const uint8_t *t = thumbs.getForm(st[i], false);
-      int h = fsThumbH(t, 1);
-      fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + FS_SLOT - 2, fsClip[3] = y + FS_SLOT - 2;
-      fsThumb(t, x + FS_SLOT / 2, y + FS_SLOT / 2 + (h < FS_SLOT - 4 ? h / 2 : FS_SLOT / 2 - 3), 1);
-      fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
-    }
+    fsSlot(x0 + i * (FS_SLOT + 6) + FS_SLOT / 2, y + FS_SLOT / 2, st[i], false);
+    if (st[i] > 1) kg += fsKg10(st[i]);
   }
   if (!total || !kg) return;
   char b[16];
@@ -841,8 +865,6 @@ static void fsArcPxBuild() {
     }
   }
 }
-// how much of a pixel a shape covers, from how far inside its edge the pixel's middle is (px; < 0 outside)
-static inline int fsCover(float in) { return in >= 0.5f ? 256 : in <= -0.5f ? 0 : (int)((in + 0.5f) * 256); }
 #endif
 // the arc now: tension pct in the zones lo..hi, the green brighter on the beat
 static void fsArcDraw(float pct, int lo, int hi, bool beat) {
@@ -947,37 +969,12 @@ static void fsBlobF(float cx, float cy, float s, int a256) {
     }
 }
 
-// the casts along the top, from the game: what each landed, the X where one got away, this one's number edged
+// the casts along the top, from the game: what each landed, this one edged, one that got away empty (fsSlot())
 static void fsSlotsLive() {
   int16_t st[FISH_CASTS];
   for (int i = 0; i < FISH_CASTS; i++) st[i] = i < fish.cast ? fish.slot[i] : i == fish.cast ? (fish.slot[i] ? fish.slot[i] : 1) : 0;
   int x0 = CX - (5 * FS_SLOT + 4 * 6) / 2, y = 40;
-  for (int i = 0; i < FISH_CASTS; i++) {
-    int x = x0 + i * (FS_SLOT + 6);
-    uint16_t edge = st[i] == 1 ? sc565(0xF8C030) : sc565(0x3A4A5A);
-    gfx->fillRoundRect(x - 3, y - 3, FS_SLOT + 6, FS_SLOT + 6, 9, sc565(0x1B1B25));
-    gfx->fillRoundRect(x - 1, y - 1, FS_SLOT + 2, FS_SLOT + 2, 8, edge);
-    gfx->fillRoundRect(x + 2, y + 2, FS_SLOT - 4, FS_SLOT - 4, 6, st[i] == -1 ? sc565(0xC8CCD8) : UI_WHITE);
-    if (st[i] == 0 || st[i] == 1) {
-      char nb[4];
-      snprintf(nb, sizeof(nb), "%d", i + 1);
-      setSize(2);
-      gfx->setTextColor(st[i] == 1 ? UI_INK : sc565(0xB8BCC8));
-      setCur(x + FS_SLOT / 2 - textW(nb, 2) / 2 + 1, y + 13);
-      printT(nb);
-    } else if (st[i] == -1) {
-      for (int k = 0; k < 14; k += 2) {
-        fsSq(x + 13 + k, y + 13 + k, 4, 0xE8503A);
-        fsSq(x + 27 - k, y + 13 + k, 4, 0xE8503A);
-      }
-    } else {
-      const uint8_t *t = thumbs.getForm(st[i], fish.slotShiny[i]);
-      int h = fsThumbH(t, 1);
-      fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + FS_SLOT - 2, fsClip[3] = y + FS_SLOT - 2;
-      fsThumb(t, x + FS_SLOT / 2, y + FS_SLOT / 2 + (h < FS_SLOT - 4 ? h / 2 : FS_SLOT / 2 - 3), 1);
-      fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
-    }
-  }
+  for (int i = 0; i < FISH_CASTS; i++) fsSlot(x0 + i * (FS_SLOT + 6) + FS_SLOT / 2, y + FS_SLOT / 2, st[i], fish.slotShiny[i]);
   if (!fish.total) return;
   char b[20];
   snprintf(b, sizeof(b), T(S_FISH_KG_FMT), (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
