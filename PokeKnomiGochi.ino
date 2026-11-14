@@ -948,6 +948,10 @@ void handleSerial() {
   } else if (line == "OTAGO") {
     startUpdate(false);
     Serial.println("DONE");
+  } else if (line == "WIFISCAN") {  // every network it hears, each access point on its own line (Wi-Fi trouble)
+    clockWifiScanLog();
+    Serial.println("DONE");
+    return;
   } else if (line == "WIFIINFO") {
     Serial.printf("wifi: network '%s' state=%u setup=%u\n", clockWifiSsid(), clockWifiStatus(), wifiSetupState());
     Serial.println("DONE");
@@ -1208,6 +1212,7 @@ void handleSerial() {
   } else if (line == "WIPE") {
     pet.factoryReset();     // wipes NVS and reboots -> new game (starter choice)
     Serial.println("DONE");
+    clockWifiSignOff();
     delay(100);
     ESP.restart();
   } else if (line == "REG") {
@@ -1735,6 +1740,7 @@ void onTap(int16_t x, int16_t y) {
       return;
     } else if (choiceKind == 3 && v2ResetSure && b2 && millis() - v2ResetSureT > 500) {  // the second time it's below
       pet.factoryReset();
+      clockWifiSignOff();
       delay(100);
       ESP.restart();
     }

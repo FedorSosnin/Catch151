@@ -151,6 +151,8 @@ const char *clockWifiSsid() { return ""; }
 uint8_t clockWifiStatus() { return 1; }
 void clockSetWifiSsid(const char *) {}
 void clockPollPause(bool) {}
+void clockWifiSignOff() {}
+void clockWifiScanLog() {}
 bool clockWasSeed() { return false; }
 
 // ---- power: always plugged in ----

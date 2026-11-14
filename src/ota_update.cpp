@@ -8,6 +8,7 @@
 #include <NetworkClientSecure.h>
 #include <esp_partition.h>
 #include <esp_ota_ops.h>
+#include "rtcbat.h"  // clockWifiSignOff()
 #include <mbedtls/sha256.h>
 #include "ota.h"
 #include "ota_roots.h"
@@ -211,6 +212,7 @@ bool otaInstall(OtaProgressCb cb) {
   }
   if (cb) cb(100);
   Serial.println("ota: restarting");
+  clockWifiSignOff();  // (so the router takes it straight back: rtcbat.cpp)
   delay(300);
   ESP.restart();
   return true;

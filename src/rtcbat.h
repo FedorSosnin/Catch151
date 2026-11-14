@@ -22,6 +22,8 @@ const char *clockWifiSsid();      // saved network, for the settings screen
 uint8_t clockWifiStatus();       // 0 not tried, 1 network time correct, 2 no connection
 void clockSetWifiSsid(const char *s);
 void clockPollPause(bool p);
+void clockWifiScanLog();           // the console: every access point it hears (Wi-Fi trouble)
+void clockWifiSignOff();          // before a restart: says goodbye to the router, so it lets the Knomi back in at once
 // time zones (timezones.h). Mac, Windows and the web follow the computer's: clockTzIndex() is -1 there
 int clockTzIndex();
 void clockSetTz(int i);          // saved; the local time moves to it at once

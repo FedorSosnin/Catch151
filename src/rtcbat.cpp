@@ -16,6 +16,12 @@
 #define NTP_RESYNC_MS (24UL * 3600UL * 1000UL)
 #define NTP_RETRY_MS (10UL * 60UL * 1000UL)
 #define WIFI_RECONNECT_MS 60000UL
+// Turned away (the access point refused it, or the handshake timed out), it tries again after a minute, then two,
+// then the usual; and before a restart of its own (an update) the Knomi says goodbye first (clockWifiSignOff()), so
+// the router lets it straight back in. (Fedor's test Knomi, 2026-11-14, refused at nearly every try: its replies
+// weren't reaching the router, on the Mac's USB power; on a wall charger, straight in. These keep a Knomi from
+// waiting 10 minutes after a refusal, whatever its cause)
+#define WIFI_REFUSED_RETRY_MS 60000UL
 
 // The clock keeps UTC (millis() on top of a base) and shows it in the chosen time zone: changing the zone
 // moves the hours, never the time that passed. fromNet: the base came from NTP and nobody set it since.
@@ -121,12 +127,28 @@ static bool stayedOn = false;   // wifi stays on after the last network time
 static uint8_t wifiStatus = 0;  // 0 not tried, 1 last network time correct, 2 no connection
 static char savedSsid[33] = "";
 static volatile uint8_t lastReason = 0;  // last disconnect reason: tells whether it's the password or the coverage
+static uint8_t refused = 0;              // refusals in a row (WIFI_REFUSED_RETRY_MS)
 
 const char *clockWifiSsid() { return savedSsid; }
 uint8_t clockWifiStatus() { return wifiStatus; }
 void clockSetWifiSsid(const char *s) { strlcpy(savedSsid, s, sizeof(savedSsid)); wifiStatus = 0; }
 
 // the wifi change screen takes priority over the radio; when it ends it retries right away
+void clockWifiScanLog() {
+  if (WiFi.getMode() == WIFI_OFF) WiFi.mode(WIFI_STA);
+  int n = WiFi.scanNetworks(false, true);
+  for (int i = 0; i < n; i++)
+    Serial.printf("scan: '%s' %s ch %ld %ld dBm auth %d\n", WiFi.SSID(i).c_str(), WiFi.BSSIDstr(i).c_str(),
+                  (long)WiFi.channel(i), (long)WiFi.RSSI(i), (int)WiFi.encryptionType(i));
+  WiFi.scanDelete();
+}
+
+void clockWifiSignOff() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  WiFi.disconnect(true);  // (a deauthentication the router hears, and the radio off)
+  delay(150);
+}
+
 void clockPollPause(bool p) {
   paused = p;
   st = CLK_IDLE;
@@ -175,6 +197,7 @@ static bool clockStep() {
       return false;
     case CONNECTING:
       if (WiFi.status() == WL_CONNECTED) {
+        refused = 0;
         Serial.printf("wifi ok, ip=%s\n", WiFi.localIP().toString().c_str());
         configTzTime(TIME_ZONES[tzIdx].posix, "pool.ntp.org", "time.google.com");
         t0 = now;
@@ -185,7 +208,11 @@ static bool clockStep() {
         Serial.printf("wifi: no connection (reason %u, state %d, saved ssid '%s', password of %u characters), continuing with the internal clock\n",
                       lastReason, (int)WiFi.status(), (const char *)cfg.sta.ssid, (unsigned)strlen((const char *)cfg.sta.password));
         WiFi.mode(WIFI_OFF);
-        wait = NTP_RETRY_MS;
+        bool turnedAway = lastReason == WIFI_REASON_AUTH_FAIL || lastReason == WIFI_REASON_HANDSHAKE_TIMEOUT ||
+                          lastReason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT || lastReason == WIFI_REASON_AUTH_EXPIRE;
+        refused = turnedAway ? refused + 1 : 0;
+        wait = turnedAway && refused <= 2 ? WIFI_REFUSED_RETRY_MS * refused : NTP_RETRY_MS;
+        if (wait < NTP_RETRY_MS) Serial.printf("wifi: turned away, trying again in %lu s\n", (unsigned long)(wait / 1000));
         wifiStatus = 2;
         st = IDLE;
       }
