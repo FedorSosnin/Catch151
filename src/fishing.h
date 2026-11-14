@@ -42,17 +42,21 @@ struct FishClassDef {
   uint8_t size;
 };
 // (Fedor, after playing it: "too easy and the rounds go a little too fast". The green moved up toward the snap and
-// narrowed, and each one takes more good taps: a tap too many or a thrash tapped through snaps the line now, and a
-// careful player lands about 95 in 100 and makes gold most games, a child about 60 and silver about half the time,
-// the plan's aim. It was 20-80% to 42-70% and 10 to 16 taps, when watching the line landed every one)
+// narrowed, and each one takes more good taps: a tap too many or a thrash tapped through snaps the line now. It was
+// 20-80% to 42-70% and 10 to 16 taps, when watching the line landed every one. After the second playtest, "just a
+// tiny bit more challenge": 2 points less green, 2 more taps, and the uneven pull, FISH_TUG)
 static const FishClassDef FISH_CLASS[FC_N] = {
-  { 3.2f, 10, 52, 80, 14, 0.90f, 5.0f, 0.6f, 3 },   // small, under 15 kg
-  { 2.5f, 12, 55, 82, 17, 0.75f, 4.0f, 0.8f, 4 },   // middling, 15 to 50
-  { 2.0f, 14, 58, 84, 20, 0.65f, 3.4f, 1.0f, 5 },   // big, 50 to 100
-  { 1.6f, 16, 61, 86, 21, 0.60f, 3.0f, 1.2f, 6 },   // heavy, 100 to 150
-  { 1.25f, 18, 64, 88, 22, 0.60f, 2.6f, 1.4f, 8 },  // giant, 200 and up
+  { 3.2f, 10, 54, 80, 16, 0.90f, 5.0f, 0.6f, 3 },   // small, under 15 kg
+  { 2.5f, 12, 57, 82, 19, 0.75f, 4.0f, 0.8f, 4 },   // middling, 15 to 50
+  { 2.0f, 14, 60, 84, 22, 0.65f, 3.4f, 1.0f, 5 },   // big, 50 to 100
+  { 1.6f, 16, 63, 86, 23, 0.60f, 3.0f, 1.2f, 6 },   // heavy, 100 to 150
+  { 1.25f, 18, 66, 88, 24, 0.60f, 2.6f, 1.4f, 8 },  // giant, 200 and up
 };
 #define FISH_THRASH_PULL 0.6f  // a thrash tightens the line by this share of the ease a second: tap slower through it
+// The fish doesn't pull evenly (Fedor, the second playtest: "slight irregularities between the pulses"): on each beat
+// its pull is up to this share harder or softer, so the notch sinks at a different speed every beat and a tap goes in
+// when the line says, not on the count alone. The beat and the fight song stay steady
+#define FISH_TUG 0.25f
 
 // The fish: the Beach's water Pokemon (zones.h), their Pokedex weights (tenths of a kg), their size and where they
 // swim (1 the shallows, 2 open water, 4 the deep)
@@ -154,6 +158,7 @@ struct FishState {
   float thrashIn, thrashLeft, warnLeft;
   float slackT;            // time under the green band
   float beat;              // 0..1 through the fish's beat
+  float tug;               // this beat's pull, against the fish's own (1 - FISH_TUG .. 1 + FISH_TUG)
   float x0, y0;            // where it was hooked
   uint8_t zone;            // the LINE arc's zone now: 0 blue, 1 green, 2 red
   FishWhy why;
@@ -308,6 +313,7 @@ inline void fishHook(FishState &s) {
   s.good = 0;
   s.slackT = 0;
   s.beat = 0;
+  s.tug = 1;
   s.thrashIn = c.thrashEvery * fishRange(s, .8f, 1.2f);
   s.thrashLeft = s.warnLeft = 0;
   s.x0 = b.x = s.floatX;
@@ -443,6 +449,7 @@ inline uint32_t fishStep(FishState &s, float dt) {
       s.beat += dt * c.pace;
       if (s.beat >= 1) {
         s.beat -= 1;
+        s.tug = fishRange(s, 1 - FISH_TUG, 1 + FISH_TUG);
         ev |= FE_BEAT;
       }
       if (s.warnLeft > 0) {
@@ -461,7 +468,7 @@ inline uint32_t fishStep(FishState &s, float dt) {
           ev |= FE_WARN;
         }
       }
-      s.T -= ease * dt;
+      s.T -= ease * s.tug * dt;
       if (s.thrashLeft > 0) s.T += ease * FISH_THRASH_PULL * dt;
       if (s.T < 0) s.T = 0;
       if (s.T >= 100) {  // a thrash on a line already too tight

@@ -186,6 +186,32 @@ TEST(fishing, a_heavier_fish_wants_a_slower_pace_and_has_less_green) {
   CHECK(FISH_CLASS[0].pace <= 3.3f);  // nothing faster than a child taps comfortably
 }
 
+// the fish pulls harder or softer on each beat (FISH_TUG): the notch sinks at that beat's speed, never past the limits,
+// and it does vary; the beat itself stays steady
+TEST(fishing, the_fish_pulls_unevenly_from_beat_to_beat) {
+  FishState s;
+  hookOne(s, FC_MID);
+  float lo = 9, hi = 0, beatT = -1;
+  int beats = 0;
+  for (float t = 0; t < 20 && beats < 40; t += DT) {
+    s.thrashIn = 1e9f, s.warnLeft = s.thrashLeft = 0;
+    s.T = 70, s.slackT = 0;  // (held in the green, never landed)
+    if (fishStep(s, DT) & FE_BEAT) {
+      if (beatT >= 0) CHECK(fabsf(t - beatT - 1.0f / FISH_CLASS[FC_MID].pace) < 2 * DT);  // a steady beat
+      beatT = t;
+      beats++;
+      CHECK(s.tug >= 1 - FISH_TUG - 1e-4f && s.tug <= 1 + FISH_TUG + 1e-4f);
+      lo = s.tug < lo ? s.tug : lo, hi = s.tug > hi ? s.tug : hi;
+      float T0 = s.T;
+      fishStep(s, DT);
+      CHECK(fabsf(T0 - s.T - fishEase(FC_MID) * s.tug * DT) < 1e-3f);  // the notch sinks at this beat's pull
+      s.T = 70;
+    }
+  }
+  CHECK(beats >= 40);
+  CHECK_MSG(hi - lo > FISH_TUG, "it varies");
+}
+
 TEST(fishing, a_thrash_is_warned_and_easing_off_through_it_saves_the_line) {
   FishState s;
   hookOne(s, FC_BIG);
