@@ -221,7 +221,7 @@ int8_t bZone = -1;                  // this battle is in a zone; -1 = random
 bool bTower = false;       // V2: this battle is a Knomi Tower fight (tower_v2.h): no catch, RUN always works, its end
                            // goes back to the climb
 void towerOpen();  // (tower_v2.h, included with the V2 screens further down)
-void fishMockSet(uint8_t n);  // (fishing_v2.h: Fishing's mockups)
+void fishMockSet(uint8_t n);  // (fishing_v2.h: Reel Fishing's mockups)
 void towerJump(uint8_t step);
 bool towerClimbing();
 bool bFromIsland = false;  // V2: a Wild Encounter from Knomi Island: its end goes back there, as a zone's does (Fedor:
@@ -1074,7 +1074,7 @@ void handleSerial() {
   } else if (line == "ZONES") {
     openZones();
     Serial.println("DONE");
-  } else if (line.startsWith("FISHMOCK ")) {  // V2: Fishing's mockups, 1..16 (0: off)
+  } else if (line.startsWith("FISHMOCK ")) {  // V2: Reel Fishing's mockups, 1..16 (0: off)
     openZones();
     fishMockSet((uint8_t)atoi(line.c_str() + 9));
     Serial.println("DONE");
@@ -7467,7 +7467,7 @@ void renderZones() {
     return;
   }
   char b[32];
-  if (fsMock) {  // V2: a Fishing mockup (fishing_v2.h)
+  if (fsMock) {  // V2: a Reel Fishing mockup (fishing_v2.h)
     fishMockRender();
     gfx->flush();
     return;

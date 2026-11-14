@@ -1,4 +1,4 @@
-// V2: Fishing MOCKUPS (not the game yet). A fishing minigame for the Games menu, played off the end of a pier at the
+// V2: Reel Fishing MOCKUPS (not the game yet). A fishing minigame for the Games menu, played off the end of a pier at the
 // Beach. The Knomi has no speaker and no vibration, so every moment of a cast reads on the screen alone (the float,
 // rings, splashes, a "!", the rim's glow, the line's colour, the rod's bend); the computers and the web add sound, and
 // phones and controllers a buzz, on top. These painters only draw still screens for the console's "FISHMOCK n"
@@ -414,7 +414,7 @@ static const int16_t FS_ST_4[5] = { 129, 118, -1, 1, 0 };
 static const int16_t FS_ST_5[5] = { 129, 118, -1, 120, 1 };
 static const int16_t FS_ST_END[5] = { 129, 118, -1, 120, 130 };
 
-// 1: the Games menu with a sixth cartridge, Fishing, in Magikarp's orange: the sea, a float, a Magikarp leaping
+// 1: the Games menu with a sixth cartridge, Reel Fishing (REEL / FISHING), in Magikarp's orange: the sea, a float, a Magikarp leaping
 static uint16_t fsLbl[V2_LBL_W * V2_LBL_H];
 static void fsMockGames() {
   v2PaintGameLabels();
@@ -430,7 +430,7 @@ static void fsMockGames() {
   v2GbBack(T(S_GAMES));
   static const int16_t XY[6][2] = { { 56, 96 }, { 180, 96 }, { 304, 96 }, { 56, 238 }, { 180, 238 }, { 304, 238 } };
   for (int k = 0; k < 5; k++) v2Cart(XY[k][0], XY[k][1], v2Lbl(k), gameLabel(V2_CART_GAME[k]), V2_CART_COL[k]);
-  v2Cart(XY[5][0], XY[5][1], fsLbl, "FISHING", 0xF07A3A);
+  v2Cart(XY[5][0], XY[5][1], fsLbl, "REEL FISHING", 0xF07A3A);
   v2CloseX();
 }
 
@@ -442,7 +442,7 @@ static void fsMockHow() {
   fsBack();
   fsAngler(FS_TIP_X, FS_TIP_Y);
   fsLine(FS_TIP_X, FS_TIP_Y, FS_TIP_X + 4, FS_TIP_Y + 60, 0, 0xF4F4F8);
-  v2IntroCard(CX, CY, true, "FISHING",
+  v2IntroCard(CX, CY, true, "REEL FISHING",
               "Cast by a big shadow: big ones weigh more! When the float goes under, tap. Keep tapping to reel it "
               "in, not too fast, not too slow. Each one is weighed, then let go.");
 }
@@ -719,7 +719,7 @@ static void fsMockResult() {
   fsBack();
   fsAngler(FS_TIP_X, FS_TIP_Y);
   v2DimFrame(115);
-  fsBoard("FISHING", 70);
+  fsBoard("REEL FISHING", 70);
   v2Panel(96, 112, 370, V2_AGAIN_Y + V2_AGAIN_H + 16, 12);
   int total = 0;
   for (int i = 0; i < 5; i++) total += FS_ST_END[i] > 1 ? fsKg10(FS_ST_END[i]) : 0;

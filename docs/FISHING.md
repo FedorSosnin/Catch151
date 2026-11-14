@@ -1,4 +1,4 @@
-# Fishing: the plan (DRAFT, round 2, mockups only, nothing built)
+# Reel Fishing: the plan (DRAFT, round 2, mockups only, nothing built)
 
 A sixth game on the Games Game Boy. Your Pokemon fishes off the end of a pier at the Beach. You get 5 casts. Pick a
 fish, cast by it, tap when the float goes under, then reel it in by tapping at its pace. Each one is weighed and let
@@ -10,7 +10,8 @@ The pictures are in the session notes (`fishing/`): `fishing-1-cast-to-bite.png`
 
 ## What changed in round 2 (Fedor)
 
-- **The name is Fishing** (no more "Poke" in names).
+- **The name is Reel Fishing** (no more "Poke" in names; on its cartridge, REEL over FISHING). The other games
+  lost theirs too: Rock Hopper, Dungeon Crawler, Volley Ball.
 - **Blobs, not fish shapes**, under the water.
 - **Tap to reel**, not hold. Too fast snaps the line; too slow and it gets away.
 - **Each weight has its own pace**: light ones want quick taps, heavy ones slow and steady.
@@ -136,8 +137,8 @@ has to register that rate (a test below).
 
 Three things to change for this:
 - **The Knomi's button.** Today a tap starts a wild battle from home and does nothing in a game, and a release after
-  0.8 to 3 s turns the screen off (`handleKnomiButton()`). While Fishing is open, each press is a tap for the game, and
-  a long press does nothing (no screen-off). The 10 s erase question stays.
+  0.8 to 3 s turns the screen off (`handleKnomiButton()`). While Reel Fishing is open, each press is a tap for the
+  game, and a long press does nothing (no screen-off). The 10 s erase question stays.
 - **Space and key repeat.** Holding Space must not machine-gun the reel: only a new press counts.
 - **Windows controllers** only tilt today. Their A button should be the Knomi's button, so a controller can play, and
   it rumbles with the buzzes.
@@ -166,8 +167,8 @@ Magikarp.
   with three medals on the result (mockup 14). As a rough guide: five small ones make bronze, a few middling and big
   ones make silver, and gold takes the giant or several heavy ones.
 - **Records:** the heaviest total (`fishHi`, in tenths of a kg) with NEW RECORD!, and maybe the heaviest single fish.
-- **Reward:** `pet.fishResult(kg10)`, the exercise reward Run and Surf give. Bronze or less: the plain joy line;
-  silver or gold: GREAT JOY. No food.
+- **Reward:** `pet.fishResult(kg10)`, the exercise reward Rock Hopper and PikaSurf give. Bronze or less: the plain
+  joy line; silver or gold: GREAT JOY. No food.
 - It counts toward the Repel's 10 minutes of games, as every game does.
 
 ## The how-to card
@@ -203,7 +204,7 @@ Magikarp.
 - `src/fishing_v2.h`: the drawing. The mockups' pieces (pier, float, rod, line, rings, rim glow, blobs, the LINE arc,
   the slots, the scale) become the game's. The scene is cached in the one scene buffer, as the other games' are.
 - `PokeKnomiGochi.ino`: `GAMES_COUNT` 6, the name and card arrays, start, close and render, `introBegin()`, the sixth
-  cartridge (3 + 3 on the Game Boy, mockup 1) and its label picture; the button while Fishing is open.
+  cartridge (3 + 3 on the Game Boy, mockup 1) and its label picture; the button while Reel Fishing is open.
 - `pet.h`, `pet.cpp`: `fishHi` and `fishResult()`.
 - `i18n`: the strings. `audio.h`, `sfx_notes.h`, `shell.html`, `windows/main.cpp`: the effects and buzzes.
   `music.h`, `songs.py`, `music_v2.h` and the synth's tempo override: the tracks.
@@ -219,9 +220,9 @@ Magikarp.
   - the blob nearest the float bites; weights stay within 0.8 to 1.2 of the kind's;
   - the water always holds 3 small, 2 middling and 1 big, and one giant shows up in casts 3 to 5 of every game;
   - 5 casts and it ends; the goals and the record; only Beach Pokemon in the water.
-- **Bots** on the console, like RUNBOT and DNBOT: FISHBOT taps at the right pace; a "kid" bot reacts in 400 to 700 ms
-  and taps with a wobbly rhythm. Tune it so the perfect bot lands about 95% and makes gold most games, and the kid
-  bot lands about 60% and makes silver about half the time.
+- **Bots** on the console, like RUNBOT (Rock Hopper) and DNBOT (Dungeon Crawler): FISHBOT taps at the right pace;
+  a "kid" bot reacts in 400 to 700 ms and taps with a wobbly rhythm. Tune it so the perfect bot lands about 95% and
+  makes gold most games, and the kid bot lands about 60% and makes silver about half the time.
 - **Host tests**: the effects table, `BUZZ` and `kBuzz` have a row per effect; the track count; holding Space reels
   once.
 - **Screens**: `tools/host_shot` scripts for every moment at day, dusk and night, against these mockups.
