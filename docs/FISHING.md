@@ -1,4 +1,4 @@
-# Reel Fishing: the plan (DRAFT, round 3: mockups and its two songs; the game isn't built)
+# Reel Fishing: the plan (agreed with Fedor; mockups and its two songs made, the game not built yet)
 
 A sixth game on the Games Game Boy. Your Pokemon fishes off the end of a pier at the Beach. You get 5 casts. Pick a
 fish, cast by it, tap when the float goes under, then reel it in by tapping at its pace. Each one is weighed and let
@@ -184,9 +184,9 @@ Magikarp.
 
 - **The score is the total weight** of what you landed in 5 casts, to a tenth of a kg (decided, Fedor: "Yes, weight",
   over points by rarity).
-- **Goal lines** (Fedor: "get over a set amount of weight"): bronze 50 kg, silver 150 kg, gold 300 kg, shown as a bar
-  with three markers on the result (mockup 14). As a rough guide: five small ones make bronze, a few middling and big
-  ones make silver, and gold takes the giant or several heavy ones.
+- **Goal lines** (Fedor: "get over a set amount of weight"; these numbers kept): bronze 50 kg, silver 150 kg, gold
+  300 kg, shown as a bar with three markers on the result (mockup 14). As a rough guide: five small ones make bronze,
+  a few middling and big ones make silver, and gold takes the giant or several heavy ones.
 - **Records:** the heaviest total (`fishHi`, in tenths of a kg) with NEW RECORD!, and maybe the heaviest single fish.
 - **Reward:** `pet.fishResult(kg10)`, the exercise reward Rock Hopper and PikaSurf give. Bronze or less: the plain
   joy line; silver or gold: GREAT JOY. No food.
@@ -279,15 +279,15 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
 - **A playtest with your daughter**: is the bite easy to catch, are the paces comfortable, and does she ever think
   she's catching them?
 
-## Questions for Fedor
+## Decided
 
-Decided so far (Fedor, rounds 2 and 3):
+All of Fedor's questions are answered (rounds 2 and 3):
 - the name Reel Fishing; blobs under the water; tap to reel at each weight's pace; the weigh-in and release;
 - scoring by total weight; one giant in every game (skill over luck);
 - the hooked blob swells on the beat, and nothing relies on sound (the Knomi has none);
 - too soon scares that fish off and the cast goes on;
 - six cartridges, 3 x 2; the Knomi's backlight flash;
-- no medals for now; two songs, the fight song following the fish.
+- no medals for now; two songs, the fight song following the fish;
+- goal lines at 50, 150 and 300 kg.
 
-Still open:
-1. **The goal lines:** are 50, 150 and 300 kg about right?
+Numbers marked "first numbers" (paces, windows, odds) are for the bots and the playtest to tune.
