@@ -43,6 +43,14 @@
 #define REPEL_MIN 3       // how long one lasts, in the game's minutes (Fedor: 3; 10 was long)
 #define REPEL_MAX 99
 #define SHINY_AFTER_GOODBYE 4              // 1 in 4 after a goodbye or release
+// A Wild Encounter (pickWildSpecies): a legend comes up on WILD_LEGEND_PCT in 100 once you have WILD_LEGEND_DEX
+// and the wild ones are level WILD_LEGEND_LVL or more; WILD_NEW_PCT in 100 look only among the ones you're
+// missing, and otherwise each rare one sits out WILD_RARE_SKIP in 100
+#define WILD_LEGEND_PCT 3
+#define WILD_LEGEND_DEX 25
+#define WILD_LEGEND_LVL 40
+#define WILD_NEW_PCT 70
+#define WILD_RARE_SKIP 60
 #define RUNAWAY_TICKS 60                   // runs away after 1 h with EVERYTHING at zero
 // Time (docs/HOW_IT_WORKS.md, "Time"): the game counts its own minutes, and only a clock the player
 // can't set (network time, a monotonic clock) adds time away. A new day needs this many of them.

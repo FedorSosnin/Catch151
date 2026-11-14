@@ -738,6 +738,44 @@ TEST(train, rival_prefers_what_is_missing_from_the_pokedex) {
   CHECK_MSG(fresh > 600, "at least 70% look for new species");
 }
 
+// the Catch 151 Dex page's Catching tab (host/dex_json.h, into tools/dex.json): how often a Search in its zone and a
+// Wild Encounter turn each one up, once you have them all and yours is strong enough for every one, is what the two
+// pickers really do. Each count within 5 standard deviations of the page's chance
+static void oddsCheck(const char *what, const int *seen, int n, int16_t d, double p) {
+  double sd = sqrt(n * p * (1 - p)), off = seen[d] - n * p;
+  char msg[120];
+  snprintf(msg, sizeof(msg), "%s #%d: %d of %d, the page says %.1f", what, d, seen[d], n, n * p);
+  CHECK_MSG(off < 5 * sd + 3 && off > -5 * sd - 3, msg);
+}
+TEST(train, dex_page_says_how_often_each_one_turns_up) {
+  Pet p;
+  makePet(p, 4);
+  for (int16_t d = 1; d <= 151; d++) p.catchWild(d);
+  CHECK(!p.repelOn());
+  double all = 0;
+  for (int16_t d = 1; d <= 151; d++) all += dexWildOdds(d);
+  CHECK_MSG(all > 0.999999 && all < 1.000001, "a Wild Encounter: everyone's chances add up to 1");
+  const int N = 100000;
+  int seen[152] = {};
+  for (int i = 0; i < N; i++) seen[p.pickWildSpecies(dexOddsLevel(-1))]++;
+  for (int16_t d = 1; d <= 151; d++) oddsCheck("a Wild Encounter", seen, N, d, dexWildOdds(d));
+  for (uint8_t z = 0; z < ZONE_COUNT; z++) {
+    const int M = 30000;
+    int got[152] = {};
+    double sum = 0;
+    for (int i = 0; i < M; i++) got[p.pickZoneSpecies(z, dexOddsLevel(z) - 3)]++;  // the lowest a wild one is then
+    for (int16_t d = 1; d <= 151; d++) {
+      if (zoneOf(d) != z) {
+        CHECK_MSG(got[d] == 0, "a Search finds only its zone's");
+        continue;
+      }
+      sum += dexSearchOdds(d);
+      oddsCheck("a Search", got, M, d, dexSearchOdds(d));
+    }
+    CHECK_MSG(sum > 0.999999 && sum < 1.000001, "a zone: its chances add up to 1");
+  }
+}
+
 TEST(play, minigame_trains_speed_and_saves_record) {
   Pet p;
   makePet(p, 4);

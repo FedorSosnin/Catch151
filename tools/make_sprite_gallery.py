@@ -13,7 +13,8 @@ the game plays it (src/cry.h): the pieces are tools/voices.json, which `make -C 
 
 Each Pokemon's page also says what the game's Pokedex says about it (its fact), its base stats, how it evolves, every
 move it learns with the game's power for it and when it's on its battle buttons, what it's strong and weak
-against, its stats with training and how the game trains them, and where it's caught; several picked together are
+against, its stats with training and how the game trains them, and where it's caught and its chances there (each
+star, regular and shiny: the Catching tab); several picked together are
 compared (match-ups). All of that is the game's own tables and battle rules (dex.h, moves.h, dexfacts.h, battle.h,
 zones.h), as tools/dex.json, which `make -C host dex` writes (host/dex_json.h; the host tests check it's up to date).
 The owned marks are the viewer's own, kept in their browser.
@@ -207,7 +208,7 @@ def main():
 
     data = json.dumps(mons, separators=(',', ':'))
     tables = json.dumps({'types': types, 'colors': [dex_data.TYPE_ACCENTS[t] for t in types], 'chart': dex['chart'],
-                         'moves': dex['moves'], 'training': dex['training'], 'zones': dex['zones']},
+                         'moves': dex['moves'], 'training': dex['training'], 'zones': dex['zones'], 'catch': dex['catch']},
                         separators=(',', ':'))
     page = open(PAGE, encoding='utf-8').read()
     page = page.replace('/*DATA*/[]', data.replace('</', '<\\/')).replace('/*GAME*/{}', tables.replace('</', '<\\/'))

@@ -1032,8 +1032,8 @@ void Pet::visitorLeft() {
 
 int16_t Pet::pickWildSpecies(uint8_t lvl) {
   // legendaries are the end of the game, as with eggs
-  bool legend = registeredCount() >= 25 && lvl >= 40 && random(100) < 3;
-  bool preferNew = random(100) < 70;
+  bool legend = registeredCount() >= WILD_LEGEND_DEX && lvl >= WILD_LEGEND_LVL && random(100) < WILD_LEGEND_PCT;
+  bool preferNew = random(100) < WILD_NEW_PCT;
   for (int pass = 0; pass < 3; pass++) {
     int16_t cand[151];
     int n = 0;
@@ -1043,7 +1043,7 @@ int16_t Pet::pickWildSpecies(uint8_t lvl) {
       if (btlMinLevel(d) > lvl) continue;
       if (pass < 2 && repelKeepsAway(d)) continue;  // V2: a Repel keeps weaker ones away
       if (pass == 0 && preferNew && isRegistered(d)) continue;
-      if (pass == 0 && r == R_RARE && random(100) < 60) continue;  // rares, less often
+      if (pass == 0 && r == R_RARE && random(100) < WILD_RARE_SKIP) continue;  // rares, less often
       cand[n++] = d;
     }
     if (n > 0) return cand[random(n)];

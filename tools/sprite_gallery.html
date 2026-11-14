@@ -13,7 +13,8 @@
   /* dark, always (Fedor): the sprites and the sparkles look best on it, the way the game shows them */
   :root { color-scheme:dark; --bg:#1b1b25; --ink:#eeeadb; --muted:#a9a7a0; --accent:#ff7a63; --line:#3a3a48; --card:#262633;
     --head:rgba(27,27,37,.94); --shade:rgba(0,0,0,.32); --gold:#ffcd28; --red:#e8503a;
-    --good:#8fe09b; --goodbg:rgba(88,184,104,.2); --weak:#f2b45e; --weakbg:rgba(232,162,60,.18); --none:rgba(255,255,255,.07); }
+    --good:#8fe09b; --goodbg:rgba(88,184,104,.2); --weak:#f2b45e; --weakbg:rgba(232,162,60,.18); --none:rgba(255,255,255,.07);
+    --shybg:rgba(255,205,40,.06); }
   * { box-sizing: border-box; }
   body { margin:0; font-family: system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
   a { color:var(--accent); }
@@ -178,6 +179,14 @@
   .lists p { margin:0 0 12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .lists p > .x { flex:none; margin-right:4px; }
   .tlvl { margin:0 0 20px; }
+  .ct { max-width:560px; }
+  .ct th { white-space:normal; vertical-align:bottom; }
+  .ct td { white-space:nowrap; }
+  .ct .stars { color:var(--gold); letter-spacing:1px; }
+  .ct .stars i { font-style:normal; color:var(--line); }
+  .ct tr.shy td { background:var(--shybg); }
+  .ct tr.shy td:first-child { box-shadow:inset 3px 0 var(--gold); padding-left:10px; }
+  .ct .sh { font-size:.78rem; color:var(--muted); margin-right:6px; }
   .tt { max-width:460px; }
   .tt .why { color:var(--muted); font-size:.78rem; margin-left:6px; }
   .how { margin:0; display:grid; grid-template-columns:6em 1fr; gap:16px 20px; font-size:.9rem; line-height:1.6; max-width:62ch; }
@@ -235,7 +244,9 @@
     .pname { flex-wrap:nowrap; gap:12px; }
     .pname .btn { flex:none; padding:4px 11px; }  /* (only its note on a phone, so it stays beside a long name) */
     .pname .lbl { display:none; }
-    .tabs { margin:40px 20px 0; gap:22px; }
+    .tabs { margin:40px 20px 0; gap:14px; overflow-x:auto; }
+    .tab { flex:none; font-size:.9rem; }
+    .ct .sh { display:block; margin:0; }
     .panel { padding:24px 20px 0; }
     .dfoot { margin:40px 20px 0; }
     .tiles { grid-template-columns:repeat(2, 1fr); gap:10px; }
@@ -335,6 +346,7 @@
   </div>
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="views" id="tab-views" aria-controls="p-views">Views</button>
+    <button class="tab" role="tab" data-tab="catch" id="tab-catch" aria-controls="p-catch">Catching</button>
     <button class="tab" role="tab" data-tab="moves" id="tab-moves" aria-controls="p-moves">Moves</button>
     <button class="tab" role="tab" data-tab="types" id="tab-types" aria-controls="p-types">Battle</button>
     <button class="tab" role="tab" data-tab="train" id="tab-train" aria-controls="p-train">Training</button>
@@ -345,6 +357,7 @@
     </div>
     <div class="tiles" id="tiles"></div>
   </div>
+  <div class="panel" role="tabpanel" id="p-catch" aria-labelledby="tab-catch"></div>
   <div class="panel" role="tabpanel" id="p-moves" aria-labelledby="tab-moves"></div>
   <div class="panel" role="tabpanel" id="p-types" aria-labelledby="tab-types"></div>
   <div class="panel" role="tabpanel" id="p-train" aria-labelledby="tab-train"></div>
@@ -836,10 +849,38 @@ function fillTraining() {
   const t = document.getElementById('tlvl');
   t.addEventListener('input', () => { state.level = +t.value; t.nextElementSibling.textContent = t.value; document.getElementById('trows').innerHTML = trainRows(g, state.level); });
 }
+// the Catching tab: how likely each catch of it is to have each of the stars, shiny or not (GAME.catch: rollStars() and
+// WILD_SHINY_PCT, the same for every Pokemon), and how often a Search in its zone or a Wild Encounter turns it up with
+// them (m.g.search and wild: dexSearchOdds() and dexWildOdds() in host/dex_json.h, checked against the game's pickers)
+const pct = (x) => `${+x.toFixed(2)}%`;
+const oneIn = (p) => `1 in ${Math.round(1 / p).toLocaleString('en-US')}`;
+const starsOf = (k) => `<span class="stars" aria-label="${k} star${k > 1 ? 's' : ''}">${'★'.repeat(k)}<i>${'★'.repeat(3 - k)}</i></span>`;
+function fillCatch() {
+  const m = MONS[dlgMon], g = m.g, C = GAME.catch, Z = GAME.zones, name = Z.names[g.zone];
+  const where = `${name === 'Beach' ? 'at' : 'in'} the ${name}`;
+  const rows = [false, true].map((shiny) => C.stars.map((s, k) => {
+    const each = (shiny ? C.shiny : 100 - C.shiny) * s / 100;  // % of its catches
+    return `<tr class="${shiny ? 'shy' : ''}"><td>${shiny ? '<span class="sh">Shiny</span>' : ''}${starsOf(k + 1)}</td><td class="r">${pct(each)}</td>`
+      + `<td class="r">${oneIn(g.search * each / 100)}</td><td class="r">${oneIn(g.wild * each / 100)}</td></tr>`;
+  }).join('')).join('');
+  const lvl = C.searchLevel[g.zone], legend = g.rarity === 3;
+  document.getElementById('p-catch').innerHTML = `<div class="sec"><h3>Its chances</h3>
+    <table class="mt ct"><thead><tr><th></th><th class="r">Each catch</th><th class="r">A Search ${where}</th><th class="r">A Wild Encounter</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="sec"><dl class="how">
+    <dt>Each catch</dt><dd>Every wild Pokémon is shiny ${C.shiny} time in ${Math.round(100 / C.shiny)}, and every catch rolls its stars:
+      1★ ${C.stars[0]} times in 100, 2★ ${C.stars[1]} and 3★ ${C.stars[2]}. That's the same for every Pokémon.</dd>
+    <dt>Search</dt><dd>How often a Search ${where} finds it with those stars, if you catch it. ${legend
+      ? `It's on 1 Search in ${Math.round(1000 / Z.legendPermil)} there, from the first.`
+      : `That's at level ${lvl} and up, when everyone there turns up${g.min > 1 ? ` (it does from level ${g.min})` : ''}, and once you have
+      all of the ${name}. Until then a Search looks for the ones you're missing first.`}</dd>
+    <dt>Wild</dt><dd>The same for a Wild Encounter, at level ${C.wildLevel} and up and once you have all 151.${legend ? ` A legend turns up in one only from level ${C.legend[0]}, once you have ${C.legend[1]}.` : ''}</dd>
+    <dt>Repel</dt><dd>A Repel keeps Pokémon weaker than yours away, so the stronger ones turn up more often while it lasts.</dd>
+    </dl></div>`;
+}
 function showTab(tab) {
   state.tab = tab;
   document.querySelectorAll('#dlg .tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-  for (const p of ['views', 'moves', 'types', 'train']) document.getElementById(`p-${p}`).classList.toggle('hide', p !== tab);
+  for (const p of ['views', 'catch', 'moves', 'types', 'train']) document.getElementById(`p-${p}`).classList.toggle('hide', p !== tab);
   dlgCanvases.forEach((c) => live.delete(c));
   if (tab === 'views') requestAnimationFrame(() => dlgCanvases.forEach((c) => { size(c); live.add(c); }));
 }
@@ -925,6 +966,7 @@ function openMon(i) {
   dlg.scrollTop = 0;
   fillHero();
   fillAbout();
+  fillCatch();
   fillMoves();
   fillTypes();
   fillTraining();

@@ -17,12 +17,19 @@
 //   zones    where they're caught (zones.h): names, the five zones in Z_* order; legends, ZONE_LEGEND (each zone's
 //           legend, turning up on legendPermil Searches in 1000 there, from the first); starters, the four you can
 //           start with (starter_v2.h's V2_STARTERS). There are no eggs: everyone else is caught
+//   catch    the chances of each catch (Pet::rollStars(), WILD_SHINY_PCT): shiny, its % of the wild ones; stars, the %
+//           of catches with 1, 2 and 3 stars; searchLevel (each zone's) and wildLevel, the level from which every one
+//           turns up on a Search there or in a Wild Encounter (dexOddsLevel()); legend, [the level, the Pokemon you
+//           have] from which a legend can turn up in a Wild Encounter
+//           and per Pokemon (mons): search, how often a Search in its zone turns it up, and wild, a Wild Encounter
+//           (dexSearchOdds(), dexWildOdds())
 //   training how your Pokemon is trained (pet.h, pet.cpp): each kind up to max; win, ATK a battle won; careHours,
 //           hours of good care for 1 DEF, and graceMin, the minutes awake a need may dip under 40; levelHours of
 //           age a level, battles counting up to levelCap; genes, [lowest, top of 1 star, top of 2, highest] (%);
 //           games, what each mini game gives SPD: [name, its unit, per that many, this much]
 // `make -C host dex` writes tools/dex.json; the host tests check that file is what this makes, and the pet's tests
 // (test/test_pet.cpp) that DEX_TRAIN_GAMES is what the games really give.
+#include <math.h>
 #include <stdio.h>
 #include <string>
 #include "../src/pet.h"
@@ -31,6 +38,7 @@
 #include "../src/battle.h"
 #include "../src/dexfacts.h"
 #include "../src/zones.h"
+#include "../src/minigames.h"
 
 // what each mini game trains (SPD), as the page says it: Pet::playResult(), runResult(), surfResult(), dungeonResult()
 enum DexTrainKind : uint8_t { DEX_TRAIN_BERRY, DEX_TRAIN_RUN, DEX_TRAIN_SURF, DEX_TRAIN_DUNGEON };
@@ -48,6 +56,48 @@ static const DexTrainGame DEX_TRAIN_GAMES[] = {
 // the game's English shows them (S_ZONE_FOREST...)
 static const int16_t DEX_STARTERS[] = { 1, 4, 7, 25 };
 static const char *const DEX_ZONE_NAMES[ZONE_COUNT] = { "Forest", "Beach", "Cave", "Mansion", "Field" };
+
+// How often it turns up (the page's Catching tab): the chance a Search in its zone finds it (Pet::pickZoneSpecies()),
+// and a Wild Encounter (Pet::pickWildSpecies()), once yours is strong enough for every one of them (dexOddsLevel())
+// and you have them all, so neither leans toward the missing ones; with no Repel. test_pet.cpp checks them against
+// the two pickers.
+static inline double dexSearchOdds(int16_t d) {
+  uint8_t z = zoneOf(d);
+  if (d == ZONE_LEGEND[z]) return ZONE_LEGEND_PERMIL / 1000.0;  // on any Search
+  int total = 0;  // the rest by weight
+  for (int16_t s = 1; s <= DEX_COUNT; s++)
+    if (zoneOf(s) == z && s != ZONE_LEGEND[z]) total += zoneWeight(s);
+  return (1 - ZONE_LEGEND_PERMIL / 1000.0) * zoneWeight(d) / total;
+}
+static inline double dexWildOdds(int16_t d) {
+  const double look = WILD_NEW_PCT / 100.0, legend = WILD_LEGEND_PCT / 100.0, sits = WILD_RARE_SKIP / 100.0;
+  int legends = 0, rares = 0, others = 0;
+  for (int16_t s = 1; s <= DEX_COUNT; s++) {
+    uint8_t r = DEX_TBL[s].rarity;
+    (r == R_LEGENDARY ? legends : r == R_RARE ? rares : others)++;
+  }
+  // a look among the missing ones finds none (you have them all), and so does a legend's turn then: everyone
+  // else as likely. Otherwise a legend's turn is the legends'; or everyone else, each rare one sitting out
+  // `sits` of the time
+  if (DEX_TBL[d].rarity == R_LEGENDARY) return (1 - look) * legend / legends;
+  bool rare = DEX_TBL[d].rarity == R_RARE;
+  int with = others + (rare ? 1 : 0), n = rares - (rare ? 1 : 0);  // it, the others always there, n that may sit out
+  double e = 0, c = 1;  // E[1 / (with + those of the n that stay)], c the binomial coefficient
+  for (int k = 0; k <= n; k++) {
+    e += c * pow(1 - sits, k) * pow(sits, n - k) / (with + k);
+    c = c * (n - k) / (k + 1);
+  }
+  return look / (rares + others) + (1 - look) * (1 - legend) * (rare ? 1 - sits : 1) * e;
+}
+// the level from which every one turns up: a wild one is up to 3 below yours (btlWildLevel()); a Wild Encounter's
+// legend needs WILD_LEGEND_LVL. zone: 0-4, or -1 for a Wild Encounter
+static inline int dexOddsLevel(int zone) {
+  int top = zone < 0 ? WILD_LEGEND_LVL : 1;
+  for (int16_t s = 1; s <= DEX_COUNT; s++)
+    if (zone < 0 ? DEX_TBL[s].rarity != R_LEGENDARY : (zoneOf(s) == zone && s != ZONE_LEGEND[zone]))
+      top = btlMinLevel(s) > top ? btlMinLevel(s) : top;
+  return top + 3;
+}
 
 static inline std::string dexJsonStr(const char *s) {
   std::string o = "\"";
@@ -92,7 +142,13 @@ static inline std::string dexPageJson() {
   out += b;
   for (size_t i = 0; i < sizeof(DEX_STARTERS) / sizeof(DEX_STARTERS[0]); i++)
     out += (i ? "," : "") + std::to_string(DEX_STARTERS[i]);
-  out += "]},\n\"mons\":{";
+  snprintf(b, sizeof(b), "]},\n\"catch\":{\"shiny\":%d,\"stars\":[%d,%d,%d],\"searchLevel\":[", WILD_SHINY_PCT,
+           100 - STAR_PCT_2 - STAR_PCT_3, STAR_PCT_2, STAR_PCT_3);
+  out += b;
+  for (int z = 0; z < ZONE_COUNT; z++) out += (z ? "," : "") + std::to_string(dexOddsLevel(z));
+  snprintf(b, sizeof(b), "],\"wildLevel\":%d,\"legend\":[%d,%d]", dexOddsLevel(-1), WILD_LEGEND_LVL, WILD_LEGEND_DEX);
+  out += b;
+  out += "},\n\"mons\":{";
   for (int16_t d = 1; d <= DEX_COUNT; d++) {
     const DexEntry &e = DEX_TBL[d];
     snprintf(b, sizeof(b), "%s\n\"%d\":{\"type\":%d,\"stats\":[%d,%d,%d,%d],\"evo\":[", d > 1 ? "," : "", d, e.type,
@@ -105,7 +161,8 @@ static inline std::string dexPageJson() {
       snprintf(b, sizeof(b), "[%d,%d]", e.evolvesTo, e.evolveLevel);
       out += b;
     }
-    snprintf(b, sizeof(b), "],\"rarity\":%d,\"zone\":%d,\"min\":%d,\"fact\":", e.rarity, zoneOf(d), btlMinLevel(d));
+    snprintf(b, sizeof(b), "],\"rarity\":%d,\"zone\":%d,\"min\":%d,\"search\":%.6g,\"wild\":%.6g,\"fact\":", e.rarity,
+             zoneOf(d), btlMinLevel(d), dexSearchOdds(d), dexWildOdds(d));
     out += b;
     out += dexJsonStr(DEX_FACT[d]);
     out += ",\"learn\":[";
