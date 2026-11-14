@@ -1074,7 +1074,7 @@ void handleSerial() {
   } else if (line == "ZONES") {
     openZones();
     Serial.println("DONE");
-  } else if (line.startsWith("FISHMOCK ")) {  // V2: Reel Fishing's mockups, 1..16 (0: off)
+  } else if (line.startsWith("FISHMOCK ")) {  // V2: Reel Fishing's mockups, 1..19 (0: off)
     openZones();
     fishMockSet((uint8_t)atoi(line.c_str() + 9));
     Serial.println("DONE");

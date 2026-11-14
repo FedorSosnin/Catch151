@@ -1,12 +1,13 @@
-# Reel Fishing: the plan (DRAFT, round 2, mockups only, nothing built)
+# Reel Fishing: the plan (DRAFT, round 3, mockups and music only, the game isn't built)
 
 A sixth game on the Games Game Boy. Your Pokemon fishes off the end of a pier at the Beach. You get 5 casts. Pick a
 fish, cast by it, tap when the float goes under, then reel it in by tapping at its pace. Each one is weighed and let
 go. The score is the total weight.
 
-The mockups are drawn in the game itself (`src/fishing_v2.h`, console `FISHMOCK 1..16`, the Berry Garden mockups' way).
+The mockups are drawn in the game itself (`src/fishing_v2.h`, console `FISHMOCK 1..19`, the Berry Garden mockups' way).
 The pictures are in the session notes (`fishing/`): `fishing-1-cast-to-bite.png`, `fishing-2-reel-to-weigh-in.png`,
-`fishing-3-got-away-to-end.png` and the cue sheet `fishing-4-cues.png`. Round 1's are in `fishing/round1/`.
+`fishing-3-got-away-to-end.png`, the cue sheet `fishing-4-cues.png` and the medals, `fishing-5-medals.png`. The music
+is written (below) and rendered in `fishing/music/`. Round 1's pictures are in `fishing/round1/`.
 
 ## What changed in round 2 (Fedor)
 
@@ -171,6 +172,29 @@ Magikarp.
   joy line; silver or gold: GREAT JOY. No food.
 - It counts toward the Repel's 10 minutes of games, as every game does.
 
+## Medals (mockups 15 to 17)
+
+Three, the trainer's (kept across every Pokemon raised, as the Pokedex and zone medals are), drawn as things in the
+trophy room's own style (`tools/fishing_trophies.py`): an outline, five shades lit from the top left, a glint. They're
+objects, not characters.
+
+| Medal | How to win it | The thing |
+|---|---|---|
+| FULL NET | Land all 5 casts in one game | A wicker creel, something gold poking out under its lid |
+| GOLD ANGLER | Weigh in 300 kg or more in one game (the gold line) | A gold scale, its needle past the top |
+| THE BIG ONE | Land a giant: Gyarados or Lapras | A gold fish mounted on a wooden plaque |
+
+- **Bits:** the medals use 26 of their 32 bits, so these are bits 26 to 28 (`MED_FISH_NET`, `MED_FISH_GOLD`,
+  `MED_FISH_GIANT`) and `MED_COUNT` goes to 29. Three bits are left after that.
+- **In the room:** a sixth group, FISHING. The scale on a little bracket and the plaque hang on the wall either side
+  of the badges' case, and the creel sits on the carpet by the MEDALS board (mockup 15). It gets its own page, 6 of 6,
+  like the other groups' (mockup 16), and each medal has its card (mockup 17).
+- **Progress on the cards:** GOLD ANGLER's card shows your best total against 300 kg, as the level medals show
+  their progress. The other two are all-or-nothing.
+- **To build them:** the art goes into `tools/trophies.py` (its `ORDER` and `MED_COUNT`) and `trophies_v2.h`; the
+  names and how-to lines into `i18n` in all 8 languages; the room's sixth group into `layout_v2.h` and `menus_v2.h`;
+  and the medal banner when one is won, as every medal has.
+
 ## The how-to card
 
 - Touch: "Cast by a big shadow: big ones weigh more! When the float goes under, tap. Keep tapping to reel it in, not
@@ -184,13 +208,21 @@ Magikarp.
 
 ## Music and effects
 
-- **Two new tracks** in `tools/music/songs.py`, all original, appended after `MUS_ZONE_FIELD` so the zones' numbering
-  stays:
-  - `MUS_FISH`, at the pier: easy and lazy, about 88 bpm in 6/8, a plucked bass, a flute tune, a soft shaker like
-    water on the posts.
-  - `MUS_FISH_FIGHT`, once it's hooked: a short driving loop whose tempo follows the fish's pace (about 60 bpm a tap a
-    second, so 240 bpm for a small one, 60 for a giant, its beat on every tap). The music engine needs a tempo override
-    for this. Back to the calm one after the weigh-in.
+- **Two new tracks, written** (in `tools/music/songs.py` and `src/music_data.h` on this branch), all original, appended
+  after `MUS_ZONE_FIELD` so nothing else renumbers. Nothing plays them yet, since the game isn't built. Both are mixed
+  to -24 dBFS, as the other games' tracks are.
+  - `MUS_FISH`, **Reel Fishing**, at the pier: a lazy swing at 84 bpm in G major, a flute over plucked chords, a
+    shaker like water slapping the posts, and rests in the tune where it waits, as you wait for the float to go
+    under. A 51-second loop after a 2-bar intro.
+  - `MUS_FISH_FIGHT`, **On the Line**, once one's hooked: driving and urgent at 150 bpm in E minor, the bass in
+    eighths, the tune climbing in short runs. A 27-second loop. Back to the pier's track after the weigh-in.
+  - **Its tempo follows the fish.** The synth's tempo is one number (`spt()`, from the song's bpm), so a speed factor
+    can let the fight track follow the pace: slower and heavier for a giant, faster for a small one. The music folder
+    has the fight track at 0.65 and 1.35 times to hear the idea (stretched there; the game would just play it slower
+    or faster).
+  - To listen on a computer: `make -C host music ONLY=fish` writes `build/music/29_fish.wav` and `30_fish_fight.wav`.
+  - They're on the soundtrack page's list too (`web/music/`, under The minigames, marked "the game is coming"), as
+    its test wants every song of the game there. Merging this branch would put them on the public page.
 - **Effects** in `sfx_notes.h`, in the game's square-wave style: CAST, NIBBLE, BITE, HOOK, REEL (the click), WARN (the
   creak), THRASH, STRAIN, SLACK (the whirr), SNAP, LANDED, SCALE, MISS. The splash and the snap would sound better with
   the noise `cry.h` already makes. The mixer already lowers the music to 45% under an effect, so the bite cuts through.
@@ -207,7 +239,8 @@ Magikarp.
   cartridge (3 + 3 on the Game Boy, mockup 1) and its label picture; the button while Reel Fishing is open.
 - `pet.h`, `pet.cpp`: `fishHi` and `fishResult()`.
 - `i18n`: the strings. `audio.h`, `sfx_notes.h`, `shell.html`, `windows/main.cpp`: the effects and buzzes.
-  `music.h`, `songs.py`, `music_v2.h` and the synth's tempo override: the tracks.
+  `music_v2.h` picks the two tracks (already in `music.h` and `songs.py`), and the synth gets its tempo factor.
+- The medals: as in Medals, above.
 
 ## Test plan
 
@@ -224,7 +257,7 @@ Magikarp.
   a "kid" bot reacts in 400 to 700 ms and taps with a wobbly rhythm. Tune it so the perfect bot lands about 95% and
   makes gold most games, and the kid bot lands about 60% and makes silver about half the time.
 - **Host tests**: the effects table, `BUZZ` and `kBuzz` have a row per effect; the track count; holding Space reels
-  once.
+  once; each fishing medal is won by its own game (5 of 5, 300 kg, a giant) and kept by a new pet.
 - **Screens**: `tools/host_shot` scripts for every moment at day, dusk and night, against these mockups.
 - **On the Knomi, by eye and finger**:
   - a nibble against a bite at arm's length;
@@ -242,9 +275,12 @@ Magikarp.
 ## Questions for Fedor
 
 1. **Scoring:** total weight against bronze, silver and gold lines (my pick, as mocked), or points by rarity?
-2. **The goal lines:** are 50, 150 and 300 kg about right? Should they become medals in the trophy room?
+2. **The goal lines:** are 50, 150 and 300 kg about right?
 3. **The giant:** one in every game (fair, as mocked), or rare and random (more of a surprise, more luck)?
 4. **Showing the pace:** the blob swells on the beat (easier), or you only feel it from the notch (harder)?
 5. **Too soon:** does tapping on a nibble lose the cast (the classic rule), or only scare that fish off?
 6. **The Game Boy:** is 3 + 3 cartridges all right (mockup 1)?
 7. **The Knomi's backlight flash** at the bite: yes?
+8. **The medals:** are FULL NET, GOLD ANGLER and THE BIG ONE the right three, and do the creel, the scale and the
+   mounted fish look right? (Another idea: one for a heavy one landed at night.)
+9. **The music:** do the two tracks fit, and should the fight track's tempo follow the fish?

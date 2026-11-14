@@ -35,6 +35,8 @@ enum MusicTrack : uint8_t {
   MUS_ZONE_CAVE,
   MUS_ZONE_MANSION,
   MUS_ZONE_FIELD,
+  MUS_FISH,        // Reel Fishing (MOCKUP, not played anywhere yet): at the pier, waiting for a bite
+  MUS_FISH_FIGHT,  // ...and once one's hooked, its tempo to follow the fish's pace
   MUS_COUNT
 };
 

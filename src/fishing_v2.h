@@ -2,7 +2,7 @@
 // Beach. The Knomi has no speaker and no vibration, so every moment of a cast reads on the screen alone (the float,
 // rings, splashes, a "!", the rim's glow, the line's colour, the rod's bend); the computers and the web add sound, and
 // phones and controllers a buzz, on top. These painters only draw still screens for the console's "FISHMOCK n"
-// (1..16), so the look can be judged in the real game before any of it is built. scene_v2.h includes this after
+// (1..19), so the look can be judged in the real game before any of it is built. scene_v2.h includes this after
 // tower_v2.h. The plan is docs/FISHING.md.
 
 static uint8_t fsMock = 0;  // the mockup on screen (0: none)
@@ -781,6 +781,121 @@ static void fsMockNight() {
   fsNight = false;
 }
 
+// ===================================================================== its medals (FISHMOCK 17..19)
+// Three, the trainer's (kept across every Pokemon raised), as things in the trophy room in its style
+// (tools/fishing_trophies.py writes their art): FULL NET, a wicker creel (all 5 landed in one game); GOLD ANGLER, a
+// gold scale (the 300 kg gold line); THE BIG ONE, a gold fish mounted on a plaque (a giant landed)
+#include "fishing_trophies_mock.h"
+static const char *const FT_NAME[3] = { "FULL NET", "GOLD ANGLER", "THE BIG ONE" };
+static const char *const FT_HOW[3] = { "Land all 5 casts in one game of Reel Fishing.",
+                                       "Weigh in 300 kg or more in one game of Reel Fishing.",
+                                       "Land a giant in Reel Fishing: Gyarados or Lapras." };
+static const bool FT_WON[3] = { true, true, false };  // as the mockups show them: two won, the giant still to land
+// trArt with Reel Fishing's palette: a thing standing with the middle of its foot at (x, base), s px a pixel
+static void ftArt(const TrArt &a, int x, int base, int s, bool won, Rgb sil = TR_SIL, Rgb silD = TR_SIL_D) {
+  int x0 = x - a.w * s / 2, y0 = base - a.h * s;
+  for (int j = 0; j < a.h; j++)
+    for (int i = 0; i < a.w; i++) {
+      uint8_t k = a.px[j * a.w + i];
+      if (!k) continue;
+      int px = x0 + i * s, py = y0 + j * s;
+      if (!won) {
+        if (FT_PAL_WON[k]) continue;
+        scRect(px, py, px + s - 1, py + s - 1, k == 1 ? silD : sil);
+      } else {
+        scRect(px, py, px + s - 1, py + s - 1, FT_PAL[k]);
+      }
+    }
+}
+
+// 17: the trophy room with Reel Fishing's three: the scale on its bracket left of the badges' case, the mounted fish on
+// the wall right of it, the creel on the carpet by the board. A sixth group: FISHING
+static void fsMockRoom() {
+  uint32_t m0 = pet.medals, t0 = pet.trainerMedals;  // (a trainer some way along, for the picture)
+  pet.medals |= MED_LV10 | MED_LV25 | MED_BERRY | MED_BOND;
+  pet.trainerMedals |= MED_DEX10 | MED_DEX50 | MED_ZONE_BEACH | MED_ZONE_FOREST | MED_BUDDY;
+  v2TrophyRoom();
+  pet.medals = m0, pet.trainerMedals = t0;
+  scScreen();
+  scRR(66, 110, 126, 116, 0x5A3A22);  // the scale's bracket
+  scRR(66, 110, 126, 112, TR_WALL_L);
+  ftArt(FT_ART_SMALL[2], 380, 108, 2, FT_WON[2]);
+  ftArt(FT_ART_SMALL[1], 96, 110, 2, FT_WON[1]);
+  ftArt(FT_ART_SMALL[0], 98, 392, 2, FT_WON[0]);
+  v2SignIn("MEDALS 11/29", 350, C565(0x6e, 0x1e, 0x2a), C565(0x8a, 0x2a, 0x38));
+}
+
+// 18: the FISHING group's shelf, as the other groups' pages: the three on one shelf, their names on plates (gold
+// once won), the board with how many, the page buttons (page 6 of 6) and the X
+static void fsPaintFishShelf(int) {
+  scRR(0, 0, V2_W, 376, TR_WALL);
+  for (int x = 24; x < V2_W; x += 60) {
+    scRR(x, 0, x + 4, 376, TR_WALL_D);
+    scRR(x + 4, 0, x + 8, 376, TR_WALL_L);
+  }
+  scRR(0, 372, V2_W, 380, 0x3A2414);
+  scRR(0, 380, V2_W, V2_W, 0xA83C3C);
+  for (int y = 388; y < V2_W; y += 16)
+    for (int x = ((y / 16) % 2) * 16; x < V2_W; x += 32) scGridRect(x, y, x + 8, y + 8, 0x882C2C);
+  scRR(0, 380, V2_W, 384, TR_GOLD_D);
+  const int sy = 250, x0 = 52, x1 = 414;  // the shelf
+  scRR(x0, sy, x1, sy + 8, 0x5A3A22);
+  scRR(x0, sy, x1, sy + 2, TR_WALL_L);
+  scRR(x0 + 8, sy + 8, x0 + 16, sy + 16, 0x3A2414);
+  scRR(x1 - 16, sy + 8, x1 - 8, sy + 16, 0x3A2414);
+}
+static void fsMockShelf() {
+  v2Cached(0x3E700000, fsPaintFishShelf, 0);
+  scScreen();
+  static const int16_t X[3] = { 118, 233, 348 };
+  for (int k = 0; k < 3; k++) ftArt(FT_ART_BIG[k], X[k], 250, 2, FT_WON[k]);
+  TrPlate pl[3];
+  int pw = 0, ph = 0;
+  for (int k = 0; k < 3; k++) {
+    v2PlateFit(FT_NAME[k], 104, pl[k]);
+    if (pl[k].w > pw) pw = pl[k].w;
+    if (pl[k].h > ph) ph = pl[k].h;
+  }
+  for (int k = 0; k < 3; k++) v2NamePlate(pl[k], X[k], 272, pw, ph, FT_WON[k]);
+  v2Sign("FISHING 2/3");
+  drawPageArrows(5, 6, V2_PAGE_ARROW_Y);
+  v2PageOf(6, 5, 390);
+  v2CloseX();
+}
+
+// 19: a medal's card, as every medal has: THE BIG ONE, won: on the plinth under the spotlight, shining, its name on a
+// gold board, how to win it and Earned!
+static void fsMockCard() {
+  const int m = 2;
+  v2Cached(0x3F000000, v2PaintTrophyBack, 0);
+  scScreen();
+  scGradeTod = 0;
+  scRR(173, 262, 293, 290, 0x5A3A22);  // the plinth
+  scRR(173, 262, 293, 266, TR_WALL_L);
+  const TrArt &a = FT_ART_BIG[m];
+  ftArt(a, CX, 262, 3, true);
+  int x0 = CX - a.w * 3 / 2, x1 = x0 + a.w * 3, y0 = 262 - a.h * 3;  // it shines: three sparkles round it
+  const int16_t sp[3][3] = { { (int16_t)(x0 - 12), (int16_t)(y0 + 18), 3 }, { (int16_t)(x1 + 9), (int16_t)(y0 + 6), 3 },
+                             { (int16_t)(x1 + 15), (int16_t)(y0 + a.h * 2), 2 } };
+  for (auto &q : sp) {
+    int x = q[0], y = q[1], r = q[2] * 3;
+    scRR(x - 1, y - r - 1, x + 2, y + r + 2, 0xFFFFFF);
+    scRR(x - r - 1, y - 1, x + r + 2, y + 2, 0xFFFFFF);
+    scRR(x - 2, y - 2, x + 3, y + 3, 0xFFF6C8);
+  }
+  v2SignIn(FT_NAME[m], V2_BOARD_Y, C565(0xc0, 0x84, 0x10), C565(0xf0, 0xc0, 0x4a));
+  v2Panel(72, 270, 394, 374, 10);
+  int n = drawWrappedAt(FT_HOW[m], 2, 306, CX, 0, 18, false), y = 270 + (105 - (n * 18 + 8 + 16)) / 2;
+  gfx->setTextColor(UI_INK);
+  drawWrappedAt(FT_HOW[m], 2, 306, CX, y, 18, true);
+  y += n * 18 + 8;
+  gfx->setTextColor(C565(0x3c, 0x8a, 0x4c));
+  setCur(centerX(T(S_MEDAL_GOT), 2), y);
+  printT(T(S_MEDAL_GOT));
+  drawPageArrows(2, 3, V2_PAGE_ARROW_Y);
+  v2CloseX();
+}
+
 static void fishMockRender() {
   switch (fsMock) {
     case 1: fsMockGames(); break;
@@ -799,5 +914,8 @@ static void fishMockRender() {
     case 14: fsMockResult(); break;
     case 15: fsMockNight(); break;
     case 16: fsMockReelBig(); break;
+    case 17: fsMockRoom(); break;
+    case 18: fsMockShelf(); break;
+    case 19: fsMockCard(); break;
   }
 }

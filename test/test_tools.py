@@ -62,7 +62,7 @@ class TestSoundtrackPage(unittest.TestCase):
             page = f.read()
         block = re.search(r'const TRACKS = \[(.*?)\n\];', page, re.S).group(1)
         names = [n.replace("\\'", "'") for n in re.findall(r"^  \['((?:[^'\\]|\\.)*)', ", block, re.M)]
-        self.assertEqual(len(games), 28)
+        self.assertEqual(len(games), 30)
         self.assertEqual(names, games, 'web/music/index.html: TRACKS must follow src/music_data.h')
         zones = re.findall(r"^  \['(\w+)', (\d+), (\d+), ", page, re.M)
         self.assertEqual([z[0] for z in zones], ['Forest', 'Beach', 'Cave', 'Mansion', 'Field'])
