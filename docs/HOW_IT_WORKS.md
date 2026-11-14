@@ -51,7 +51,7 @@ Your Pokémon needs at least 15 ⚡ to fight.
 
 | Result | 😊 | ⚡ | 🍖 | 💪 | 💞 | ⚖️ |
 |---|---|---|---|---|---|---|
-| 🏆 **Win** | +10 | −12 | −5 | +6 | +2 | −5 |
+| 🏆 **Win** | +10 | −12 | −5 | +3 | +2 | −5 |
 | 💫 **Loss** | −5 | Drops to 5 | −5 | | | −5 |
 | 🤝 **Win against a buddy** | +15 | | | | +2 | |
 | 🤝 **Loss against a buddy** | +8 | | | | +2 | |
@@ -93,7 +93,7 @@ Every form in the Pokédex (regular and shiny count apart) has 1–3 ★: its ge
 
 ## Training
 
-- **Winning a battle** adds attack training (+6 a win).
+- **Winning a battle** adds attack training (+3 a win).
 - **Every 6 hours of good care** adds defense training (+1). Good care means every need stays at 40 or more. Hours asleep count too, and a need can dip under 40 for up to 15 minutes while it's awake (time to notice and feed it) before the 6 hours start over. The count is saved, so a restart or an update doesn't lose it.
 - **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf and Dungeon Crawler add 1 for every 5 points.
 - **Weight** isn't training: every berry adds 4 and candy 12 (6 more if it was already 80% full). Games, battles and time burn it off. Over 50, energy drops twice as fast; 20 or less earns the Fit medal.

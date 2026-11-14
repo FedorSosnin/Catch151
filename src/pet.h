@@ -12,7 +12,7 @@
 #define GOOD_CARE_MIN 360  // 6 h of good care (sleep included) = +1 defense training
 #define CARE_GRACE_MIN 15  // a need may stay under 40 this long (awake) before the streak is lost
 #define VISIT_MINUTES 60     // the daily visitor stays this long (awake minutes, kept over sleep and restarts)
-#define BTL_WIN_TRAIN 6      // ATK per battle won
+#define BTL_WIN_TRAIN 3      // ATK per battle won (Fedor: 3, from 6: "Reaching max is too easy")
 #define BTL_ENERGY_COST 12
 #define BTL_LOSS_ENERGY 5    // losing leaves it exhausted: it must sleep to fight again
 #define BTL_LOSS_GRACE_MIN 10  // minutes to put it to bed before it counts as neglect
