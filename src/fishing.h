@@ -41,12 +41,16 @@ struct FishClassDef {
   float window, thrashEvery, thrashLen;
   uint8_t size;
 };
+// (Fedor, after playing it: "too easy and the rounds go a little too fast". The green moved up toward the snap and
+// narrowed, and each one takes more good taps: a tap too many or a thrash tapped through snaps the line now, and a
+// careful player lands about 95 in 100 and makes gold most games, a child about 60 and silver about half the time,
+// the plan's aim. It was 20-80% to 42-70% and 10 to 16 taps, when watching the line landed every one)
 static const FishClassDef FISH_CLASS[FC_N] = {
-  { 3.2f, 10, 20, 80, 10, 0.90f, 5.0f, 0.6f, 3 },   // small, under 15 kg
-  { 2.5f, 12, 25, 78, 12, 0.75f, 4.0f, 0.8f, 4 },   // middling, 15 to 50
-  { 2.0f, 14, 30, 75, 14, 0.65f, 3.4f, 1.0f, 5 },   // big, 50 to 100
-  { 1.6f, 16, 36, 72, 15, 0.60f, 3.0f, 1.2f, 6 },   // heavy, 100 to 150
-  { 1.25f, 18, 42, 70, 16, 0.60f, 2.6f, 1.4f, 8 },  // giant, 200 and up
+  { 3.2f, 10, 52, 80, 14, 0.90f, 5.0f, 0.6f, 3 },   // small, under 15 kg
+  { 2.5f, 12, 55, 82, 17, 0.75f, 4.0f, 0.8f, 4 },   // middling, 15 to 50
+  { 2.0f, 14, 58, 84, 20, 0.65f, 3.4f, 1.0f, 5 },   // big, 50 to 100
+  { 1.6f, 16, 61, 86, 21, 0.60f, 3.0f, 1.2f, 6 },   // heavy, 100 to 150
+  { 1.25f, 18, 64, 88, 22, 0.60f, 2.6f, 1.4f, 8 },  // giant, 200 and up
 };
 #define FISH_THRASH_PULL 0.6f  // a thrash tightens the line by this share of the ease a second: tap slower through it
 
