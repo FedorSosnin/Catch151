@@ -68,8 +68,17 @@ Rules that keep it fair:
   (`knomi_rim.h`), so the glow runs from about 18 px in to 40 px in. Red means too fast, blue too slow.
 - **Colour plus shape plus words.** Every warning also moves (the notch, the line's sag or snap) and says what to do
   (SLOWER!, FASTER!), so it reads for colour-blind players.
-- **Knomi only: the backlight** flashes to full at the bite and pulses when the line's about to snap
-  (`panel->setBrightness()`, with a short "flash until" in `updateBrightness()`).
+- **The beat is seen, never only heard** (Fedor: "the knomi has no speaker, so we shouldnt rely on sound to make the
+  game fun"). While reeling, the hooked blob swells on every beat, the reel's marks turn with it and the LINE arc's
+  green band brightens on it, so the rhythm is on the screen first. On a computer the fight song plays the same beat;
+  the music doubles it and never carries it alone.
+- **Knomi only: the backlight** flashes to full at the bite and pulses when the line's about to snap (Fedor: yes,
+  if it's doable; it is). The Knomi has no battery: it's always on USB (`rtcbat.cpp` says so for the Knomi V2), so
+  awake it always runs at 180 of 255 (`brightnessFor()`, `power.h`), and a flash to 255 is a clear jump. (The 145 and
+  the low-battery caps there are the Waveshare board's, which has one.) `KnomiPanel::setBrightness()` restarts the
+  backlight chip on every change (off for about 3 ms, then on at full and stepped down), so a flash is two changes
+  and blocks about 6 ms: fine for one flash and three pulses a second. It's a "flash until" time that
+  `updateBrightness()` puts over its own level.
 - **The screen stays awake** through a cast.
 
 | Moment | Screen (all; the Knomi's only cue) | + Sound | + Buzz |
@@ -87,7 +96,8 @@ Rules that keep it fair:
 | Landed | It leaps out with drops and sparkles; its name on the board | A fanfare | A happy pattern |
 | **Weigh-in** | On the scale: the needle swings, the weight goes on the total, BACK IN IT GOES! and a splash | Tick-tick-ding, then its own cry (`cry.h`) as it swims off | A short tick |
 | Snap or slipped off | The line breaks (or goes limp), the blob shoots off, IT GOT AWAY! on a red board | A snap, then the aww of a wrong answer | One long buzz |
-| Too soon, too slow to strike | TOO SOON! or TOO SLOW! over the water; the float bobs back up | A bloop going down | A short double |
+| Too soon | TOO SOON! over the water, the blob darts off with a wake, the float bobs on; another fish comes | A bloop going down | A short double |
+| Too slow to strike | TOO SLOW! over the water; the float bobs back up and the cast is over | A bloop going down | A short double |
 | The giant | Gold rays, a gold board, THE BIG ONE! | The medal fanfare | A longer happy pattern |
 | Night | The same; the float has a lamp that glows even under the water | The same | The same |
 
@@ -98,7 +108,9 @@ Rules that keep it fair:
    water, the dark blue on the right is the deep (the heavy ones).
 3. **Wait** 2 to 8 seconds (less if you landed it close, or there are bubbles). Up to 3 nibbles come first.
 4. **The bite.** Tap within the strike window: 0.9 s for small ones, 0.75 s middling, 0.6 s for the heavy ones.
-   - Tap on a nibble or before the bite: TOO SOON, the fish swims off and the cast is over.
+   - Tap on a nibble or before the bite: TOO SOON. That fish is scared off (its blob darts away) but the cast goes on
+     (Fedor: "Scare the fish off"): the float stays out and the next nearest blob comes to the hook, after a longer
+     wait. The cost is the fish you picked: a big one scared off may be followed by a small one.
    - Miss the window: TOO SLOW, the float bobs back up and the cast is over.
 5. **Reel.** Tap, tap, tap, at the fish's pace. Each tap pulls the line tighter (the notch goes up) and brings the
    fish a step closer; between taps the line eases (the notch sinks).
@@ -228,7 +240,8 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
 - `src/fishing_v2.h`: the drawing. The mockups' pieces (pier, float, rod, line, rings, rim glow, blobs, the LINE arc,
   the slots, the scale) become the game's. The scene is cached in the one scene buffer, as the other games' are.
 - `PokeKnomiGochi.ino`: `GAMES_COUNT` 6, the name and card arrays, start, close and render, `introBegin()`, the sixth
-  cartridge (3 + 3 on the Game Boy, mockup 1) and its label picture; the button while Reel Fishing is open.
+  cartridge (3 x 2 on the Game Boy, six in all, mockup 1) and its label picture; the button while Reel Fishing is
+  open.
 - `pet.h`, `pet.cpp`: `fishHi` and `fishResult()`.
 - `i18n`: the strings. `audio.h`, `sfx_notes.h`, `shell.html`, `windows/main.cpp`: the effects and buzzes.
   `music_v2.h` picks the two tracks (already in `music.h` and `songs.py`), and the synth gets its tempo factor.
@@ -236,7 +249,8 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
 ## Test plan
 
 - **Rules** (`test/test_fishing.cpp`):
-  - a tap on a nibble ends the cast as too soon; a tap in the window hooks it; after it, too slow;
+  - a tap on a nibble scares that fish off and the cast goes on with the next nearest blob; a tap in the window hooks
+    it; after it, too slow, and the cast is over;
   - a clean strike starts the notch in the middle of the green, a late one near an edge;
   - for each weight, tapping at its pace holds the notch in the green; tapping much faster snaps it; much slower
     lets it slip after 1.5 s;
@@ -255,7 +269,8 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
   - the rim glow (red and blue) through the Knomi's dark rim; the backlight flash;
   - that the touch screen and the button both register 3 to 4 taps a second, and a long press never turns the screen
     off;
-  - the frame rate while reeling (the water is drawn every frame; it should stay at 20 fps or more).
+  - the frame rate while reeling: it runs at the arcade games' 40 ms a frame (25 fps, `frameIntervalMs()`), so a
+    192 bpm beat is about 8 frames; the water is drawn every frame, so check it holds that.
 - **Muted on a Mac**: a whole game with the sound off has to feel just as fair.
 - **Web**: an Android phone buzzes at the bite, the thrashes and the snap; an iPhone doesn't and plays the same
   otherwise. Windows with a controller: A strikes and reels, and it rumbles.
@@ -266,12 +281,13 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
 
 ## Questions for Fedor
 
-Decided so far: the name (Reel Fishing), blobs, tap to reel at each weight's pace, the weigh-in and release, no medals
-for now, the two songs with the fight song following the fish, and scoring by total weight.
+Decided so far (Fedor, rounds 2 and 3):
+- the name Reel Fishing; blobs under the water; tap to reel at each weight's pace; the weigh-in and release;
+- scoring by total weight; one giant in every game (skill over luck);
+- the hooked blob swells on the beat, and nothing relies on sound (the Knomi has none);
+- too soon scares that fish off and the cast goes on;
+- six cartridges, 3 x 2; the Knomi's backlight flash;
+- no medals for now; two songs, the fight song following the fish.
 
+Still open:
 1. **The goal lines:** are 50, 150 and 300 kg about right?
-2. **The giant:** one in every game (fair, as mocked), or rare and random (more of a surprise, more luck)?
-3. **Showing the pace:** the blob swells on the beat (easier), or you only feel it from the notch (harder)?
-4. **Too soon:** does tapping on a nibble lose the cast (the classic rule), or only scare that fish off?
-5. **The Game Boy:** is 3 + 3 cartridges all right (mockup 1)?
-6. **The Knomi's backlight flash** at the bite: yes?
