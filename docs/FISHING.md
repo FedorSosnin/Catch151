@@ -1,4 +1,4 @@
-# Reel Fishing: the plan (DRAFT, round 3, mockups and music only, the game isn't built)
+# Reel Fishing: the plan (DRAFT, round 3: mockups and its two songs; the game isn't built)
 
 A sixth game on the Games Game Boy. Your Pokemon fishes off the end of a pier at the Beach. You get 5 casts. Pick a
 fish, cast by it, tap when the float goes under, then reel it in by tapping at its pace. Each one is weighed and let
@@ -6,8 +6,8 @@ go. The score is the total weight.
 
 The mockups are drawn in the game itself (`src/fishing_v2.h`, console `FISHMOCK 1..19`, the Berry Garden mockups' way).
 The pictures are in the session notes (`fishing/`): `fishing-1-cast-to-bite.png`, `fishing-2-reel-to-weigh-in.png`,
-`fishing-3-got-away-to-end.png`, the cue sheet `fishing-4-cues.png` and the medals, `fishing-5-medals.png`. The music
-is written (below) and rendered in `fishing/music/`. Round 1's pictures are in `fishing/round1/`.
+`fishing-3-got-away-to-end.png` and the cue sheet `fishing-4-cues.png`. The music is written (below) and rendered in
+`fishing/music/`. Round 1's pictures are in `fishing/round1/`.
 
 ## What changed in round 2 (Fedor)
 
@@ -165,35 +165,19 @@ Magikarp.
 
 - **The score is the total weight** of what you landed in 5 casts, to a tenth of a kg.
 - **Goal lines** (Fedor: "get over a set amount of weight"): bronze 50 kg, silver 150 kg, gold 300 kg, shown as a bar
-  with three medals on the result (mockup 14). As a rough guide: five small ones make bronze, a few middling and big
+  with three markers on the result (mockup 14). As a rough guide: five small ones make bronze, a few middling and big
   ones make silver, and gold takes the giant or several heavy ones.
 - **Records:** the heaviest total (`fishHi`, in tenths of a kg) with NEW RECORD!, and maybe the heaviest single fish.
 - **Reward:** `pet.fishResult(kg10)`, the exercise reward Rock Hopper and PikaSurf give. Bronze or less: the plain
   joy line; silver or gold: GREAT JOY. No food.
 - It counts toward the Repel's 10 minutes of games, as every game does.
 
-## Medals (mockups 15 to 17)
+## Medals: none for now
 
-Three, the trainer's (kept across every Pokemon raised, as the Pokedex and zone medals are), drawn as things in the
-trophy room's own style (`tools/fishing_trophies.py`): an outline, five shades lit from the top left, a glint. They're
-objects, not characters.
-
-| Medal | How to win it | The thing |
-|---|---|---|
-| FULL NET | Land all 5 casts in one game | A wicker creel, something gold poking out under its lid |
-| GOLD ANGLER | Weigh in 300 kg or more in one game (the gold line) | A gold scale, its needle past the top |
-| THE BIG ONE | Land a giant: Gyarados or Lapras | A gold fish mounted on a wooden plaque |
-
-- **Bits:** the medals use 26 of their 32 bits, so these are bits 26 to 28 (`MED_FISH_NET`, `MED_FISH_GOLD`,
-  `MED_FISH_GIANT`) and `MED_COUNT` goes to 29. Three bits are left after that.
-- **In the room:** a sixth group, FISHING. The scale on a little bracket and the plaque hang on the wall either side
-  of the badges' case, and the creel sits on the carpet by the MEDALS board (mockup 15). It gets its own page, 6 of 6,
-  like the other groups' (mockup 16), and each medal has its card (mockup 17).
-- **Progress on the cards:** GOLD ANGLER's card shows your best total against 300 kg, as the level medals show
-  their progress. The other two are all-or-nothing.
-- **To build them:** the art goes into `tools/trophies.py` (its `ORDER` and `MED_COUNT`) and `trophies_v2.h`; the
-  names and how-to lines into `i18n` in all 8 languages; the room's sixth group into `layout_v2.h` and `menus_v2.h`;
-  and the medal banner when one is won, as every medal has.
+Fedor (round 3): skip them for now, since the other minigames have no medals either. The mockups made for them are
+parked on this branch, in case they come back: FULL NET (a gold landing net, all 5 landed in a game), GOLD ANGLER (a
+gold scale, 300 kg in a game) and THE BIG ONE (a golden Lapras, made as the golden Pikachu is; a giant landed), drawn
+by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of their 32 bits, so there's room.
 
 ## The how-to card
 
@@ -208,7 +192,8 @@ objects, not characters.
 
 ## Music and effects
 
-- **Two new tracks, written** (in `tools/music/songs.py` and `src/music_data.h` on this branch), all original, appended
+- **Two tracks, written and agreed** (Fedor: one for fishing, one for when a fish is hooked), in `tools/music/songs.py`
+  and `src/music_data.h` on this branch, all original, appended
   after `MUS_ZONE_FIELD` so nothing else renumbers. Nothing plays them yet, since the game isn't built. Both are mixed
   to -24 dBFS, as the other games' tracks are.
   - `MUS_FISH`, **Reel Fishing**, at the pier: a lazy swing at 84 bpm in G major, a flute over plucked chords, a
@@ -240,7 +225,6 @@ objects, not characters.
 - `pet.h`, `pet.cpp`: `fishHi` and `fishResult()`.
 - `i18n`: the strings. `audio.h`, `sfx_notes.h`, `shell.html`, `windows/main.cpp`: the effects and buzzes.
   `music_v2.h` picks the two tracks (already in `music.h` and `songs.py`), and the synth gets its tempo factor.
-- The medals: as in Medals, above.
 
 ## Test plan
 
@@ -257,7 +241,7 @@ objects, not characters.
   a "kid" bot reacts in 400 to 700 ms and taps with a wobbly rhythm. Tune it so the perfect bot lands about 95% and
   makes gold most games, and the kid bot lands about 60% and makes silver about half the time.
 - **Host tests**: the effects table, `BUZZ` and `kBuzz` have a row per effect; the track count; holding Space reels
-  once; each fishing medal is won by its own game (5 of 5, 300 kg, a giant) and kept by a new pet.
+  once.
 - **Screens**: `tools/host_shot` scripts for every moment at day, dusk and night, against these mockups.
 - **On the Knomi, by eye and finger**:
   - a nibble against a bite at arm's length;
@@ -281,6 +265,5 @@ objects, not characters.
 5. **Too soon:** does tapping on a nibble lose the cast (the classic rule), or only scare that fish off?
 6. **The Game Boy:** is 3 + 3 cartridges all right (mockup 1)?
 7. **The Knomi's backlight flash** at the bite: yes?
-8. **The medals:** are FULL NET, GOLD ANGLER and THE BIG ONE the right three, and do the creel, the scale and the
-   mounted fish look right? (Another idea: one for a heavy one landed at night.)
-9. **The music:** do the two tracks fit, and should the fight track's tempo follow the fish?
+8. **The fight track's tempo:** should it follow the fish (slower for a giant, faster for a small one), or always
+   play at its own speed?

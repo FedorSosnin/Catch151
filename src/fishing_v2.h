@@ -781,10 +781,10 @@ static void fsMockNight() {
   fsNight = false;
 }
 
-// ===================================================================== its medals (FISHMOCK 17..19)
-// Three, the trainer's (kept across every Pokemon raised), as things in the trophy room in its style
-// (tools/fishing_trophies.py writes their art): FULL NET, a wicker creel (all 5 landed in one game); GOLD ANGLER, a
-// gold scale (the 300 kg gold line); THE BIG ONE, a gold fish mounted on a plaque (a giant landed)
+// ===================================================================== its medals (FISHMOCK 17..19), PARKED
+// Skipped for now (Fedor: the other minigames have no medals); kept here in case they come back. Three, the trainer's (kept across every Pokemon raised), as things in the trophy room in its style
+// (tools/fishing_trophies.py writes their art): FULL NET, a gold landing net (all 5 landed in one game); GOLD ANGLER, a
+// gold scale (the 300 kg gold line); THE BIG ONE, a golden Lapras (a giant landed)
 #include "fishing_trophies_mock.h"
 static const char *const FT_NAME[3] = { "FULL NET", "GOLD ANGLER", "THE BIG ONE" };
 static const char *const FT_HOW[3] = { "Land all 5 casts in one game of Reel Fishing.",
