@@ -16,7 +16,8 @@ multiple of it, with `image-rendering: pixelated`.
 | `catch151-dex.*` | Its Pokédex: the sparkle icon, CATCH 151 and a gold DEX sign |
 | `catch151-for-knomi.svg`, `-mac`, `-windows`, `-web` (and `@2x.png`) | The game on a device: a wooden sign after the name |
 | `catch151-icon.svg`, `-16/32/48/64.png` | The game's icon, each size drawn at its own pixels |
-| `catch151-icon-180/192/512/1024.png` | The same for app icons: a design scaled whole (60 x 3, 64 x 3, 64 x 8, 64 x 16) |
+| `catch151-icon-192/512/1024.png` | The same for app icons: a design scaled whole (64 x 3, 64 x 8, 64 x 16) |
+| `catch151-icon-180.png`, `-maskable-512.png` | A full square, no corners (60 x 3, 64 x 8): the iPhone's home screen and Android round them themselves |
 | `catch151-dex-icon.*` | The Pokédex's icon, the same sizes |
 
 - **The icon** is the apps' icon frame (a red top, a dark band, a white bottom) round the Knomi's round screen. The game's
@@ -28,5 +29,9 @@ multiple of it, with `image-rendering: pixelated`.
   2 px a pixel so it lands whole on the Knomi's 240 px panel (3x would blur there). `webgame/assets/logo.svg` is the
   regular one, at the top of the web game's page (`webgame/shell.html`).
 - **The signs** are the game's wooden name board (`v2SignIn()`) in its 5x7 font: gold for DEX, wood for a device.
-- The 1024 px icon is the art alone: the apps' icons (`mac/AppIcon.icns`, `windows/app.ico`) and the web's are made
-  from these sizes.
+- **The apps' icons** are written by the same script, all from the game's icon:
+  - `mac/AppIcon.icns`: on Apple's grid (the icon 832 of 1024, Apple's rounder corners, a soft shadow under it), every
+    size from 16 to 1024 drawn as it is and put together by `iconutil`;
+  - `windows/app.ico`: 16 to 256, each drawn at its own pixels up to 64;
+  - `webgame/assets/`: `icon-180.png` (the iPhone's home screen), `icon-192.png`, `icon-512.png`,
+    `icon-maskable-512.png` and `favicon.png`.

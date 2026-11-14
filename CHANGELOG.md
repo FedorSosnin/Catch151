@@ -8,6 +8,7 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 
 ## [Unreleased]
 
+- **New app icons, drawn from the Catch 151 logo:** on a Mac it now sits on Apple's grid like other apps (no longer larger than its neighbours in the Dock), on an iPhone's home screen it's a full square that iOS rounds (no black corners), and Windows gets every size drawn crisp. The online Pokédex's iPhone icon is fixed the same way.
 - **Tidied up under the hood:** the original game's look (1.x), kept until now behind a build switch, is gone with its code, about 3,200 lines, along with old screenshots and tools nobody used. Nothing you see or play changes, and the Knomi's firmware is a little smaller.
 
 ## [2.2.0] - 2026-11-13

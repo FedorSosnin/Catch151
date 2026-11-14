@@ -13,7 +13,8 @@ Everything is drawn here a pixel at a time in the game's own colours, so it stay
   device (FOR KNOMI, FOR MAC...).
 
 Writes tools/assets/brand/ (each picture as an SVG and as PNGs at 1x, 2x and 3x; the icons at the sizes browsers and the
-apps use; see its README.md), src/brand_logo.h (the logo, for the game's About page to draw) and webgame/assets/logo.svg
+apps use; see its README.md), the apps' icons (mac/AppIcon.icns, windows/app.ico, webgame/assets/icon-*.png and
+favicon.png), src/brand_logo.h (the logo, for the game's About page to draw) and webgame/assets/logo.svg
 (the top of the web game's page).
 """
 import math
@@ -149,12 +150,16 @@ def even(v):
 CORNER = {16: [2, 1], 20: [2, 1]}  # how far in each top row starts, at the small sizes
 
 
-def frame(n):
-    """the apps' icon frame: rounded corners, a red top, a dark band, a white bottom, lit and shaded rows"""
-    if n in CORNER:
+def frame(n, shape='round'):
+    """the apps' icon frame: rounded corners, a red top, a dark band, a white bottom, lit and shaded rows. shape: 'round'
+    (corners a sixth of it: the logo, Windows, the web), 'mac' (Apple's rounder corners) or 'square' (no corners: the
+    iPhone rounds them itself)"""
+    if shape == 'square':
+        ins = []
+    elif shape == 'round' and n in CORNER:
         ins = CORNER[n]
     else:
-        r = n * .16
+        r = n * (.225 if shape == 'mac' else .16)
         ins = []
         for y in range(int(r)):
             ins.append(max(0, math.ceil(r - math.sqrt(max(0, r * r - (r - y - .5) ** 2)) - .35)))
@@ -250,9 +255,9 @@ def sparkle(p, n, inner):
             p.p[(x, y)] = CREAM_L if dx + dy <= (1 if n < 48 else 2) else GOLD_S
 
 
-def icon(n, what):
+def icon(n, what, shape='round'):
     """n x n: the frame, the screen's ring, and the island ('game') or the sparkle ('dex')"""
-    p = frame(n)
+    p = frame(n, shape)
     disc, inner = screen(n)
     p.put(disc, INK)
     if what == 'game':
@@ -334,8 +339,64 @@ def save_icon(what, base):
         icon(n, what).image().save(os.path.join(OUT, '%s-%d.png' % (base, n)), optimize=True)
     with open(os.path.join(OUT, base + '.svg'), 'w') as f:
         f.write(icon(32, what).svg())
-    for size, design in ((180, 60), (192, 64), (512, 64), (1024, 64)):  # the app sizes: a design, scaled whole
+    for size, design in ((192, 64), (512, 64), (1024, 64)):  # the app sizes: a design, scaled whole
         icon(design, what).image(size // design).save(os.path.join(OUT, '%s-%d.png' % (base, size)), optimize=True)
+    # the iPhone's home screen (apple-touch-icon): a full square, as iOS wants it, which rounds its corners itself (with
+    # see-through corners it would show black ones). Also the web's maskable icon, which Android crops to its own shape
+    icon(60, what, 'square').image(3).save(os.path.join(OUT, '%s-180.png' % base), optimize=True)
+    icon(64, what, 'square').image(8).save(os.path.join(OUT, '%s-maskable-512.png' % base), optimize=True)
+
+
+# ---- the apps' icon files ----
+MAC_ICON = os.path.join(ROOT, 'mac', 'AppIcon.icns')
+WIN_ICON = os.path.join(ROOT, 'windows', 'app.ico')
+WEB_ASSETS = os.path.join(ROOT, 'webgame', 'assets')
+
+
+def mac_icon(size):
+    """the Mac's icon at size: on Apple's grid, the icon's body about 81% of it (832 of 1024), Apple's rounder corners,
+    a soft shadow under it. Drawn at 52 pixels and scaled whole from 64 up; drawn at its own size below that"""
+    from PIL import Image, ImageFilter
+    if size >= 64:
+        body = icon(52, 'game', 'mac').image(round(size * .8125 / 52))
+    else:
+        body = icon(even(size * .8125), 'game', 'mac').image()
+    off = (size - body.size[0]) // 2
+    shade = Image.new('RGBA', body.size, (0, 0, 0, 0))
+    shade.putalpha(body.split()[3].point(lambda v: v * 35 // 100))
+    shadow = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    shadow.alpha_composite(shade, (off, off + max(1, size // 85)))
+    out = shadow.filter(ImageFilter.GaussianBlur(max(.6, size / 73)))
+    out.alpha_composite(body, (off, off))
+    return out
+
+
+def win_icon(size):
+    """Windows' sizes: each drawn at its own pixels up to 64, the 64 scaled whole above"""
+    return icon(size, 'game').image() if size <= 64 else icon(64, 'game').image(size // 64)
+
+
+def save_app_icons():
+    """mac/AppIcon.icns, windows/app.ico and the web game's icons (webgame/assets), all the game's icon. The .icns is made
+    by Apple's iconutil (on a Mac only: elsewhere it's left as it is), which keeps every size as drawn"""
+    import shutil
+    import subprocess
+    import tempfile
+    if shutil.which('iconutil'):
+        with tempfile.TemporaryDirectory() as tmp:
+            iconset = os.path.join(tmp, 'AppIcon.iconset')
+            os.makedirs(iconset)
+            for pt in (16, 32, 128, 256, 512):
+                mac_icon(pt).save(os.path.join(iconset, 'icon_%dx%d.png' % (pt, pt)))
+                mac_icon(pt * 2).save(os.path.join(iconset, 'icon_%dx%d@2x.png' % (pt, pt)))
+            subprocess.run(['iconutil', '-c', 'icns', iconset, '-o', MAC_ICON], check=True)
+    wins = [win_icon(s) for s in (256, 128, 64, 48, 40, 32, 24, 16)]
+    wins[0].save(WIN_ICON, sizes=[im.size for im in wins], append_images=wins[1:])
+    for name in ('180', '192', '512', 'maskable-512'):
+        src = os.path.join(OUT, 'catch151-icon-%s.png' % name)
+        with open(src, 'rb') as a, open(os.path.join(WEB_ASSETS, 'icon-%s.png' % name), 'wb') as b:
+            b.write(a.read())
+    icon(64, 'game').image().save(os.path.join(WEB_ASSETS, 'favicon.png'), optimize=True)
 
 
 def badge(n, what):
@@ -407,6 +468,7 @@ def main():
         save(row(badge(20, 'game'), name(), board('FOR ' + dev)), 'catch151-for-' + dev.lower(), scales=(2,))
     save_icon('game', 'catch151-icon')
     save_icon('dex', 'catch151-dex-icon')
+    save_app_icons()
     print('brand: %d files in %s' % (len(os.listdir(OUT)), os.path.relpath(OUT, ROOT)))
 
 
