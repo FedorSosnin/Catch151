@@ -46,13 +46,17 @@ struct FishClassDef {
 // (Fedor, after playing it: "too easy and the rounds go a little too fast". The green moved up toward the snap and
 // narrowed, and each one takes more good taps: a tap too many or a thrash tapped through snaps the line now. It was
 // 20-80% to 42-70% and 10 to 16 taps, when watching the line landed every one. After the second playtest, "just a
-// tiny bit more challenge": 2 points less green, 2 more taps, and the uneven pull, FISH_TUG)
+// tiny bit more challenge": 2 points less green, 2 more taps, and the uneven pull, FISH_TUG. After the fourth, "2/3 the
+// length of time it takes currently to reel" more and "the green area about 1/3 smaller": the green a third narrower,
+// from the bottom (the snap as near), and taps for reels two thirds longer, measured with bots that watch the line (a
+// careful player's 12.5 s a fish to 20; more taps miss now, so the taps grew by less). The two heaviest pulled more
+// than their narrower green is wide, so no tap could land in it: the heavy one and the giant pull 12, from 16 and 18)
 static const FishClassDef FISH_CLASS[FC_N] = {
-  { 3.2f, 10, 54, 80, 16, 0.90f, 5.0f, 0.6f, 3 },   // small, under 15 kg
-  { 2.5f, 12, 57, 82, 19, 0.75f, 4.0f, 0.8f, 4 },   // middling, 15 to 50
-  { 2.0f, 14, 60, 84, 22, 0.65f, 3.4f, 1.0f, 5 },   // big, 50 to 100
-  { 1.6f, 16, 63, 86, 23, 0.60f, 3.0f, 1.2f, 6 },   // heavy, 100 to 150
-  { 1.25f, 18, 66, 88, 24, 0.60f, 2.6f, 1.4f, 8 },  // giant, 200 and up
+  { 3.2f, 10, 62, 80, 22, 0.90f, 5.0f, 0.6f, 3 },   // small, under 15 kg
+  { 2.5f, 11, 65, 82, 26, 0.75f, 4.0f, 0.8f, 4 },   // middling, 15 to 50
+  { 2.0f, 12, 68, 84, 30, 0.65f, 3.4f, 1.0f, 5 },   // big, 50 to 100
+  { 1.6f, 12, 71, 86, 31, 0.60f, 3.0f, 1.2f, 6 },   // heavy, 100 to 150
+  { 1.25f, 12, 74, 88, 33, 0.60f, 2.6f, 1.4f, 8 },  // giant, 200 and up
 };
 #define FISH_THRASH_PULL 0.6f  // a thrash tightens the line by this share of the ease a second: tap slower through it
 // The fish doesn't pull evenly (Fedor, the second playtest: "slight irregularities between the pulses"): on each beat

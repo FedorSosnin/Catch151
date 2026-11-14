@@ -156,11 +156,11 @@ the hooked blob swells on that same beat. Each pace is a tempo, first numbers fo
 
 | Weight | e.g. | Pace (one tap a beat) | The fight song | Green band | Good taps to land it |
 |---|---|---|---|---|---|
-| Small, under 15 kg | Shellder, Krabby, Horsea, Magikarp, Poliwag | 3.2 taps a second | 192 bpm (1.28x) | widest (54 to 80%) | 16 |
-| Middling, 15 to 50 kg | Goldeen, Psyduck, Poliwhirl, Seadra, Staryu, Slowpoke, Seaking, Tentacool | 2.5 | 150 bpm (as written) | 57 to 82% | 19 |
-| Big, 50 to 100 kg | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2 | 120 bpm (0.8x) | 60 to 84% | 22 |
-| Heavy, 100 to 150 kg | Dewgong, Cloyster | 1.6 | 96 bpm (0.64x) | 63 to 86% | 23 |
-| Giant, 200 kg and up | Lapras, Gyarados | 1.25 | 75 bpm (0.5x) | 66 to 88% | 24 |
+| Small, under 15 kg | Shellder, Krabby, Horsea, Magikarp, Poliwag | 3.2 taps a second | 192 bpm (1.28x) | widest (62 to 80%) | 22 |
+| Middling, 15 to 50 kg | Goldeen, Psyduck, Poliwhirl, Seadra, Staryu, Slowpoke, Seaking, Tentacool | 2.5 | 150 bpm (as written) | 65 to 82% | 26 |
+| Big, 50 to 100 kg | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2 | 120 bpm (0.8x) | 68 to 84% | 30 |
+| Heavy, 100 to 150 kg | Dewgong, Cloyster | 1.6 | 96 bpm (0.64x) | 71 to 86% | 31 |
+| Giant, 200 kg and up | Lapras, Gyarados | 1.25 | 75 bpm (0.5x) | 74 to 88% | 33 |
 
 - **Harder after the first playtest** (Fedor: "too easy and the rounds go a little too fast"): watching the line, every
   fish landed, since the green sat far below the snap and each took 10 to 16 taps. The green moved up toward the snap
@@ -174,6 +174,12 @@ the hooked blob swells on that same beat. Each pace is a tempo, first numbers fo
   on each beat (`FISH_TUG`), so the notch sinks at a different speed every beat and the taps go in by the line, not by
   the count. The beat and the song stay steady. The same bots: 96 and 84 (attentive), 83 and 47 (casual), 55 (a
   child, silver or bronze); about 13 seconds a fish and 92 a game.
+- **Longer and narrower, after the fourth playtest** (Fedor: "2/3 the length of time it takes currently to reel and
+  make the green area about 1/3 smaller"): the green a third narrower from the bottom, and taps for reels two thirds
+  longer (a careful player's 12.5 s a fish to about 20; the taps grew by less than that, since more of them miss now).
+  The heavy one and the giant pull 12 a tap, from 16 and 18, or a tap would jump right over their green. The bots:
+  97 in 100 landed and gold in 89 games (attentive), 78 and 25 (casual), 47 and silver now and then (a child); a game
+  about 140 seconds.
 - The tempo changes only when a fish is hooked: the song starts at that fish's tempo and keeps it to the weigh-in.
   It doesn't speed up or slow down during a thrash, where the right move is to ease off between beats.
 - In the synth, the tempo is one number (`spt()`, the samples a tick from the song's bpm), so this is a speed factor
