@@ -137,6 +137,8 @@ How it all works, floor by floor: [Knomi Tower](docs/HOW_IT_WORKS.md#knomi-tower
 
 ## Original music and sound
 
+https://github.com/user-attachments/assets/f82808d7-1e92-4fdf-b180-c83dea43f1dd
+
 Everything you hear in Catch 151 was made for it. **All 28 songs are original**: none comes from any other game. A home
 tune that slows down at night, Knomi Tower, the legends, every minigame, evolving and saying goodbye, and two songs for
 every zone of Knomi Island, one while you explore it and one for its wild battles. Pick one to hear it:
