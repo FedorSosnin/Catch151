@@ -1538,7 +1538,7 @@ static void v2ZoneBack(uint8_t zone) {
 // TV. Pokemon blue and red were gameboy games and that screen has a distinct color. The cartridges would also make
 // more sense"; it was an old TV with snow) -----
 // A Game Boy filling the round screen, close up: its grey body, the dark bezel with the two coloured lines and the
-// red power light, the big olive screen with its dot matrix faint on it, and at the bottom the D-pad and the A and B
+// red power light (on), the big olive screen with its dot matrix faint on it, and at the bottom the D-pad and the A and B
 // buttons either side of the X. Painted once and kept (the TV's snow, new every second, is gone). On its screen, the
 // cartridges in the colours the games came in, each label a little picture from its game: its colours and a
 // starter, quick to draw (they were the games' own scenes at half size, and opening took seconds on the Knomi).
@@ -1550,6 +1550,8 @@ static void v2ZoneBack(uint8_t zone) {
 #define V2_LBL_W 79  // a label's picture (AW x AH)
 #define V2_LBL_H 42
 #define V2_GB_KEY 0x3A000000
+#define V2_GB_LED_X 31  // the power light, on the bezel left of the screen
+#define V2_GB_LED_Y 214
 static void v2PaintGb(int) {
   const uint16_t body = sc565(0xCDC9C2), bodyL = sc565(0xE2DED8), bodyD = sc565(0xA39E97), ink = sc565(0x1B1B25);
   gfx->fillScreen(body);
@@ -1569,9 +1571,7 @@ static void v2PaintGb(int) {
     gfx->fillRect(60, 70 + k * 6, 110, 4, c);
     gfx->fillRect(296, 70 + k * 6, 110, 4, c);
   }
-  gfx->fillCircle(31, 214, 5, ink);  // the power light
-  gfx->fillCircle(31, 214, 3, sc565(0xE0463A));
-  gfx->fillRect(30, 212, 2, 2, sc565(0xFFB0A0));
+  gfx->fillCircle(V2_GB_LED_X, V2_GB_LED_Y, 5, ink);  // the power light's socket: the light itself is v2GbLight()
   // the screen: olive, its dot matrix faint, a shadow along its top and left
   const uint16_t lcd = sc565(0xA6BA3C), dot = sc565(0x9CB036), sh = sc565(0x869C2C);
   gfx->fillRect(V2_GB_X0, V2_GB_Y0, V2_GB_X1 - V2_GB_X0, V2_GB_Y1 - V2_GB_Y0, lcd);
@@ -1862,9 +1862,34 @@ static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8 };   // each one
 static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A };  // (Reel Fishing: Magikarp's orange)
 static const int16_t V2_PLAY_XY[3][2] = { { 56, 150 }, { 180, 150 }, { 304, 150 } };
 static const Rgb V2_PLAY_COL[3] = { 0xC9A43C, 0x5AC8D8, 0xF2C230 };
+// the power light, on (Fedor: lit up, as a real Game Boy's is when it's switched on, and flickering a little): drawn
+// every frame over the kept Game Boy, a bright red with a hot middle and its glow on the bezel round it (not on the
+// screen). Now and then, for a moment, it dips, as an old one's does
+static void v2GbLight(uint32_t now) {
+  const int lx = V2_GB_LED_X, ly = V2_GB_LED_Y, R = 18, bezel = 22;
+  uint32_t h = (now / 90) * 2654435761u;  // a moment (90 ms, one Knomi frame), and its own roll
+  h ^= h >> 15;
+  float on = h % 100 < 14 ? 0.45f + (h >> 8) % 40 / 100.0f : 1.0f;  // 14 moments in 100 dimmer, by a random amount
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  const uint16_t glow = sc565(0xFF3A2A);
+  for (int y = ly - R; y < ly + R; y += 2)
+    for (int x = lx - R; x < lx + R; x += 2) {
+      if (x < bezel || x + 1 >= V2_GB_X0 || y < 0 || y > V2_W - 2) continue;
+      float d = hypotf(x + 1 - lx, y + 1 - ly);
+      if (d <= 5 || d >= R) continue;
+      int a = (int)(190 * on * (1 - (d - 5) / (R - 5)));
+      uint16_t *q = fb + y * V2_W + x;
+      q[0] = v2Blend(q[0], glow, a), q[1] = v2Blend(q[1], glow, a);
+      q[V2_W] = v2Blend(q[V2_W], glow, a), q[V2_W + 1] = v2Blend(q[V2_W + 1], glow, a);
+    }
+  gfx->fillCircle(lx, ly, 4, sc565(scMix(0x8A2A22, 0xFF4632, on)));
+  gfx->fillCircle(lx, ly, 2, sc565(scMix(0xA8402E, 0xFF9C7A, on)));
+  if (on > 0.8f) gfx->fillRect(lx - 2, ly - 3, 2, 2, sc565(0xFFF0E2));
+}
 static void v2GbBack(const char *title) {
   char b[40];
   v2Cached(V2_GB_KEY, v2PaintGb, 0);
+  v2GbLight(millis());
   v2Sign(v2Caps(title, b, sizeof(b)), 24);
 }
 static void v2GamesTv() {

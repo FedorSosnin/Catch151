@@ -286,30 +286,10 @@ static void fsRimGlow(Rgb col, int a256, int w) {
 }
 // how tight the line is: an arc on the right rim (where the need bars sit at home) in three zones, blue at the
 // bottom (too slow: it'll slip off), green in the middle (keep it there), red at the top (too fast: it'll snap). It
-// fills from the bottom, each zone in its own colour, and a white notch marks where it is now
-static void fsLineArc(int pct, int lo = FS_SLACK, int hi = FS_SNAP) {
-  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
-  const float a0 = 52, a1 = -34;  // the bottom end, the top end (degrees, 0 = right)
-  for (int y = 0; y < V2_W; y += 2)
-    for (int x = CX; x < V2_W; x += 2) {
-      float dx = x + 1 - CX, dy = y + 1 - CY, r = hypotf(dx, dy), a = atan2f(dy, dx) * 57.29578f;
-      if (r < V2_BAR_RIN - 7 || r > V2_BAR_ROUT + 7 || a > a0 + 3 || a < a1 - 3) continue;
-      float f = (a0 - a) / (a0 - a1) * 100, m = fabsf(f - pct);
-      Rgb c;
-      if (m <= 1.0f && r >= V2_BAR_RIN - 5 && r <= V2_BAR_ROUT + 5) c = 0xFFFFFF;  // the notch, a little proud of the arc
-      else if (m <= 2.2f && r >= V2_BAR_RIN - 7 && r <= V2_BAR_ROUT + 7) c = 0x1B1B25;
-      else if (r < V2_BAR_RIN - 3 || r > V2_BAR_ROUT + 3 || a > a0 + 2 || a < a1 - 2) continue;
-      else if (r < V2_BAR_RIN || r > V2_BAR_ROUT || a > a0 || a < a1) c = 0x1B1B25;
-      else if (fabsf(f - lo) < 0.6f || fabsf(f - hi) < 0.6f) c = 0x1B1B25;  // where the zones meet
-      else {
-        Rgb zone = f < lo ? 0x2E4A72 : f < hi ? 0x2E5A3A : 0x7A3A3A, lit = f < lo ? 0x7CC4EA : f < hi ? 0x58B868 : 0xE8503A;
-        c = f <= pct ? lit : zone;  // each zone keeps its own colour, filled or not
-        if (f <= pct && r > V2_BAR_ROUT - 4) c = scMix(c, 0xFFFFFF, .35);
-      }
-      fsBlend(x, y, x + 1, y + 1, c, 256);
-    }
-  v2BarLabel(fb, "LINE", -45, UI_WHITE);  // past its top end, clear of the notch
-}
+// fills from the bottom, each zone in its own colour, and a white notch marks where it is now. The mockups draw the
+// game's own (fsArcDraw, below)
+static void fsArcDraw(float pct, int lo, int hi, bool beat);
+static void fsLineArc(int pct, int lo = FS_SLACK, int hi = FS_SNAP) { fsArcDraw(pct, lo, hi, false); }
 
 // what each one in the mockups weighed, in tenths of a kg (the game would weigh each fish: its kind's Pokedex weight,
 // bigger or smaller by its blob's size)
@@ -789,6 +769,8 @@ static void fsMockNight() {
 
 // the LINE arc's cells, worked out once (their place along it and how far out), so a frame only colours them: on the
 // Knomi's chip an atan2 a cell, every frame, would cost more than the rest of the frame
+// It has round ends, as the need bars have (v2Seg(), v2In()), and its dark edge goes round them (Fedor: "rounded edges
+// on the corners", for continuity)
 struct FsArcCell { int16_t x, y; uint8_t f, k; };  // f: 0..200 along the arc (bottom to top); k: 0 bar, 1 its edge, 2 notch room, +4 lit
 static FsArcCell *fsArc = nullptr;
 static int fsArcN = 0;
@@ -796,15 +778,18 @@ static int fsArcN = 0;
 #define FS_ARC_A1 -34.0f  // its top end
 static void fsArcBuild() {
   if (fsArc) return;
+  // the bar, its dark edge 3 px round it and the notch's room 7 px round it: each a segment with round ends
+  const V2Seg bar = v2Seg(V2_BAR_RIN, V2_BAR_ROUT, FS_ARC_A1, FS_ARC_A0),
+              edge = v2Seg(V2_BAR_RIN - 3, V2_BAR_ROUT + 3, FS_ARC_A1, FS_ARC_A0),
+              room = v2Seg(V2_BAR_RIN - 7, V2_BAR_ROUT + 7, FS_ARC_A1, FS_ARC_A0);
   int n = 0;
   for (int pass = 0; pass < 2; pass++) {
     for (int y = 0; y < V2_W; y += 2)
       for (int x = CX; x < V2_W; x += 2) {
-        float dx = x + 1 - CX, dy = y + 1 - CY, r = hypotf(dx, dy), a = atan2f(dy, dx) * 57.29578f;
-        if (r < V2_BAR_RIN - 7 || r > V2_BAR_ROUT + 7 || a > FS_ARC_A0 + 3 || a < FS_ARC_A1 - 3) continue;
-        float f = (FS_ARC_A0 - a) / (FS_ARC_A0 - FS_ARC_A1) * 200;
-        uint8_t k = (r < V2_BAR_RIN - 3 || r > V2_BAR_ROUT + 3 || a > FS_ARC_A0 + 2 || a < FS_ARC_A1 - 2) ? 2
-                    : (r < V2_BAR_RIN || r > V2_BAR_ROUT || a > FS_ARC_A0 || a < FS_ARC_A1) ? 1 : 0;
+        float dx = x + 1 - CX, dy = y + 1 - CY, r2 = dx * dx + dy * dy, r = sqrtf(r2);
+        if (r < V2_BAR_RIN - 7 || r > V2_BAR_ROUT + 7 || !v2In(room, dx, dy, r2)) continue;
+        float a = atan2f(dy, dx) * 57.29578f, f = (FS_ARC_A0 - a) / (FS_ARC_A0 - FS_ARC_A1) * 200;  // (past an end: 0 or 200)
+        uint8_t k = v2In(bar, dx, dy, r2) ? 0 : v2In(edge, dx, dy, r2) ? 1 : 2;
         if (k == 0 && r > V2_BAR_ROUT - 4) k |= 4;
         if (pass) fsArc[n] = { (int16_t)x, (int16_t)y, (uint8_t)(f < 0 ? 0 : f > 200 ? 200 : f), k };
         n++;
