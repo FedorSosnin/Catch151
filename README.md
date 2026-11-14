@@ -8,6 +8,7 @@
   <a href="https://github.com/FedorSosnin/Catch151/releases?q=win-v&expanded=true"><img src="https://img.shields.io/badge/download-Windows%20PC-0078d4" alt="Download Catch 151 for Windows"></a>
   <a href="https://catch151.3dprintsos.com"><img src="https://img.shields.io/badge/play-in%20your%20browser-de2121" alt="Play Catch 151 in your browser"></a>
   <a href="https://fedorsosnin.github.io/Catch151/sprites/"><img src="https://img.shields.io/badge/online-Catch_151_Dex-d4a017" alt="The online Catch 151 Dex"></a>
+  <a href="https://fedorsosnin.github.io/Catch151/music/"><img src="https://img.shields.io/badge/listen-the%20soundtrack-8a5a30" alt="Listen to Catch 151's soundtrack"></a>
   <a href="relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
 </p>
 
@@ -50,7 +51,7 @@
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
 
-<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 28 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.)
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 28 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Settings, Medals, Stats and the Pokédex.
 
@@ -133,6 +134,28 @@ Walk out along Travel's new pier to **Knomi Tower**: eight floors, each guarded 
 | **A tip after every lost climb** | **Friends cheer you on** | **Tower Master and the Hall of Fame** |
 
 How it all works, floor by floor: [Knomi Tower](docs/HOW_IT_WORKS.md#knomi-tower).
+
+## Original music and sound
+
+Everything you hear in Catch 151 was made for it. **All 28 songs are original**: none comes from any other game. A home
+tune that slows down at night, a song for exploring each zone of Knomi Island and another for its battles, Knomi Tower,
+the legends, every minigame, evolving and saying goodbye.
+
+<p align="center"><a href="https://fedorsosnin.github.io/Catch151/music/"><img src="docs/images/v2/soundtrack.webp" width="640" alt="The soundtrack page: Knomi Island's five zones, each with its exploring song and its battle song, and the player with a scope for each of the four voices"></a></p>
+
+- **Written as notes.** Each song is a melody, a harmony, a bassline and a drum pattern over its chords, written out in
+  [`tools/music/songs.py`](tools/music/songs.py), checked bar by bar, and compiled into a few bytes: all 28 fit in
+  about 40 KB.
+- **Played like the old handhelds.** There are no recordings or samples. A small synthesizer in the game
+  ([`src/music_synth.h`](src/music_synth.h)) makes every note as it plays, with the four voices those consoles had: two
+  pulse waves for the tune and the harmony, a stepped triangle or 4-bit wave for the bass, and noise for the drums.
+- **A cry for every Pokémon**, made the same way and worked out from the Pokémon itself: its size and speed set the
+  pitch, its type the rasp and the trill, and a family sounds alike ([`src/cry.h`](src/cry.h)). None is copied from any
+  game. Hear all 151 in the [Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/).
+
+**[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)** in your browser. The page runs the game's
+own synthesizer and songs, built for the web ([`host/music_web.cpp`](host/music_web.cpp), about 70 KB), so it plays
+exactly what the game plays, looping the way the game loops, with a scope for each of the four voices.
 
 ## Install
 

@@ -51,6 +51,28 @@ class TestMusic(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
+class TestSoundtrackPage(unittest.TestCase):
+    """The soundtrack page (web/music/) lists the game's songs in src/music.h's order, under the names the game gives
+    them (src/music_data.h), each zone with its two, and has its player (tools/build_music_page.sh)"""
+
+    def test_the_songs_are_the_games(self):
+        with open(os.path.join(ROOT, 'src', 'music_data.h'), encoding='utf-8') as f:
+            games = re.findall(r'^  \{ "((?:[^"\\]|\\.)*)", [0-9.]+f,', f.read(), re.M)
+        with open(os.path.join(ROOT, 'web', 'music', 'index.html'), encoding='utf-8') as f:
+            page = f.read()
+        block = re.search(r'const TRACKS = \[(.*?)\n\];', page, re.S).group(1)
+        names = [n.replace("\\'", "'") for n in re.findall(r"^  \['((?:[^'\\]|\\.)*)', ", block, re.M)]
+        self.assertEqual(len(games), 28)
+        self.assertEqual(names, games, 'web/music/index.html: TRACKS must follow src/music_data.h')
+        zones = re.findall(r"^  \['(\w+)', (\d+), (\d+), ", page, re.M)
+        self.assertEqual([z[0] for z in zones], ['Forest', 'Beach', 'Cave', 'Mansion', 'Field'])
+        for name, explore, battle in zones:
+            self.assertEqual(games[int(explore)], name)
+            self.assertEqual(games[int(battle)], name + ' Battle')
+        for f in ('music.wasm', 'music-worklet.js', 'brand/catch151-soundtrack.svg'):
+            self.assertTrue(os.path.exists(os.path.join(ROOT, 'web', 'music', f)), f)
+
+
 class TestTimeZones(unittest.TestCase):
     """The Knomi's time zones (timezones.h): every POSIX rule gives the same UTC offset as the real zone
     (the system's tz database), hour by hour for three years, summer time included."""

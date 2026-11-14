@@ -4,7 +4,8 @@
   python3 tools/music/songs.py           writes src/music_data.h, and prints what in the songs doesn't fit
   python3 tools/music/songs.py --check   only checks that src/music_data.h is up to date
 
-Then `make -C host music` plays every song into build/music/*.wav, to listen to.
+Then `make -C host music` plays every song into build/music/*.wav, to listen to, and tools/build_music_page.sh
+rebuilds the soundtrack page's player (web/music/), so the page plays the songs as they are now.
 
 All of it is original: no tune here comes from any other game. compose.py explains the notation.
 """
