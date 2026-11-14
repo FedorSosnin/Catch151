@@ -12,7 +12,7 @@
   <a href="relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
 </p>
 
-**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play mini games by tapping and tilting.
+**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play six mini games by tapping and tilting, the newest a fishing contest off the Beach's pier.
 
 | | |
 |:--:|:--:|
@@ -21,7 +21,7 @@
 
 **No Knomi? [Play it in your browser](https://catch151.3dprintsos.com)** on a computer, phone or tablet, or get the [Mac app](#catch-151-for-mac) or the [Windows app](#catch-151-for-windows). **CRT effect:** each scanline a soft beam, a warm glow, a slightly curved glass for that nostalgia look.
 
-**[Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/)**: all 151, regular and shiny, in every view the game has (standing, turning, walking, from behind, asleep, attacking and more), sorted by number or type, each credited to its artists. Each one's page says what the game's Pokédex says about it, with its stats and every move it learns; pick a few to see their match-ups, and tick the ones you have.
+**[Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/)**: all 151, regular and shiny, in every view the game has (standing, turning, walking, from behind, asleep, attacking and more), sorted by number or type, each credited to its artists. Each one's page says what the game's Pokédex says about it, with its stats and every move it learns; pick a few to see their match-ups, and tick the ones you have. Its **Catching** tab gives the chances of each star, 1★ to 3★, regular and shiny: of a catch, and of a Search in its zone or a Wild Encounter turning it up that way.
 
 ## What's in it
 
@@ -42,6 +42,8 @@
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Fill the Pokédex.** All 151, with their shiny forms, each caught with 1 to 3 stars. Every entry turns round to show its Pokémon from all sides. **[View the Pokédex](https://fedorsosnin.github.io/Catch151/sprites/)**: all of them, regular and shiny, in every view.
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
+
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** New: **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Six mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon? and Reel Fishing, on cartridges in a Game Boy. **Play Again!** at the end.
 
@@ -107,8 +109,8 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Battle wild Pokémon** | **Pick a ball and throw** | **Catch them, 1 to 3 ★** |
 | ![The Pokédex at 55 of 151, with stars and sparkling shinies](docs/images/v2/pokedex.png) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](docs/images/v2/zone.png) |
 | **Fill the Pokédex** | **Travel Knomi Island** | **See what's missing** |
-| ![The games: five cartridges on a Game Boy's screen](docs/images/v2/games.png) | ![Rock Hopper's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
-| **Five mini games** | **How to play, before each game** | **Play Again!** |
+| ![The games: six cartridges on a Game Boy's screen, Reel Fishing's orange one last, the power light lit](docs/images/v2/games.png) | ![Rock Hopper's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
+| **Six mini games** | **How to play, before each game** | **Play Again!** |
 | ![Who's That Pokémon? A silhouette, three names and ten seconds on the clock](docs/images/v2/quiz.png) | ![The trophy room: 11 of 26 medals](docs/images/v2/trophy-room.png) | ![The shiny medal's card: a gem under a spotlight, earned](docs/images/v2/medal-card.png) |
 | **Who's That Pokémon?** | **The trophy room** | **How to earn each medal** |
 | ![The backpack's band out of the bag: three berries, a candy and a Repel](docs/images/v2/backpack.png) | ![Gengar in the bath, with bubbles and a duck](docs/images/v2/bath.png) | ![A new medal dropping in on a ribbon](docs/images/v2/medal-banner.png) |
@@ -118,7 +120,24 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | ![Say goodbye? Goodbye or Stay together](docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](docs/images/v2/release.png) | ![Settings: Wi-Fi, Check for update and Auto-update](docs/images/v2/settings.png) |
 | **One day, a goodbye** | **Let it go** | **Updates over Wi-Fi** |
 
-## New: the Knomi Tower Battle System
+## New: Reel Fishing
+
+<p align="center"><img src="docs/images/v2/fishing.gif" alt="One cast of Reel Fishing: the float flies out, dips at two nibbles and goes under with a !, the Tentacool is reeled in to its beat with the LINE bar's white needle on the right, leaps out and is weighed on the gold gauge on the left: 42.3 kg" width="360"></p>
+
+The sixth cartridge on the Game Boy, and a fishing contest: five casts off the end of the pier at the Beach, the rod in your hands. The water holds the Beach's Pokémon as shadows, small ones near the pier and heavy ones out in the deep, and the bigger the shadow, the heavier the fish. Tap the water by the one you want, wait out the nibbles and strike when the float goes under. Then reel it in by tapping to its beat: each weight has its own pace, quick for the small ones and slow and steady for the heavy ones, and the **LINE** bar on the right shows the line's strain, its white needle rising with every tap and sinking as the fish pulls. Keep it in the green: too fast and the line snaps, too slow and the fish slips off. Every fish is weighed, a gold gauge on the left filling to its weight and saying how big it is for one of its kind, then it goes back in the water. Five casts add up to your score, against bronze, silver and gold lines at 50, 150 and 300 kg, and one giant swims in every game, Gyarados or Lapras, the hardest fish of all to land.
+
+It all shows on the screen, so it plays as well on the Knomi, which has no speaker (its backlight flashes at the bite). On a computer and the web it has its own sounds and two new songs, the fight song playing at the fish's pace, and phones and controllers buzz along.
+
+| | | |
+|:--:|:--:|:--:|
+| ![Tap the water: the casts along the top, 248.1 kg so far, the fish as shadows and the giant's big one in the deep](docs/images/v2/fishing-cast.png) | ![The bite: the float pulled under, a ! over it, the screen's edge glowing and TAP!](docs/images/v2/fishing-bite.png) | ![Reeling a Seel in: the hooked shadow swelling on the beat and the LINE bar's needle in the green](docs/images/v2/fishing-reel.png) |
+| **Pick a fish by its shadow** | **Strike when the float goes under** | **Reel it in to its beat** |
+| ![The giant on the line, SLOW AND STEADY, its green narrow at the top of the LINE bar](docs/images/v2/fishing-giant.png) | ![The weigh-in: a Seel over the pier, the gold gauge full, 96.5 kg, A BIG ONE FOR A SEEL!, then BACK IN IT GOES!](docs/images/v2/fishing-weigh.png) | ![The end: 439.3 kg from five fish, the bronze, silver and gold line, GOLD! NEW RECORD! and Play Again!](docs/images/v2/fishing-end.png) |
+| **A giant in every game** | **Weighed, then let go** | **Bronze, silver or gold** |
+
+How it all works: [Reel Fishing](docs/HOW_IT_WORKS.md#reel-fishing).
+
+## The Knomi Tower Battle System
 
 <p align="center"><img src="docs/images/v2/tower-climb.gif" alt="A climb of Knomi Tower: the tower's islet, the tower, the team, who goes first, a floor fight, both balls' bars, the Rock Badge, the Legend, Mewtwo, Tower Master and the challenges" width="360"></p>
 
@@ -290,7 +309,7 @@ Charmander, for example, starts with Scratch, learns Ember at level 9, Slash at 
 
 Your Pokémon's ATK, DEF and SPD grow as it levels up, and training adds more on top:
 
-- **Winning a battle** adds attack training.
+- **Winning a battle** adds attack training: 3 a win, so 34 wins fill it.
 - **Every 6 hours of good care** (every need at 40 or more) adds defense training. Sleep counts, and a need can dip under 40 for up to 15 minutes before the 6 hours start over.
 - **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing) add speed training.
 - **Weight** isn't training: food adds it (candy the most), and games, battles and time burn it off. Over 50, your Pokémon tires twice as fast.
@@ -318,7 +337,7 @@ Tap the **handheld** icon, on the left, for the mini games: cartridges on a Game
 - **Dungeon Crawler:** explore a cave floor by floor. Tap toward where you want to step, or hold to keep walking. Walk into a wild Pokémon to attack it with your own best move, pick up Razz, Oran and Pinap Berries to heal, and find the stairs down. A better-trained Pokémon gets deeper.
 - **Rock Hopper:** tap to jump over rocks, bushes, fallen logs, stumps and mushrooms in a forest that keeps getting faster. How long can you last?
 - **PikaSurf:** your Pokémon surfs down the rushing water on a board; tilt, drag it or use the arrow keys to dodge the rocks coming up in three lanes. Pikachu surfs alongside and never hits one, until he pulls ahead out of sight. It keeps speeding up, and one rock ends the run.
-- **Reel Fishing:** five casts off the pier at the Beach. Tap the water by a fish (the bigger the shadow, the heavier it is), wait out the nibbles, and tap when the float goes under. Then tap to the beat to reel it in: too fast and the line snaps, too slow and it slips off, and each weight has its own pace (on a computer the fight song plays it; on the Knomi the fish swells on it). Every fish is weighed and let go: the score is the total weight, against bronze, silver and gold lines at 50, 150 and 300 kg. One giant comes in every game.
+- **Reel Fishing:** five casts off the pier at the Beach, the rod in your hands. Tap the water by a fish (the bigger the shadow, the heavier it is; bubbles over one mean it's about to bite), wait out the nibbles, and tap when the float goes under. Then tap to the beat to reel it in, keeping the white needle in the green of the **LINE** bar on the right: too fast and the line snaps, too slow and it slips off, and each weight has its own pace (the fish swells on it, and on a computer the fight song plays it). Every fish is weighed, a gold gauge on the left filling to its weight and saying how big it is for its kind, then let go: the score is the total weight, against bronze, silver and gold lines at 50, 150 and 300 kg. One giant comes in every game. The Knomi's button (Space on a computer) casts, strikes and reels too.
 - **Who's That Pokémon?:** name the silhouette, ten rounds per game, never the same Pokémon twice. Each one has ten seconds on the clock: run out and it counts as wrong, and the answer shows.
 - **Berry Drop:** in the woods under two tall berry trees, tilt left and right, or drag your Pokémon with a finger, to catch falling berries. They fall faster with every catch, with no top speed, so every game ends.
 
@@ -470,7 +489,7 @@ The code also builds for the Waveshare ESP32-S3-Touch-AMOLED-1.75, a bigger roun
 
 - **Saves:** it saves in the browser by itself. Clearing the browser's data erases it, so use **Export save** now and then for a backup file, and **Import save** to bring a Pokémon back or move it to another browser. Coming from V1, your Pokémon comes along by itself, and V1's save stays as it was.
 - **One tab at a time:** a second tab offers **Play here**, which moves the game over after the first one saves.
-- **Controls:** tap, hold and swipe the screen, as on the Knomi (see [How to play](#how-to-play)). On a phone, tilt it to aim the ball and to steer in PikaSurf and Berry Drop; where the browser asks first, **Enable tilt** turns it on. On Android it also buzzes along with the sounds; **Vibration** turns that off (iPhone browsers can't vibrate). On a computer, the mouse is a finger that presses when you click, the left and right arrows tilt, all four arrows walk in Dungeon Crawler, Space is the Knomi's button, and on a catch the left and right arrows choose a ball and Space or the up arrow throws it.
+- **Controls:** tap, hold and swipe the screen, as on the Knomi (see [How to play](#how-to-play)). On a phone, tilt it to aim the ball and to steer in PikaSurf and Berry Drop; where the browser asks first, **Enable tilt** turns it on. On Android it also buzzes along with the sounds; **Vibration** turns that off (iPhone browsers can't vibrate). On a computer, the mouse is a finger that presses when you click, the left and right arrows tilt, all four arrows walk in Dungeon Crawler, Space is the Knomi's button (in Reel Fishing it casts, strikes and reels), and on a catch the left and right arrows choose a ball and Space or the up arrow throws it.
 - **Size and CRT:** it opens Large, with the CRT screen on. **Size** makes it Small or Medium, like the Mac app, and on a small screen it shrinks to fit. **CRT** turns the effect off for the Knomi's own look; a browser without WebGL 2 shows that look by itself.
 - **Sound and Music:** **Sound** turns the effects and cries off and on, and **Music** steps the music down from High to Medium, Low and Off, each on its own. Settings in the ring has a level from 0 to 3 for each.
 - **Buddies:** browsers can't send the Knomi's local Wi-Fi messages, so they meet buddies through a small relay on the internet that only passes those same messages between devices on the same home network and stores nothing. Knomis and the Mac and Windows apps use it too, so they all meet each other.
@@ -488,7 +507,7 @@ The same game as a round window on your Mac desktop, in a Poké Ball ring with a
 
    Or, in Terminal: `xattr -dr com.apple.quarantine "/Applications/Catch 151.app"`
 
-**Controls:** click, hold and swipe like a touch screen. The left and right arrows tilt, for Berry Drop and throwing Poké Balls, and all four arrows walk in Dungeon Crawler. Space is the Knomi's button, for a wild battle; on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the red and white ring to move the window: it grows when the mouse is over it, so it's easy to grab, and the screen inside is only for touching, with the mouse as a finger. Right-click it, or click the Poké Ball in the menu bar, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit.
+**Controls:** click, hold and swipe like a touch screen. The left and right arrows tilt, for Berry Drop and throwing Poké Balls, and all four arrows walk in Dungeon Crawler. Space is the Knomi's button, for a wild battle (in Reel Fishing it casts, strikes and reels); on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the red and white ring to move the window: it grows when the mouse is over it, so it's easy to grab, and the screen inside is only for touching, with the mouse as a finger. Right-click it, or click the Poké Ball in the menu bar, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit.
 
 **Size and CRT Screen:** it opens Large, with the CRT screen on. **Size** makes it Medium or Small, sharp at every size, and **CRT Screen** turns the effect off for the Knomi's own look.
 

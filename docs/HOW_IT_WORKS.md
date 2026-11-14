@@ -46,6 +46,26 @@ Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Reel Fishing each add at 
 
 At the end, **Play Again!** starts the same game again and the ✕ goes back to the games; a tap on the Repel bar under them opens the Repel's page on your Pokémon's card. Every second you actually play counts toward a Repel (see [Items](#items)): not the how-to card or the end, and only while you're touching, tilting or pressing keys, so sitting in the dungeon earns nothing. The games with a buddy count too.
 
+### Reel Fishing
+
+Five casts off the end of the Beach's pier. The fish are the Beach's water Pokémon, seen as shadows, and each one weighs 0.8 to 1.2 times its Pokédex weight: the bigger its shadow, the heavier it is. The score is the total weight of the fish you land, and every one is let go.
+
+| Size | Weight | Where | Fish | Taps a second | Green | Good taps | Strike within |
+|---|---|---|---|---:|---:|---:|---:|
+| **Small** | 3–15 kg | The shallows | Shellder, Krabby, Horsea, Magikarp, Poliwag | 3.2 | 62–80% | 22 | 0.9 s |
+| **Middling** | 16–55 kg | The shallows and open water | Psyduck, Slowpoke, Goldeen, Poliwhirl, Seadra, Staryu, Seaking, Tentacool | 2.5 | 65–82% | 26 | 0.75 s |
+| **Big** | 44–108 kg | Open water and the deep | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2.0 | 68–84% | 30 | 0.65 s |
+| **Heavy** | 96–159 kg | The deep | Dewgong, Cloyster | 1.6 | 71–86% | 31 | 0.6 s |
+| **Giant** | 176–282 kg | The deep | Lapras, Gyarados | 1.25 | 74–88% | 33 | 0.6 s |
+
+- **The water:** there are always 3 small, 2 middling and 1 big fish in sight (now and then a heavy one in the big one's place), and a fish that's gone comes back as another of its size 2.5 seconds later. One giant swims in for cast 3, 4 or 5 of every game and stays until it's hooked or the game ends. About 1 fish in 100 is shiny.
+- **Casting:** tap the water (or aim with the tilt or the arrow keys and press the button or Space). The float lands out past the middle of the screen, within a little of where you tapped. The fish nearest the float comes round to the hook, sooner the closer it is; bubbles over a fish mean it's eager and bites quicker.
+- **Nibbles:** before the bite the float dips a few times: none (then the bite takes longer) 20 casts in 100, one 15, two 35 and three 30. A tap on a nibble is **TOO SOON!**: that fish darts off and another comes, and the cast goes on.
+- **The bite:** the float goes under, with a **!**, a splash and the screen's edge glowing, and the Knomi's backlight flashes. Tap within the strike time in the table, or **TOO SLOW!** and it's gone with that cast. A strike in the first third of that time is clean and starts the fight with the needle in the middle of the green; a late one starts it near the slack end.
+- **Reeling:** each tap tightens the line by a step, and the fish pulls it back between taps, a little harder or softer on each beat. The **LINE** bar on the right shows it, its white needle rising and sinking: a tap with the needle in the green counts toward landing it (the good taps in the table), and the fish comes in toward the pier as they add up. Over the green, the bar turns red (**SLOWER!**), and the needle reaching the top snaps the line. Under it, the line goes slack (**FASTER!**), and 1.5 seconds slack and it slips off. Now and then the fish thrashes and pulls the line tighter for a moment: the blob flashes just before, so tap slower through it. The hooked fish swells on every beat, and on a computer and the web the fight song plays at its pace, one tap a beat.
+- **The weigh-in:** a fish landed leaps out with its name, then a gold gauge on the left fills to its weight and says how big it is for one of its kind (**A SMALL ONE**, **A GOOD ONE** or **A BIG ONE**), and back in it goes. A giant landed is **THE BIG ONE!**
+- **The score:** the five casts' weights add up against three lines, **bronze at 50 kg, silver at 150 and gold at 300**, and your best total is kept. Joy and speed training come from the total, a point for every 20 kg: 2 joy a point (up to +35 in all) and 1 speed training for every 5 points, so every 100 kg.
+
 ## Battles
 
 Your Pokémon needs at least 15 ⚡ to fight.

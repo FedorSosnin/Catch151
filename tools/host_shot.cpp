@@ -2,7 +2,8 @@
 //   clang++ -std=c++17 -O2 -I host tools/host_shot.cpp build/host/libpokehost.a -framework CoreFoundation -o build/host_shot
 //   build/host_shot <resources> <save dir> <script>
 // Script lines: WAIT ms | SER <console line> | TAP x y | SWIPE x0 y0 x1 y1 | TAPQ x y (no wait after) | HOVER x y (-1 -1: off) |
-//               DOWN x y, then UP x y (a finger held there: WAIT between for how long) | SHOT file.ppm
+//               DOWN x y, then UP x y (a finger held there: WAIT between for how long) | SHOT file.ppm |
+//               REC n ms prefix (n frames ms apart, prefix-000.ppm on: a moving picture)
 // Run it with POKEMACGOCHI_BUDDY_PORT set to a test port, as every test copy is, so it never meets a real Knomi.
 #include "host.h"
 #include <stdio.h>
@@ -16,6 +17,15 @@ static void run(int ms) {
     hostTick();
     usleep(16000);
   }
+}
+
+static void shot(std::vector<uint8_t> &px, const char *path) {
+  hostFrameRGBA(px.data());
+  FILE *o = fopen(path, "wb");
+  if (!o) { perror(path); return; }
+  fprintf(o, "P6\n%d %d\n255\n", HOST_CANVAS_SIZE, HOST_CANVAS_SIZE);
+  for (size_t i = 0; i < px.size(); i += 4) fwrite(&px[i], 1, 3, o);
+  fclose(o);
 }
 
 int main(int argc, char **argv) {
@@ -50,12 +60,16 @@ int main(int argc, char **argv) {
       hostPointer(c, d, false); run(400);
     } else if (sscanf(line, "SHOT %399s", path) == 1) {
       run(60);
-      hostFrameRGBA(px.data());
-      FILE *o = fopen(path, "wb");
-      fprintf(o, "P6\n%d %d\n255\n", HOST_CANVAS_SIZE, HOST_CANVAS_SIZE);
-      for (size_t i = 0; i < px.size(); i += 4) fwrite(&px[i], 1, 3, o);
-      fclose(o);
+      shot(px, path);
       printf("shot %s\n", path);
+    } else if (sscanf(line, "REC %d %d %399s", &a, &b, path) == 3) {  // n frames, ms apart: path-000.ppm, path-001.ppm...
+      for (int k = 0; k < a; k++) {
+        run(b);
+        char name[420];
+        snprintf(name, sizeof(name), "%s-%03d.ppm", path, k);
+        shot(px, name);
+      }
+      printf("rec %s x%d\n", path, a);
     }
   }
   hostFlushSave();

@@ -42,9 +42,11 @@ The game is on this branch, playable on the Knomi, Mac, Windows and the web; not
 
 ## It isn't catching
 
-- No Poke Balls anywhere, no Pokedex, never "caught" or "NEW!". The casts along the top are numbered 1 to 5.
-- Every fish is weighed on a scale at the pier (mockup 11), its weight goes on your total, and it hops back in: BACK
-  IN IT GOES!
+- No Poke Balls anywhere, no Pokedex, never "caught" or "NEW!". The casts along the top are five round see-through slots in the icon band's ink, each
+  showing the fish it landed (they were numbered 1 to 5 in the mockups).
+- Every fish is weighed, its weight goes on your total, and it hops back in: BACK IN IT GOES! The scale at the pier of
+  mockup 11 became a gold gauge on the left rim (the LINE bar's twin), filling to the weight with a needle and then
+  saying how big it is for one of its kind: A SMALL ONE, A GOOD ONE or A BIG ONE FOR A STARYU.
 - The score is kilograms, as in a fishing contest. The how-to card says "Each one is weighed, then let go."
 - The Pokemon's names still show (STARYU!); they're just never kept.
 
