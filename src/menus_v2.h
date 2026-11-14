@@ -1721,7 +1721,7 @@ static void v2Cart(int x, int y, const uint16_t *pic, const char *title, Rgb she
 static uint16_t *v2LblArt = nullptr;
 static uint16_t *v2Lbl(int i) { return v2LblArt ? v2LblArt + i * V2_LBL_W * V2_LBL_H : nullptr; }
 static bool v2LblStart() {
-  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(8 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));
+  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(9 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));  // (8: Reel Fishing's)
   return v2LblArt != nullptr;
 }
 static void v2LblKeep(int i) {
@@ -1818,6 +1818,15 @@ static void v2PaintGameLabels() {
   v2LblThumb(7, 40, 40, false);
   drawMap(SPR_BERRY_ORAN, HOME_ICON_N, 60, 24, 1, false);
   v2LblKeep(4);
+  // Reel Fishing: the sea, a float on it, a line from the corner, Magikarp leaping out
+  v2LblSky(0x7FBDE6, 0xD8EEE8, 22, 0x4F93C4, 0x3A78A8);
+  for (int k = 0; k < 4; k++) gfx->fillRect(6 + k * 20, 26 + (k % 2) * 8, 10, 2, sc565(0x9FD6F0));
+  gfx->fillRect(14, 30, 4, 3, sc565(0xE8503A));  // the float
+  gfx->fillRect(14, 33, 4, 2, UI_WHITE);
+  for (int x = 16; x < 40; x += 2) gfx->fillRect(x, 6 + (x - 16) / 2, 1, 1, UI_WHITE);  // the line
+  v2LblThumb(129, 54, 30, false);
+  for (int k = 0; k < 4; k++) gfx->fillRect(40 + k * 6, 34 - (k % 2) * 3, 2, 2, UI_WHITE);  // drops
+  v2LblKeep(8);
 }
 static void v2PaintPlayLabels() {
   if (!v2LblStart()) return;
@@ -1844,10 +1853,13 @@ static void v2PaintPlayLabels() {
 }
 
 // ----- the two Game Boys -----
-static const int16_t V2_CART_XY[5][2] = { { 56, 100 }, { 180, 100 }, { 304, 100 }, { 118, 248 }, { 242, 248 } };
-static const uint8_t V2_CART_GAME[5] = { 0, 1, 2, 4, 3 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler)
+// six, 3 x 2 (Fedor: "a 3x2, 6 total carts"), a little higher than five were, so the bottom row's corners clear the rim
+#define V2_CARTS 6
+static const int16_t V2_CART_XY[V2_CARTS][2] = { { 56, 96 }, { 180, 96 }, { 304, 96 }, { 56, 238 }, { 180, 238 }, { 304, 238 } };
+static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing)
+static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
 // the colours the games came in: Green, Silver, Red, Yellow, Blue; Play together's Gold, Crystal, Yellow
-static const Rgb V2_CART_COL[5] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8 };
+static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A };  // (Reel Fishing: Magikarp's orange)
 static const int16_t V2_PLAY_XY[3][2] = { { 56, 150 }, { 180, 150 }, { 304, 150 } };
 static const Rgb V2_PLAY_COL[3] = { 0xC9A43C, 0x5AC8D8, 0xF2C230 };
 static void v2GbBack(const char *title) {
@@ -1857,7 +1869,7 @@ static void v2GbBack(const char *title) {
 }
 static void v2GamesTv() {
   v2GbBack(T(S_GAMES));
-  for (int k = 0; k < 5; k++) v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(k), gameLabel(V2_CART_GAME[k]), V2_CART_COL[k]);
+  for (int k = 0; k < V2_CARTS; k++) v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[k]), gameLabel(V2_CART_GAME[k]), V2_CART_COL[k]);
   v2CloseX();
 }
 static void v2PlayTv() {
@@ -1879,11 +1891,11 @@ static int v2CartAt(int16_t x, int16_t y, const int16_t (*xy)[2], int n) {
   return -1;
 }
 static int v2GameAt(int16_t x, int16_t y) {  // V1's game number
-  int k = v2CartAt(x, y, V2_CART_XY, 5);
+  int k = v2CartAt(x, y, V2_CART_XY, V2_CARTS);
   return k < 0 ? -1 : V2_CART_GAME[k];
 }
 static int v2CartOfGame(int g) {
-  for (int k = 0; k < 5; k++)
+  for (int k = 0; k < V2_CARTS; k++)
     if (V2_CART_GAME[k] == g) return k;
   return 0;
 }
@@ -2694,6 +2706,7 @@ static int v2GameEnd(uint32_t *since = nullptr) {
   else if (runOpen && runOverT) t = runOverT;
   else if (dungeonOpen && dnOverT) t = dnOverT;
   else if (surfOpen && !surfDuel && surfOverT) t = surfOverT;
+  else if (fishOpen && fishOverT) t = fishOverT;
   else {
     y = V2_AGAIN_YB;
     if (sdOpen && sdPhase == SD_DONE) t = sdT;
@@ -2745,6 +2758,7 @@ static void v2GameEndDo(int k) {
       if (runOpen) closeRun();
       if (dungeonOpen) closeDungeon();
       if (surfOpen) closeSurf();
+      if (fishOpen) closeFish();
     }
     cardOpen = true;
     cardAch = false;
@@ -2760,20 +2774,22 @@ static void v2GameEndDo(int k) {
     else if (!pet.isEgg() && !pet.sleeping && !pet.ceremony) buddyInvite(kind);
     return;
   }
-  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : 4;
+  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : surfOpen ? 4 : 5;
   gameOpen = false;
   if (quizOpen) closeQuiz();
   if (runOpen) closeRun();
   if (dungeonOpen) closeDungeon();
   if (surfOpen) closeSurf();
+  if (fishOpen) closeFish();
   if (again) {
     if (g == 0) startGame();
     else if (g == 1) startQuiz();
     else if (g == 2) startRun();
     else if (g == 3) startDungeon();
-    else startSurf();
+    else if (g == 4) startSurf();
+    else startFish();
   }
-  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen) gameEndToMenu();  // (it may not start: asleep)
+  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen) gameEndToMenu();  // (it may not start: asleep)
 }
 
 // ----- the home's dialogs and moments (rooms2_px.py release_dialog(), batch3.py medal_banner(), bath(), evolving()) -----

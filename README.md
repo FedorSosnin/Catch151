@@ -43,7 +43,7 @@
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
 
-<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Five mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Who's That Pokémon?, on cartridges in a Game Boy. **Play Again!** at the end.
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Six mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon? and Reel Fishing, on cartridges in a Game Boy. **Play Again!** at the end.
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
 
@@ -290,7 +290,7 @@ Your Pokémon's ATK, DEF and SPD grow as it levels up, and training adds more on
 
 - **Winning a battle** adds attack training.
 - **Every 6 hours of good care** (every need at 40 or more) adds defense training. Sleep counts, and a need can dip under 40 for up to 15 minutes before the 6 hours start over.
-- **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler) add speed training.
+- **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing) add speed training.
 - **Weight** isn't training: food adds it (candy the most), and games, battles and time burn it off. Over 50, your Pokémon tires twice as fast.
 
 Each kind of training stops at 100. The card's **Training** page (**Stats** in the ring, then two pages on) shows how far along each one is, with **MAX** when it's full, and your Pokémon's weight. Once attack training is maxed, a win says so instead of adding more. A new Pokémon starts training from zero.
@@ -316,6 +316,7 @@ Tap the **handheld** icon, on the left, for the mini games: cartridges on a Game
 - **Dungeon Crawler:** explore a cave floor by floor. Tap toward where you want to step, or hold to keep walking. Walk into a wild Pokémon to attack it with your own best move, pick up Razz, Oran and Pinap Berries to heal, and find the stairs down. A better-trained Pokémon gets deeper.
 - **Rock Hopper:** tap to jump over rocks, bushes, fallen logs, stumps and mushrooms in a forest that keeps getting faster. How long can you last?
 - **PikaSurf:** your Pokémon surfs down the rushing water on a board; tilt, drag it or use the arrow keys to dodge the rocks coming up in three lanes. Pikachu surfs alongside and never hits one, until he pulls ahead out of sight. It keeps speeding up, and one rock ends the run.
+- **Reel Fishing:** five casts off the pier at the Beach. Tap the water by a fish (the bigger the shadow, the heavier it is), wait out the nibbles, and tap when the float goes under. Then tap to the beat to reel it in: too fast and the line snaps, too slow and it slips off, and each weight has its own pace (on a computer the fight song plays it; on the Knomi the fish swells on it). Every fish is weighed and let go: the score is the total weight, against bronze, silver and gold lines at 50, 150 and 300 kg. One giant comes in every game.
 - **Who's That Pokémon?:** name the silhouette, ten rounds per game, never the same Pokémon twice. Each one has ten seconds on the clock: run out and it counts as wrong, and the answer shows.
 - **Berry Drop:** in the woods under two tall berry trees, tilt left and right, or drag your Pokémon with a finger, to catch falling berries. They fall faster with every catch, with no top speed, so every game ends.
 

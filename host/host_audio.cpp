@@ -54,6 +54,8 @@ void voiceSay(int16_t dex, uint8_t mood) {
   gVoiceReady.store(true, std::memory_order_release);
 }
 void musicWant(uint8_t track) { gMusicWant.store(track, std::memory_order_relaxed); }
+static std::atomic<float> gFightTempo{1.0f};
+void musicTempo(float f) { gFightTempo.store(f, std::memory_order_relaxed); }
 bool musicEnabled() { return gMusicOn; }
 void musicSetEnabled(bool on) {
   gMusicOn = on;
@@ -158,6 +160,7 @@ static inline int16_t withMusic(int16_t s, bool playing) {
   gDuck += (target - gDuck) * (target < gDuck ? duckIn : duckOut);
   gMusGain += (LEVEL_GAIN[gMusLv.load(std::memory_order_relaxed)] - gMusGain) * ease;
   float m = 0;
+  gMusic.fightTempo(gFightTempo.load(std::memory_order_relaxed));
   gMusic.render(&m, 1, gDuck * gMusGain);
   int32_t v = (int32_t)lrintf((s + voice * 32767.0f) * gSndGain + m * 32767.0f);
   return (int16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);

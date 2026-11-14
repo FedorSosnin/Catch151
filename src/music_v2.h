@@ -61,6 +61,7 @@ static uint8_t v2MusicPick(uint32_t now) {
   if (dungeonOpen) return MUS_DUNGEON;
   if (runOpen) return MUS_RUN;
   if (surfOpen) return MUS_SURF;
+  if (fishOpen) return fish.phase == FP_REEL ? MUS_FISH_FIGHT : MUS_FISH;  // a fish on the line: its own, at its pace
   if (battleOpen && bPhase != BP_TIRED) return v2MusicBattle();  // (tired: a notice over what was there)
   if (buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || galleryOpen || gamesMenuOpen || kbOpen || clockOpen ||
       cardOpen)

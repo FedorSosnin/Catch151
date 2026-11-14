@@ -1,4 +1,4 @@
-// V2: Reel Fishing MOCKUPS (not the game yet). A fishing minigame for the Games menu, played off the end of a pier at the
+// V2: Reel Fishing: the game's drawing (fsGame, from fishing.h's state) and its mockups (FISHMOCK n). A fishing minigame for the Games menu, played off the end of a pier at the
 // Beach. The Knomi has no speaker and no vibration, so every moment of a cast reads on the screen alone (the float,
 // rings, splashes, a "!", the rim's glow, the line's colour, the rod's bend); the computers and the web add sound, and
 // phones and controllers a buzz, on top. These painters only draw still screens for the console's "FISHMOCK n"
@@ -363,7 +363,7 @@ static void fsSlots(const int16_t *st, bool total = true) {
 
 // your Pokemon at the pier's end and its rod; tip: where the rod's tip is, (bx, by) how far it's bent
 static void fsAngler(int tx, int ty, int bx = 0, int by = 0) {
-  fsThumb(thumbs.getForm(pet.speciesId, false), FS_PET_X, FS_DECK + 2, 3);
+  fsThumb(thumbs.getForm(pet.speciesId, pet.shiny), FS_PET_X, FS_DECK + 2, 3);
   fsRod(FS_PET_X + 26, FS_DECK - 30, tx, ty, bx, by);
 }
 #define FS_TIP_X 252  // the rod's tip, at rest
@@ -779,6 +779,490 @@ static void fsMockNight() {
   fsNight = true;
   fsMockBite();
   fsNight = false;
+}
+
+// ===================================================================== the game: drawn from fishing.h's state
+// Every moment has its own look, so the Knomi (no speaker, no buzz) plays it as well as a computer: the float, rings,
+// the "!", the rim glowing (red too tight, blue too slack), the line's colour and sag, the rod's bend, the LINE arc
+// with the fish's own green band, and the hooked blob swelling on the fight's beat (the fight song plays that beat on a
+// computer). The sketch keeps the state (fish) and the times things last happened (fishTapT, fishBiteT, fishSoonT).
+
+// the LINE arc's cells, worked out once (their place along it and how far out), so a frame only colours them: on the
+// Knomi's chip an atan2 a cell, every frame, would cost more than the rest of the frame
+struct FsArcCell { int16_t x, y; uint8_t f, k; };  // f: 0..200 along the arc (bottom to top); k: 0 bar, 1 its edge, 2 notch room, +4 lit
+static FsArcCell *fsArc = nullptr;
+static int fsArcN = 0;
+#define FS_ARC_A0 52.0f   // its bottom end (degrees, 0 = right)
+#define FS_ARC_A1 -34.0f  // its top end
+static void fsArcBuild() {
+  if (fsArc) return;
+  int n = 0;
+  for (int pass = 0; pass < 2; pass++) {
+    for (int y = 0; y < V2_W; y += 2)
+      for (int x = CX; x < V2_W; x += 2) {
+        float dx = x + 1 - CX, dy = y + 1 - CY, r = hypotf(dx, dy), a = atan2f(dy, dx) * 57.29578f;
+        if (r < V2_BAR_RIN - 7 || r > V2_BAR_ROUT + 7 || a > FS_ARC_A0 + 3 || a < FS_ARC_A1 - 3) continue;
+        float f = (FS_ARC_A0 - a) / (FS_ARC_A0 - FS_ARC_A1) * 200;
+        uint8_t k = (r < V2_BAR_RIN - 3 || r > V2_BAR_ROUT + 3 || a > FS_ARC_A0 + 2 || a < FS_ARC_A1 - 2) ? 2
+                    : (r < V2_BAR_RIN || r > V2_BAR_ROUT || a > FS_ARC_A0 || a < FS_ARC_A1) ? 1 : 0;
+        if (k == 0 && r > V2_BAR_ROUT - 4) k |= 4;
+        if (pass) fsArc[n] = { (int16_t)x, (int16_t)y, (uint8_t)(f < 0 ? 0 : f > 200 ? 200 : f), k };
+        n++;
+      }
+    if (!pass) {
+      fsArc = (FsArcCell *)ps_malloc(n * sizeof(FsArcCell));
+      if (!fsArc) return;
+      fsArcN = n;
+      n = 0;
+    }
+  }
+}
+// the arc now: tension pct in the zones lo..hi, the green brighter on the beat
+static void fsArcDraw(float pct, int lo, int hi, bool beat) {
+  fsArcBuild();
+  if (!fsArc) return;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  const uint16_t ink = sc565(0x1B1B25), white = UI_WHITE;
+  uint16_t dim[3] = { sc565(0x2E4A72), sc565(beat ? 0x3E7A4A : 0x2E5A3A), sc565(0x7A3A3A) };
+  uint16_t lit[3] = { sc565(0x7CC4EA), sc565(beat ? 0x8AE08A : 0x58B868), sc565(0xE8503A) };
+  uint16_t litT[3] = { sc565(scMix(0x7CC4EA, 0xFFFFFF, .35)), sc565(scMix(beat ? 0x8AE08A : 0x58B868, 0xFFFFFF, .35)),
+                       sc565(scMix(0xE8503A, 0xFFFFFF, .35)) };
+  float p2 = pct * 2;
+  for (int i = 0; i < fsArcN; i++) {
+    const FsArcCell &c = fsArc[i];
+    float m = fabsf(c.f - p2);
+    uint8_t k = c.k & 3;
+    uint16_t col;
+    if (m <= 2.0f && k != 2) col = white;               // the notch, a little proud of the bar
+    else if (m <= 2.0f && k == 2 && m <= 1.0f) col = white;
+    else if (m <= 4.4f) col = ink;
+    else if (k == 2) continue;
+    else if (k == 1) col = ink;
+    else if (abs(c.f - 2 * lo) <= 1 || abs(c.f - 2 * hi) <= 1) col = ink;  // where the zones meet
+    else {
+      int z = c.f < 2 * lo ? 0 : c.f < 2 * hi ? 1 : 2;
+      col = c.f <= p2 ? ((c.k & 4) ? litT[z] : lit[z]) : dim[z];
+    }
+    uint16_t *q = fb + c.y * V2_W + c.x;
+    q[0] = q[1] = q[V2_W] = q[V2_W + 1] = col;
+  }
+  setSize(2);
+  v2BarLabel(fb, T(S_FISH_LINE), -45, UI_WHITE);
+}
+
+// the rim's cells within 40 px of the edge, worked out once
+struct FsRimCell { int16_t x, y; uint8_t d; };
+static FsRimCell *fsRim = nullptr;
+static int fsRimN = 0;
+static void fsRimGlowFast(Rgb col, int a256, int w) {
+  if (!fsRim) {
+    int n = 0;
+    for (int pass = 0; pass < 2; pass++) {
+      for (int y = 0; y < V2_W; y += 4)
+        for (int x = 0; x < V2_W; x += 4) {
+          float d = 233 - hypotf(x + 2 - CX, y + 2 - CY);
+          if (d < 0 || d > 40) continue;
+          if (pass) fsRim[n] = { (int16_t)x, (int16_t)y, (uint8_t)d };
+          n++;
+        }
+      if (!pass) {
+        fsRim = (FsRimCell *)ps_malloc(n * sizeof(FsRimCell));
+        if (!fsRim) return;
+        fsRimN = n;
+        n = 0;
+      }
+    }
+  }
+  if (!fsRim) return;
+  for (int i = 0; i < fsRimN; i++) {
+    const FsRimCell &c = fsRim[i];
+    if (c.d > w || (c.d > w / 2 && (scFl4(c.x) + scFl4(c.y)) % 2)) continue;
+    fsBlend(c.x, c.y, c.x + 3, c.y + 3, col, a256 * (w - c.d) / w);
+  }
+}
+
+// a blob of any size (s px a unit, as fsBlob)
+static void fsBlobF(float cx, float cy, float s, int a256) {
+  Rgb col = fsNight ? 0x050A18 : 0x0E2A5C;
+  float rx = 5.0f * s, ry = 3.0f * s;
+  for (int y = scFl4((int)(cy - ry)) * 4; y < cy + ry; y += 4)
+    for (int x = scFl4((int)(cx - rx)) * 4; x < cx + rx; x += 4) {
+      float dx = (x + 2 - cx) / rx, dy = (y + 2 - cy) / ry, d = dx * dx + dy * dy;
+      if (d > 1 || (d > 0.6f && (scFl4(x) + scFl4(y)) % 2)) continue;
+      fsBlend(x, y, x + 3, y + 3, col, a256);
+    }
+}
+
+// the casts along the top, from the game: what each landed, the X where one got away, this one's number edged
+static void fsSlotsLive() {
+  int16_t st[FISH_CASTS];
+  for (int i = 0; i < FISH_CASTS; i++) st[i] = i < fish.cast ? fish.slot[i] : i == fish.cast ? (fish.slot[i] ? fish.slot[i] : 1) : 0;
+  int x0 = CX - (5 * FS_SLOT + 4 * 6) / 2, y = 40;
+  for (int i = 0; i < FISH_CASTS; i++) {
+    int x = x0 + i * (FS_SLOT + 6);
+    uint16_t edge = st[i] == 1 ? sc565(0xF8C030) : sc565(0x3A4A5A);
+    gfx->fillRoundRect(x - 3, y - 3, FS_SLOT + 6, FS_SLOT + 6, 9, sc565(0x1B1B25));
+    gfx->fillRoundRect(x - 1, y - 1, FS_SLOT + 2, FS_SLOT + 2, 8, edge);
+    gfx->fillRoundRect(x + 2, y + 2, FS_SLOT - 4, FS_SLOT - 4, 6, st[i] == -1 ? sc565(0xC8CCD8) : UI_WHITE);
+    if (st[i] == 0 || st[i] == 1) {
+      char nb[4];
+      snprintf(nb, sizeof(nb), "%d", i + 1);
+      setSize(2);
+      gfx->setTextColor(st[i] == 1 ? UI_INK : sc565(0xB8BCC8));
+      setCur(x + FS_SLOT / 2 - textW(nb, 2) / 2 + 1, y + 13);
+      printT(nb);
+    } else if (st[i] == -1) {
+      for (int k = 0; k < 14; k += 2) {
+        fsSq(x + 13 + k, y + 13 + k, 4, 0xE8503A);
+        fsSq(x + 27 - k, y + 13 + k, 4, 0xE8503A);
+      }
+    } else {
+      const uint8_t *t = thumbs.getForm(st[i], fish.slotShiny[i]);
+      int h = fsThumbH(t, 1);
+      fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + FS_SLOT - 2, fsClip[3] = y + FS_SLOT - 2;
+      fsThumb(t, x + FS_SLOT / 2, y + FS_SLOT / 2 + (h < FS_SLOT - 4 ? h / 2 : FS_SLOT / 2 - 3), 1);
+      fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
+    }
+  }
+  if (!fish.total) return;
+  char b[20];
+  snprintf(b, sizeof(b), T(S_FISH_KG_FMT), (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
+  setSize(2);
+  int w = textW(b, 2) + 20;
+  gfx->fillRoundRect(CX - w / 2 - 3, y + FS_SLOT + 6, w + 6, 26, 8, sc565(0x1B1B25));
+  gfx->fillRoundRect(CX - w / 2, y + FS_SLOT + 9, w, 20, 6, sc565(0x3A6FA0));
+  gfx->setTextColor(UI_WHITE);
+  setCur(CX - textW(b, 2) / 2, y + FS_SLOT + 12);
+  printT(b);
+}
+
+// the water's fish: each blob, the gone ones swimming off with a wake, bubbles over the one about to bite
+static void fsBlobsLive(uint32_t now) {
+  for (int i = 0; i < FISH_BLOBS; i++) {
+    const FishBlob &b = fish.b[i];
+    if (!b.on) continue;
+    if (b.gone > 0 && b.fleeV == 0) continue;
+    bool hooked = i == fish.target && (fish.phase == FP_REEL || fish.phase == FP_LANDED || fish.phase == FP_WEIGH);
+    if (hooked) continue;  // (drawn with the line)
+    float sz = fishBlobSize(b), bob = sinf(now * 0.002f + i * 1.7f) * 2;
+    int a = b.gone > 0 ? 120 : b.cls == FC_GIANT ? 165 : 140 + (int)(b.y - 250) / 6;
+    fsBlobF(b.x, b.y + bob, sz, a);
+    if (b.gone > 0)
+      for (int k = 0; k < 3; k++) scRect((int)b.x - (int)(5 * sz) - 14 - k * 20, (int)b.y - 2 + (k % 2) * 6,
+                                        (int)b.x - (int)(5 * sz) - 5 - k * 20, (int)b.y + 1 + (k % 2) * 6, 0xD8F0FF);  // its wake
+    if (i == fish.eager && b.gone <= 0) {  // bubbles rising from it, glints where they break
+      for (int k = 0; k < 3; k++) {
+        int rise = (int)((now / 18 + k * 22) % (int)(b.y - FS_SURF - 6 > 20 ? b.y - FS_SURF - 6 : 20));
+        fsCircle((int)b.x + (k - 1) * 6, (int)b.y - 6 - rise, 2 + k % 2, fsNight ? 0x6A8CB8 : 0xD8F0FF, 2);
+      }
+      if ((now / 300) % 2) scRect((int)b.x - 2, FS_SURF - 8, (int)b.x + 1, FS_SURF - 5, 0xFFFFFF);
+    }
+  }
+}
+
+// where the rod's tip goes for the moment, and how far it's bent
+static void fsRodNow(int &tx, int &ty, int &bx, int &by) {
+  tx = FS_TIP_X, ty = FS_TIP_Y, bx = by = 0;
+  switch (fish.phase) {
+    case FP_FLY: tx = FS_TIP_X + 36, ty = FS_TIP_Y + 44, bx = 10, by = -10; break;
+    case FP_WAIT:
+      if (fish.t - fish.lastNibble < 0.15f && fish.nibbled) ty += 6;  // a nibble tugs it
+      break;
+    case FP_BITE: tx = FS_TIP_X + 6, ty = FS_TIP_Y + 18, bx = 8, by = 10; break;
+    case FP_REEL: {
+      float T = fish.T;
+      tx = FS_TIP_X + 4 - (int)(T * 0.1f), ty = FS_TIP_Y + 10 + (int)(T * 0.45f), bx = 10 + (int)(T * 0.26f), by = 8 + (int)(T * 0.22f);
+      break;
+    }
+    case FP_LANDED: tx = 236, ty = 142, bx = -6, by = -10; break;
+    case FP_AWAY: tx = FISH_PIER_X + 68, ty = 140, bx = -6, by = -10; break;
+    default: break;
+  }
+}
+
+static void fsGameAim(uint32_t now) {
+  int x = (int)fish.aimX;  // the aim ring: where the button or Space casts (a tap casts where it goes down)
+  int r = 24 + (int)((now / 120) % 4) * 2;
+  fsRing(x, r, 0xFFFFFF, 2);
+  scRect(x - 2, FS_SURF - 28, x + 1, FS_SURF - 13, 0xFFFFFF);
+  scRect(x - 6, FS_SURF - 16, x + 5, FS_SURF - 13, 0xFFFFFF);
+  scRect(x - 2, FS_SURF - 12, x + 1, FS_SURF - 9, 0xFFFFFF);
+  fsAngler(FS_TIP_X, FS_TIP_Y);
+  fsLine(FS_TIP_X, FS_TIP_Y, FS_TIP_X + 4, FS_TIP_Y + 36, 0, 0xF4F4F8);
+  fsFloat(FS_TIP_X + 4, FS_TIP_Y + 50, fsNight);
+  fsSay(T(S_FISH_TAP_WATER), CX, 396, 0xFFFFFF);
+}
+
+// the hooked fish on the line: its blob swelling on the beat, the float dragged under beside it, a thrash's splashes
+static void fsGameReel(uint32_t now, int tx, int ty) {
+  const FishBlob &b = fish.b[fish.target];
+  const FishClassDef &c = FISH_CLASS[b.cls];
+  float sz = fishBlobSize(b), sw = 1 - fish.beat, swell = 1 + 0.18f * sw * sw * sw * sw;
+  bool warn = fish.warnLeft > 0, thrash = fish.thrashLeft > 0;
+  float bx = b.x, by = b.y;
+  int a = warn && (now / 80) % 2 ? 110 : 205;  // a thrash coming: it flashes
+  fsBlobF(bx, by, sz * swell, a);
+  if (warn) fsBubbles((int)bx, (int)by - 12, 3);
+  int fx = (int)(bx - 5 * sz - 14), fy = (int)by - 6;
+  uint8_t z = fish.zone;
+  Rgb lc = z == 0 ? 0xA8BCD4 : z == 2 ? 0xE8503A : fish.T > c.hi - 8 ? 0xFFE27A : 0xF4F4F8;
+  fsLine(tx, ty, fx + 2, fy, z == 0 ? 26 : 0, lc);
+  fsFloat(fx, fy);
+  if (thrash) {
+    fsSplash((int)bx, FS_SURF - 4, 26, 16, now / 90);
+    fsRing((int)bx, 32 + (int)((now / 60) % 3) * 4, 0xFFFFFF, 2);
+    for (int k = 0; k < 3; k++) {
+      int dx = (int)(5 * sz) + 8;
+      scRect((int)bx + dx, (int)by - 10 + k * 10, (int)bx + dx + 14, (int)by - 7 + k * 10, 0xFFFFFF);
+      scRect((int)bx - dx - 30, (int)by - 10 + k * 10, (int)bx - dx - 16, (int)by - 7 + k * 10, 0xFFFFFF);
+    }
+  }
+  if (now - fishTapT < 160) fsSpin();  // each tap turns the reel
+  if (z == 2) {  // too tight: sparks off the tip
+    static const int8_t SP[3][2] = { { -14, -12 }, { 10, -16 }, { 16, 2 } };
+    if ((now / 100) % 2)
+      for (auto &q : SP) fsSq(tx + q[0], ty + q[1], 4, 0xFFE27A);
+  }
+}
+
+// the end: the total big, the five with what each weighed, the goal bar (bronze, silver, gold) and the record
+static void fsResultLive() {
+  v2DimFrame(115);
+  char b[48];
+  fsBoard(T(S_GAME_FISH), 70);
+  v2Panel(96, 112, 370, V2_AGAIN_Y + V2_AGAIN_H + 16, 12);
+  snprintf(b, sizeof(b), T(S_FISH_KG_FMT), (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
+  setSize(4);
+  gfx->setTextColor(UI_INK);
+  setCur(centerX(b, 4), 118);
+  printT(b);
+  int y = 156, x0 = CX - (5 * 40 + 4 * 6) / 2;
+  for (int i = 0; i < FISH_CASTS; i++) {
+    int x = x0 + i * 46, d = fish.slot[i];
+    gfx->fillRoundRect(x, y, 40, 40, 8, sc565(d < 0 ? 0xE4E6EC : 0xEAF6FB));
+    char w[8];
+    if (d <= 0) {
+      for (int k = 0; k < 14; k += 2) {
+        fsSq(x + 13 + k, y + 13 + k, 4, 0xE8503A);
+        fsSq(x + 27 - k, y + 13 + k, 4, 0xE8503A);
+      }
+      snprintf(w, sizeof(w), "-");
+    } else {
+      const uint8_t *t = thumbs.getForm(d, fish.slotShiny[i]);
+      int h = fsThumbH(t, 1);
+      fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + 38, fsClip[3] = y + 38;
+      fsThumb(t, x + 20, y + 20 + (h < 36 ? h / 2 : 17), 1);
+      fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
+      snprintf(w, sizeof(w), "%u", (unsigned)((fish.slotKg10[i] + 5) / 10));
+    }
+    setSize(2);
+    gfx->setTextColor(V2_INK_MUTED);
+    setCur(x + 20 - textW(w, 2) / 2 + 1, y + 42);
+    printT(w);
+  }
+  const int bx0 = 122, bx1 = 344, by = 222;  // the goals: a bar to 330 kg, a medal at each line
+  const uint32_t gk[3] = { FISH_GOAL_BRONZE, FISH_GOAL_SILVER, FISH_GOAL_GOLD };
+  const Rgb gc[3] = { 0xC8783A, 0xB4BAC8, 0xF8C030 };
+  uint32_t tot = fish.total > 3300 ? 3300 : fish.total;
+  int fx = bx0 + (int)((bx1 - bx0) * tot / 3300);
+  gfx->fillRoundRect(bx0 - 2, by - 2, bx1 - bx0 + 4, 12, 5, sc565(0x1B1B25));
+  gfx->fillRoundRect(bx0, by, bx1 - bx0, 8, 4, sc565(0xD8DCE4));
+  if (fx > bx0) gfx->fillRoundRect(bx0, by, fx - bx0, 8, 4, sc565(0x58B868));
+  for (int k = 0; k < 3; k++) {
+    int mx = bx0 + (int)((bx1 - bx0) * gk[k] / 3300);
+    bool got = fish.total >= gk[k];
+    gfx->fillCircle(mx, by + 4, 9, sc565(0x1B1B25));
+    gfx->fillCircle(mx, by + 4, 7, sc565(got ? gc[k] : 0xE4E6EC));
+    if (got) gfx->fillRect(mx - 3, by + 1, 3, 3, UI_WHITE);
+  }
+  // under it: the goal reached and the record, as much of the two as fits on the line
+  uint8_t g = fishGoal(fish.total);
+  static const StrId GOAL[4] = { STR_COUNT, S_FISH_BRONZE, S_FISH_SILVER, S_FISH_GOLD };
+  char rec[40];
+  if (fishNewHi) snprintf(rec, sizeof(rec), "%s", T(S_NEW_RECORD));
+  else snprintf(rec, sizeof(rec), T(S_FISH_REC_FMT), (unsigned)(pet.fishHi / 10), (unsigned)(pet.fishHi % 10));
+  const char *gw = g ? T(GOAL[g]) : "";
+  setSize(2);
+  int wg = g ? textW(gw, 2) : 0, wr = textW(rec, 2), gap = g ? 16 : 0;
+  if (wg + gap + wr > 266) wr = 0, gap = 0;  // (no room: the medal word alone)
+  int lx = CX - (wg + gap + wr) / 2;
+  if (g) {
+    gfx->setTextColor(sc565(g == 3 ? 0xC08410 : g == 2 ? 0x787E8C : 0xA85A28));
+    setCur(lx, 238);
+    printT(gw);
+  }
+  if (wr) {
+    gfx->setTextColor(fishNewHi ? C565(0xc0, 0x84, 0x10) : V2_INK_MUTED);
+    setCur(lx + wg + gap, 238);
+    printT(rec);
+  }
+  v2AgainButton(V2_AGAIN_Y);
+  v2RepelRowFor(V2_AGAIN_Y);
+}
+
+// the whole screen, a frame
+static void fsGame(uint32_t now) {
+  int hh = sceneHour();
+  fsNight = hh < 6 || hh >= 20;
+  fsScene();
+  fsBlobsLive(now);
+  int tx, ty, bx, by;
+  fsRodNow(tx, ty, bx, by);
+  FishPhase ph = fish.phase;
+  bool hud = ph <= FP_REEL || ph == FP_AWAY;
+  switch (ph) {
+    case FP_AIM: fsGameAim(now); break;
+    case FP_FLY: {
+      float p = fish.t / FISH_FLY_S;
+      p = p > 1 ? 1 : p;
+      int fx = (int)(fish.fromX + (fish.floatX - fish.fromX) * p);
+      int fy = (int)((FS_TIP_Y + 30) * (1 - p) + FS_SURF * p - 70 * sinf(3.14159f * p));
+      fsAngler(tx, ty, bx, by);
+      fsLine(tx, ty, fx, fy - 14, -6, 0xF4F4F8);
+      fsFloat(fx, fy, fsNight);
+      break;
+    }
+    case FP_WAIT: {
+      int fx = (int)fish.floatX, fy = FS_SURF + ((now / 600) % 2 ? 0 : 2);
+      bool nib = fish.nibbled && fish.t - fish.lastNibble < 0.15f;
+      if (nib) fy += 6;
+      if (fish.nibbled && fish.t - fish.lastNibble < 0.5f) {
+        fsRing(fx, 12 + (int)((fish.t - fish.lastNibble) * 30), 0xFFFFFF, 2);
+        for (int k = 0; k < 2; k++) {
+          scRect(fx - 24, FS_SURF - 22 + k * 8, fx - 19, FS_SURF - 19 + k * 8, 0xFFFFFF);
+          scRect(fx + 20, FS_SURF - 22 + k * 8, fx + 25, FS_SURF - 19 + k * 8, 0xFFFFFF);
+        }
+      } else if ((now % 2500) < 700) {
+        fsRing(fx, 12 + (int)(now % 2500) / 40, fsNight ? 0x6A8CB8 : 0xE6F6FF, 2);  // a soft ring now and then
+      }
+      fsAngler(tx, ty, bx, by);
+      fsLine(tx, ty, fx, FS_SURF - 18 + (fy - FS_SURF), 14, 0xF4F4F8);
+      fsHook(fx, fy + 12, fy + 52);
+      fsFloat(fx, fy, fsNight);
+      break;
+    }
+    case FP_BITE: {
+      int fx = (int)fish.floatX;
+      float w = FISH_CLASS[fish.b[fish.target].cls].window, p = fish.t / w;
+      fsRimGlowFast(fsNight ? 0xFFE27A : 0xFFF3B0, (int)(220 * (1 - p * 0.5f)), 34);
+      fsAngler(tx, ty, bx, by);
+      fsLine(tx, ty, fx, FS_SURF + 30, 0, 0xFFE27A);
+      fsFloat(fx, FS_SURF + 34, fsNight);
+      fsRing(fx, 28 + (int)(p * 30), 0xFFFFFF, 4);
+      fsRing(fx, 16 + (int)(p * 20), 0xFFFFFF, 2);
+      if (p < 0.5f) fsSplash(fx, FS_SURF - 6, 30, 22, 7);
+      int r = 70 - (int)(52 * (p > 1 ? 1 : p));  // the strike window, closing
+      fsCircle(fx, FS_SURF + 6, r, 0x1B1B25, 6);
+      fsCircle(fx, FS_SURF + 6, r, 0xFFFFFF, 2);
+      fsBang(fx - 4, FS_SURF - 92);
+      fsSay(T(S_FISH_TAP), CX - 6, 396, 0xFFE27A, 4);
+      break;
+    }
+    case FP_REEL: {
+      const FishClassDef &c = FISH_CLASS[fish.b[fish.target].cls];
+      if (fish.zone == 2) fsRimGlowFast(0xE8503A, 150 + (int)(80 * sinf(now * 0.019f)), 40);  // pulsing, 3 times a second
+      else if (fish.zone == 0) fsRimGlowFast(0x7CC4EA, 170, 34);
+      fsAngler(tx, ty, bx, by);
+      fsGameReel(now, tx, ty);
+      fsArcDraw(fish.T, c.lo, c.hi, fish.beat < 0.2f);
+      if (fish.zone == 2) fsSay(T(S_FISH_SLOWER), CX - 10, 386, 0xFF8A7A, 4);
+      else if (fish.zone == 0) fsSay(T(S_FISH_FASTER), CX - 10, 386, 0x9FD6F0, 4);
+      else if (fish.t < 2.5f && fish.b[fish.target].cls == FC_SMALL) fsSay(T(S_FISH_QUICK), CX - 10, 396, 0xFFFFFF);
+      else if (fish.t < 2.5f && fish.b[fish.target].cls >= FC_HEAVY) fsSay(T(S_FISH_STEADY), CX - 10, 396, 0xFFFFFF);
+      if (fishTapX >= 0 && now - fishTapT < 200) fsTapMark(fishTapX, fishTapY);
+      break;
+    }
+    case FP_LANDED: {
+      const FishBlob &b = fish.b[fish.target];
+      int16_t dex = fish.slot[fish.cast];
+      bool giant = fish.target == FISH_GIANT;
+      float p = fish.t / FISH_LANDED_S, up = sinf(3.14159f * (p * 1.4f > 1 ? 1 : p * 1.4f) * 0.5f);
+      int cx = (int)b.x, feet = FS_SURF + 30 - (int)(up * (giant ? 116 : 104));
+      if (giant) {
+        fsRays(cx, feet - 60, 18, 0xFFE27A, 110);
+        twGlow(cx, feet - 60, 110, 0xFFF3B0, 190);
+      } else {
+        twGlow(cx, feet - 34, 70, 0xFFF3B0, 170);
+      }
+      fsAngler(tx, ty, bx, by);
+      fsLine(tx, ty, cx - 14, feet - 30, 4, giant ? 0xFFE27A : 0xF4F4F8);
+      fsThumb(thumbs.getForm(dex, fish.slotShiny[fish.cast]), cx, feet, 3);
+      fsSplash(cx, FS_SURF + 4, giant ? 60 : 40, giant ? 40 : 26, 21);
+      fsRing(cx, 50, 0xFFFFFF, 2);
+      for (int i = 0; i < 4; i++) {
+        static const int8_t SP[4][2] = { { -62, -70 }, { 58, -86 }, { 66, -24 }, { -50, -10 } };
+        if ((now / 200 + i) % 4 == 0) continue;
+        int gx = cx + SP[i][0], gy = feet - 40 + SP[i][1];
+        scGridRect(gx, gy - 8, gx + 4, gy + 12, 0xFFFFFF);
+        scGridRect(gx - 8, gy, gx + 12, gy + 4, 0xFFFFFF);
+      }
+      char nm[40];
+      snprintf(nm, sizeof(nm), "%s!", dexName(dex));
+      if (giant) {
+        char cb[40];
+        v2SignIn(v2Caps(nm, cb, sizeof(cb)), 44, C565(0xc0, 0x84, 0x10), C565(0xf0, 0xc0, 0x4a));
+        fsSay(T(S_FISH_BIG), CX - 20, 392, 0xFFE27A, 3);
+      } else {
+        fsBoard(nm, 44);
+      }
+      break;
+    }
+    case FP_WEIGH: {
+      int16_t dex = fish.slot[fish.cast];
+      uint16_t kg = fish.slotKg10[fish.cast];
+      fsAngler(FS_TIP_X, FS_TIP_Y);
+      v2DimFrame(115);
+      fsBoard(T(S_FISH_WEIGH), 70);
+      v2Panel(108, 112, 358, 360, 12);
+      float p = fish.t / 0.8f;
+      fsScale(CX, 236, (int)(kg * (p > 1 ? 1 : p)), thumbs.getForm(dex, fish.slotShiny[fish.cast]));
+      char w[20];
+      snprintf(w, sizeof(w), T(S_FISH_KG_FMT), (unsigned)(kg / 10), (unsigned)(kg % 10));
+      setSize(4);
+      gfx->setTextColor(UI_INK);
+      setCur(centerX(w, 4), 322);
+      if (p >= 1) printT(w);
+      fsSay(T(S_FISH_BACK), CX, 376, 0xFFFFFF);
+      break;
+    }
+    case FP_AWAY: {
+      if (fish.why == FW_SLOW) {
+        int fx = (int)fish.floatX;
+        fsAngler(FS_TIP_X, FS_TIP_Y);
+        fsLine(FS_TIP_X, FS_TIP_Y, fx, FS_SURF - 18, 14, 0xF4F4F8);
+        fsFloat(fx, FS_SURF + ((now / 300) % 2 ? 0 : 3), fsNight);
+        fsRing(fx, 20 + (int)(fish.t * 20), 0xFFFFFF, 2);
+        fsSay(T(S_FISH_TOO_SLOW), CX, 150, 0xFF8A7A, 3);
+        break;
+      }
+      fsAngler(tx, ty, bx, by);
+      for (int i = 0; i < 40; i++) {  // the line hanging from the tip: snapped and curling, or limp
+        int lx = tx + (fish.why == FW_SNAP ? (int)(8 * sinf(i * 0.2f)) + i / 4 : i / 6), ly = ty + i * 2;
+        fsSq(lx, ly, 4, i % 2 ? 0x1B1B25 : 0xF4F4F8);
+      }
+      for (int i = 0; i < 40; i++)
+        fsSq(tx + (fish.why == FW_SNAP ? (int)(8 * sinf(i * 0.2f)) + i / 4 : i / 6), ty + i * 2, 2, 0xFFFFFF);
+      fsBoard(T(S_FISH_AWAY), 44, C565(0x8a, 0x2a, 0x30), C565(0xb8, 0x40, 0x44));
+      if (fish.why == FW_SNAP) fsSay("SNAP!", 300, 146, 0xFF8A7A, 3);
+      hud = false;
+      break;
+    }
+    case FP_END:
+      fsAngler(FS_TIP_X, FS_TIP_Y);
+      fsResultLive();
+      return;
+  }
+  if (fish.soonT > 0 && ph == FP_WAIT) fsSay(T(S_FISH_TOO_SOON), CX, 150, 0xFF8A7A, 3);
+  if (hud) fsSlotsLive();
+  if (ph == FP_BITE && fish.t < 0.2f) {  // a short shake as it bites: the picture jolts side to side
+    int dx = (now / 40) % 2 ? 4 : -4;
+    uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+    for (int y = 0; y < V2_W; y++) {
+      uint16_t *row = fb + y * V2_W;
+      if (dx > 0) memmove(row + dx, row, (V2_W - dx) * 2);
+      else memmove(row, row - dx, (V2_W + dx) * 2);
+    }
+  }
 }
 
 // ===================================================================== its medals (FISHMOCK 17..19), PARKED

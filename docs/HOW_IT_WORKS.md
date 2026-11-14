@@ -39,9 +39,10 @@ Games don't raise anything if you quit by swiping up.
 | 🏃 **Rock Hopper** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
 | 🏄 **PikaSurf** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
 | 🕳️ **Dungeon Crawler** | +5, plus 4 per floor | −10, more for deep dives | −5 | Yes | +2 | Yes |
+| 🎣 **Reel Fishing** | +5, plus 2 per 20 kg | −10, more for heavy catches | −5 | Yes | +2 | Yes |
 | ❓ **Who's That?** | +3, plus 3 per right answer | | | | +1 | |
 
-Berry Drop, Rock Hopper, PikaSurf and Dungeon Crawler each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
+Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Reel Fishing each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
 
 At the end, **Play Again!** starts the same game again and the ✕ goes back to the games; a tap on the Repel bar under them opens the Repel's page on your Pokémon's card. Every second you actually play counts toward a Repel (see [Items](#items)): not the how-to card or the end, and only while you're touching, tilting or pressing keys, so sitting in the dungeon earns nothing. The games with a buddy count too.
 
@@ -95,7 +96,7 @@ Every form in the Pokédex (regular and shiny count apart) has 1–3 ★: its ge
 
 - **Winning a battle** adds attack training (+6 a win).
 - **Every 6 hours of good care** adds defense training (+1). Good care means every need stays at 40 or more. Hours asleep count too, and a need can dip under 40 for up to 15 minutes while it's awake (time to notice and feed it) before the 6 hours start over. The count is saved, so a restart or an update doesn't lose it.
-- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf and Dungeon Crawler add 1 for every 5 points.
+- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Reel Fishing add 1 for every 5 points.
 - **Weight** isn't training: every berry adds 4 and candy 12 (6 more if it was already 80% full). Games, battles and time burn it off. Over 50, energy drops twice as fast; 20 or less earns the Fit medal.
 
 Each kind of training stops at 100. Hold your Pokémon and tap **Stats** for the card, then two pages on: the **Training** page shows each one's bar, with **MAX** when it's full, and what trains it, plus a row for weight. Training belongs to the Pokémon: a new one starts from zero.

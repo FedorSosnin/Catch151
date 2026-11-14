@@ -41,6 +41,7 @@
 #include "src/minigames.h"
 #include "src/pokerun.h"
 #include "src/surf.h"
+#include "src/fishing.h"
 #include "src/dungeon.h"
 #include "src/zones.h"
 #include "src/zones_art.h"
@@ -270,6 +271,15 @@ PmdMon surfPika;  // Pikachu on his board (in a duel, the buddy's Pokemon on it)
 uint32_t surfLast = 0, surfOverT = 0;
 uint8_t surfScale = 3;
 float surfAcc = 0;  // time not yet stepped: the game moves in fixed steps (SURF_FIXED_DT)
+// Reel Fishing (fishing.h): five casts off the Beach's pier, each fish weighed and let go (fishing_v2.h draws it)
+bool fishOpen = false, fishNewHi = false;
+FishState fish;
+uint32_t fishLast = 0, fishOverT = 0;
+uint32_t fishTapT = 0, fishBiteT = 0, fishSoonT = 0, fishStrainT = 0;  // when each last happened (the screen's flashes)
+int16_t fishTapX = -1, fishTapY = -1;  // where the finger last went down (its ring)
+bool fishBot = false;                  // FISHBOT on the console: it plays by itself, by eye (testing, screenshots)
+uint32_t fishBotT = 0;
+uint32_t gBacklightFlashUntil = 0;     // the Knomi's backlight to full until then (the bite; too tight)
 // a PikaSurf duel with a buddy (BK_SURF): both on the same course (the session id is the seed), each
 // sending where it is and its time; the buddy rides alongside in Pikachu's place. Whoever lasts longer
 // wins; the first to crash waits for the other, then both go back to Play together
@@ -723,7 +733,7 @@ void loop() {
   static uint32_t autoTriedT = 0;
   // V2: from any screen a restart loses nothing on (Fedor: "the knomi finds the update but never auto install it":
   // menus stay open when left alone, and only the light wakes the pet), and asleep in the middle of the day (otaAutoNow())
-  bool otaBusy = pet.ceremony || choiceKind || confirmUntil || bsState != BS_IDLE || gameOpen || runOpen || surfOpen ||
+  bool otaBusy = pet.ceremony || choiceKind || confirmUntil || bsState != BS_IDLE || gameOpen || runOpen || surfOpen || fishOpen ||
                  dungeonOpen || battleOpen || quizOpen || vbOpen || sdOpen || tradeOpen || kbOpen ||
                  wifiSetupState() != WS_OFF || towerClimbing();
 #define OTA_AUTO_WHEN otaAutoNow(screenOff || dimStage >= 1, otaBusy, pet.sleeping, sceneHour())
@@ -803,8 +813,9 @@ PowerCtx powerCtx(uint32_t now) {
   // a battle waits for you (it no longer ends by itself): left alone long enough to dim, it is
   // drawn at the slower rates like any other screen
   bool battleIdle = battleOpen && c.idleMs > POWER_DIM1_MS;
-  c.gameOpen = gameOpen || (battleOpen && !battleIdle) || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen;
-  c.arcadeOpen = runOpen || surfOpen || dungeonOpen || vbOpen;
+  c.gameOpen = gameOpen || (battleOpen && !battleIdle) || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen ||
+               fishOpen;
+  c.arcadeOpen = runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen;  // (Reel Fishing: 25 fps, its beat smooth)
   c.usb = usbPresent();
   c.charging = batCharging();
   c.batPct = batPercent();
@@ -833,6 +844,7 @@ void updateBrightness(uint32_t now) {
   PowerCtx c = powerCtx(now);
   dimStage = dimStageFor(c.idleMs);
   uint8_t target = brightnessFor(c);
+  if (target && (int32_t)(gBacklightFlashUntil - now) > 0) target = 255;  // Reel Fishing's bite: a flash
   static uint8_t current = 255;
   if (target != current) {
     current = target;
@@ -1045,6 +1057,9 @@ void handleSerial() {
   } else if (line == "DNBOT" && pet.noSave) {  // descends by itself, to see deep floors
     startDungeon();
     dnBot = true;
+    Serial.println("DONE");
+  } else if (line == "FISHBOT" && pet.noSave) {  // Reel Fishing plays by itself, as a careful player (testing)
+    fishBot = !fishBot;
     Serial.println("DONE");
   } else if (line == "RUNBOT" && pet.noSave) {  // plays by itself, to see high speeds
     runBot = !runBot;
@@ -1328,7 +1343,8 @@ void handleTouch() {
 
   // games: the touch is resolved on finger lift, so that swiping up exits
   // without pressing anything on the way. Only the Rock Hopper jump fires on touch-down: there every ms counts.
-  if (battleOpen || quizOpen || gamesMenuOpen || gameOpen || runOpen || surfOpen || dungeonOpen || zoneScreen || sdOpen || vbOpen) {
+  if (battleOpen || quizOpen || gamesMenuOpen || gameOpen || runOpen || surfOpen || dungeonOpen || zoneScreen || sdOpen || vbOpen ||
+      fishOpen) {
     if (pressed) { tXl = x; tYl = y; }  // tXl: aim with the finger where there is no accelerometer
     // in the dungeon, keeping the finger down keeps walking
     if (dungeonOpen && !introUp() && pressed && wasPressed && !swallowGesture && !dnOverT && millis() - tStart > 350 &&
@@ -1349,6 +1365,7 @@ void handleTouch() {
       screenOff = false;
       wakeUI();
       if (runOpen && !introUp() && !swallowGesture) runJump = true;
+      if (fishOpen && !introUp() && !swallowGesture) fishTouchDown(x, y);  // a cast, a strike, a reel: on the touch
     }
     if (pressed) {
       pressUpdate(x, y);
@@ -2121,7 +2138,7 @@ void printT(const char *s) {
 static bool staticScreen() {
   if (pet.awaitingStarter()) return false;  // V2: the starters walk
   if (pet.awaitingStarter()) return true;
-  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen) return false;  // the gallery manages its own repainting
+  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen || fishOpen) return false;  // the gallery manages its own repainting
   if (clockOpen && clockPage == V2_ABOUT_PAGE) return false;  // V2: About's coin spins and gleams
   if (kbOpen || clockOpen) return true;
   if (cardOpen && !cardAch && cardPage >= 4) return false;  // V2: an item's page: the item hovers (Fedor)
@@ -2250,6 +2267,10 @@ bool render() {
   }
   if (surfOpen) {
     renderSurf();
+    return true;
+  }
+  if (fishOpen) {
+    renderFish();
     return true;
   }
   if (battleOpen) {
@@ -2485,6 +2506,7 @@ void quitGame() {
     closeSurf();
   }
   if (dungeonOpen) closeDungeon();
+  if (fishOpen) closeFish();
   gameOpen = gamesMenuOpen = false;
 }
 
@@ -2496,7 +2518,7 @@ void autoRotateTick(uint32_t now) {
   static RotFilter filter;
   if (now - last < 100) return;
   last = now;
-  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || (battleOpen && bPhase >= BP_AIM)) {
+  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || fishOpen || (battleOpen && bPhase >= BP_AIM)) {
     filter.reset();
     return;
   }
@@ -2583,19 +2605,19 @@ void stepGame() {
 
 // ---------- games menu ----------
 // As the zones: a round window onto each game, its own scene with your Pokemon in it, the name under.
-#define GAMES_COUNT 5    // battles have their own icon on the home screen
+#define GAMES_COUNT 6    // battles have their own icon on the home screen
 #define GAME_ICON_R 50
 
 const char *gameLabel(int row) {
-  static const StrId L[GAMES_COUNT] = { S_GAME_TILT, S_GAME_WHO, S_GAME_RUN, S_GAME_DUNGEON, S_GAME_SURF };
+  static const StrId L[GAMES_COUNT] = { S_GAME_TILT, S_GAME_WHO, S_GAME_RUN, S_GAME_DUNGEON, S_GAME_SURF, S_GAME_FISH };
   return T(L[row]);
 }
 
 // how to play it, plainly: the ways to move and the point. Two versions where the controls differ: the
 // Knomi's (tilting, touch) and the one for computers and the web (the arrow keys too); neither names a device
 const char *gameHowTo(int row) {
-  static const StrId H[GAMES_COUNT] = { S_HOW_BERRY, S_HOW_WHO, S_HOW_RUN, S_HOW_DN, S_HOW_SURF };
-  static const StrId K[GAMES_COUNT] = { S_HOW_BERRY_KEYS, S_HOW_WHO, S_HOW_RUN, S_HOW_DN_KEYS, S_HOW_SURF_KEYS };
+  static const StrId H[GAMES_COUNT] = { S_HOW_BERRY, S_HOW_WHO, S_HOW_RUN, S_HOW_DN, S_HOW_SURF, S_HOW_FISH };
+  static const StrId K[GAMES_COUNT] = { S_HOW_BERRY_KEYS, S_HOW_WHO, S_HOW_RUN, S_HOW_DN_KEYS, S_HOW_SURF_KEYS, S_HOW_FISH_KEYS };
   return T(playKeysUi ? K[row] : H[row]);
 }
 
@@ -2694,7 +2716,7 @@ int drawWrapped(const char *s, uint8_t size, int maxW, int y, int lineH, bool dr
 }
 
 // a card is up over a game that is open (a card left over from a closed game counts for nothing)
-bool introUp() { return introCard >= 0 && (gameOpen || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen); }
+bool introUp() { return introCard >= 0 && (gameOpen || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen || fishOpen); }
 
 // Play together's games have cards too (after the Games menu's 0..4): the same card on both boards, and
 // the game begins once both players have pressed Ready, GO! (buddyGameReady)
@@ -2801,6 +2823,9 @@ void introBegin(int g) {
   } else if (g == 4) {
     surfLast = now;
     tiltZero();
+  } else if (g == 5) {
+    fishLast = now;
+    tiltZero();
   } else if (g >= CARD_VOLLEY) {  // a game with a buddy: say you're ready; it begins when they are too
     bReadyMine = true;
     bReadySendT = 0;
@@ -2852,8 +2877,9 @@ void gamesMenuTap(int16_t x, int16_t y) {
   else if (g == 1) startQuiz();
   else if (g == 2) startRun();
   else if (g == 3) startDungeon();
-  else startSurf();
-  if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen) introOpen(g);  // it opens under its card
+  else if (g == 4) startSurf();
+  else startFish();
+  if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen) introOpen(g);  // it opens under its card
 }
 
 // the art in a rounded square r from its centre, its corners rad round
@@ -3032,7 +3058,7 @@ void endVisit() {
 
 // checks the time and advances the visit, even with another screen open on top
 bool onMainScreen() {
-  return !gameOpen && !runOpen && !surfOpen && !dungeonOpen && !battleOpen && !quizOpen && !gamesMenuOpen && !zoneScreen && !galleryOpen && !cardOpen &&
+  return !gameOpen && !runOpen && !surfOpen && !dungeonOpen && !fishOpen && !battleOpen && !quizOpen && !gamesMenuOpen && !zoneScreen && !galleryOpen && !cardOpen &&
                       !kbOpen && !clockOpen && !choiceKind && !confirmUntil && !buddyMenuOpen && !partyOpen && !tradeOpen &&
                       !playMenuOpen && !sdOpen && !vbOpen;
 }
@@ -3132,6 +3158,7 @@ void knomiButtonTap() {
   screenOff = false;
   wakeUI();
   if (wasAsleep) return;  // in the dark it only wakes, like the touchscreen
+  if (fishOpen) return;  // (Reel Fishing has the button as it goes down: handleKnomiButton())
 #if defined(BOARD_HOST)
   if (v2KeyThrow()) return;  // V2 on a computer: Space throws on the catch (master_v2.h)
 #endif
@@ -3149,6 +3176,7 @@ void knomiAskReset() {
   if (runOpen) closeRun();
   if (surfOpen) closeSurf();
   if (dungeonOpen) closeDungeon();
+  if (fishOpen) closeFish();
   gamesMenuOpen = playMenuOpen = false;
   zoneDetailClose();
   zoneScreen = ZS_NONE;
@@ -3173,6 +3201,7 @@ void handleKnomiButton(uint32_t now) {
     down = true;
     resetAsked = false;
     downAt = now;
+    if (fishOpen && !screenOff && dimStage == 0) fishButton();  // Reel Fishing: the button casts, strikes, reels
   } else if (pressed && !resetAsked && now - downAt >= KNOMI_BTN_RESET_MS) {
     resetAsked = true;
     knomiAskReset();
@@ -3182,6 +3211,8 @@ void handleKnomiButton(uint32_t now) {
     if (held < 30 || resetAsked) return;  // 30 ms: debounce
     if (held < KNOMI_BTN_HOLD_MS) {
       knomiButtonTap();
+    } else if (fishOpen) {
+      // Reel Fishing has the button: a long press is just a press there, never the screen off
     } else if (held < KNOMI_BTN_HOLD_MAX_MS) {
       screenOff = !screenOff;
       if (!screenOff) wakeUI();
@@ -4554,6 +4585,149 @@ void renderRun() {
     }
   }
   drawIntroCard();  // its how-to-play card, while it is up
+  gfx->flush();
+}
+
+// ---------- Reel Fishing ----------
+// Five casts off the Beach's pier (fishing.h), drawn by fishing_v2.h. Tap the water to cast (tilting or the arrow
+// keys move the aim ring, and the button or Space casts there), tap when the float goes under, then tap at the fish's
+// pace to reel it in; each one is weighed and let go. It all reads on the screen alone (the Knomi has no speaker):
+// the sounds, and the buzzes that come with them on a phone or a controller, only add to it.
+void startFish() {
+  if (pet.isEgg() || pet.sleeping || pet.ceremony) { sfxPlay(SFX_DENY); return; }
+  fishStart(fish, esp_random());
+  fishOpen = true;
+  fishNewHi = false;
+  fishOverT = 0;
+  fishLast = millis();
+  fishTapT = fishBiteT = fishSoonT = fishStrainT = 0;
+  fishTapX = fishTapY = -1;
+  fishBotT = 0;
+  tiltZero();
+}
+
+void closeFish() {
+  fishOpen = false;
+  introCard = -1;
+  gBacklightFlashUntil = 0;
+#if HAS_MUSIC
+  musicTempo(1.0f);
+#endif
+}
+
+// what happened: its sound (and through it its buzz), the backlight's flash, the times the screen's flashes follow
+void fishEvents(uint32_t ev) {
+  if (!ev) return;
+  uint32_t now = millis();
+  if (ev & FE_CAST) sfxPlay(SFX_FISH_CAST);
+  if (ev & FE_SPLASH) sfxPlay(SFX_FISH_PLIP);
+  if (ev & FE_NIBBLE) sfxPlay(SFX_FISH_NIBBLE);
+  if (ev & FE_BITE) {
+    sfxPlay(SFX_FISH_BITE);
+    fishBiteT = now | 1;
+    gBacklightFlashUntil = now + 160;  // the Knomi's backlight flashes (Fedor: "If thats doable, sure!")
+  }
+  if (ev & FE_HOOK) sfxPlay(SFX_FISH_HOOK);
+  if (ev & (FE_TOO_SOON | FE_TOO_SLOW | FE_SLIP)) sfxPlay(SFX_DENY);
+  if (ev & FE_TOO_SOON) fishSoonT = now | 1;
+  if (ev & FE_REEL) {
+    fishTapT = now | 1;
+    if (!(ev & (FE_RED | FE_SNAP | FE_LANDED))) sfxPlay(SFX_FISH_REEL);
+  }
+  if (ev & FE_WARN) sfxPlay(SFX_FISH_WARN);
+  if (ev & FE_RED) {
+    sfxPlay(SFX_FISH_STRAIN);
+    fishStrainT = now;
+  }
+  if (ev & FE_BLUE) sfxPlay(SFX_FISH_SLACK);
+  if (ev & FE_SNAP) sfxPlay(SFX_FISH_SNAP);
+  if (ev & FE_LANDED) sfxPlay(fish.target == FISH_GIANT ? SFX_MEDAL : SFX_FISH_LANDED);
+  if (ev & FE_WEIGH) {
+    sfxPlay(SFX_FISH_SCALE);
+#if HAS_MUSIC
+    voiceSay(fish.slot[fish.cast], VOICE_WIN);  // its own cry as it goes back in
+#endif
+  }
+  if (ev & FE_END) {
+    fishNewHi = fish.total > pet.fishHi;
+    pet.fishResult((uint16_t)(fish.total > 65535 ? 65535 : fish.total));  // the reward and record only at the end
+    sfxPlay(fishNewHi || fishGoal(fish.total) == 3 ? SFX_MEDAL : SFX_PLAY);
+    fishOverT = now | 1;
+    Serial.printf("reel fishing: %u.%u kg\n", (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
+  }
+}
+
+// a finger down on the screen: aiming, a cast to where it is; otherwise a strike, a reel, on from the weigh-in (or,
+// while waiting, too soon). The end's buttons act on the lift (v2GameEnd())
+void fishTouchDown(int16_t x, int16_t y) {
+  if (fishOverT) return;
+  fishTapX = x, fishTapY = y;
+  fishEvents(fish.phase == FP_AIM ? fishCastAt(fish, x) : fishTap(fish));
+}
+
+// the Knomi's button, or Space on a computer: the card's READY, GO!, then a cast at the aim ring, a strike, a reel
+void fishButton() {
+  if (!fishOpen || fishOverT) return;
+  v2PlayInputAt = millis();
+  if (introUp()) {
+    introDismiss(0, -1);
+    return;
+  }
+  fishTapX = fishTapY = -1;
+  fishEvents(fishTap(fish));
+}
+
+// FISHBOT: casts by the heaviest fish, strikes at once, reels by eye (a tap when the notch sinks to the green's lower
+// half), moves on from the weigh-in: the careful bot of test/test_fishing.cpp
+void fishBotStep(uint32_t now) {
+  if (now - fishBotT < 150) return;
+  if (fish.phase == FP_AIM && fish.t > 0.8f) {
+    int best = -1;
+    for (int i = 0; i < FISH_BLOBS; i++)
+      if (fish.b[i].on && fish.b[i].gone <= 0 && (best < 0 || fish.b[i].kg10 > fish.b[best].kg10)) best = i;
+    fishTouchDown(best >= 0 ? (int16_t)fish.b[best].x : 300, 300);
+  } else if (fish.phase == FP_BITE && fish.t > 0.12f) {
+    fishTouchDown(300, 300);
+  } else if (fish.phase == FP_REEL) {
+    const FishClassDef &c = FISH_CLASS[fish.b[fish.target].cls];
+    if (fish.T > (c.lo + c.hi - c.pull) * 0.5f) return;
+    fishTouchDown(260, 330);
+  } else if (fish.phase == FP_WEIGH && fish.t > 1.2f) {
+    fishTouchDown(300, 300);
+  } else {
+    return;
+  }
+  fishBotT = now;
+}
+
+void renderFish() {
+  if (pet.ceremony) {
+    closeFish();
+    return;
+  }
+  uint32_t now = millis();
+  float dt = (now - fishLast) / 1000.0f;
+  fishLast = now;
+  if (dt > 0.1f) dt = 0.1f;  // a stall (a flash save) mustn't make the fish leap ahead
+  if (!introPaused() && !fishOverT) {
+    if (fish.phase == FP_AIM && !wasPressed) {  // tilting or the arrow keys move the aim ring
+      fish.aimX += playerTilt() * 220 * dt;
+      fish.aimX = fish.aimX < FISH_CAST_X0 ? FISH_CAST_X0 : fish.aimX > FISH_CAST_X1 ? FISH_CAST_X1 : fish.aimX;
+    }
+    if (fishBot) fishBotStep(now);
+    fishEvents(fishStep(fish, dt));
+    if (fish.phase == FP_REEL && fish.zone == 2 && now - fishStrainT > 350) {  // too tight: the warning again and
+      sfxPlay(SFX_FISH_STRAIN);                                               // again, the Knomi's backlight pulsing
+      fishStrainT = now;
+      gBacklightFlashUntil = now + 90;
+    }
+    if (fish.phase >= FP_FLY && fish.phase <= FP_REEL) lastInteract = now;  // a cast out keeps the screen awake
+  }
+#if HAS_MUSIC
+  musicTempo(fish.phase == FP_REEL && fish.target >= 0 ? FISH_CLASS[fish.b[fish.target].cls].pace * 60 / 150.0f : 1.0f);
+#endif
+  fsGame(now);
+  drawIntroCard();
   gfx->flush();
 }
 
@@ -8205,6 +8379,7 @@ void gameTap(int16_t x, int16_t y) {
   else if (runOpen) runTap();
   else if (surfOpen) surfTap();
   else if (dungeonOpen && !dnHeld) dungeonTap(x, y);
+  // (Reel Fishing acts on the touch going down: fishTouchDown())
 }
 
 static bool pressIn(int16_t x, int16_t y, int rx, int ry, int rw, int rh) {
@@ -8290,7 +8465,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     if (v2PressNav(x, y, t, 0, 0, 0, true, ZONE_CLOSE_Y)) return true;  // V2: its X
     return false;  // Pokedex grids (here and below) swipe between pages: a slow swipe must not pick a square
   }
-  if (gameOpen || runOpen || surfOpen || dungeonOpen || vbOpen) return false;  // aiming, jumping, surfing, walking, volleying: no buttons
+  if (gameOpen || runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen) return false;  // aiming, jumping, surfing, walking, volleying, fishing: no buttons
 
   // --- everything else (same order as onTap) ---
   if (pet.awaitingStarter()) {

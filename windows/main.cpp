@@ -429,6 +429,18 @@ static const Buzz kBuzz[] = {
   {1, {120}, 0xA000},                      // goodbye
   {3, {40, 50, 60}, 0xB000},               // level up
   {1, {50}, 0x9000}, {1, {50}, 0x9000}, {1, {50}, 0xA000},  // the ball rocks: one, two, three
+  {1, {20}, 0x5000},                       // Reel Fishing: the cast
+  {0, {0}, 0},                             // ...the float lands (none)
+  {1, {25}, 0x4000},                       // ...a nibble
+  {1, {110}, 0xF000},                      // ...the bite
+  {1, {40}, 0x8000},                       // ...hooked
+  {0, {0}, 0},                             // ...a tap's reel click (none)
+  {3, {30, 40, 30}, 0x7000},               // ...a thrash coming
+  {1, {80}, 0xC000},                       // ...too tight
+  {3, {40, 80, 40}, 0x6000},               // ...too slack
+  {1, {220}, 0xE000},                      // ...snapped
+  {5, {40, 50, 40, 50, 140}, 0xB000},      // ...landed
+  {1, {25}, 0x5000},                       // ...the weigh-in
 };
 
 static int controllerIndex() {  // the first one connected, or -1
@@ -439,7 +451,7 @@ static int controllerIndex() {  // the first one connected, or -1
 }
 
 static void haptic(uint8_t sfx) {  // the game's thread: hands the effect over, never waits
-  if (!gVibeOn || !gXSet || sfx >= sizeof(kBuzz) / sizeof(kBuzz[0])) return;
+  if (!gVibeOn || !gXSet || sfx >= sizeof(kBuzz) / sizeof(kBuzz[0]) || !kBuzz[sfx].count) return;  // (none: not cutting one short)
   std::lock_guard<std::mutex> l(gVibeLock);
   gVibeNext = sfx;
   gVibeWake.notify_one();

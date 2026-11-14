@@ -92,6 +92,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Ahora no",  // the grey button under EVOLVE!
     "Tu %s quiere evolucionar!",  // the hold's EVOLVE box heading
     "M\243sica",  // the settings page's Music row
+    "Reel Fishing",
+    "Toca el agua junto a un pez para lanzar: los grandes pesan m\240s! Cuando el flotador se hunda, toca! Luego toca al ritmo para recogerlo.",
+    "Haz clic en el agua o pulsa Espacio para lanzar junto a un pez: los grandes pesan m\240s! Cuando el flotador se hunda, toca! Luego toca al ritmo.",
+    "TOCA EL AGUA",
+    "TOCA!",
+    "TOQUES RAPIDOS!",
+    "LENTO Y CONSTANTE",
+    "MAS LENTO!",
+    "MAS RAPIDO!",
+    "DEMASIADO PRONTO!",
+    "DEMASIADO TARDE!",
+    "SE ESCAPO!",
+    "PESAJE",
+    "AL AGUA OTRA VEZ!",
+    "EL GRANDE!",
+    "SEDAL",
+    "BRONCE!",
+    "PLATA!",
+    "ORO!",
+    "%u.%u kg",
+    "RECORD: %u.%u kg",
   },
   // ---------------- EN ----------------
   {
@@ -178,6 +199,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Not now",  // the grey button under EVOLVE!
     "Your %s is trying to evolve!",  // the hold's EVOLVE box heading
     "Music",  // the settings page's Music row
+    "Reel Fishing",
+    "Tap the water to cast by a fish: big ones weigh more! When the float goes under, tap! Then tap to the beat to reel it in.",
+    "Click the water or press Space to cast by a fish: big ones weigh more! When the float goes under, strike! Then tap to the beat to reel it in.",
+    "TAP THE WATER",
+    "TAP!",
+    "QUICK TAPS!",
+    "SLOW AND STEADY",
+    "SLOWER!",
+    "FASTER!",
+    "TOO SOON!",
+    "TOO SLOW!",
+    "IT GOT AWAY!",
+    "WEIGH-IN",
+    "BACK IN IT GOES!",
+    "THE BIG ONE!",
+    "LINE",
+    "BRONZE!",
+    "SILVER!",
+    "GOLD!",
+    "%u.%u kg",
+    "BEST: %u.%u kg",
   },
   // ---------------- FR ----------------
   {
@@ -264,6 +306,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Pas maintenant",  // the grey button under EVOLVE!
     "Ton %s essaie d'\202voluer!",  // the hold's EVOLVE box heading
     "Musique",  // the settings page's Music row
+    "Reel Fishing",
+    "Touche l'eau pr\212s d'un poisson pour lancer: les gros p\212sent plus! Quand le flotteur plonge, touche! Puis touche en rythme pour le ramener.",
+    "Clique sur l'eau ou appuie sur Espace pour lancer pr\212s d'un poisson: les gros p\212sent plus! Quand le flotteur plonge, ferre! Puis tape en rythme.",
+    "TOUCHE L'EAU",
+    "TOUCHE!",
+    "TAPE VITE!",
+    "LENT ET REGULIER",
+    "MOINS VITE!",
+    "PLUS VITE!",
+    "TROP TOT!",
+    "TROP TARD!",
+    "IL S'EST ECHAPPE!",
+    "PESEE",
+    "RETOUR A L'EAU!",
+    "LE GROS!",
+    "FIL",
+    "BRONZE!",
+    "ARGENT!",
+    "OR!",
+    "%u.%u kg",
+    "RECORD: %u.%u kg",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -355,6 +418,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Nicht jetzt",  // the grey button under EVOLVE!
     "Dein %s will sich entwickeln!",  // the hold's EVOLVE box heading
     "Musik",  // the settings page's Music row
+    "Reel Fishing",
+    "Tippe neben einen Fisch ins Wasser, um auszuwerfen: gro\341e wiegen mehr! Geht der Schwimmer unter, tippe! Dann tippe im Takt, um ihn einzuholen.",
+    "Klicke ins Wasser oder dr\201cke Leertaste, um neben einen Fisch auszuwerfen: gro\341e wiegen mehr! Geht der Schwimmer unter, schlag an! Dann tippe im Takt.",
+    "TIPPE INS WASSER",
+    "TIPPEN!",
+    "SCHNELL TIPPEN!",
+    "LANGSAM UND STETIG",
+    "LANGSAMER!",
+    "SCHNELLER!",
+    "ZU FRUH!",
+    "ZU SPAT!",
+    "ENTWISCHT!",
+    "WIEGEN",
+    "ZURUCK INS WASSER!",
+    "DER GROSSE!",
+    "SCHNUR",
+    "BRONZE!",
+    "SILBER!",
+    "GOLD!",
+    "%u.%u kg",
+    "REKORD: %u.%u kg",
   },
   // ---------------- IT ----------------
   {
@@ -441,6 +525,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Non ora",  // the grey button under EVOLVE!
     "Il tuo %s sta per evolversi!",  // the hold's EVOLVE box heading
     "Musica",  // the settings page's Music row
+    "Reel Fishing",
+    "Tocca l'acqua vicino a un pesce per lanciare: i grandi pesano di pi\227! Quando il galleggiante va gi\227, tocca! Poi tocca a ritmo per tirarlo su.",
+    "Clicca l'acqua o premi Spazio per lanciare vicino a un pesce: i grandi pesano di pi\227! Quando il galleggiante va gi\227, colpisci! Poi tocca a ritmo.",
+    "TOCCA L'ACQUA",
+    "TOCCA!",
+    "TOCCHI VELOCI!",
+    "LENTO E COSTANTE",
+    "PIU PIANO!",
+    "PIU VELOCE!",
+    "TROPPO PRESTO!",
+    "TROPPO TARDI!",
+    "E SCAPPATO!",
+    "PESATA",
+    "TORNA IN ACQUA!",
+    "IL PESCE GROSSO!",
+    "LENZA",
+    "BRONZO!",
+    "ARGENTO!",
+    "ORO!",
+    "%u.%u kg",
+    "RECORD: %u.%u kg",
   },
   // ---------------- PT ----------------
   {
@@ -527,6 +632,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Agora nao",  // the grey button under EVOLVE!
     "Seu %s quer evoluir!",  // the hold's EVOLVE box heading
     "M\243sica",  // the settings page's Music row
+    "Reel Fishing",
+    "Toca na \240gua ao p\202 de um peixe para lan\207ar: os grandes pesam mais! Quando a boia afundar, toca! Depois toca ao ritmo para o puxar.",
+    "Clica na \240gua ou carrega em Espa\207o para lan\207ar ao p\202 de um peixe: os grandes pesam mais! Quando a boia afundar, puxa! Depois toca ao ritmo.",
+    "TOCA NA AGUA",
+    "TOCA!",
+    "TOQUES RAPIDOS!",
+    "DEVAGAR E SEMPRE",
+    "MAIS DEVAGAR!",
+    "MAIS RAPIDO!",
+    "CEDO DEMAIS!",
+    "TARDE DEMAIS!",
+    "FUGIU!",
+    "PESAGEM",
+    "DE VOLTA A AGUA!",
+    "O GRANDE!",
+    "LINHA",
+    "BRONZE!",
+    "PRATA!",
+    "OURO!",
+    "%u.%u kg",
+    "RECORDE: %u.%u kg",
   },
   // ---------------- JA ----------------
   {
@@ -636,6 +762,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "いまは しない",  // the grey button under EVOLVE!
     "%sが しんかしようと している!",  // the hold's EVOLVE box heading
     "おんがく",  // the settings page's Music row
+    "Reel Fishing",
+    "さかなの そばの みずを タッチして なげよう! おおきいほど おもいよ。 うきが しずんだら タッチ! そのあと リズムに あわせて タッチして ひきよせよう!",
+    "みずを クリックするか スペースキーで さかなの そばに なげよう! おおきいほど おもいよ。 うきが しずんだら クリック! そのあと リズムに あわせて まきあげよう!",
+    "みずを タッチ",
+    "タッチ！",
+    "はやく タッチ！",
+    "ゆっくり じっくり",
+    "ゆっくり！",
+    "はやく！",
+    "はやすぎ！",
+    "おそすぎ！",
+    "にげられた！",
+    "けいりょう",
+    "うみに かえそう！",
+    "おおものだ！",
+    "いと",
+    "ブロンズ！",
+    "シルバー！",
+    "ゴールド！",
+    "%u.%u kg",
+    "きろく: %u.%u kg",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -727,6 +874,27 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "지금은 안 해",  // the grey button under EVOLVE!
     "%s 진화하려고 해요!",  // the hold's EVOLVE box heading
     "음악",  // the settings page's Music row
+    "Reel Fishing",
+    "물고기 옆 물을 눌러서 던져요! 큰 것일수록 무거워요. 찌가 가라앉으면 눌러요! 그다음 박자에 맞춰 눌러서 끌어올려요!",
+    "물을 클릭하거나 스페이스 키로 물고기 옆에 던져요! 큰 것일수록 무거워요. 찌가 가라앉으면 클릭! 그다음 박자에 맞춰 끌어올려요!",
+    "물을 눌러요",
+    "눌러요!",
+    "빠르게 눌러요!",
+    "천천히 꾸준히",
+    "천천히!",
+    "빨리!",
+    "너무 빨라요!",
+    "너무 늦었어요!",
+    "놓쳤어요!",
+    "무게 재기",
+    "바다로 돌려보내요!",
+    "대어다!",
+    "줄",
+    "동메달!",
+    "은메달!",
+    "금메달!",
+    "%u.%u kg",
+    "최고: %u.%u kg",
   },
 };
 

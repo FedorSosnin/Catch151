@@ -1,4 +1,4 @@
-# Reel Fishing: the plan (agreed with Fedor; mockups and its two songs made, the game not built yet)
+# Reel Fishing: the plan (agreed with Fedor, and built on this branch: not released)
 
 A sixth game on the Games Game Boy. Your Pokemon fishes off the end of a pier at the Beach. You get 5 casts. Pick a
 fish, cast by it, tap when the float goes under, then reel it in by tapping at its pace. Each one is weighed and let
@@ -8,6 +8,21 @@ The mockups are drawn in the game itself (`src/fishing_v2.h`, console `FISHMOCK 
 The pictures are in the session notes (`fishing/`): `fishing-1-cast-to-bite.png`, `fishing-2-reel-to-weigh-in.png`,
 `fishing-3-got-away-to-end.png` and the cue sheet `fishing-4-cues.png`. The music is written (below) and rendered in
 `fishing/music/`. Round 1's pictures are in `fishing/round1/`.
+
+## Built (round 4)
+
+The game is on this branch, playable on the Knomi, Mac, Windows and the web; nothing is merged or released.
+- `src/fishing.h`: the rules, with 18 tests in `test/test_fishing.cpp` (whole games played by a careful bot and a
+  sloppy one among them).
+- `src/fishing_v2.h`: the drawing (`fsGame()`), from the mockups' pieces. The LINE arc and the rim glow use tables
+  worked out once, so a frame stays cheap on the Knomi.
+- `PokeKnomiGochi.ino`: the sixth cartridge (3 x 2), its card, the input (a cast, a strike and each reel on the touch
+  going down; the Knomi's button and Space too), the sounds and the backlight flash, the end with PLAY AGAIN!, the
+  record (`fishHi`) and the reward. `FISHBOT` on the console plays it by itself.
+- 21 new strings in all 8 languages, 12 new effects (each with a buzz on a phone and a rumble on a controller, none
+  for the reel's click and the float's plip), the two songs, and the fight song's tempo.
+- A test copy for the Mac: `tools/fishing_test.sh` (or `tools/Reel Fishing Test.command`), its own save folder and
+  buddy port, the Games menu open with a Squirtle.
 
 ## What changed in round 2 (Fedor)
 
@@ -134,10 +149,10 @@ the hooked blob swells on that same beat. Each pace is a tempo, first numbers fo
 | Weight | e.g. | Pace (one tap a beat) | The fight song | Green band | Good taps to land it |
 |---|---|---|---|---|---|
 | Small, under 15 kg | Shellder, Krabby, Horsea, Magikarp, Poliwag | 3.2 taps a second | 192 bpm (1.28x) | wide (20 to 80%) | 10 |
-| Middling, 15 to 50 kg | Goldeen, Psyduck, Poliwhirl, Seadra, Staryu, Slowpoke, Seaking, Tentacool | 2.5 | 150 bpm (as written) | 25 to 78% | 14 |
-| Big, 50 to 100 kg | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2 | 120 bpm (0.8x) | 30 to 75% | 18 |
-| Heavy, 100 to 150 kg | Dewgong, Cloyster | 1.6 | 96 bpm (0.64x) | 36 to 72% | 22 |
-| Giant, 200 kg and up | Lapras, Gyarados | 1.25 | 75 bpm (0.5x) | 42 to 70% | 26 |
+| Middling, 15 to 50 kg | Goldeen, Psyduck, Poliwhirl, Seadra, Staryu, Slowpoke, Seaking, Tentacool | 2.5 | 150 bpm (as written) | 25 to 78% | 12 |
+| Big, 50 to 100 kg | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2 | 120 bpm (0.8x) | 30 to 75% | 14 |
+| Heavy, 100 to 150 kg | Dewgong, Cloyster | 1.6 | 96 bpm (0.64x) | 36 to 72% | 15 |
+| Giant, 200 kg and up | Lapras, Gyarados | 1.25 | 75 bpm (0.5x) | 42 to 70% | 16 |
 
 - The tempo changes only when a fish is hooked: the song starts at that fish's tempo and keeps it to the weigh-in.
   It doesn't speed up or slow down during a thrash, where the right move is to ease off between beats.
@@ -225,8 +240,10 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
     pace table, above). The music folder has it at each weight's tempo (stretched there, keeping its pitch; the game
     would just play it slower or faster).
   - To listen on a computer: `make -C host music ONLY=fish` writes `build/music/29_fish.wav` and `30_fish_fight.wav`.
-  - They're on the soundtrack page's list too (`web/music/`, under The minigames, marked "the game is coming"), as
-    its test wants every song of the game there. Merging this branch would put them on the public page.
+  - Built: the synth plays MUS_FISH_FIGHT at `musicTempo()` (`spt()` scaled; the pitch stays), set each frame from
+    the hooked fish's pace.
+  - They're on the soundtrack page's list too (`web/music/`, under The minigames), as its test wants every song of the
+    game there. Merging this branch and publishing would put them on the public page.
 - **Effects** in `sfx_notes.h`, in the game's square-wave style: CAST, NIBBLE, BITE, HOOK, REEL (the click), WARN (the
   creak), THRASH, STRAIN, SLACK (the whirr), SNAP, LANDED, SCALE, MISS. The splash and the snap would sound better with
   the noise `cry.h` already makes. The mixer already lowers the music to 45% under an effect, so the bite cuts through.

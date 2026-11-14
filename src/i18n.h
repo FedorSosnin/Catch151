@@ -136,6 +136,10 @@ enum StrId : STRID_BASE {
   S_NOT_NOW,    // V2: the grey button under EVOLVE! on the home
   S_EVO_TRYING_FMT,  // V2: the hold's EVOLVE box heading: "Your CATERPIE is trying to evolve!"
   S_MUSIC,           // V2: the settings page's Music row (a computer and the web)
+  S_GAME_FISH, S_HOW_FISH, S_HOW_FISH_KEYS,  // Reel Fishing (fishing.h): its name and how-to cards
+  S_FISH_TAP_WATER, S_FISH_TAP, S_FISH_QUICK, S_FISH_STEADY, S_FISH_SLOWER, S_FISH_FASTER,  // ...its hints
+  S_FISH_TOO_SOON, S_FISH_TOO_SLOW, S_FISH_AWAY, S_FISH_WEIGH, S_FISH_BACK, S_FISH_BIG, S_FISH_LINE,
+  S_FISH_BRONZE, S_FISH_SILVER, S_FISH_GOLD, S_FISH_KG_FMT, S_FISH_REC_FMT,  // ...its goals and weights
   STR_COUNT
 };
 
