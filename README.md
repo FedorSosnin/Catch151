@@ -398,6 +398,10 @@ Changing the clock doesn't speed anything up. Time away only counts by network t
 
 Once it's on Wi-Fi, the Knomi looks for a new version two minutes after it starts and then every hour, while the screen is dimmed. With **Auto-update** on (the switch on the second page of **Settings** in the ring; it's on unless you turn it off), it installs the new version by itself the next time nobody is using it: the screen dimmed on any page but a game, a battle or a question, between 7 am and 8 pm (10 am to 6 pm while your Pokémon sleeps). Knomis on 2.1.0 or older only install by themselves from the home screen with the Pokémon awake, so 2.1.1 may need one update by hand. To update by hand, open **Settings** in the ring, turn to the next page and tap **Check for update**. If a new version is out, the button changes to **Update to v…**: tap it and wait about a minute while it downloads and restarts. Your Pokémon, Pokédex and Wi-Fi are kept. If the new version ever fails to start, the Knomi goes back to the one it had.
 
+The version you have is on **About**, the last page of **Settings**, under the 3D Print SOS coin (tap it and it spins):
+
+<p align="center"><img src="docs/images/v2/about.gif" alt="The About page: the 3D Print SOS coin spins twice and lands with a gold gleam, over the Catch 151 logo, v2.2.5, and the GitHub and YouTube buttons" width="240"></p>
+
 On version 1.30 or older, **Update** could fail while buddies were connected through the internet relay: the two secure connections didn't fit in memory together. If yours says "Update failed", install 1.31 or newer once with the [web installer](https://fedorsosnin.github.io/Catch151/) and a USB cable, without ticking "Erase device". It keeps your Pokémon, and from then on updates over Wi-Fi work.
 
 ## 3D-printed case

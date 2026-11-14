@@ -1,4 +1,4 @@
-# Reel Fishing: the plan (agreed with Fedor, and built on this branch: not released)
+# Reel Fishing: the plan (agreed with Fedor, built, and released in 2.2.5)
 
 A sixth game on the Games Game Boy. You fish off the end of a pier at the Beach, the rod coming in from the screen's left edge with nobody on the pier (Fedor: a Pidgey can't hold a rod; this way it's you). You get 5 casts. Pick a
 fish, cast by it, tap when the float goes under, then reel it in by tapping at its pace. Each one is weighed and let
@@ -11,7 +11,7 @@ The pictures are in the session notes (`fishing/`): `fishing-1-cast-to-bite.png`
 
 ## Built (round 4)
 
-The game is on this branch, playable on the Knomi, Mac, Windows and the web; nothing is merged or released.
+The game is playable on the Knomi, Mac, Windows and the web, released in 2.2.5.
 - `src/fishing.h`: the rules, with 18 tests in `test/test_fishing.cpp` (whole games played by a careful bot and a
   sloppy one among them).
 - `src/fishing_v2.h`: the drawing (`fsGame()`), from the mockups' pieces. The LINE arc and the rim glow use tables
@@ -238,7 +238,7 @@ Magikarp.
 ## Medals: none for now
 
 Fedor (round 3): skip them for now, since the other minigames have no medals either. The mockups made for them are
-parked on this branch, in case they come back: FULL NET (a gold landing net, all 5 landed in a game), GOLD ANGLER (a
+parked in the code, in case they come back: FULL NET (a gold landing net, all 5 landed in a game), GOLD ANGLER (a
 gold scale, 300 kg in a game) and THE BIG ONE (a golden Lapras, made as the golden Pikachu is; a giant landed), drawn
 by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of their 32 bits, so there's room.
 
@@ -256,7 +256,7 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
 ## Music and effects
 
 - **Two tracks, written and agreed** (Fedor: one for fishing, one for when a fish is hooked), in `tools/music/songs.py`
-  and `src/music_data.h` on this branch, all original, appended
+  and `src/music_data.h`, all original, appended
   after `MUS_ZONE_FIELD` so nothing else renumbers. Nothing plays them yet, since the game isn't built. Both are mixed
   to -24 dBFS, as the other games' tracks are.
   - `MUS_FISH`, **Reel Fishing**, at the pier: a lazy swing at 84 bpm in G major, a flute over plucked chords, a
@@ -271,7 +271,7 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
   - Built: the synth plays MUS_FISH_FIGHT at `musicTempo()` (`spt()` scaled; the pitch stays), set each frame from
     the hooked fish's pace.
   - They're on the soundtrack page's list too (`web/music/`, under The minigames), as its test wants every song of the
-    game there. Merging this branch and publishing would put them on the public page.
+    game there, public since 2.2.5.
 - **Effects** in `sfx_notes.h`, in the game's square-wave style: CAST, NIBBLE, BITE, HOOK, REEL (the click), WARN (the
   creak), THRASH, STRAIN, SLACK (the whirr), SNAP, LANDED, SCALE, MISS. The splash and the snap would sound better with
   the noise `cry.h` already makes. The mixer already lowers the music to 45% under an effect, so the bite cuts through.
