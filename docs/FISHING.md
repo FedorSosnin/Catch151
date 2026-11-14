@@ -23,6 +23,11 @@ The game is on this branch, playable on the Knomi, Mac, Windows and the web; not
   for the reel's click and the float's plip), the two songs, and the fight song's tempo.
 - A test copy for the Mac: `tools/fishing_test.sh` (or `tools/Reel Fishing Test.command`), its own save folder and
   buddy port, the Games menu open with a Squirtle.
+- The Knomi's firmware: 1,905,139 bytes (60%), against 1,881,203 (59%) for `v2`: about 23 KB more, and under 0.5 KB
+  more RAM. The mockups and the parked medals' art are left out of it (only a computer's console shows them).
+- Not checked yet: on a real Knomi (the touch screen at 3 taps a second, the backlight flash, the frame rate while
+  reeling), the sounds by ear, and a playtest. The careful test bot made gold in both full games it played (428 and
+  552 kg), so the goal lines may want raising once real players have tried it.
 
 ## What changed in round 2 (Fedor)
 

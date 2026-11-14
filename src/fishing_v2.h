@@ -1382,7 +1382,10 @@ static void fsMockCard() {
   v2CloseX();
 }
 
+// the mockups are for a computer's console only: on a board, nothing calls them, so they (and the parked medals' art)
+// aren't in its firmware
 static void fishMockRender() {
+#ifdef BOARD_HOST
   switch (fsMock) {
     case 1: fsMockGames(); break;
     case 2: fsMockHow(); break;
@@ -1404,4 +1407,5 @@ static void fishMockRender() {
     case 18: fsMockShelf(); break;
     case 19: fsMockCard(); break;
   }
+#endif
 }
