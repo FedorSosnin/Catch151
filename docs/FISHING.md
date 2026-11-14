@@ -1,6 +1,6 @@
 # Reel Fishing: the plan (agreed with Fedor, and built on this branch: not released)
 
-A sixth game on the Games Game Boy. Your Pokemon fishes off the end of a pier at the Beach. You get 5 casts. Pick a
+A sixth game on the Games Game Boy. You fish off the end of a pier at the Beach, the rod coming in from the screen's left edge with nobody on the pier (Fedor: a Pidgey can't hold a rod; this way it's you). You get 5 casts. Pick a
 fish, cast by it, tap when the float goes under, then reel it in by tapping at its pace. Each one is weighed and let
 go. The score is the total weight.
 

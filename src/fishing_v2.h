@@ -10,12 +10,12 @@ void fishMockSet(uint8_t n) { fsMock = n; }
 
 // ===================================================================== the scene
 // Seen from the side, cut away at the waterline: the sky down to the surface, the sea under it getting deeper to the
-// right, the sand sloping away under the pier. Your Pokemon sits at the pier's end on the left with its rod; the float
-// rides the surface on the right, its hook hanging under it where the fish come.
+// right, the sand sloping away under the pier. The rod comes in from the screen's left edge, held by you just out of
+// sight (Fedor: no Pokemon on the pier, since a Pidgey or a Magikarp can't hold a rod, and this way it's you fishing);
+// the float rides the surface on the right, its hook hanging under it where the fish come.
 #define FS_SURF 208      // the water's surface
-#define FS_DECK 184      // the pier's deck: your Pokemon's feet
+#define FS_DECK 184      // the pier's deck
 #define FS_PIER_X1 168   // the pier's end
-#define FS_PET_X 104
 #define FS_FLOAT_X 304   // where the float sits in most of the mockups
 static const Rgb FS_WATER[4] = { 0x62B6E2, 0x4C9CD6, 0x3B82C6, 0x2D66AE };
 static const Rgb FS_WATER_N[4] = { 0x2C5482, 0x254A76, 0x1E3F68, 0x18345A };  // at night (light enough to see the fish in)
@@ -361,11 +361,11 @@ static void fsSlots(const int16_t *st, bool total = true) {
   printT(b);
 }
 
-// your Pokemon at the pier's end and its rod; tip: where the rod's tip is, (bx, by) how far it's bent
-static void fsAngler(int tx, int ty, int bx = 0, int by = 0) {
-  fsThumb(thumbs.getForm(pet.speciesId, pet.shiny), FS_PET_X, FS_DECK + 2, 3);
-  fsRod(FS_PET_X + 26, FS_DECK - 30, tx, ty, bx, by);
-}
+// the rod, held by you: its butt just off the screen's left edge, the grip and the reel just inside it, up over the
+// empty pier; tip: where the rod's tip is, (bx, by) how far it's bent
+#define FS_HAND_X 22     // the hand (fsRod puts the butt behind and below it, under the rim)
+#define FS_HAND_Y 160
+static void fsAngler(int tx, int ty, int bx = 0, int by = 0) { fsRod(FS_HAND_X, FS_HAND_Y, tx, ty, bx, by); }
 #define FS_TIP_X 252  // the rod's tip, at rest
 #define FS_TIP_Y 88
 
