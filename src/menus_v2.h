@@ -784,24 +784,33 @@ static void v2DexInfo(int16_t dex, bool withFact) {
 static bool v2Won(int medal, bool bare) { return !bare && pet.hasMedal(1UL << medal); }
 
 // a medal's art, s px a pixel, the middle of its bottom edge at (x, base): in its colours once won, otherwise its
-// shape in shadow (its outline a shade darker, no glass and no sparkles). Glass shows the room through it
+// shape in shadow (its outline a shade darker, no glass and no sparkles). Glass shows the room through it.
+// On the Knomi each of its pixels has its edges on the 2 px grid, a Knomi pixel each (Fedor: the medals' writing was
+// blurry: one with an odd width started off the grid, and the card's 3 px pixels fell across the Knomi's; at 3 they
+// come out 2 and 4 px wide in turn now, sharp, as pixel art is scaled by one and a half)
+#if defined(BOARD_HOST)
+#define TR_EDGE(v) (v)
+#else
+#define TR_EDGE(v) SNAP2(v)
+#endif
 static void trArt(const TrArt &a, int x, int base, int s, bool won, Rgb sil = TR_SIL, Rgb silD = TR_SIL_D) {
   int x0 = x - a.w * s / 2, y0 = base - a.h * s;
   for (int j = 0; j < a.h; j++) {
     const uint8_t *row = a.px + j * a.w;
+    const int py = TR_EDGE(y0 + j * s), ph = TR_EDGE(y0 + (j + 1) * s) - py;
     for (int i = 0; i < a.w; i++) {
       uint8_t k = row[i];
       if (!k) continue;
-      int px = x0 + i * s, py = y0 + j * s;
+      const int px = TR_EDGE(x0 + i * s), pw = TR_EDGE(x0 + (i + 1) * s) - px;
       if (!won) {
         if (TR_PAL_A[k] < 255 || TR_PAL_WON[k]) continue;
-        scRect(px, py, px + s - 1, py + s - 1, k == 1 ? silD : sil);
+        scRect(px, py, px + pw - 1, py + ph - 1, k == 1 ? silD : sil);
       } else if (TR_PAL_A[k] == 255) {
-        scRect(px, py, px + s - 1, py + s - 1, TR_PAL[k]);
+        scRect(px, py, px + pw - 1, py + ph - 1, TR_PAL[k]);
       } else {
         uint16_t c = sc565(scGrade(TR_PAL[k]));
-        for (int yy = py + scDY; yy < py + s + scDY; yy++)
-          for (int xx = px + scDX; xx < px + s + scDX; xx++)
+        for (int yy = py + scDY; yy < py + ph + scDY; yy++)
+          for (int xx = px + scDX; xx < px + pw + scDX; xx++)
             if (xx >= 0 && yy >= 0 && xx < scW && yy < scH) scFb[yy * scW + xx] = v2Blend(scFb[yy * scW + xx], c, TR_PAL_A[k]);
       }
     }
@@ -1004,7 +1013,8 @@ static void v2PlateFit(const char *s, int maxW, TrPlate &p) {
 // a plate w x h, its top at y, its lines in its middle
 static void v2NamePlate(const TrPlate &p, int cx, int y, int w, int h, bool won) {
   const uint16_t dark = C565(0x3a, 0x24, 0x14);
-  int x0 = cx - w / 2, ty = y + (h - (p.b[0] ? 34 : 16)) / 2 + 1;
+  y = SNAP2(y), w = (w + 1) & ~1, h = (h + 1) & ~1;  // (its edges on the 2 px grid too: sharp on the Knomi)
+  int x0 = SNAP2(cx - w / 2), ty = y + (h - (p.b[0] ? 34 : 16)) / 2 + 1;
   gfx->fillRect(x0 - 2, y - 2, w + 4, h + 4, dark);
   gfx->fillRect(x0, y, w, h, won ? C565(0xc0, 0x84, 0x10) : C565(0x5a, 0x3a, 0x22));
   gfx->fillRect(x0, y, w, 3, won ? C565(0xf0, 0xc0, 0x4a) : C565(0x7a, 0x5a, 0x3a));

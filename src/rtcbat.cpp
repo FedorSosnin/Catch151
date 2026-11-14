@@ -18,9 +18,9 @@
 #define WIFI_RECONNECT_MS 60000UL
 // Turned away (the access point refused it, or the handshake timed out), it tries again after a minute, then two,
 // then the usual; and before a restart of its own (an update) the Knomi says goodbye first (clockWifiSignOff()), so
-// the router lets it straight back in. (Fedor's test Knomi, 2026-11-14, refused at nearly every try: its replies
-// weren't reaching the router, on the Mac's USB power; on a wall charger, straight in. These keep a Knomi from
-// waiting 10 minutes after a refusal, whatever its cause)
+// the router lets it straight back in. (Fedor's test Knomi, 2026-11-14, refused at nearly every try on a poor USB
+// cable: it heard the network but its replies weren't getting through; on a known good cable, straight in every
+// time. These keep a Knomi from waiting 10 minutes after a refusal, whatever its cause)
 #define WIFI_REFUSED_RETRY_MS 60000UL
 
 // The clock keeps UTC (millis() on top of a base) and shows it in the chosen time zone: changing the zone
