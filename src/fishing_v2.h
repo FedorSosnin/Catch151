@@ -1,8 +1,8 @@
-// V2: PokeFish MOCKUPS (not the game yet). A fishing minigame for the Games menu, played off the end of a pier at the
+// V2: Fishing MOCKUPS (not the game yet). A fishing minigame for the Games menu, played off the end of a pier at the
 // Beach. The Knomi has no speaker and no vibration, so every moment of a cast reads on the screen alone (the float,
 // rings, splashes, a "!", the rim's glow, the line's colour, the rod's bend); the computers and the web add sound, and
 // phones and controllers a buzz, on top. These painters only draw still screens for the console's "FISHMOCK n"
-// (1..13), so the look can be judged in the real game before any of it is built. scene_v2.h includes this after
+// (1..16), so the look can be judged in the real game before any of it is built. scene_v2.h includes this after
 // tower_v2.h. The plan is docs/FISHING.md.
 
 static uint8_t fsMock = 0;  // the mockup on screen (0: none)
@@ -117,7 +117,7 @@ static void fsScene() {
 
 // ===================================================================== the pieces
 // a thumbnail standing with its feet at (cx, feet), s px a pixel; flip: facing the other way; sil/silA: a see-through
-// shadow of it (a256), as a fish under the water
+// shadow of it (a256)
 static int16_t fsClip[4] = { 0, 0, V2_W, V2_W };  // what fsThumb may draw in (x0, y0, x1, y1): a slot keeps a big one in
 static void fsThumb(const uint8_t *b, int cx, int feet, int s, bool flip = false, Rgb sil = SC_NONE, int silA = 256) {
   if (!b) return;
@@ -155,26 +155,20 @@ static int fsThumbH(const uint8_t *b, int s) {
   return bot < 0 ? 0 : (bot - top + 1) * s;
 }
 
-// a fish's shadow under the water, its head toward dir (-1 left, 1 right), s px a pixel (3 small, 4 middling, 6 big)
-static const char *const FS_FISH[7] = {
-  "....xxxxx.....",
-  "..xxxxxxxxx..x",
-  ".xxxxxxxxxxxxx",
-  "xxxxxxxxxxxxx.",
-  ".xxxxxxxxxxxxx",
-  "..xxxxxxxxx..x",
-  "....xxxxx.....",
-};
-static void fsShadow(int cx, int cy, int s, int dir, int a256 = 150) {
+// something under the water: a dark blob, no shape to give it away (Fedor: "just blobs"), s its size (3 small,
+// 4 middling, 6 big); its edge on a checker, soft
+static void fsBlob(int cx, int cy, int s, int a256 = 150) {
   Rgb col = fsNight ? 0x050A18 : 0x0E2A5C;
-  int x0 = SNAP2(cx - 7 * s), y0 = SNAP2(cy - 7 * s / 2);
-  for (int r = 0; r < 7; r++)
-    for (int c = 0; c < 14; c++) {
-      if (FS_FISH[r][dir < 0 ? c : 13 - c] != 'x') continue;
-      fsBlend(x0 + c * s, y0 + r * s, x0 + c * s + s - 1, y0 + r * s + s - 1, col, a256);
+  float rx = 5.0f * s, ry = 3.0f * s;
+  for (int y = scFl4(cy - (int)ry) * 4; y < cy + ry; y += 4)
+    for (int x = scFl4(cx - (int)rx) * 4; x < cx + rx; x += 4) {
+      float dx = (x + 2 - cx) / rx, dy = (y + 2 - cy) / ry, d = dx * dx + dy * dy;
+      if (d > 1 || (d > 0.6f && (scFl4(x) + scFl4(y)) % 2)) continue;
+      fsBlend(x, y, x + 3, y + 3, col, a256);
     }
 }
 
+static int fsReelX, fsReelY;  // where the reel was drawn
 // the rod: a cork grip, a dark shaft thinning to its tip, the reel under it; bend pulls its middle toward (bx, by)
 static void fsRod(int hx, int hy, int tx, int ty, int bx = 0, int by = 0) {
   int gx = hx - 14, gy = hy + 12;  // its butt, behind the hand
@@ -191,6 +185,7 @@ static void fsRod(int hx, int hy, int tx, int ty, int bx = 0, int by = 0) {
   float t = 0.2f, u = 1 - t;  // the reel
   int rx = (int)(u * u * gx + 2 * u * t * mx + t * t * tx), ry = (int)(u * u * gy + 2 * u * t * my + t * t * ty) + 10;
   rx = SNAP2(rx), ry = SNAP2(ry);
+  fsReelX = rx, fsReelY = ry;
   gfx->fillCircle(rx, ry, 8, sc565(0x1B1B25));
   gfx->fillCircle(rx, ry, 6, sc565(0xAAB0BC));
   gfx->fillCircle(rx, ry, 2, sc565(0x787E8C));
@@ -204,8 +199,11 @@ static void fsLine(int x0, int y0, int x1, int y1, int sag, Rgb col) {
     fsSq((int)(u * u * x0 + 2 * u * t * mx + t * t * x1), (int)(u * u * y0 + 2 * u * t * my + t * t * y1), 2, col);
   }
 }
-// the line's colour by how hard it's pulled: white slack, yellow taut, orange, red about to snap
-static Rgb fsLineCol(int pct) { return pct < 40 ? 0xF4F4F8 : pct < 70 ? 0xFFE27A : pct < 85 ? 0xF5A040 : 0xE8503A; }
+// the line's colour by how hard it's pulled: pale when it's going slack (too slow), white, yellow as it tightens,
+// red about to snap (too fast)
+#define FS_SLACK 20  // the LINE arc's zones: under this, too slow; over FS_SNAP, too fast
+#define FS_SNAP 80
+static Rgb fsLineCol(int pct) { return pct < FS_SLACK ? 0xA8BCD4 : pct < 62 ? 0xF4F4F8 : pct < FS_SNAP ? 0xFFE27A : 0xE8503A; }
 
 // the float, red over white, its middle at (cx, cy); what's under the surface tinted by the water
 static const char *const FS_BOBBER[10] = {
@@ -286,33 +284,44 @@ static void fsRimGlow(Rgb col, int a256, int w) {
       fsBlend(x, y, x + 3, y + 3, col, (int)(a256 * (1 - d / w)));
     }
 }
-// how hard the line is pulled: an arc on the right rim (where the need bars sit at home), filling from the bottom,
-// green to yellow to red; the top fifth is the danger, red even when empty
-static void fsTension(int pct) {
+// how tight the line is: an arc on the right rim (where the need bars sit at home) in three zones, blue at the
+// bottom (too slow: it'll slip off), green in the middle (keep it there), red at the top (too fast: it'll snap). It
+// fills from the bottom, each zone in its own colour, and a white notch marks where it is now
+static void fsLineArc(int pct, int lo = FS_SLACK, int hi = FS_SNAP) {
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
-  const float a0 = 50, a1 = -50;  // the bottom end, the top end (degrees, 0 = right)
-  Rgb fill = pct < 50 ? 0x58B868 : pct < 80 ? 0xF8C030 : 0xE8503A;
+  const float a0 = 52, a1 = -34;  // the bottom end, the top end (degrees, 0 = right)
   for (int y = 0; y < V2_W; y += 2)
     for (int x = CX; x < V2_W; x += 2) {
       float dx = x + 1 - CX, dy = y + 1 - CY, r = hypotf(dx, dy), a = atan2f(dy, dx) * 57.29578f;
-      if (r < V2_BAR_RIN - 3 || r > V2_BAR_ROUT + 3 || a > a0 + 2 || a < a1 - 2) continue;
+      if (r < V2_BAR_RIN - 7 || r > V2_BAR_ROUT + 7 || a > a0 + 3 || a < a1 - 3) continue;
+      float f = (a0 - a) / (a0 - a1) * 100, m = fabsf(f - pct);
       Rgb c;
-      if (r < V2_BAR_RIN || r > V2_BAR_ROUT || a > a0 || a < a1) c = 0x1B1B25;
+      if (m <= 1.0f && r >= V2_BAR_RIN - 5 && r <= V2_BAR_ROUT + 5) c = 0xFFFFFF;  // the notch, a little proud of the arc
+      else if (m <= 2.2f && r >= V2_BAR_RIN - 7 && r <= V2_BAR_ROUT + 7) c = 0x1B1B25;
+      else if (r < V2_BAR_RIN - 3 || r > V2_BAR_ROUT + 3 || a > a0 + 2 || a < a1 - 2) continue;
+      else if (r < V2_BAR_RIN || r > V2_BAR_ROUT || a > a0 || a < a1) c = 0x1B1B25;
+      else if (fabsf(f - lo) < 0.6f || fabsf(f - hi) < 0.6f) c = 0x1B1B25;  // where the zones meet
       else {
-        float f = (a0 - a) / (a0 - a1) * 100;
-        c = f <= pct ? fill : f >= 80 ? 0x7A3A3A : 0x3A4A5A;
+        Rgb zone = f < lo ? 0x2E4A72 : f < hi ? 0x2E5A3A : 0x7A3A3A, lit = f < lo ? 0x7CC4EA : f < hi ? 0x58B868 : 0xE8503A;
+        c = f <= pct ? lit : zone;  // each zone keeps its own colour, filled or not
         if (f <= pct && r > V2_BAR_ROUT - 4) c = scMix(c, 0xFFFFFF, .35);
       }
       fsBlend(x, y, x + 1, y + 1, c, 256);
     }
-  v2BarLabel(fb, "LINE", 0, UI_WHITE);
+  v2BarLabel(fb, "LINE", -45, UI_WHITE);  // past its top end, clear of the notch
 }
 
-// the casts so far, along the top: a Pokemon where one was caught, a red X where it got away, a yellow edge on this
-// one, a faint Poke Ball on those to come. st: 0 to come, 1 this one, -1 got away, else the dex caught
+// what each one in the mockups weighed, in tenths of a kg (the game would weigh each fish: its kind's Pokedex weight,
+// bigger or smaller by its blob's size)
+static int fsKg10(int16_t dex) { return dex == 129 ? 112 : dex == 118 ? 146 : dex == 120 ? 361 : dex == 130 ? 2418 : 0; }
+static void fsKgText(char *b, int n, int kg10) { snprintf(b, n, "%d.%d kg", kg10 / 10, kg10 % 10); }
+
+// the casts along the top: the Pokemon where one was landed, a red X where it got away, the cast's number on those
+// to come (no Poke Balls: this isn't catching), a yellow edge on this one; under them the weight so far
+// st: 0 to come, 1 this one, -1 got away, else the dex landed
 #define FS_SLOT 40
-static void fsSlots(const int16_t *st) {
-  int x0 = CX - (5 * FS_SLOT + 4 * 6) / 2, y = 40;
+static void fsSlots(const int16_t *st, bool total = true) {
+  int x0 = CX - (5 * FS_SLOT + 4 * 6) / 2, y = 40, kg = 0;
   for (int i = 0; i < 5; i++) {
     int x = x0 + i * (FS_SLOT + 6);
     uint16_t edge = st[i] == 1 ? sc565(0xF8C030) : sc565(0x3A4A5A);
@@ -320,14 +329,19 @@ static void fsSlots(const int16_t *st) {
     gfx->fillRoundRect(x - 1, y - 1, FS_SLOT + 2, FS_SLOT + 2, 8, edge);
     gfx->fillRoundRect(x + 2, y + 2, FS_SLOT - 4, FS_SLOT - 4, 6, st[i] == -1 ? sc565(0xC8CCD8) : UI_WHITE);
     if (st[i] == 0 || st[i] == 1) {
-      drawMap(SPR_HOME_BALL, HOME_ICON_N, x + 11, y + 11, 1, false);
-      if (st[i] == 0) fsBlend(x + 4, y + 4, x + FS_SLOT - 5, y + FS_SLOT - 5, 0xFFFFFF, 150);
+      char nb[4];
+      snprintf(nb, sizeof(nb), "%d", i + 1);
+      setSize(2);
+      gfx->setTextColor(st[i] == 1 ? UI_INK : sc565(0xB8BCC8));
+      setCur(x + FS_SLOT / 2 - textW(nb, 2) / 2 + 1, y + 13);
+      printT(nb);
     } else if (st[i] == -1) {
       for (int k = 0; k < 14; k += 2) {
         fsSq(x + 13 + k, y + 13 + k, 4, 0xE8503A);
         fsSq(x + 27 - k, y + 13 + k, 4, 0xE8503A);
       }
     } else {
+      kg += fsKg10(st[i]);
       const uint8_t *t = thumbs.getForm(st[i], false);
       int h = fsThumbH(t, 1);
       fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + FS_SLOT - 2, fsClip[3] = y + FS_SLOT - 2;
@@ -335,6 +349,16 @@ static void fsSlots(const int16_t *st) {
       fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
     }
   }
+  if (!total || !kg) return;
+  char b[16];
+  fsKgText(b, sizeof(b), kg);
+  setSize(2);
+  int w = textW(b, 2) + 20;
+  gfx->fillRoundRect(CX - w / 2 - 3, y + FS_SLOT + 6, w + 6, 26, 8, sc565(0x1B1B25));
+  gfx->fillRoundRect(CX - w / 2, y + FS_SLOT + 9, w, 20, 6, sc565(0x3A6FA0));
+  gfx->setTextColor(UI_WHITE);
+  setCur(CX - textW(b, 2) / 2, y + FS_SLOT + 12);
+  printT(b);
 }
 
 // your Pokemon at the pier's end and its rod; tip: where the rod's tip is, (bx, by) how far it's bent
@@ -382,17 +406,6 @@ static void fsBoard(const char *s, int y, uint16_t wood = C565(0x8a, 0x5a, 0x30)
   char b[40];
   v2SignIn(v2Caps(s, b, sizeof(b)), y, wood, lit);
 }
-// a chip with its points: "+3"
-static void fsPoints(const char *s, int cx, int y, Rgb col) {
-  setSize(3);
-  int w = textW(s, 3) + 20;
-  gfx->fillRoundRect(cx - w / 2 - 3, y - 3, w + 6, 36, 10, sc565(0x1B1B25));
-  gfx->fillRoundRect(cx - w / 2, y, w, 30, 8, sc565(col));
-  gfx->setTextColor(UI_WHITE);
-  setCur(cx - textW(s, 3) / 2, y + 4);
-  printT(s);
-}
-
 // ===================================================================== the mock screens
 static const int16_t FS_ST_1[5] = { 1, 0, 0, 0, 0 };
 static const int16_t FS_ST_2[5] = { 129, 1, 0, 0, 0 };
@@ -401,7 +414,7 @@ static const int16_t FS_ST_4[5] = { 129, 118, -1, 1, 0 };
 static const int16_t FS_ST_5[5] = { 129, 118, -1, 120, 1 };
 static const int16_t FS_ST_END[5] = { 129, 118, -1, 120, 130 };
 
-// 1: the Games menu with a sixth cartridge, PokeFish, in Magikarp's orange: the sea, a float, a Magikarp leaping
+// 1: the Games menu with a sixth cartridge, Fishing, in Magikarp's orange: the sea, a float, a Magikarp leaping
 static uint16_t fsLbl[V2_LBL_W * V2_LBL_H];
 static void fsMockGames() {
   v2PaintGameLabels();
@@ -417,7 +430,7 @@ static void fsMockGames() {
   v2GbBack(T(S_GAMES));
   static const int16_t XY[6][2] = { { 56, 96 }, { 180, 96 }, { 304, 96 }, { 56, 238 }, { 180, 238 }, { 304, 238 } };
   for (int k = 0; k < 5; k++) v2Cart(XY[k][0], XY[k][1], v2Lbl(k), gameLabel(V2_CART_GAME[k]), V2_CART_COL[k]);
-  v2Cart(XY[5][0], XY[5][1], fsLbl, "POKEFISH", 0xF07A3A);
+  v2Cart(XY[5][0], XY[5][1], fsLbl, "FISHING", 0xF07A3A);
   v2CloseX();
 }
 
@@ -429,18 +442,18 @@ static void fsMockHow() {
   fsBack();
   fsAngler(FS_TIP_X, FS_TIP_Y);
   fsLine(FS_TIP_X, FS_TIP_Y, FS_TIP_X + 4, FS_TIP_Y + 60, 0, 0xF4F4F8);
-  v2IntroCard(CX, CY, true, "POKEFISH",
-              "Tap the water to cast. Wait for the float to go under, then tap! Hold to reel in, and let go when the "
-              "line turns red. 5 casts.");
+  v2IntroCard(CX, CY, true, "FISHING",
+              "Cast by a big shadow: big ones weigh more! When the float goes under, tap. Keep tapping to reel it "
+              "in, not too fast, not too slow. Each one is weighed, then let go.");
 }
 
-// 3: casting: tap the water and the float flies there; a ring marks the spot. Shadows under the water, a big one
-// far out where it's deep, and bubbles where a fish is waiting
+// 3: casting: pick a fish and tap the water by it; the float flies there and a ring marks the spot. Blobs under the
+// water, the big (heavy) one far out where it's deep, and bubbles where one's about to bite
 static void fsMockCast() {
   fsBack();
-  fsShadow(212, 262, 3, -1);
-  fsShadow(296, 330, 4, 1);
-  fsShadow(404, 318, 6, -1, 130);
+  fsBlob(212, 262, 3);
+  fsBlob(296, 330, 4);
+  fsBlob(404, 318, 6, 130);
   fsBubbles(410, FS_SURF + 52, 4);
   scRect(402, FS_SURF - 8, 405, FS_SURF - 5, 0xFFFFFF);  // glints where the bubbles break: a fish is there
   scRect(418, FS_SURF - 12, 421, FS_SURF - 9, 0xFFFFFF);
@@ -468,8 +481,8 @@ static void fsMockCast() {
 // 4: waiting: the float bobs on its ring, a fish comes round toward the hook
 static void fsMockWait() {
   fsBack();
-  fsShadow(380, 286, 4, -1);
-  fsShadow(170, 300, 3, 1, 110);
+  fsBlob(380, 286, 4);
+  fsBlob(170, 300, 3, 110);
   fsAngler(FS_TIP_X, FS_TIP_Y);
   fsLine(FS_TIP_X, FS_TIP_Y, FS_FLOAT_X, FS_SURF - 18, 14, 0xF4F4F8);
   fsHook(FS_FLOAT_X, FS_SURF + 12, FS_SURF + 52);
@@ -481,7 +494,7 @@ static void fsMockWait() {
 // 5: a nibble (a fake-out): the float dips a little, one small ring, the fish nosing the bait. Not yet!
 static void fsMockNibble() {
   fsBack();
-  fsShadow(FS_FLOAT_X + 30, FS_SURF + 66, 4, -1);
+  fsBlob(FS_FLOAT_X + 30, FS_SURF + 66, 4);
   fsAngler(FS_TIP_X, FS_TIP_Y);
   fsLine(FS_TIP_X, FS_TIP_Y, FS_FLOAT_X, FS_SURF - 12, 10, 0xF4F4F8);
   fsHook(FS_FLOAT_X, FS_SURF + 18, FS_SURF + 56);
@@ -500,7 +513,7 @@ static void fsMockNibble() {
 static void fsMockBite() {
   fsBack();
   fsRimGlow(fsNight ? 0xFFE27A : 0xFFF3B0, 220, 34);
-  fsShadow(FS_FLOAT_X + 8, FS_SURF + 70, 4, -1, 190);
+  fsBlob(FS_FLOAT_X + 8, FS_SURF + 70, 4, 190);
   fsAngler(FS_TIP_X + 6, FS_TIP_Y + 18, 8, 10);
   fsLine(FS_TIP_X + 6, FS_TIP_Y + 18, FS_FLOAT_X, FS_SURF + 30, 0, 0xFFE27A);
   fsFloat(FS_FLOAT_X, FS_SURF + 34, fsNight);  // under (at night its lamp still glows down there)
@@ -514,53 +527,103 @@ static void fsMockBite() {
   fsSay("TAP!", CX - 6, 396, 0xFFE27A, 4);
 }
 
-// a hooked fish under the water, fighting at (cx, cy): its shadow, the float dragged down by it, bubbles, splashes over
+// a hooked fish under the water, fighting at (cx, cy): its blob, the float dragged down by it, bubbles, splashes over
 static void fsHooked(int cx, int cy, int s, int thrash) {
-  fsShadow(cx, cy, s, 1, 200);
-  fsFloat(cx - 7 * s - 14, cy - 6);
-  fsBubbles(cx - 4 * s, cy - 18, 3);
+  fsBlob(cx, cy, s, 200);
+  fsFloat(cx - 5 * s - 14, cy - 6);
+  fsBubbles(cx - 3 * s, cy - 18, 3);
   if (thrash) {
     fsSplash(cx, FS_SURF - 4, 20 + 10 * thrash, 10 + 12 * thrash, 11 + thrash);
     fsRing(cx, 26 + 12 * thrash, 0xFFFFFF, 2);
     for (int k = 0; k < 3; k++) {  // motion marks either side of it
-      scRect(cx + 7 * s + 8, cy - 10 + k * 10, cx + 7 * s + 19 + thrash * 4, cy - 7 + k * 10, 0xFFFFFF);
-      scRect(cx - 7 * s - 20 - thrash * 4, cy - 10 + k * 10, cx - 7 * s - 9, cy - 7 + k * 10, 0xFFFFFF);
+      scRect(cx + 5 * s + 8, cy - 10 + k * 10, cx + 5 * s + 19 + thrash * 4, cy - 7 + k * 10, 0xFFFFFF);
+      scRect(cx - 5 * s - 36 - thrash * 4, cy - 10 + k * 10, cx - 5 * s - 25, cy - 7 + k * 10, 0xFFFFFF);
     }
   }
 }
 
-// 7: reeling it in: hold anywhere (or the button). The line is taut and yellow, the rod bends, the arc on the rim
-// shows how hard it's pulling
-static void fsMockReel() {
-  fsBack();
-  int fx = 314, fy = 300;
-  fsAngler(FS_TIP_X + 4, FS_TIP_Y + 30, 22, 16);
-  fsLine(FS_TIP_X + 4, FS_TIP_Y + 30, fx - 30, fy - 4, 0, fsLineCol(55));
-  fsHooked(fx, fy, 4, 1);
-  fsTension(55);
-  fsSlots(FS_ST_4);
-  fsSay("HOLD TO REEL", CX - 10, 396, 0xFFFFFF);
+// the reel turning: three little white marks round it (each tap turns it a notch)
+static void fsSpin() {
+  static const int8_t M[3][2] = { { 0, -14 }, { 13, 6 }, { -13, 6 } };
+  for (auto &m : M) {
+    fsSq(fsReelX + m[0], fsReelY + m[1], 4, 0xFFFFFF);
+    fsSq(fsReelX + m[0] * 5 / 4 + (m[1] < 0 ? 4 : m[0] > 0 ? -2 : 2), fsReelY + m[1] * 5 / 4 + (m[1] < 0 ? 0 : 3), 2, 0xFFFFFF);
+  }
+}
+// where a finger tapped: a ring spreading from it
+static void fsTapMark(int cx, int cy) {
+  fsCircle(cx, cy, 16, 0x1B1B25, 6);
+  fsCircle(cx, cy, 16, 0xFFFFFF, 2);
+  fsCircle(cx, cy, 6, 0xFFFFFF, 4);
 }
 
-// 8: about to snap: it's thrashing and you're still reeling. The line red, the rod bent double, the arc in the red,
-// the rim glowing red (it pulses), LET GO!
+// 7: reeling it in: tap, tap, tap (anywhere, or the button). Each tap turns the reel a notch, brings it a step closer
+// and tightens the line; the line slackens between taps. Kept in the green, it comes in. Each weight has its own pace
+// (Fedor): a small one barely pulls and slips off quickly, so it wants quick taps
+static void fsMockReel() {
+  fsBack();
+  int fx = 314, fy = 296, s = 3;
+  fsAngler(FS_TIP_X + 4, FS_TIP_Y + 24, 18, 12);
+  fsSpin();
+  fsLine(FS_TIP_X + 4, FS_TIP_Y + 24, fx - 5 * s - 12, fy - 4, 0, fsLineCol(50));
+  fsHooked(fx, fy, s, 1);
+  fsLineArc(50);
+  fsSlots(FS_ST_4);
+  fsTapMark(150, 336);
+  fsSay("QUICK TAPS!", CX - 10, 396, 0xFFFFFF);
+}
+
+// 16: a giant on the line: slow and steady. Every tap pulls hard and the line takes longer to ease, so the taps come
+// slowly, and its green is narrower. (Shown beside 7: a different weight, a different pace)
+static void fsMockReelBig() {
+  fsBack();
+  int fx = 336, fy = 318, s = 7;
+  fsAngler(FS_TIP_X - 2, FS_TIP_Y + 48, 30, 28);
+  fsSpin();
+  fsLine(FS_TIP_X - 2, FS_TIP_Y + 48, fx - 5 * s - 12, fy - 4, 0, fsLineCol(60));
+  fsHooked(fx, fy, s, 1);
+  fsLineArc(58, 42, 70);
+  fsSlots(FS_ST_5);
+  fsTapMark(150, 336);
+  fsSay("SLOW AND STEADY", CX - 10, 396, 0xFFFFFF);
+}
+
+// 8: too fast: tapping hard while it thrashes. The line red, the rod bent double, the notch in the red, the rim
+// glowing red (it pulses), SLOWER!
 static void fsMockStrain() {
   fsBack();
   fsRimGlow(0xE8503A, 230, 40);
   int fx = 296, fy = 290;
   fsAngler(FS_TIP_X - 6, FS_TIP_Y + 56, 36, 30);
-  fsLine(FS_TIP_X - 6, FS_TIP_Y + 56, fx - 30, fy - 4, 0, fsLineCol(92));
+  fsSpin();
+  fsLine(FS_TIP_X - 6, FS_TIP_Y + 56, fx - 32, fy - 4, 0, fsLineCol(92));
   for (int k = 0; k < 3; k++) {  // sparks off the rod's tip
     static const int8_t SP[3][2] = { { -14, -12 }, { 10, -16 }, { 16, 2 } };
     fsSq(FS_TIP_X - 6 + SP[k][0], FS_TIP_Y + 56 + SP[k][1], 4, 0xFFE27A);
   }
   fsHooked(fx, fy, 4, 2);
-  fsTension(92);
+  fsLineArc(92);
   fsSlots(FS_ST_4);
-  fsSay("LET GO!", CX - 10, 386, 0xFF8A7A, 4);
+  fsSay("SLOWER!", CX - 10, 386, 0xFF8A7A, 4);
 }
 
-// 9: caught! It leaps out onto the pier's side of the screen, drops flying, and its name goes up on the board
+// 9: too slow: no taps for a while. The line sags in a pale curve, the rod straightens, the notch sinks into the
+// blue, the rim glows a cold blue, and the blob drifts off with the float: FASTER! (a little longer and it's gone)
+static void fsMockSlack() {
+  fsBack();
+  fsRimGlow(0x7CC4EA, 190, 34);
+  int fx = 372, fy = 312;
+  fsBlob(fx, fy, 4, 170);
+  for (int k = 0; k < 3; k++) scRect(fx - 50 - k * 22, fy - 2 + (k % 2) * 6, fx - 41 - k * 22, fy + 1 + (k % 2) * 6, 0xD8F0FF);  // drifting
+  fsFloat(fx - 34, FS_SURF + 2);
+  fsAngler(FS_TIP_X, FS_TIP_Y - 4);
+  fsLine(FS_TIP_X, FS_TIP_Y - 4, fx - 34, FS_SURF - 16, 34, fsLineCol(10));
+  fsLineArc(10);
+  fsSlots(FS_ST_4);
+  fsSay("FASTER!", CX - 10, 386, 0x9FD6F0, 4);
+}
+
+// 10: landed! It leaps out onto the pier's side of the screen, drops flying, and its name goes up on the board
 static void fsMockCaught() {
   fsBack();
   const uint8_t *t = thumbs.getForm(120, false);  // Staryu
@@ -577,14 +640,51 @@ static void fsMockCaught() {
     scGridRect(gx, gy - 8, gx + 4, gy + 12, 0xFFFFFF);
     scGridRect(gx - 8, gy, gx + 12, gy + 4, 0xFFFFFF);
   }
-  fsBoard("STARYU!", 44);  // (the casts come back along the top once it's landed)
-  fsPoints("+1", CX, 392, 0x58B868);
+  fsBoard("STARYU!", 44);  // (the casts come back along the top once it's been weighed)
 }
 
-// 10: got away: the line snapped and hangs from the rod, the shadow shooting off with a trail of bubbles
+// the weigh-in: a red platform scale with a round dial, the Pokemon sitting on it, kg turning the needle
+static void fsScale(int cx, int top, int kg10, const uint8_t *who) {
+  const uint16_t ink = sc565(0x1B1B25);
+  gfx->fillRoundRect(cx - 58, top + 8, 116, 70, 10, ink);  // the body
+  gfx->fillRoundRect(cx - 55, top + 11, 110, 64, 8, sc565(0xE8503A));
+  gfx->fillRect(cx - 49, top + 13, 98, 4, sc565(0xF58C78));
+  int dy = top + 46;
+  gfx->fillCircle(cx, dy, 25, ink);  // the dial
+  gfx->fillCircle(cx, dy, 22, UI_WHITE);
+  for (int k = 0; k < 10; k++) {
+    float a = k * 0.6283f - 1.5708f;
+    fsSq(cx + (int)(17 * cosf(a)), dy + (int)(17 * sinf(a)), k % 5 ? 2 : 4, 0x1B1B25);
+  }
+  float a = (kg10 % 1000) / 1000.0f * 6.2832f - 1.5708f;  // a turn per 100 kg
+  for (int r = 0; r < 15; r += 2) fsSq(cx + (int)(r * cosf(a)), dy + (int)(r * sinf(a)), 4, 0xE8503A);
+  gfx->fillCircle(cx, dy, 4, ink);
+  gfx->fillRoundRect(cx - 80, top - 4, 160, 16, 5, ink);  // the platform it sits on
+  gfx->fillRoundRect(cx - 77, top - 1, 154, 10, 4, sc565(0xAAB0BC));
+  gfx->fillRect(cx - 73, top - 1, 146, 3, sc565(0xE4E6EC));
+  fsThumb(who, cx, top, 3);
+}
+
+// 11: the weigh-in, the moment that makes it fishing and not catching: it sits on the scale, the needle swings to
+// its weight, the weight goes on your total, and it hops back into the water
+static void fsMockWeigh() {
+  fsBack();
+  fsAngler(FS_TIP_X, FS_TIP_Y);
+  v2DimFrame(115);
+  fsBoard("WEIGH-IN", 70);
+  v2Panel(108, 112, 358, 360, 12);
+  fsScale(CX, 236, 361, thumbs.getForm(120, false));
+  setSize(4);
+  gfx->setTextColor(UI_INK);
+  setCur(centerX("36.1 kg", 4), 322);
+  printT("36.1 kg");
+  fsSay("BACK IN IT GOES!", CX, 376, 0xFFFFFF);
+}
+
+// 12: got away: the line snapped and hangs from the rod, the blob shooting off with a trail of bubbles
 static void fsMockAway() {
   fsBack();
-  fsShadow(414, 318, 4, 1, 120);
+  fsBlob(414, 318, 4, 120);
   for (int k = 0; k < 4; k++) scRect(340 - k * 26, 314 + (k % 2) * 6, 351 - k * 26, 317 + (k % 2) * 6, 0xD8F0FF);  // its wake
   fsBubbles(330, 300, 3);
   fsAngler(236, 140, -6, -10);
@@ -597,7 +697,7 @@ static void fsMockAway() {
   fsSay("SNAP!", 300, 146, 0xFF8A7A, 3);
 }
 
-// 11: the big one: Gyarados, the rare one from the deep. Gold rays and a gold board
+// 13: the big one: Gyarados, the giant that turns up once a game, from the deep. Gold rays and a gold board
 static void fsMockRare() {
   fsBack();
   const uint8_t *t = thumbs.getForm(130, false);
@@ -610,65 +710,71 @@ static void fsMockRare() {
   fsSplash(cx, FS_SURF + 6, 60, 40, 41);
   fsRing(cx, 70, 0xFFFFFF, 4);
   v2SignIn("GYARADOS!", 44, C565(0xc0, 0x84, 0x10), C565(0xf0, 0xc0, 0x4a));
-  fsPoints("+10", CX - 46, 392, 0xF8A020);
-  setSize(2);  // and it's new to your Pokedex
-  int w = textW("NEW!", 2) + 16, nx = CX + 50;
-  gfx->fillRoundRect(nx - 3, 395, w + 6, 30, 9, sc565(0x1B1B25));
-  gfx->fillRoundRect(nx, 398, w, 24, 7, sc565(0xE8503A));
-  gfx->setTextColor(UI_WHITE);
-  setCur(nx + 8, 403);
-  printT("NEW!");
+  fsSay("THE BIG ONE!", CX - 20, 392, 0xFFE27A, 3);
 }
 
-// 12: the end: v2GameResult's panel with the score and the record, and the five casts in a row under the score
+// 14: the end: the total weight big, the five with what each weighed, how far along the goals it got (bronze 50 kg,
+// silver 150, gold 300) and the record. PLAY AGAIN! where every game has it
 static void fsMockResult() {
   fsBack();
   fsAngler(FS_TIP_X, FS_TIP_Y);
   v2DimFrame(115);
-  fsBoard("POKEFISH", 70);
+  fsBoard("FISHING", 70);
   v2Panel(96, 112, 370, V2_AGAIN_Y + V2_AGAIN_H + 16, 12);
-  int y = 124;
+  int total = 0;
+  for (int i = 0; i < 5; i++) total += FS_ST_END[i] > 1 ? fsKg10(FS_ST_END[i]) : 0;
+  char b[24];
+  fsKgText(b, sizeof(b), total);
   setSize(4);
   gfx->setTextColor(UI_INK);
-  setCur(centerX("13", 4), y);  // Magikarp 1 + Goldeen 1 + Staryu 1 + Gyarados 10
-  printT("13");
-  y += 40;
-  int x0 = CX - (5 * 40 + 4 * 6) / 2;
-  for (int i = 0; i < 5; i++) {  // the five casts
+  setCur(centerX(b, 4), 120);
+  printT(b);
+  int y = 158, x0 = CX - (5 * 40 + 4 * 6) / 2;
+  for (int i = 0; i < 5; i++) {  // the five casts, and what each weighed
     int x = x0 + i * 46, d = FS_ST_END[i];
     gfx->fillRoundRect(x, y, 40, 40, 8, sc565(d < 0 ? 0xE4E6EC : 0xEAF6FB));
+    char w[8];
     if (d < 0) {
       for (int k = 0; k < 14; k += 2) {
         fsSq(x + 13 + k, y + 13 + k, 4, 0xE8503A);
         fsSq(x + 27 - k, y + 13 + k, 4, 0xE8503A);
       }
-      continue;
+      snprintf(w, sizeof(w), "-");
+    } else {
+      const uint8_t *t = thumbs.getForm(d, false);
+      int h = fsThumbH(t, 1);
+      fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + 38, fsClip[3] = y + 38;
+      fsThumb(t, x + 20, y + 20 + (h < 36 ? h / 2 : 17), 1);
+      fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
+      snprintf(w, sizeof(w), "%d", (fsKg10(d) + 5) / 10);
     }
-    const uint8_t *t = thumbs.getForm(d, false);
-    int h = fsThumbH(t, 1);
-    fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + 38, fsClip[3] = y + 38;
-    fsThumb(t, x + 20, y + 20 + (h < 36 ? h / 2 : 17), 1);
-    fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
-    char p[4];
-    snprintf(p, sizeof(p), "%d", d == 130 ? 10 : 1);
-    setSize(1);
-    gfx->setTextColor(sc565(d == 130 ? 0xC08410 : 0x3C8A4C));
-    setCur(x + 40 - textW(p, 1) - 3, y + 31);
-    printT(p);
+    setSize(2);
+    gfx->setTextColor(V2_INK_MUTED);
+    setCur(x + 20 - textW(w, 2) / 2 + 1, y + 43);
+    printT(w);
   }
-  y += 48;
+  // the goals: a bar to 330 kg with a medal at 50, 150 and 300, filled to the total
+  const int bx0 = 122, bx1 = 344, by = 222, gk[3] = { 50, 150, 300 };
+  const Rgb gc[3] = { 0xC8783A, 0xB4BAC8, 0xF8C030 };
+  int fx = bx0 + (bx1 - bx0) * (total > 3300 ? 3300 : total) / 3300;
+  gfx->fillRoundRect(bx0 - 2, by - 2, bx1 - bx0 + 4, 12, 5, sc565(0x1B1B25));
+  gfx->fillRoundRect(bx0, by, bx1 - bx0, 8, 4, sc565(0xD8DCE4));
+  gfx->fillRoundRect(bx0, by, fx - bx0, 8, 4, sc565(0x58B868));
+  for (int k = 0; k < 3; k++) {
+    int mx = bx0 + (bx1 - bx0) * gk[k] / 330;
+    bool got = total >= gk[k] * 10;
+    gfx->fillCircle(mx, by + 4, 9, sc565(0x1B1B25));
+    gfx->fillCircle(mx, by + 4, 7, sc565(got ? gc[k] : 0xE4E6EC));
+    if (got) gfx->fillRect(mx - 3, by + 1, 3, 3, UI_WHITE);
+  }
   setSize(2);
   gfx->setTextColor(C565(0xc0, 0x84, 0x10));
-  setCur(centerX("NEW RECORD!", 2), y);
-  printT("NEW RECORD!");
-  y += 22;
-  gfx->setTextColor(C565(0x3c, 0x8a, 0x4c));
-  setCur(centerX(T(S_GREAT_JOY), 2), y);
-  printT(T(S_GREAT_JOY));
+  setCur(centerX("GOLD!  NEW RECORD!", 2), 240);
+  printT("GOLD!  NEW RECORD!");
   v2AgainButton(V2_AGAIN_Y);
 }
 
-// 13: the bite at night: the same moment in the dark. The float's lamp, the rings and the "!" carry it
+// 15: the bite at night: the same moment in the dark. The float's lamp, the rings and the "!" carry it
 static void fsMockNight() {
   fsNight = true;
   fsMockBite();
@@ -685,10 +791,13 @@ static void fishMockRender() {
     case 6: fsMockBite(); break;
     case 7: fsMockReel(); break;
     case 8: fsMockStrain(); break;
-    case 9: fsMockCaught(); break;
-    case 10: fsMockAway(); break;
-    case 11: fsMockRare(); break;
-    case 12: fsMockResult(); break;
-    case 13: fsMockNight(); break;
+    case 9: fsMockSlack(); break;
+    case 10: fsMockCaught(); break;
+    case 11: fsMockWeigh(); break;
+    case 12: fsMockAway(); break;
+    case 13: fsMockRare(); break;
+    case 14: fsMockResult(); break;
+    case 15: fsMockNight(); break;
+    case 16: fsMockReelBig(); break;
   }
 }
