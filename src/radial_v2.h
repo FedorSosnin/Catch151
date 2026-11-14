@@ -166,32 +166,56 @@ static void v2RadialItem(const char *const *icon, int cx, int cy, const char *la
   setCur(x, labelY);
   printT(b);
 }
+// The ring's cells, worked out once since it never moves (V2Cells): their kind is the section * 2, + 1 on its soft edge
+static V2Cells gRadCells;
+static void v2RadialCells() {
+  const int ri = V2_RAD_IN, ro = V2_RAD_OUT, rr = ro + 3;
+  v2CellsBuild(gRadCells, (CX - rr) & ~1, (CY - rr) & ~1, CX + rr, CY + rr, [&](int x, int y) {
+    int fx = x + 1 - CX, fy = y + 1 - CY, r2 = fx * fx + fy * fy;
+    if (r2 < (ri - 3) * (ri - 3) || r2 > rr * rr) return -1;
+    int d = abs(abs(fx) - abs(fy));
+    if (d < V2_RAD_GAP) return -1;  // the gaps between them
+    int s = abs(fy) > abs(fx) ? (fy < 0 ? 0 : 2) : (fx > 0 ? 1 : 3);
+    bool rim = r2 < ri * ri || r2 > ro * ro || d < V2_RAD_GAP + 4;
+    return s * 2 + rim;
+  });
+}
 // The ring over the dimmed home, see-through as the icons' band is (Fedor: "the same color as the area behind the
 // main screen icons"), with its fainter edge; the section under the finger green in the panels' dark rim. Its icons
-// and words, the Pokemon seen through the middle.
+// and words, the Pokemon seen through the middle. One pass: every pixel dimmed (v2DimFrame(140)) and, on the ring,
+// the band's ink over that (the edge's, then inside the inside's), the blends as tables (V2Lut)
 static void v2RadialDraw() {
-  v2DimFrame(140);
+  if (!gRadCells.row) v2RadialCells();
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
-  const int ri = V2_RAD_IN, ro = V2_RAD_OUT, rr = ro + 3;
   const uint16_t green = C565(0x58, 0xb8, 0x68);
   uint16_t col;
   int ra, ta;
   v2BandInk(col, ra, ta);
-  for (int y = (CY - rr) & ~1; y <= CY + rr; y += 2)
-    for (int x = (CX - rr) & ~1; x <= CX + rr; x += 2) {
-      int fx = x + 1 - CX, fy = y + 1 - CY, r2 = fx * fx + fy * fy;
-      if (r2 < (ri - 3) * (ri - 3) || r2 > rr * rr) continue;
-      int d = abs(abs(fx) - abs(fy));
-      if (d < V2_RAD_GAP) continue;  // the gaps between them
-      int s = abs(fy) > abs(fx) ? (fy < 0 ? 0 : 2) : (fx > 0 ? 1 : 3);
-      bool rim = r2 < ri * ri || r2 > ro * ro || d < V2_RAD_GAP + 4;
-      if (s == v2RadialHover) {
-        v2Cell(fb, x, y, rim ? V2_RIM : green, 256);
-      } else {
-        v2Cell(fb, x, y, col, ra);
-        if (!rim) v2Cell(fb, x, y, col, ta);
+  V2Lut dim, edge, in;
+  v2LutStart(dim);
+  v2LutBlend(dim, sc565(V2_DIM_TINT), 140);
+  edge = dim;
+  v2LutBlend(edge, col, ra);
+  in = edge;
+  v2LutBlend(in, col, ta);
+  for (int y = 0; y < V2_W; y++) {
+    uint16_t *row = fb + y * V2_W;
+    int x = 0, k = y >> 1;
+    if (gRadCells.row)
+      for (int i = gRadCells.row[k]; i < gRadCells.row[k + 1]; i++) {
+        const V2CellRun &u = gRadCells.run[i];
+        int n = 2 * u.cells;
+        v2LutRun(row + x, u.x0 - x, dim);
+        if (u.kind >> 1 == v2RadialHover) {
+          uint16_t c = (u.kind & 1) ? V2_RIM : green;
+          for (int j = 0; j < n; j++) row[u.x0 + j] = c;
+        } else {
+          v2LutRun(row + u.x0, n, (u.kind & 1) ? edge : in);
+        }
+        x = u.x0 + n;
       }
-    }
+    v2LutRun(row + x, V2_W - x, dim);
+  }
   v2RadialItem(SPR_V2_RAD_GEAR, CX, 72, T(S_SETTINGS), 114);  // (72 px icons: their corners inside the ring's edge)
   v2RadialItem(SPR_V2_RAD_MEDAL, 378, 206, T(S_RAD_MEDALS), 250);
   v2RadialItem(SPR_V2_RAD_STATS, CX, 390, T(S_RAD_STATS), 334);
