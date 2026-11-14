@@ -18,7 +18,7 @@ void fishMockSet(uint8_t n) { fsMock = n; }
 #define FS_PET_X 104
 #define FS_FLOAT_X 304   // where the float sits in most of the mockups
 static const Rgb FS_WATER[4] = { 0x62B6E2, 0x4C9CD6, 0x3B82C6, 0x2D66AE };
-static const Rgb FS_WATER_N[4] = { 0x24466E, 0x1E3C62, 0x183256, 0x12284A };  // at night
+static const Rgb FS_WATER_N[4] = { 0x2C5482, 0x254A76, 0x1E3F68, 0x18345A };  // at night (light enough to see the fish in)
 static bool fsNight = false;
 
 static int fsSandY(int x) { return x < 140 ? 356 + x / 10 : 370 + (x - 140) * 62 / 100; }
@@ -881,7 +881,7 @@ static void fsRimGlowFast(Rgb col, int a256, int w) {
   }
 }
 
-// a blob of any size (s px a unit, as fsBlob)
+// a blob of any size (s px a unit, as fsBlob). At night the moon catches its top edge, so its size still shows
 static void fsBlobF(float cx, float cy, float s, int a256) {
   Rgb col = fsNight ? 0x050A18 : 0x0E2A5C;
   float rx = 5.0f * s, ry = 3.0f * s;
@@ -889,7 +889,9 @@ static void fsBlobF(float cx, float cy, float s, int a256) {
     for (int x = scFl4((int)(cx - rx)) * 4; x < cx + rx; x += 4) {
       float dx = (x + 2 - cx) / rx, dy = (y + 2 - cy) / ry, d = dx * dx + dy * dy;
       if (d > 1 || (d > 0.6f && (scFl4(x) + scFl4(y)) % 2)) continue;
-      fsBlend(x, y, x + 3, y + 3, col, a256);
+      float uy = (y - 2 - cy) / ry;
+      if (fsNight && dx * dx + uy * uy > 1 && dy < 0) fsBlend(x, y, x + 3, y + 3, 0x8AA8D0, 150);  // moonlit
+      else fsBlend(x, y, x + 3, y + 3, col, a256);
     }
 }
 
