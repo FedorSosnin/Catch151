@@ -59,16 +59,16 @@ static bool wsSend(uint8_t opcode, const uint8_t *data, size_t len) {
   return rc->write(f, 6 + len) == 6 + len;
 }
 
-// Connects and upgrades to a WebSocket. Holds the loop for a second or two (the TLS handshake):
-// only at boot and after the connection drops, with a growing pause between tries.
-static void relayConnect() {
-  rc = new NetworkClientSecure;
-  rc->setCACert(OTA_ROOTS);
-  rc->setHandshakeTimeout(8);
-  if (!rc->connect(BUDDY_RELAY_HOST, 443)) {
+// Connects and upgrades to a WebSocket: true once it's upgraded. The TLS handshake takes a second or two, and when the
+// relay can't be reached, up to its timeouts: so it runs on a task of its own, on the other core (relayConnect()),
+// and the game no longer waits for it. It held the loop all that time, the screen frozen: 32 s once, on a Wi-Fi that
+// came and went.
+static bool relayHandshake(NetworkClientSecure *c) {
+  c->setCACert(OTA_ROOTS);
+  c->setHandshakeTimeout(8);
+  if (!c->connect(BUDDY_RELAY_HOST, 443)) {
     Serial.println("buddy: relay unreachable");
-    relayClose(true);
-    return;
+    return false;
   }
   uint8_t raw[16];
   esp_fill_random(raw, sizeof(raw));
@@ -82,34 +82,91 @@ static void relayConnect() {
     key[o++] = i + 2 < 16 ? B64[v & 63] : '=';
     key[o] = 0;
   }
-  rc->printf("GET " BUDDY_RELAY_PATH " HTTP/1.1\r\nHost: " BUDDY_RELAY_HOST "\r\nUpgrade: websocket\r\n"
-             "Connection: Upgrade\r\nSec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n"
-             "User-Agent: Catch151/2\r\n\r\n", key);  // /2: steps aside for Wi-Fi updates (1.31 on)
-  rc->setTimeout(4000);
-  String status = rc->readStringUntil('\n');
+  c->printf("GET " BUDDY_RELAY_PATH " HTTP/1.1\r\nHost: " BUDDY_RELAY_HOST "\r\nUpgrade: websocket\r\n"
+            "Connection: Upgrade\r\nSec-WebSocket-Key: %s\r\nSec-WebSocket-Version: 13\r\n"
+            "User-Agent: Catch151/2\r\n\r\n", key);  // /2: steps aside for Wi-Fi updates (1.31 on)
+  c->setTimeout(4000);
+  String status = c->readStringUntil('\n');
   if (!status.startsWith("HTTP/1.1 101")) {
     Serial.printf("buddy: relay refused (%s)\n", status.c_str());
-    relayClose(true);
-    return;
+    return false;
   }
-  while (rc->connected()) {  // the rest of the headers, up to the blank line
-    String h = rc->readStringUntil('\n');
+  while (c->connected()) {  // the rest of the headers, up to the blank line
+    String h = c->readStringUntil('\n');
     if (h.length() <= 1) break;
   }
-  rc->setTimeout(1000);
-  relayOn = true;
-  relayWait = RELAY_RETRY_MS;
-  relayPingT = millis();
-  Serial.println("buddy: relay connected");
+  c->setTimeout(1000);
+  return true;
+}
+
+// The task: a connection made each time relayConnect() asks, handed back in rcMade with relayDone 1 (or relayDone -1,
+// nothing made). Meanwhile the loop leaves the relay alone (relayBusy).
+static NetworkClientSecure *rcMade = nullptr;
+static int relayDone = 0;
+static bool relayBusy = false;
+static SemaphoreHandle_t relayGo = nullptr;
+static void relayMake() {  // (on the task, or in the loop if there's no task)
+  NetworkClientSecure *c = new NetworkClientSecure;
+  bool ok = relayHandshake(c);
+  if (!ok) {
+    c->stop();
+    delete c;
+    c = nullptr;
+  }
+  rcMade = c;
+  __atomic_store_n(&relayDone, ok ? 1 : -1, __ATOMIC_RELEASE);
+}
+static void relayTask(void *) {
+  for (;;) {
+    xSemaphoreTake(relayGo, portMAX_DELAY);
+    relayMake();
+  }
+}
+static void relayConnect() {
+  static bool tried = false, task = false;
+  if (!tried) {
+    tried = true;
+    relayGo = xSemaphoreCreateBinary();
+    // (8 KB of stack, as the loop's task had for it)
+    task = relayGo && xTaskCreatePinnedToCore(relayTask, "relay", 8192, nullptr, 1, nullptr, 0) == pdPASS;
+  }
+  relayBusy = true;
+  relayDone = 0;
+  if (task) xSemaphoreGive(relayGo);
+  else relayMake();  // no room for the task: in the loop, as before
+}
+// In the loop: a connection made meanwhile becomes the relay's, or is closed if the relay isn't wanted now (off the
+// Wi-Fi, or held for an update); a failure makes the pause before the next try longer
+static void relayCollect(bool wanted) {
+  int done = __atomic_load_n(&relayDone, __ATOMIC_ACQUIRE);
+  if (!relayBusy || !done) return;
+  NetworkClientSecure *c = rcMade;
+  rcMade = nullptr;
+  relayBusy = false;
+  relayDone = 0;
+  if (done > 0 && wanted) {
+    rc = c;
+    relayOn = true;
+    relayWait = RELAY_RETRY_MS;
+    relayPingT = millis();
+    Serial.println("buddy: relay connected");
+    return;
+  }
+  if (c) {
+    c->stop();
+    delete c;
+  }
+  relayClose(done < 0);
 }
 
 static void relayTick(bool wifi) {
   uint32_t now = millis();
+  relayCollect(wifi && !relayHeld);
   if (!wifi || relayHeld) {
     if (rc) relayClose(false);
     return;
   }
-  if (!rc && now - relayT >= relayWait) relayConnect();
+  if (!rc && !relayBusy && now - relayT >= relayWait) relayConnect();
   if (relayOn && now - relayPingT >= BUDDY_RELAY_PING_MS) {
     relayPingT = now;
     if (!wsSend(0x1, (const uint8_t *)"ping", 4)) relayClose(true);
@@ -205,7 +262,11 @@ void buddyNetRelayHold(bool hold) {
   if (hold == relayHeld) return;
   relayHeld = hold;
   if (hold) {
-    if (rc) relayClose(false);  // frees its TLS memory now
+    // frees its TLS memory now, a connection being made too once it's done (the update makes one of its own; this
+    // waits only before an update, which the screen dimmed or the update's own screen allows)
+    while (relayBusy && !__atomic_load_n(&relayDone, __ATOMIC_ACQUIRE)) delay(20);
+    relayCollect(false);
+    if (rc) relayClose(false);
   } else {
     relayT = millis();
     relayWait = 2000;  // back soon after
