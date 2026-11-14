@@ -64,7 +64,7 @@ $(BUILD)/music_wav: music_wav.cpp voice_json.h $(ROOT)/src/music.h $(ROOT)/src/m
 dex: $(BUILD)/dex_json
 	$(BUILD)/dex_json $(ROOT)/tools/dex.json
 
-$(BUILD)/dex_json: dex_json.cpp dex_json.h $(ROOT)/src/dex.h $(ROOT)/src/moves.h $(ROOT)/src/battle.h $(ROOT)/src/dexfacts.h
+$(BUILD)/dex_json: dex_json.cpp dex_json.h $(ROOT)/src/dex.h $(ROOT)/src/moves.h $(ROOT)/src/battle.h $(ROOT)/src/dexfacts.h $(ROOT)/src/pet.h $(ROOT)/src/zones.h
 	@mkdir -p $(BUILD)
 	$(CXX) $(ALLFLAGS) -o $@ dex_json.cpp
 

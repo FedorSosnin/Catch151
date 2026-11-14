@@ -2414,10 +2414,12 @@ void v2HostWifiShot(int which) {
 #endif
 
 // ----- the games' ends, their how-to cards, Who's That? and a catch -----
+#define V2_DIM_TINT 0x120E22
 static void v2DimFrame(int a256) {  // everything a256/256 of the way to the night tint
-  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
-  const uint16_t tint = sc565(0x120E22);
-  for (int i = 0; i < V2_W * V2_W; i++) fb[i] = v2Blend(fb[i], tint, a256);
+  V2Lut L;
+  v2LutStart(L);
+  v2LutBlend(L, sc565(V2_DIM_TINT), a256);
+  v2LutRun((uint16_t *)gfx->getFramebuffer(), V2_W * V2_W, L);
 }
 // a game's end (Fedor: "a Play Again! button to play again and our X to close"): PLAY AGAIN! in green, the
 // red X under it; the end waits for one of them. Its place is fixed, so a finger finds it at every game's end

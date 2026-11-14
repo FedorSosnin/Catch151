@@ -22,6 +22,117 @@ static inline void v2Cell(uint16_t *fb, int x, int y, uint16_t col, int a) {
   p[466] = v2Blend(p[466], col, a); p[467] = v2Blend(p[467], col, a);
 }
 
+// Blends one after another toward fixed colours, as a table for each 565 channel. v2Blend works on each channel apart
+// (a channel's result depends on that channel alone), so a pixel goes through the whole chain in three lookups and
+// comes out the very colour the blends one by one give. For the passes over most of the screen (v2DimFrame, the radial
+// menu's ring), where those blends were much of a frame's time on the Knomi.
+struct V2Lut {
+  uint16_t r[32], g[64], b[32];  // each channel's result, already in its place in the 565 word
+};
+static void v2LutStart(V2Lut &L) {  // no blend yet: every colour as it is
+  for (int i = 0; i < 64; i++) {
+    if (i < 32) L.r[i] = (uint16_t)(i << 11), L.b[i] = (uint16_t)i;
+    L.g[i] = (uint16_t)(i << 5);
+  }
+}
+static void v2LutBlend(V2Lut &L, uint16_t s, int a) {  // then v2Blend(that, s, a)
+  const int sr = s >> 11, sg = (s >> 5) & 63, sb = s & 31;
+  for (int i = 0; i < 64; i++) {
+    if (i < 32) {
+      int dr = L.r[i] >> 11, db = L.b[i];
+      L.r[i] = (uint16_t)((dr + (((sr - dr) * a) >> 8)) << 11);
+      L.b[i] = (uint16_t)(db + (((sb - db) * a) >> 8));
+    }
+    int dg = L.g[i] >> 5;
+    L.g[i] = (uint16_t)((dg + (((sg - dg) * a) >> 8)) << 5);
+  }
+}
+static inline uint16_t v2LutPx(const V2Lut &L, uint16_t p) { return L.r[p >> 11] | L.g[(p >> 5) & 63] | L.b[p & 31]; }
+// n pixels from p through the table, two at a time where they line up (the Knomi's framebuffer is in PSRAM, where
+// fewer, wider reads and writes are what count)
+typedef uint32_t __attribute__((may_alias)) v2u32a;
+static void v2LutRun(uint16_t *p, int n, const V2Lut &L) {
+  if (n <= 0) return;
+  if ((uintptr_t)p & 2) {
+    *p = v2LutPx(L, *p);
+    p++;
+    n--;
+  }
+  v2u32a *q = (v2u32a *)p;
+  for (int i = n >> 1; i > 0; i--, q++) {
+    uint32_t v = *q;
+    *q = v2LutPx(L, (uint16_t)v) | (uint32_t)v2LutPx(L, (uint16_t)(v >> 16)) << 16;
+  }
+  if (n & 1) p[n - 1] = v2LutPx(L, p[n - 1]);
+}
+
+// A shape's 2 px cells (a Knomi pixel each) worked out once, so drawing it each frame has no geometry in it: for each
+// pair of rows, its runs of cells alike, a kind each (what the shape does there). classify(x, y) gives the kind of
+// the cell whose top left is (x, y), or -1 where the shape isn't; the cells are those of a loop over x0..x1, y0..y1
+// in steps of 2, as v2Cell() would draw them (none past the screen's edge); x0 and y0 are even, as every shape's are.
+struct V2CellRun {
+  uint16_t x0;
+  uint8_t cells, kind;  // cells from x0, 2 px each
+};
+struct V2Cells {
+  uint16_t *row = nullptr;  // row pair k's runs: run[row[k]] up to run[row[k + 1]] (V2_CELL_ROWS + 1 of them)
+  V2CellRun *run = nullptr;
+};
+#define V2_CELL_ROWS 233
+template <typename F>
+static int v2CellsPass(V2Cells *c, int x0, int y0, int x1, int y1, F classify) {  // c null: only counted
+  int n = 0;
+  for (int k = 0; k < V2_CELL_ROWS; k++) {
+    if (c) c->row[k] = (uint16_t)n;
+    const int y = 2 * k;
+    if (y < y0 || y > y1 || y > 464) continue;
+    int lastKind = -1, lastEnd = -1, cells = 0;
+    for (int x = x0; x <= x1; x += 2) {
+      if (x < 0 || x > 464) continue;
+      int kind = classify(x, y);
+      if (kind < 0) continue;
+      if (kind == lastKind && x == lastEnd && cells < 255) {  // the run goes on
+        cells++;
+        if (c) c->run[n - 1].cells = (uint8_t)cells;
+      } else {
+        if (c) c->run[n] = { (uint16_t)x, 1, (uint8_t)kind };
+        n++;
+        lastKind = kind;
+        cells = 1;
+      }
+      lastEnd = x + 2;
+    }
+  }
+  if (c) c->row[V2_CELL_ROWS] = (uint16_t)n;
+  return n;
+}
+template <typename F>
+static void v2CellsBuild(V2Cells &c, int x0, int y0, int x1, int y1, F classify) {
+  free(c.row);
+  c.row = nullptr;
+  c.run = nullptr;
+  int n = v2CellsPass(nullptr, x0, y0, x1, y1, classify);
+  uint8_t *mem = (uint8_t *)ps_malloc((V2_CELL_ROWS + 1) * sizeof(uint16_t) + n * sizeof(V2CellRun) + 4);
+  if (!mem) return;
+  c.row = (uint16_t *)mem;
+  c.run = (V2CellRun *)(mem + (((V2_CELL_ROWS + 1) * sizeof(uint16_t) + 3) & ~3));
+  v2CellsPass(&c, x0, y0, x1, y1, classify);
+}
+// Draws them: each kind's cells through its table (lut[kind]), or painted paint[kind] where it has none
+static void v2CellsDraw(uint16_t *fb, const V2Cells &c, const V2Lut *const *lut, const uint16_t *paint) {
+  if (!c.row) return;
+  for (int k = 0; k < V2_CELL_ROWS; k++)
+    for (int i = c.row[k]; i < c.row[k + 1]; i++) {
+      const V2CellRun &u = c.run[i];
+      const int n = 2 * u.cells;
+      for (int y = 2 * k; y <= 2 * k + 1; y++) {
+        uint16_t *p = fb + y * 466 + u.x0;
+        if (lut[u.kind]) v2LutRun(p, n, *lut[u.kind]);
+        else for (int j = 0; j < n; j++) p[j] = paint[u.kind];
+      }
+    }
+}
+
 #include "hover_v2.h"  // on a computer and the web: the control under the mouse lifted, with its shadow (V2_HOVER)
 
 // A ring segment round the screen's centre: from angle a0 to a1 (degrees, 0 = right, clockwise, less than
@@ -208,6 +319,63 @@ static void v2BarLabel(uint16_t *fb, const char *lab, float midDeg, uint16_t col
   }
 }
 
+#ifdef KNOMI_RIM
+// The Knomi: a bar's label (Latin letters, white with their dark edge) drawn once on a blank screen and its pixels
+// kept, so each frame only puts them back (the turned letters were most of the bars' time). A pixel each: its place in
+// the canvas, bit 30 for the letters' white (else the dark edge), bit 31 inside the box that lifts the label over the
+// rim's shadow (knomiLiftKeep()'s, when it has room for it); a cell where one changes the picture is marked over the
+// shadow, as knomiLiftMark() finds them. False if there's no room to keep it (then it's drawn as ever).
+struct V2LabelPx {
+  uint32_t *px = nullptr;
+  int n = 0;
+  char text[24] = "";
+};
+static bool v2BarLabelKept(uint16_t *fb, int bi, const char *lab, float mid, int bx0, int by0, int bx1, int by1) {
+  static V2LabelPx kept[4];
+  V2LabelPx &k = kept[bi];
+  if (!k.px || strcmp(k.text, lab) != 0) {
+    if (strlen(lab) >= sizeof k.text) return false;
+    free(k.px);
+    k.px = nullptr;
+    k.n = 0;
+    uint16_t *tmp = (uint16_t *)ps_malloc(466 * 466 * sizeof(uint16_t));
+    if (!tmp) return false;
+    uint16_t blank = 1;
+    while (blank == UI_INK || blank == UI_WHITE) blank++;
+    for (int i = 0; i < 466 * 466; i++) tmp[i] = blank;
+    v2BarLabel(tmp, lab, mid, UI_WHITE);
+    int n = 0;
+    for (int i = 0; i < 466 * 466; i++) n += tmp[i] != blank;
+    k.px = (uint32_t *)ps_malloc(n * sizeof(uint32_t) + 4);
+    if (!k.px) {
+      free(tmp);
+      return false;
+    }
+    knomiLiftClip(bx0, by0, bx1, by1);
+    const int w = bx1 - bx0 + 1, h = by1 - by0 + 1;
+    const bool lifts = w > 0 && h > 0 && w * h <= KNOMI_LIFT_MAX;
+    for (int i = 0; i < 466 * 466; i++) {
+      if (tmp[i] == blank) continue;
+      int x = i % 466, y = i / 466;
+      bool in = lifts && x >= bx0 && x <= bx1 && y >= by0 && y <= by1;
+      k.px[k.n++] = (uint32_t)i | (tmp[i] == UI_WHITE ? 1u << 30 : 0) | (in ? 1u << 31 : 0);
+    }
+    free(tmp);
+    strcpy(k.text, lab);
+  }
+  for (int i = 0; i < k.n; i++) {
+    const uint32_t v = k.px[i], at = v & 0x3FFFF;
+    const uint16_t c = (v >> 30 & 1) ? UI_WHITE : UI_INK;
+    if ((v >> 31) && fb[at] != c) {
+      uint32_t y = at / 466, x = at - y * 466, cell = (y >> 1) * KNOMI_CELLS + (x >> 1);
+      gKnomiLift[cell >> 5] |= 1u << (cell & 31);
+    }
+    fb[at] = c;
+  }
+  return true;
+}
+#endif
+
 #ifdef BOARD_HOST
 // How much of a pixel (its centre at fx, fy from the screen's centre) a bar covers, 0..256: the bar is everything within
 // h of its middle line, the arc of radius rm from a0 to a1 degrees (round ends included), and a pixel half in, half
@@ -268,16 +436,27 @@ static void v2Bar(uint16_t *fb, const V2Bar &b, uint8_t val, const char *lab, bo
   v2BarLabel(fb, lab, (a0 + a1) / 2, UI_WHITE);
   return;
 #endif
-  for (int y = y0; y <= y1; y += 2) {
-    float fy = y + 1 - CY;
-    for (int x = x0; x <= x1; x += 2) {
-      float fx = x + 1 - CX, r2 = fx * fx + fy * fy;
-      if (!v2In(rim, fx, fy, r2)) continue;
-      if (v2In(full, fx, fy, r2)) { v2Cell(fb, x, y, fill, 256); continue; }
-      v2Cell(fb, x, y, tcol, ra);
-      if (v2In(track, fx, fy, r2)) v2Cell(fb, x, y, tcol, ta);
-    }
+  // its cells (V2Cells), worked out again only when its value changes: kind 0 the soft rim, 1 the track, 2 the fill
+  const int bi = (int)(&b - V2_BARS) & 3;
+  static V2Cells cells[4];
+  static int16_t cellsVal[4] = { -1, -1, -1, -1 };
+  if (cellsVal[bi] != val || !cells[bi].row) {
+    v2CellsBuild(cells[bi], x0, y0, x1, y1, [&](int x, int y) {
+      float fy = y + 1 - CY, fx = x + 1 - CX, r2 = fx * fx + fy * fy;
+      if (!v2In(rim, fx, fy, r2)) return -1;
+      if (v2In(full, fx, fy, r2)) return 2;
+      return v2In(track, fx, fy, r2) ? 1 : 0;
+    });
+    cellsVal[bi] = val;
   }
+  V2Lut edge, in;
+  v2LutStart(edge);
+  v2LutBlend(edge, tcol, ra);
+  in = edge;
+  v2LutBlend(in, tcol, ta);
+  const V2Lut *lut[3] = { &edge, &in, nullptr };
+  const uint16_t paint[3] = { 0, 0, fill };
+  v2CellsDraw(fb, cells[bi], lut, paint);
 #ifdef KNOMI_RIM  // the Knomi: the label over its rim's shadow (knomi_rim.h), so it reads as before
   {
     // its box: the letters along the bar (12 px each, 18 a kana or hangul) and their edge, with room to spare
@@ -293,9 +472,11 @@ static void v2Bar(uint16_t *fb, const V2Bar &b, uint8_t val, const char *lab, bo
         bx0 = px < bx0 ? px : bx0, by0 = py < by0 ? py : by0, bx1 = px > bx1 ? px : bx1, by1 = py > by1 ? py : by1;
       }
     bx0 -= 4, by0 -= 4, bx1 += 4, by1 += 4;
-    bool kept = knomiLiftKeep(fb, bx0, by0, bx1, by1);
-    v2BarLabel(fb, lab, mid, UI_WHITE);
-    if (kept) knomiLiftMark(fb, bx0, by0, bx1, by1);
+    if (gCjkFont || !v2BarLabelKept(fb, bi, lab, mid, bx0, by0, bx1, by1)) {  // (Japanese and Korean: drawn as ever)
+      bool kept = knomiLiftKeep(fb, bx0, by0, bx1, by1);
+      v2BarLabel(fb, lab, mid, UI_WHITE);
+      if (kept) knomiLiftMark(fb, bx0, by0, bx1, by1);
+    }
   }
 #else
   v2BarLabel(fb, lab, (a0 + a1) / 2, UI_WHITE);
@@ -354,15 +535,21 @@ static void v2DrawBand() {
     }
   }
 #else
-  for (int y = y0; y <= y1; y += 2) {
-    float fy = y + 1 - CY;
-    for (int x = x0; x <= x1; x += 2) {
-      float fx = x + 1 - CX, r2 = fx * fx + fy * fy;
-      if (!v2In(rim, fx, fy, r2)) continue;
-      v2Cell(fb, x, y, col, ra);
-      if (v2In(band, fx, fy, r2)) v2Cell(fb, x, y, col, ta);
-    }
-  }
+  // its cells, worked out once (V2Cells): kind 0 the soft edge only, 1 inside the band
+  static V2Cells cells;
+  if (!cells.row)
+    v2CellsBuild(cells, x0, y0, x1, y1, [&](int x, int y) {
+      float fy = y + 1 - CY, fx = x + 1 - CX, r2 = fx * fx + fy * fy;
+      if (!v2In(rim, fx, fy, r2)) return -1;
+      return v2In(band, fx, fy, r2) ? 1 : 0;
+    });
+  V2Lut edge, in;
+  v2LutStart(edge);
+  v2LutBlend(edge, col, ra);
+  in = edge;
+  v2LutBlend(in, col, ta);
+  const V2Lut *lut[2] = { &edge, &in };
+  v2CellsDraw(fb, cells, lut, nullptr);
 #endif
 }
 
