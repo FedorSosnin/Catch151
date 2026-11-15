@@ -26,6 +26,7 @@
 #include <initguid.h>  // the sensor ids, defined here
 #include <sensors.h>
 #include <sensorsapi.h>
+#include <tpcshrd.h>  // the touch screen: no press-and-hold right-click (TABLET_DISABLE_PRESSANDHOLD)
 #include "host.h"
 #include "host_crt.h"  // the CRT screen
 #include "host_shadow.h"  // the drop shadow under the window
@@ -1527,6 +1528,29 @@ static LRESULT CALLBACK wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
       break;
     }
     case WM_MOUSEACTIVATE: return MA_ACTIVATE;  // the first click is already a touch
+    case WM_TABLET_QUERYSYSTEMGESTURESTATUS: {  // no press-and-hold right-click on the game's screen (holding is its
+      // hold menu), and no flicks there; on the ring a finger held down still opens this app's menu, as a right-click
+      POINT p = {(short)LOWORD(lp), (short)HIWORD(lp)};
+      ScreenToClient(w, &p);
+      return zoneAt(p.x, p.y) == ZONE_SCREEN ? TABLET_DISABLE_PRESSANDHOLD | TABLET_DISABLE_FLICKS : 0;
+    }
+    // A finger or a pen, as it happens. Left to Windows, a touch becomes mouse messages, and a finger held still sends
+    // nothing until Windows has decided whether it's a press-and-hold right-click: the game never saw it go down, so its
+    // hold menu never opened (Fedor, on a ROG Ally: "Taps and swipes work, but not holding"). The mouse stays as it was.
+    case WM_POINTERDOWN:
+    case WM_POINTERUPDATE:
+    case WM_POINTERUP: {
+      POINTER_INPUT_TYPE type = PT_POINTER;
+      if (!GetPointerType(GET_POINTERID_WPARAM(wp), &type) || (type != PT_TOUCH && type != PT_PEN)) break;
+      if (!IS_POINTER_PRIMARY_WPARAM(wp)) return 0;  // a second finger: the game has one
+      POINT p = {(short)LOWORD(lp), (short)HIWORD(lp)};  // on the screen: to the window's
+      ScreenToClient(w, &p);
+      LPARAM at = MAKELPARAM(p.x, p.y);
+      if (msg == WM_POINTERDOWN) return wndProc(w, WM_LBUTTONDOWN, MK_LBUTTON, at);
+      if (msg == WM_POINTERUP) return wndProc(w, WM_LBUTTONUP, 0, at);
+      if (!IS_POINTER_INCONTACT_WPARAM(wp)) break;  // a pen above the glass: as Windows has it
+      return gTouching ? wndProc(w, WM_MOUSEMOVE, MK_LBUTTON, at) : 0;
+    }
     case WM_LBUTTONDOWN: {
       if (zoneAt((short)LOWORD(lp), (short)HIWORD(lp)) != ZONE_SCREEN && !gConsole) return 0;
       canvasPoint((short)LOWORD(lp), (short)HIWORD(lp), gTouchX, gTouchY);

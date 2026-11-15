@@ -9,6 +9,7 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 ## [Unreleased]
 
 - **Windows handhelds and tablets no longer freeze (Windows):** with **Tilt with the Device** on, a PC with a motion sensor (a ROG Ally, say) barely moved, its screen as good as frozen and its fans at full speed: the game asked the sensor for a reading 60 times a second and waited for each one. The sensor now sends its readings to a thread of its own as they come, and the game never waits on it. A PC too slow for a moment also keeps answering taps, the menu and dragging, where before it stopped until it caught up.
+- **Holding works on a touch screen (Windows):** holding a finger on the screen did nothing, so the hold menu never opened (taps and swipes worked). Windows kept the touch back while it waited to see if it was its own press-and-hold right-click; the game now takes the finger the moment it lands. Holding a finger on the ring still opens the app's menu.
 
 ## [2.2.5] - 2026-11-14
 
