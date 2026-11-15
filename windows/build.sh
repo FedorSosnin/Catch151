@@ -24,6 +24,8 @@ python3 -I tools/pack_flash.py $B/res/sprites.tpkz >/dev/null
 python3 -I host/gen_sketch_unit.py PokeKnomiGochi.ino $B/sketch_unit.cpp
 
 FLAGS=(-O2 -DBOARD_HOST -DBOARD_KNOMI_V2 -I host -I host/shim -I . -I src -I $ZLIB_DIR)
+# PERF_REPORT=<a Mac's address>: a test copy that sends its timings there (tools/perf_listen.py); never a release
+[[ -n $PERF_REPORT ]] && FLAGS+=(-DPERF_REPORT=\"$PERF_REPORT\")
 SRC=(host/host_canvas.cpp host/host_prefs.cpp host/host_runtime.cpp host/host_board.cpp host/host_buddy.cpp
      host/host_audio.cpp host/host_crt.cpp src/pet.cpp src/i18n.cpp src/sdmon.cpp src/ota_update.cpp $B/sketch_unit.cpp windows/main.cpp)
 OBJ=()

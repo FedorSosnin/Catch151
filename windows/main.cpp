@@ -500,39 +500,127 @@ static void startVibration() {
 // Both only while this window is the active one, so playing something else doesn't move the pet. ----
 #define TILT_FULL_G 0.5  // sin(30 degrees): tilting 30 degrees is all the way, as on a phone
 #define PAD_SCAN_MS 2000 // with no controller, the slots are asked again this often (an empty one is slow)
-static ISensor *gAccel = NULL;
-static std::atomic<bool> gTiltOn{true};  // "Tilt with the device" in the menu, shown with a sensor
+// The sensor lives on a thread of its own, which it tells when it has a new reading (an event sink), so the game's
+// thread never waits on it. Until 2.2.6 the game asked it for a reading every tick, 60 times a second, and on a ROG Ally
+// that kept the game barely moving and the fans at full speed (Fedor: "the screen is basically frozen").
+static std::atomic<bool> gHasAccel{false};  // a motion sensor was found: the menu shows Tilt with the Device
+static std::atomic<bool> gTiltOn{true};     // "Tilt with the device" in the menu, shown with a sensor
+static std::atomic<double> gAccelX{NAN};    // its latest reading across the screen, in g; NAN: none (yet)
+#ifdef PERF_REPORT
+static std::atomic<int> gPerfSensorReads{0};    // readings that came in (events, or asked for when there are none)
+static std::atomic<int> gPerfSensorAskUs{0};    // the longest a reading took to ask for, in microseconds
+static std::atomic<int> gPerfSensorMode{0};     // 0 none, 1 events, 2 asked for
+#endif
 static int gPad = -1;
 static DWORD gPadScanT = 0;
 static bool gPadL = false, gPadR = false, gPadU = false, gPadD = false;
 static bool gLeft = false, gRight = false, gUp = false, gDown = false;  // the keyboard's arrows
 
-static void startTiltSensor() {
-  ISensorManager *mgr = NULL;
-  if (FAILED(CoCreateInstance(CLSID_SensorManager, NULL, CLSCTX_INPROC_SERVER, IID_ISensorManager, (void **)&mgr))) return;
-  ISensorCollection *list = NULL;
-  ULONG n = 0;
-  if (SUCCEEDED(mgr->GetSensorsByType(SENSOR_TYPE_ACCELEROMETER_3D, &list)) && SUCCEEDED(list->GetCount(&n)) && n)
-    list->GetAt(0, &gAccel);
-  if (list) list->Release();
-  mgr->Release();
-  Preferences p;
-  p.begin(PREFS_NS, true);
-  gTiltOn = p.getBool("tilt", true);
-  p.end();
-}
-
 // across the screen, in g: positive with the right side down, held flat or upright
-static bool accelX(double &x) {
-  ISensorDataReport *r = NULL;
-  if (!gAccel || FAILED(gAccel->GetData(&r)) || !r) return false;
+static bool reportX(ISensorDataReport *r, double &x) {
   PROPVARIANT v;
   PropVariantInit(&v);
   bool ok = SUCCEEDED(r->GetSensorValue(SENSOR_DATA_TYPE_ACCELERATION_X_G, &v)) && v.vt == VT_R8;
   if (ok) x = v.dblVal;
   PropVariantClear(&v);
-  r->Release();
   return ok;
+}
+
+class TiltSink : public ISensorEvents {  // the sensor's new readings, on threads of COM's own
+  LONG refs = 1;
+
+ public:
+  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id, void **out) override {
+    if (IsEqualIID(id, IID_IUnknown) || IsEqualIID(id, IID_ISensorEvents)) {
+      *out = static_cast<ISensorEvents *>(this);
+      AddRef();
+      return S_OK;
+    }
+    *out = NULL;
+    return E_NOINTERFACE;
+  }
+  ULONG STDMETHODCALLTYPE AddRef() override { return InterlockedIncrement(&refs); }
+  ULONG STDMETHODCALLTYPE Release() override {
+    LONG n = InterlockedDecrement(&refs);
+    if (!n) delete this;
+    return n;
+  }
+  HRESULT STDMETHODCALLTYPE OnStateChanged(ISensor *, SensorState) override { return S_OK; }
+  HRESULT STDMETHODCALLTYPE OnDataUpdated(ISensor *, ISensorDataReport *r) override {
+    double x;
+    if (r && reportX(r, x)) gAccelX = x;
+#ifdef PERF_REPORT
+    gPerfSensorReads++;
+#endif
+    return S_OK;
+  }
+  HRESULT STDMETHODCALLTYPE OnEvent(ISensor *, REFGUID, IPortableDeviceValues *) override { return S_OK; }
+  HRESULT STDMETHODCALLTYPE OnLeave(REFSENSOR_ID) override {  // unplugged or turned off
+    gAccelX = NAN;
+    return S_OK;
+  }
+};
+
+static void tiltThread() {
+  CoInitializeEx(NULL, COINIT_MULTITHREADED);  // the sensor's events then arrive without this thread's help
+  ISensorManager *mgr = NULL;
+  if (FAILED(CoCreateInstance(CLSID_SensorManager, NULL, CLSCTX_INPROC_SERVER, IID_ISensorManager, (void **)&mgr))) return;
+  ISensorCollection *list = NULL;
+  ISensor *s = NULL;
+  ULONG n = 0;
+  if (SUCCEEDED(mgr->GetSensorsByType(SENSOR_TYPE_ACCELEROMETER_3D, &list)) && SUCCEEDED(list->GetCount(&n)) && n)
+    list->GetAt(0, &s);
+  if (list) list->Release();
+  mgr->Release();
+  if (!s) return;
+  gHasAccel = true;
+  if (SUCCEEDED(s->SetEventSink(new TiltSink))) {  // the sensor keeps its own reference
+#ifdef PERF_REPORT
+    gPerfSensorMode = 1;
+#endif
+    for (;;) Sleep(INFINITE);
+  }
+  // a sensor that sends no events: asked here, 20 times a second, and still never on the game's thread
+#ifdef PERF_REPORT
+  gPerfSensorMode = 2;
+#endif
+  for (;;) {
+    if (gTiltOn && GetForegroundWindow() == gWnd) {
+#ifdef PERF_REPORT
+      LARGE_INTEGER f, a, b;
+      QueryPerformanceFrequency(&f);
+      QueryPerformanceCounter(&a);
+#endif
+      ISensorDataReport *r = NULL;
+      double x;
+      if (SUCCEEDED(s->GetData(&r)) && r) {
+        if (reportX(r, x)) gAccelX = x;
+        r->Release();
+      }
+#ifdef PERF_REPORT
+      QueryPerformanceCounter(&b);
+      int us = (int)((b.QuadPart - a.QuadPart) * 1000000 / f.QuadPart);
+      if (us > gPerfSensorAskUs) gPerfSensorAskUs = us;
+      gPerfSensorReads++;
+#endif
+    }
+    Sleep(50);
+  }
+}
+
+static void startTiltSensor() {
+  Preferences p;
+  p.begin(PREFS_NS, true);
+  gTiltOn = p.getBool("tilt", true);
+  p.end();
+  std::thread(tiltThread).detach();
+}
+
+static bool accelX(double &x) {  // the latest reading, never waited for
+  double v = gAccelX;
+  if (v != v) return false;  // NAN
+  x = v;
+  return true;
 }
 
 static float stickAxis(SHORT v, SHORT dead) {  // -1..1 outside the dead zone, 0 inside
@@ -637,6 +725,66 @@ static inline uint32_t premul(double r, double g, double b, double a) {
          (uint32_t)lround(b * a * 255);
 }
 
+#ifdef PERF_REPORT
+// A test copy's timings (windows/build.sh with PERF_REPORT=<a Mac's address>): where each tick's time goes, sent every
+// 2 s to tools/perf_listen.py on that Mac (port 47399), from a thread of its own. Never in a release.
+struct PerfPart {
+  double sum = 0, max = 0;
+  int n = 0;
+  void add(double v) { sum += v, n++, max = v > max ? v : max; }
+};
+static PerfPart gPerfTilt, gPerfGame, gPerfFrame, gPerfCrt, gPerfCompose, gPerfPresent, gPerfTick;
+static int gPerfLoops = 0;
+static double perfNow() {
+  static LARGE_INTEGER f = {};
+  if (!f.QuadPart) QueryPerformanceFrequency(&f);
+  LARGE_INTEGER c;
+  QueryPerformanceCounter(&c);
+  return c.QuadPart * 1000.0 / f.QuadPart;
+}
+static void perfReport() {
+  static DWORD last = 0;
+  DWORD now = timeGetTime();
+  if (!last) last = now;
+  if (now - last < 2000) return;
+  double secs = (now - last) / 1000.0;
+  last = now;
+  char line[900];
+  auto part = [](const char *name, const PerfPart &p, char *out, size_t len) {
+    snprintf(out, len, " %s %.1f/%.1f", name, p.n ? p.sum / p.n : 0.0, p.max);
+  };
+  char a[7][60];
+  part("tilt", gPerfTilt, a[0], 60), part("game", gPerfGame, a[1], 60), part("frame", gPerfFrame, a[2], 60);
+  part("crt", gPerfCrt, a[3], 60), part("compose", gPerfCompose, a[4], 60), part("present", gPerfPresent, a[5], 60);
+  part("tick", gPerfTick, a[6], 60);
+  snprintf(line, sizeof(line),
+           "%s ticks/s %.0f frames/s %.0f loops/s %.0f | ms avg/max:%s%s%s%s%s%s%s | sensor %s reads/s %.0f ask max %d us"
+           " | window %d scale %.2f crt %d",
+           APP_VERSION, gPerfTick.n / secs, gPerfCompose.n / secs, gPerfLoops / secs, a[0], a[1], a[2], a[3], a[4], a[5],
+           a[6], gPerfSensorMode == 1 ? "events" : gPerfSensorMode == 2 ? "asked" : "none", gPerfSensorReads / secs,
+           (int)gPerfSensorAskUs, gSide, gScale, (int)gCrt);
+  gPerfTilt = gPerfGame = gPerfFrame = gPerfCrt = gPerfCompose = gPerfPresent = gPerfTick = PerfPart();
+  gPerfLoops = 0, gPerfSensorReads = 0, gPerfSensorAskUs = 0;
+  std::string body = line;
+  std::thread([body] {
+    HINTERNET c = WinHttpConnect(httpSession(), L"" PERF_REPORT, 47399, 0);
+    HINTERNET r = c ? WinHttpOpenRequest(c, L"POST", L"/perf", NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0) : NULL;
+    if (r) {
+      WinHttpSetTimeouts(r, 2000, 2000, 2000, 2000);
+      if (WinHttpSendRequest(r, WINHTTP_NO_ADDITIONAL_HEADERS, 0, (LPVOID)body.data(), (DWORD)body.size(), (DWORD)body.size(), 0))
+        WinHttpReceiveResponse(r, NULL);
+      WinHttpCloseHandle(r);
+    }
+    if (c) WinHttpCloseHandle(c);
+  }).detach();
+}
+#define PERF_AT(v) double v = perfNow()
+#define PERF_ADD(part, from) part.add(perfNow() - (from))
+#else
+#define PERF_AT(v)
+#define PERF_ADD(part, from)
+#endif
+
 // the CRT image at the screen's own pixels, its rows on four threads; made again only when the picture changed
 static void crtImage(int n) {
   if (!gCrtStale && gCrtBuf.size() == (size_t)n * n * 4) return;
@@ -653,7 +801,11 @@ static void crtImage(int n) {
 
 static void compose() {
   int n = screenSide(), off = screenOffset();
-  if (gCrt) crtImage(n);
+  if (gCrt) {
+    PERF_AT(c0);
+    crtImage(n);
+    PERF_ADD(gPerfCrt, c0);
+  }
   // across: every canvas row to n columns
   for (int y = 0; y < HOST_CANVAS_SIZE && !gCrt; y++) {
     const uint8_t *row = gCanvas + (size_t)y * HOST_CANVAS_SIZE * 4;
@@ -768,10 +920,14 @@ static void makeShadow() {
 }
 
 static void redraw() {
+  PERF_AT(a);
   compose();
+  PERF_ADD(gPerfCompose, a);
+  PERF_AT(b);
   RECT r;
   GetWindowRect(gWnd, &r);
   present(r.left, r.top);
+  PERF_ADD(gPerfPresent, b);
 }
 
 static void saveWindowPlace() {
@@ -875,7 +1031,7 @@ static void showMenu(POINT at) {
   AppendMenuW(m, MF_POPUP, (UINT_PTR)music, L"Music");
   if (gXSet && controllerIndex() >= 0)  // only with a controller that can buzz
     AppendMenuW(m, MF_STRING | (gVibeOn ? MF_CHECKED : 0), ID_VIBE, L"Vibration");
-  if (gAccel)  // only with a motion sensor
+  if (gHasAccel)  // only with a motion sensor
     AppendMenuW(m, MF_STRING | (gTiltOn ? MF_CHECKED : 0), ID_TILT, L"Tilt with the Device");
   std::wstring upd = gUpdating            ? L"Updating…"
                     : gNewVersion.empty() ? L"Check for Updates…"
@@ -1300,15 +1456,22 @@ static void fetchNetTime() {
   }).detach();
 }
 
+
 // ---- the game loop and the window's messages ----
 static DWORD gLastTick = 0;  // timeGetTime(): to the millisecond with timeBeginPeriod(1)
 static void tick() {
   gLastTick = timeGetTime();
+  PERF_AT(t0);
   if (!gConsole) readTilt();  // tests steer with their own commands
+  PERF_ADD(gPerfTilt, t0);
+  PERF_AT(t1);
   hostTick();
+  PERF_ADD(gPerfGame, t1);
   if (hostNetTimeWanted()) fetchNetTime();
   bool dirty = hostFrameDirty();
+  PERF_AT(t2);
   if (dirty) hostFrameRGBA(gCanvas), gCrtStale = true;
+  if (dirty) PERF_ADD(gPerfFrame, t2);
   // the frame grows while the mouse is over the ball (a look at the cursor each tick is all it takes)
   POINT cur;
   bool over = gHover;
@@ -1331,6 +1494,10 @@ static void tick() {
     fprintf(stderr, "update: quiet, updating to %s by itself\n", gNewVersion.c_str());
     installUpdate();
   }
+  PERF_ADD(gPerfTick, t0);
+#ifdef PERF_REPORT
+  perfReport();
+#endif
 }
 
 static LRESULT CALLBACK wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
@@ -1666,15 +1833,17 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     checkForUpdates(false);
   }
 
-  // the game's loop: its tick every TICK_MS, and the window's messages in between
+  // the game's loop: its tick every TICK_MS, and the window's messages in between. After every tick, even one that ran
+  // long: before 2.2.6 a computer too slow for a tick in TICK_MS went from tick to tick and never read its messages, so
+  // taps, the menu and dragging stopped and Windows called it not responding.
   timeBeginPeriod(1);  // sleeps to the millisecond, not the system's 15.6 ms step
   for (;;) {
     DWORD now = timeGetTime(), due = gLastTick + TICK_MS;
-    if ((int)(due - now) <= 0) {
-      tick();
-      continue;
-    }
-    MsgWaitForMultipleObjects(0, NULL, FALSE, due - now, QS_ALLINPUT);
+#ifdef PERF_REPORT
+    gPerfLoops++;
+#endif
+    if ((int)(due - now) <= 0) tick();
+    else MsgWaitForMultipleObjects(0, NULL, FALSE, due - now, QS_ALLINPUT);
     MSG m;
     while (PeekMessageW(&m, NULL, 0, 0, PM_REMOVE)) {
       if (m.message == WM_QUIT) quit();

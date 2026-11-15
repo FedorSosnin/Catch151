@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Windows handhelds and tablets no longer freeze (Windows):** with **Tilt with the Device** on, a PC with a motion sensor (a ROG Ally, say) barely moved, its screen as good as frozen and its fans at full speed: the game asked the sensor for a reading 60 times a second and waited for each one. The sensor now sends its readings to a thread of its own as they come, and the game never waits on it. A PC too slow for a moment also keeps answering taps, the menu and dragging, where before it stopped until it caught up.
+
 ## [2.2.5] - 2026-11-14
 
 - **Reel Fishing, a sixth game:** five casts off the pier at the Beach. Tap the water by a fish (bigger shadows weigh more), wait out the nibbles, tap when the float goes under, then tap to the beat to reel it in, keeping the white needle in the green of the **LINE** bar on the right: too fast snaps the line, too slow and it slips off, each weight has its own pace, and the fish pulls a little unevenly from beat to beat. Every fish is weighed (a gold gauge on the left fills to its weight and says how big it is for one of its kind) and let go; the score is the total weight against bronze, silver and gold lines (50, 150 and 300 kg), and a giant comes in every game. Everything shows on the screen (the float, rings, a "!", the screen's edge glowing, the line's colour), so it plays as well on the Knomi, which has no speaker; computers add its sounds and two new songs (the fight song plays at the fish's pace), and phones and controllers buzz. The Knomi's backlight flashes at the bite. The rod comes in from the screen's left edge, in your hands, and the five casts are round slots along the top that fill with what each one landed. The Game Boy now holds six cartridges, 3 x 2, and its power light is lit, flickering now and then.
