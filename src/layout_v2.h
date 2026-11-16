@@ -5,8 +5,8 @@
 
 #define V2_GRID 4                 // one 8-bit pixel of scenery = 4 canvas px = 2 Knomi px
 
-// header (no battery, no streak flame on the home screen)
-#define V2_CLOCK_Y 10             // size 2, e.g. "4:15 PM" (clock12Hour)
+// header (no streak flame on the home screen)
+#define V2_CLOCK_Y 10             // size 2, e.g. "4:15 PM" (clock12Hour); the battery here on a board with one
 #define V2_LEVEL_Y 34             // size 2
 #define V2_NAME_Y 54              // size 3, bold (drawn twice 1 px apart), accent colour; light ink on dark zones
 #define V2_STATUS_Y 90            // size 2

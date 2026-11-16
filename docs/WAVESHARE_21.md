@@ -273,6 +273,10 @@ This is what `pin_config.h` is set up for. It keeps both USB ports and the 12-pi
   and the code treats the board as always on USB for now (no light sleep, no low-battery shutdown).
   - A fix that needs a wire: USB 5 V (12-pin, pin 2) through a divider into GPIO 19 or 20 would tell the firmware
     when USB is in.
+- **On screen:** the battery takes the clock's place at the top of the home screen: an icon and the percentage.
+  The icon turns amber under 40% and red under 15%. While charging it turns green with a bolt, but only once the
+  board can tell it is charging (the wire above). With no cell, the clock comes back. The time is still on the
+  clock page. To see it on a computer: `POKEMACGOCHI_FAKE_BAT=85` (or `15c` for 15% and charging) on a test copy.
 - **The power LED** is always on while powered (about 1 mA). Remove it, or cover it, if battery life matters.
 - **The clock's backup cell:** with no cell on J4, the clock forgets the time whenever the slide switch is off. With
   a **rechargeable** coin cell (an ML1220 with SH1.0 leads, for example), it keeps time. Never fit a non-rechargeable
@@ -359,7 +363,8 @@ it works.
 9. **Backlight.** Let it dim and switch off, then wake it. No flicker at any level (try 5 kHz if it flickers).
 10. **Clock.** Set Wi-Fi, let it take network time, restart without Wi-Fi: the time should still be right.
 11. **Battery.** Fix the 2 A charging first (above). Then plug in a protected cell, compare the `HEALTH` line's mV
-    with a multimeter, and adjust `BAT_ADC_RATIO`.
+    with a multimeter, and adjust `BAT_ADC_RATIO`. The home screen's percentage should then match a full cell
+    (100%) and a nearly flat one.
 12. **Sound.** Wire the MAX98357A, uncomment `WS21_AUDIO_I2S`, start with the gain pin open.
 13. **Soak.** 24 hours on battery, watching the `HEALTH` lines. Then measure the current at idle, dimmed and off.
 14. **Then the case.**

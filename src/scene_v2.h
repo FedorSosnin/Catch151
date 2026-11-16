@@ -663,21 +663,61 @@ static void v2NameText(const char *name, int y) {
   }
 }
 
-// The clock on top, then the level, the name (big and bold) and the status. No battery (the Knomi has none)
-// and no streak flame (it's on the card).
+// The battery on the top line: its outline on the 2 px grid with the level inside, then the percentage, the two
+// centred together. The icon in the ink colour, amber under 40%, red under 15% (as the original look had it), green
+// with a bolt in place of the level while it charges.
+#define V2_BAT_W 28  // the body (its tip is 4 px more)
+#define V2_BAT_H 14  // as tall as the digits beside it
+static void v2Battery(int pct, bool charging, int y) {
+  char t[6];
+  snprintf(t, sizeof(t), "%d%%", pct);
+  bool cjk = classicFontBegin();  // digits and % in the classic font, as the clock has them
+  setSize(2);
+  int x = SNAP2(CX - (V2_BAT_W + 4 + 6 + textW(t, 2)) / 2);
+  uint16_t ink = inkColor();
+  uint16_t col = charging ? UI_BAR_OK : pct >= 40 ? ink : pct >= 15 ? UI_BAR_WARN : UI_BAR_BAD;
+  gfx->fillRect(x + 2, y, V2_BAT_W - 4, 2, col);  // the outline, 2 px, its corners cut
+  gfx->fillRect(x + 2, y + V2_BAT_H - 2, V2_BAT_W - 4, 2, col);
+  gfx->fillRect(x, y + 2, 2, V2_BAT_H - 4, col);
+  gfx->fillRect(x + V2_BAT_W - 2, y + 2, 2, V2_BAT_H - 4, col);
+  gfx->fillRect(x + V2_BAT_W, y + 4, 4, V2_BAT_H - 8, col);  // the tip
+  if (charging) {  // a bolt in 2 px cells across the inside, which is 12 cells by 5
+    static const uint8_t BOLT[5][2] = { { 6, 7 }, { 5, 6 }, { 4, 7 }, { 5, 6 }, { 4, 5 } };  // each row's first and last cell
+    for (int r = 0; r < 5; r++)
+      gfx->fillRect(x + 2 + BOLT[r][0] * 2, y + 2 + r * 2, (BOLT[r][1] - BOLT[r][0] + 1) * 2, 2, C565(0xff, 0xd9, 0x4a));
+  } else {  // the level: 20 by 6, 2 px in from the outline
+    int fw = SNAP2((V2_BAT_W - 8) * pct / 100);
+    if (pct > 0 && fw < 2) fw = 2;
+    if (fw) gfx->fillRect(x + 4, y + 4, fw, V2_BAT_H - 8, col);
+  }
+  gfx->setTextColor(ink);
+  setCur(x + V2_BAT_W + 4 + 6, y);
+  printT(t);
+  classicFontEnd(cjk);
+}
+
+// The clock on top, then the level, the name (big and bold) and the status. On a board with a battery (the
+// Waveshare 2.1) the battery takes the clock's place on top (Fedor: "We need to find a place to show battery level.
+// Maybe instead of the clock at the top of the screen"); the time is still on the clock page. The Knomi and the
+// computers have none, so they keep the clock. No streak flame (it's on the card).
 static void v2Header(const char *name, uint16_t nameColor, const char *msg, const char *level) {
   static uint32_t clockAt = 0;
   static char clk[12] = "";
+  static int bat = -1;
+  static bool charging = false;
   uint32_t now = millis();
   if (!clockAt || now - clockAt >= 1000) {  // once a second: on the Waveshare the clock is read over I2C
     clockAt = now ? now : 1;
+    bat = batPercent();  // -1: no battery (or none connected): the clock
+    charging = bat >= 0 && batCharging();
     uint32_t e = rtcEpoch();
     int h = (e / 3600) % 24;
     if (e) snprintf(clk, sizeof(clk), "%d:%02d %s", clock12Hour(h), (int)((e / 60) % 60), h < 12 ? "AM" : "PM");
     else clk[0] = 0;  // no time yet: no clock
   }
   gfx->setTextColor(inkColor());
-  if (clk[0]) {
+  if (bat >= 0) v2Battery(bat, charging, V2_CLOCK_Y);
+  else if (clk[0]) {
     bool cjk = classicFontBegin();  // digits and AM/PM in the classic font, as on the clock screen
     setSize(2);
     setCur(centerX(clk, 2), V2_CLOCK_Y);

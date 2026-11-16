@@ -70,7 +70,7 @@ The save lives in `~/Library/Application Support/PokeMacGochi` (the game's old n
 | Right-click, or the Pokéball in the menu bar | About, Show/Hide, Size, CRT Screen, Mute Sound (the game's own sound setting) and Quit |
 | Cmd-Q | Quit |
 
-For testing, launching with `--console` keeps the app from taking keyboard focus and reads the Knomi's serial commands from stdin (`HEALTH`, `GAMES`, `WILD 25`...). It also takes `MOUSE down|drag|up|right x y` and `KEY down|up code`, which go through AppKit's event queue, `MENU n`, which triggers menu item n, and `HOVER on|off`, which grows or shrinks the ring as the mouse would. `POKEMACGOCHI_SAVE_DIR` points the app at another save folder.
+For testing, launching with `--console` keeps the app from taking keyboard focus and reads the Knomi's serial commands from stdin (`HEALTH`, `GAMES`, `WILD 25`...). It also takes `MOUSE down|drag|up|right x y` and `KEY down|up code`, which go through AppKit's event queue, `MENU n`, which triggers menu item n, and `HOVER on|off`, which grows or shrinks the ring as the mouse would. `POKEMACGOCHI_SAVE_DIR` points the app at another save folder. `POKEMACGOCHI_FAKE_BAT=85` (or `15c`: 15% and charging) gives a test copy a battery, so the home screen shows it in the clock's place, as a board with one does.
 
 ## The screen
 
