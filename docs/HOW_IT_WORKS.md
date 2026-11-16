@@ -40,9 +40,10 @@ Games don't raise anything if you quit by swiping up.
 | 🏄 **PikaSurf** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
 | 🕳️ **Dungeon Crawler** | +5, plus 4 per floor | −10, more for deep dives | −5 | Yes | +2 | Yes |
 | 🎣 **Reel Fishing** | +5, plus 2 per 44 lb | −10, more for heavy catches | −5 | Yes | +2 | Yes |
+| 🕹️ **Pinball** | +5, plus 2 per 400 points | −10, more for high scores | −5 | Yes | +2 | Yes |
 | ❓ **Who's That?** | +3, plus 3 per right answer | | | | +1 | |
 
-Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Reel Fishing each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
+Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing and Pinball each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
 
 At the end, **Play Again!** starts the same game again and the ✕ goes back to the games; a tap on the Repel bar under them opens the Repel's page on your Pokémon's card. Every second you actually play counts toward a Repel (see [Items](#items)): not the how-to card or the end, and only while you're touching, tilting or pressing keys, so sitting in the dungeon earns nothing. The games with a buddy count too.
 
@@ -66,6 +67,27 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 - **The weigh-in:** a fish landed leaps out with its name, then a gold gauge on the left fills to its weight and says how big it is for one of its kind (**A SMALL ONE**, **A GOOD ONE** or **A BIG ONE**), and back in it goes. A giant landed is **THE BIG ONE!**
 - **The score:** the five casts' weights add up against three lines, **bronze at 110 lb, silver at 331 and gold at 661** (50, 150 and 300 kg), and your best total is kept. Weights show in pounds, to a tenth. Joy and speed training come from the total, a point for every 44 lb (20 kg): 2 joy a point (up to +35 in all) and 1 speed training for every 5 points, so every 220 lb.
 - **Your biggest fish:** the heaviest single fish you've landed is kept too, and the weigh-in of one that beats it says **YOUR BIGGEST EVER!** The heaviest anyone has landed shows on the README's **biggest fish** badge (the game tells the buddy relay only the weight and the kind).
+
+### Pinball
+
+A round table, the round screen itself, its rim the wall, with a drain between the two flippers. Hold the left or right half of the screen to raise that flipper; the Knomi's button (Space on a computer) raises both, and on a computer the left and right arrows raise each. Three balls; the best score is kept. Each game deals one of two tables at random: night-blue on a chrome rim, or a meadow on a wooden one.
+
+| What | Points |
+|---|---:|
+| A slingshot | 5 |
+| A bumper (the Poké Ball, the Great Ball, the Ultra Ball) | 10 |
+| Round the orbit | 50 |
+| A hit on the wild one in the ring | 50 |
+| Up the ramp and over | 250 |
+| A wild one knocked out | 500 |
+| Diglett | 1000 |
+
+- **The ramp:** from its mouth left of the middle (the arrows on the floor show the shot, from the right flipper) straight up into the top-left corner, round over into the wall and down a wire rail to your left flipper. A shot too slow rolls back down and out.
+- **The orbit and the berries:** a lane round the top, under the wire rail on the left, with six berry lights in it. The ball rolling over one lights it; all six lit and every point after counts **x2** for the rest of the game (the next six, **x3**), and they start over. Going round over the top scores 50.
+- **Diglett:** light all three bumpers and Diglett pops out of its hole between them for 12 seconds, a gold ring round it counting down. Hit it in time for 1000; then the bumpers start over.
+- **The battle in the ring:** the ball into the gap in the tall grass by the right wall brings out a wild Pokémon of about your Pokémon's level, picked as a wild battle picks one. It jumps into the ring in the middle with its HP over it and 20 seconds on a gold ring round it. Each hit of the ball is the stronger of your Pokémon's two moves, its damage worked out as in a battle (its type against the wild one's), but always between two and five hits to knock it out. While one is in the ring the grass takes no ball, and losing the ball ends the battle. Nothing outside Pinball changes: it isn't caught or added to the Pokédex.
+- **Rewards:** joy and speed training from the score, a point for every 400, as the table above. A ball stuck still for 2.5 seconds (anywhere but held up on a flipper) gets a nudge.
+- **The pace:** the Knomi draws about 10 frames a second, so the table is a gentle one, low gravity and a top speed the eye can follow, and the ball moves in many small steps between frames so it never passes through a flipper.
 
 ## Battles
 
@@ -117,7 +139,7 @@ Every form in the Pokédex (regular and shiny count apart) has 1–3 ★: its ge
 
 - **Winning a battle** adds attack training (+3 a win).
 - **Every 6 hours of good care** adds defense training (+1). Good care means every need stays at 40 or more. Hours asleep count too, and a need can dip under 40 for up to 15 minutes while it's awake (time to notice and feed it) before the 6 hours start over. The count is saved, so a restart or an update doesn't lose it.
-- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Reel Fishing add 1 for every 5 points.
+- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing and Pinball add 1 for every 5 points.
 - **Weight** isn't training: every berry adds 4 and candy 12 (6 more if it was already 80% full). Games, battles and time burn it off. Over 50, energy drops twice as fast; 20 or less earns the Fit medal.
 
 Each kind of training stops at 100. Hold your Pokémon and tap **Stats** for the card, then two pages on: the **Training** page shows each one's bar, with **MAX** when it's full, and what trains it, plus a row for weight. Training belongs to the Pokémon: a new one starts from zero.

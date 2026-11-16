@@ -13,7 +13,7 @@
   <a href="relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.biggest&label=biggest%20fish&color=1f6feb&cacheSeconds=300" alt="The heaviest fish anyone has landed in Reel Fishing"></a>
 </p>
 
-**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play six mini games by tapping and tilting, the newest a fishing contest off the Beach's pier.
+**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play seven mini games by tapping and tilting, the newest Pinball on a round table and a fishing contest off the Beach's pier.
 
 | | |
 |:--:|:--:|
@@ -46,9 +46,11 @@
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
 
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** New: **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett. Roll the ball into the tall grass and a wild Pokémon jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
+
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** New: **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
 
-<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Six mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon? and Reel Fishing, on cartridges in a Game Boy. **Play Again!** at the end.
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Seven mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing and Pinball, on cartridges in a Game Boy, four a page. **Play Again!** at the end.
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
 
@@ -56,7 +58,7 @@
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
 
-<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 30 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
+<img src="docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 31 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
 
 <img src="docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Settings, Medals, Stats and the Pokédex.
 
@@ -72,8 +74,8 @@ The Mac and Windows apps and the browser game, as they open: in the Poké Ball r
 | **Battle wild Pokémon** | **Climb Knomi Tower** |
 | <img src="docs/images/v2/crt-island.webp" width="381" alt="Knomi Island with the CRT screen: five zones and the pier out to the tower"> | <img src="docs/images/v2/crt-starters.webp" width="381" alt="Choose your starter with the CRT screen: Bulbasaur, Charmander, Squirtle and Pikachu"> |
 | **Travel Knomi Island** | **Choose your partner** |
-| <img src="docs/images/v2/crt-fishing.webp" width="381" alt="Reel Fishing with the CRT screen: the float bobs, goes under with a ! and TAP!, then the fish is reeled in with QUICK TAPS! and the LINE bar on the right"> | <img src="docs/images/v2/crt-games.webp" width="381" alt="The games with the CRT screen: six cartridges on a Game Boy, each lifting as the mouse passes over it, the power light flickering"> |
-| **New: Reel Fishing** | **Six games on a Game Boy** |
+| <img src="docs/images/v2/crt-pinball.webp" width="381" alt="Pinball with the CRT screen: the ball goes into the tall grass with a !, a wild Butterfree jumps into the ring in the middle, Diglett pops up between the bumpers, and each hit of the ball is Squirtle's Bite"> | <img src="docs/images/v2/crt-fishing.webp" width="381" alt="Reel Fishing with the CRT screen: the float bobs, goes under with a ! and TAP!, then the fish is reeled in with QUICK TAPS! and the LINE bar on the right"> |
+| **New: Pinball** | **New: Reel Fishing** |
 
 ## On the Knomi
 
@@ -114,8 +116,8 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Battle wild Pokémon** | **Pick a ball and throw** | **Catch them, 1 to 3 ★** |
 | ![The Pokédex at 54 of 151, with stars, the shinies sparkling](docs/images/v2/pokedex.gif) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](docs/images/v2/zone.png) |
 | **Fill the Pokédex** | **Travel Knomi Island** | **See what's missing** |
-| ![The games: six cartridges on a Game Boy's screen, Reel Fishing's orange one last, the power light flickering](docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
-| **Six mini games** | **How to play, before each game** | **Play Again!** |
+| ![The games: four cartridges a page on a Game Boy's screen, then the arrow turns to page 2, Dungeon Crawler, Reel Fishing and Pinball, the power light flickering](docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](docs/images/v2/game-end.png) |
+| **Seven mini games** | **How to play, before each game** | **Play Again!** |
 | ![Who's That Pokémon? The clock counts down, a wrong name turns red and the answer shows: Nidoqueen](docs/images/v2/quiz.gif) | ![The trophy room: 9 of 26 medals, a gleam sweeping over the ones won](docs/images/v2/trophy-room.gif) | ![The shiny medal's card: a golden Pikachu under glass in a spotlight, sparkling, earned](docs/images/v2/medal-card.gif) |
 | **Who's That Pokémon?** | **The trophy room** | **How to earn each medal** |
 | ![The backpack's band out of the bag: three berries, a candy and a Repel](docs/images/v2/backpack.png) | ![Gengar in the bath: drops, bubbles and a rubber duck, then sparkling clean](docs/images/v2/bath.gif) | ![A new medal, DEX 10, dropping in on its ribbon over Gengar's home, then away](docs/images/v2/medal-banner.gif) |
@@ -124,6 +126,23 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Buddies visit** | **Battle, trade or play** | **Games for two** |
 | ![Say goodbye? Goodbye or Stay together](docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](docs/images/v2/release.png) | ![Settings: the clock, set automatically, Sound and Music each on a slider from 0 to 3, the language, and Start Over](docs/images/v2/settings.png) |
 | **One day, a goodbye** | **Let it go** | **Settings** |
+
+## New: Pinball
+
+<p align="center"><img src="docs/images/v2/pinball.gif" alt="Pinball on the meadow table: the ball rolls into the tall grass with a !, a wild Butterfree jumps out into the ring in the middle, Diglett pops up between the bumpers and is hit, Squirtle's Bite lands on Butterfree with each hit of the ball, a shot goes up the ramp, and Butterfree is knocked out: YOU WON! +500" width="360"></p>
+
+The seventh cartridge, on the Game Boy's second page: pinball on a round table, the round screen itself, its rim the wall. Hold the left or right half of the screen to raise that flipper (the Knomi's button raises both; on a computer the left and right arrows, and Space for both). Shoot the ramp up the left into the top corner, arrows chasing up it, and the ball comes back down a wire rail to your left flipper (+250). Send it round the orbit under the wire to light the six berries: light them all and every point after counts double (the next six, triple). Hit all three bumpers, a Poké Ball, a Great Ball and an Ultra Ball, and Diglett pops out of its hole between them: hit it before it ducks back down (+1000). Roll the ball into the tall grass by the right wall and a wild Pokémon of about your level jumps out into the ring in the middle of the table. Every hit of the ball on it is your Pokémon's own move, with its real damage and type matchups (+50), its HP over it and 20 seconds on the gold ring to knock it out (+500). Three balls, and the best score is kept.
+
+Each game deals one of two tables at random, a night-blue one on a chrome rim or a meadow on a wooden one, and the ball is a Poké Ball that rolls as it goes. On a computer and the web it has a song of its own, [▶&nbsp;Pinball](https://fedorsosnin.github.io/Catch151/music/#pinball), a little faster while a wild one is in the ring.
+
+| | | |
+|:--:|:--:|:--:|
+| ![Two shots up the ramp, RAMP! +250 each, the ball rolling back down the wire rail on the left](docs/images/v2/pinball-ramp.gif) | ![The ball goes into the tall grass with a !, and a wild Butterfree jumps out into the ring: WILD BUTTERFREE!](docs/images/v2/pinball-wild.gif) | ![The ball hits Butterfree in the ring: it flashes, SQUIRTLE: BITE!, its HP bar drops, +50](docs/images/v2/pinball-hit.gif) |
+| **Up the ramp** | **Into the grass, out comes a wild one** | **Every hit is your move** |
+| ![All three bumpers lit and Diglett pops out between them, HIT DIGLETT!, then it's hit for +1000](docs/images/v2/pinball-diglett.gif) | ![Butterfree knocked out in the ring: YOU WON! +500](docs/images/v2/pinball-won.gif) | ![The night table, night-blue on a chrome rim, a shot going up the ramp](docs/images/v2/pinball-night.gif) |
+| **Diglett, for the three bumpers** | **Knock it out in time** | **Two tables, one each game** |
+
+How it all works: [Pinball](docs/HOW_IT_WORKS.md#pinball).
 
 ## New: Reel Fishing
 
@@ -320,7 +339,7 @@ Your Pokémon's ATK, DEF and SPD grow as it levels up, and training adds more on
 
 - **Winning a battle** adds attack training: 3 a win, so 34 wins fill it.
 - **Every 6 hours of good care** (every need at 40 or more) adds defense training. Sleep counts, and a need can dip under 40 for up to 15 minutes before the 6 hours start over.
-- **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing) add speed training.
+- **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball) add speed training.
 - **Weight** isn't training: food adds it (candy the most), and games, battles and time burn it off. Over 50, your Pokémon tires twice as fast.
 
 Each kind of training stops at 100. The card's **Training** page (**Stats** in the ring, then two pages on) shows how far along each one is, with **MAX** when it's full, and your Pokémon's weight. Once attack training is maxed, a win says so instead of adding more. A new Pokémon starts training from zero.
@@ -347,6 +366,7 @@ Tap the **handheld** icon, on the left, for the mini games: cartridges on a Game
 - **Rock Hopper:** tap to jump over rocks, bushes, fallen logs, stumps and mushrooms in a forest that keeps getting faster. How long can you last?
 - **PikaSurf:** your Pokémon surfs down the rushing water on a board; tilt, drag it or use the arrow keys to dodge the rocks coming up in three lanes. Pikachu surfs alongside and never hits one, until he pulls ahead out of sight. It keeps speeding up, and one rock ends the run.
 - **Reel Fishing:** five casts off the pier at the Beach, the rod in your hands. Tap the water by a fish (the bigger the shadow, the heavier it is; bubbles over one mean it's about to bite), wait out the nibbles, and tap when the float goes under. Then tap to the beat to reel it in, keeping the white needle in the green of the **LINE** bar on the right: too fast and the line snaps, too slow and it slips off, and each weight has its own pace (the fish swells on it, and on a computer the fight song plays it). Every fish is weighed, a gold gauge on the left filling to its weight and saying how big it is for its kind, then let go: the score is the total weight, against bronze, silver and gold lines at 110, 331 and 661 lb. One giant comes in every game. The Knomi's button (Space on a computer) casts, strikes and reels too.
+- **Pinball:** a round table, its rim the wall. Hold the left or right half of the screen to raise that flipper; the Knomi's button (Space on a computer) raises both, and on a computer the left and right arrows raise each. Three balls. The ramp up the left comes back to your left flipper (+250), the orbit round the top lights berries (all six double your points, the next six triple them), the three bumpers bring out Diglett (+1000), and the tall grass by the right wall sends a wild Pokémon into the ring in the middle: hit it with the ball, each hit your Pokémon's move, to knock it out in 20 seconds (+500).
 - **Who's That Pokémon?:** name the silhouette, ten rounds per game, never the same Pokémon twice. Each one has ten seconds on the clock: run out and it counts as wrong, and the answer shows.
 - **Berry Drop:** in the woods under two tall berry trees, tilt left and right, or drag your Pokémon with a finger, to catch falling berries. They fall faster with every catch, with no top speed, so every game ends.
 
@@ -500,7 +520,7 @@ The code also builds for the Waveshare ESP32-S3-Touch-AMOLED-1.75, a bigger roun
 
 - **Saves:** it saves in the browser by itself. Clearing the browser's data erases it, so use **Export save** now and then for a backup file, and **Import save** to bring a Pokémon back or move it to another browser. Coming from V1, your Pokémon comes along by itself, and V1's save stays as it was.
 - **One tab at a time:** a second tab offers **Play here**, which moves the game over after the first one saves.
-- **Controls:** tap, hold and swipe the screen, as on the Knomi (see [How to play](#how-to-play)). On a phone, tilt it to aim the ball and to steer in PikaSurf and Berry Drop; where the browser asks first, **Enable tilt** turns it on. On Android it also buzzes along with the sounds; **Vibration** turns that off (iPhone browsers can't vibrate). On a computer, the mouse is a finger that presses when you click, the left and right arrows tilt, all four arrows walk in Dungeon Crawler, Space is the Knomi's button (in Reel Fishing it casts, strikes and reels), and on a catch the left and right arrows choose a ball and Space or the up arrow throws it.
+- **Controls:** tap, hold and swipe the screen, as on the Knomi (see [How to play](#how-to-play)). On a phone, tilt it to aim the ball and to steer in PikaSurf and Berry Drop; where the browser asks first, **Enable tilt** turns it on. On Android it also buzzes along with the sounds; **Vibration** turns that off (iPhone browsers can't vibrate). On a computer, the mouse is a finger that presses when you click, the left and right arrows tilt, all four arrows walk in Dungeon Crawler, Space is the Knomi's button (in Reel Fishing it casts, strikes and reels; in Pinball the left and right arrows raise the flippers and Space both), and on a catch the left and right arrows choose a ball and Space or the up arrow throws it.
 - **Size and CRT:** it opens Large, with the CRT screen on. **Size** makes it Small or Medium, like the Mac app, and on a small screen it shrinks to fit. **CRT** turns the effect off for the Knomi's own look; a browser without WebGL 2 shows that look by itself.
 - **Sound and Music:** **Sound** turns the effects and cries off and on, and **Music** steps the music down from High to Medium, Low and Off, each on its own. Settings in the ring has a level from 0 to 3 for each.
 - **Buddies:** browsers can't send the Knomi's local Wi-Fi messages, so they meet buddies through a small relay on the internet that only passes those same messages between devices on the same home network and stores nothing. Knomis and the Mac and Windows apps use it too, so they all meet each other.
@@ -518,7 +538,7 @@ The same game as a round window on your Mac desktop, in a Poké Ball ring with a
 
    Or, in Terminal: `xattr -dr com.apple.quarantine "/Applications/Catch 151.app"`
 
-**Controls:** click, hold and swipe like a touch screen. The left and right arrows tilt, for Berry Drop and throwing Poké Balls, and all four arrows walk in Dungeon Crawler. Space is the Knomi's button, for a wild battle (in Reel Fishing it casts, strikes and reels); on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the red and white ring to move the window: it grows when the mouse is over it, so it's easy to grab, and the screen inside is only for touching, with the mouse as a finger. Right-click it, or click the Poké Ball in the menu bar, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit.
+**Controls:** click, hold and swipe like a touch screen. The left and right arrows tilt, for Berry Drop and throwing Poké Balls, and all four arrows walk in Dungeon Crawler. Space is the Knomi's button, for a wild battle (in Reel Fishing it casts, strikes and reels; in Pinball the left and right arrows raise the flippers and Space both); on a catch, the left and right arrows choose a ball and Space or the up arrow throws it. Drag the red and white ring to move the window: it grows when the mouse is over it, so it's easy to grab, and the screen inside is only for touching, with the mouse as a finger. Right-click it, or click the Poké Ball in the menu bar, for About, Size, CRT Screen, Mute Sound, Music (Off, Low, Medium or High), Check for Updates, Update Automatically and Quit.
 
 **Size and CRT Screen:** it opens Large, with the CRT screen on. **Size** makes it Medium or Small, sharp at every size, and **CRT Screen** turns the effect off for the Knomi's own look.
 

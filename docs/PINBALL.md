@@ -1,7 +1,7 @@
 # Pinball
 
 The seventh cartridge (Fedor, 2026-11-15: "let's branch off to make a pinball mini game"), on the Games menu's second
-page (four cartridges a page now). Built 2026-11-16 (Fedor: "Build it"), on the `pinball` branch: playable on the
+page (four cartridges a page now). Built 2026-11-16 (Fedor: "Build it") and released the same day in 2.2.7: playable on the
 Knomi, the Mac and Windows apps and the web. Reworked the same day after Fedor played the Mac test copy: the battle
 moved onto the table, a smooth ramp, no trail behind the ball, a song of its own, and a smaller patch of grass.
 
