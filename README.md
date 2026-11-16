@@ -11,7 +11,6 @@
   <a href="https://fedorsosnin.github.io/Catch151/music/"><img src="https://img.shields.io/badge/listen-the%20soundtrack-8a5a30" alt="Listen to Catch 151's soundtrack"></a>
   <a href="#minigame-leaderboard"><img src="https://img.shields.io/badge/minigame-leaderboard-c8961e" alt="The minigame leaderboard"></a>
   <a href="Catch151/relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
-  <a href="Catch151/relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.biggest&label=biggest%20fish&color=1f6feb&cacheSeconds=300" alt="The heaviest fish anyone has landed in Reel Fishing"></a>
 </p>
 
 **Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play seven mini games by tapping and tilting, the newest Pinball on a round table and a fishing contest off the Beach's pier, with a live [minigame leaderboard](#minigame-leaderboard) for each one's best.
@@ -79,6 +78,12 @@ The Mac and Windows apps and the browser game, as they open: in the Poké Ball r
 | **Travel Knomi Island** | **Choose your partner** |
 | <img src="Catch151/docs/images/v2/crt-pinball.webp" width="381" alt="Pinball with the CRT screen: the ball goes into the tall grass with a !, a wild Butterfree jumps into the ring in the middle, Diglett pops up between the bumpers, and each hit of the ball is Squirtle's Bite"> | <img src="Catch151/docs/images/v2/crt-fishing.webp" width="381" alt="Reel Fishing with the CRT screen: the float bobs, goes under with a ! and TAP!, then the fish is reeled in with QUICK TAPS! and the LINE bar on the right"> |
 | **New: Pinball** | **New: Reel Fishing** |
+
+## Minigame Leaderboard
+
+<p align="center"><a href="https://fedorsosnin.github.io/Catch151/leaderboard/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The leaderboard, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
+
+The best score in each of the minigames, not the whole game: live from copies of Catch 151 everywhere, with the gamer tag that set it and the day. Each game's [top 10](https://fedorsosnin.github.io/Catch151/leaderboard/) is on its own page. You make your gamer tag after your first game and change it from its label in the Games menu; the best score in any game earns the **High Score** medal, a golden cartridge.
 
 ## On the Knomi
 
@@ -216,12 +221,6 @@ you're reeling in, one tap a beat, and Pinball has its own,
 **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)** in your browser. The page runs the game's
 own synthesizer and songs, built for the web ([`host/music_web.cpp`](Catch151/host/music_web.cpp), about 70 KB), so it plays
 exactly what the game plays, looping the way the game loops, with a scope for each of the four voices.
-
-## Minigame Leaderboard
-
-<p align="center"><a href="https://fedorsosnin.github.io/Catch151/leaderboard/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The leaderboard, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
-
-The best score in each of the minigames, not the whole game: live from copies of Catch 151 everywhere, with the gamer tag that set it and the day. Each game's [top 10](https://fedorsosnin.github.io/Catch151/leaderboard/) is on its own page. You make your gamer tag after your first game and change it from its label in the Games menu; the best score in any game earns the **High Score** medal, a golden cartridge.
 
 ## Install
 
