@@ -70,7 +70,7 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 
 ### Pinball
 
-A round table, the round screen itself, its rim the wall, with a drain between the two flippers. Hold the left or right half of the screen to raise that flipper; the Knomi's button (Space on a computer) raises both, and on a computer the left and right arrows raise each. Three balls; the best score is kept. Each game deals one of two tables at random: night-blue on a chrome rim, or a meadow on a wooden one.
+A round table, the round screen itself, its rim the wall, with a drain between the two flippers. Hold the left or right half of the screen to raise that flipper; the Knomi's button (Space on a computer) raises both, and on a computer the left and right arrows raise each. Three balls; the best score is kept. Each game deals one of two tables at random: night-blue on a chrome rim, with a cave by the right wall, or a meadow on a wooden one, with a patch of tall grass there. The corners where the wall meets the rails down to the flippers are rounded, so a ball rolling round the rim keeps its speed onto a flipper.
 
 | What | Points |
 |---|---:|
@@ -80,12 +80,14 @@ A round table, the round screen itself, its rim the wall, with a drain between t
 | A hit on the wild one in the ring | 50 |
 | Up the ramp and over | 250 |
 | A wild one knocked out | 500 |
-| Diglett | 1000 |
+| Diglett, or each of Dugtrio's three heads | 1000 |
+| All three of Dugtrio's heads, on top | 2000 |
 
 - **The ramp:** from its mouth left of the middle (the arrows on the floor show the shot, from the right flipper) straight up into the top-left corner, round over into the wall and down a wire rail to your left flipper. A shot too slow rolls back down and out.
 - **The orbit and the berries:** a lane round the top, under the wire rail on the left, with six berry lights in it. The ball rolling over one lights it; all six lit and every point after counts **x2** for the rest of the game (the next six, **x3**), and they start over. Going round over the top scores 50.
 - **Diglett:** light all three bumpers and Diglett pops out of its hole between them for 12 seconds, a gold ring round it counting down. Hit it in time for 1000; then the bumpers start over.
-- **The battle in the ring:** the ball into the gap in the tall grass by the right wall brings out a wild Pokémon of about your Pokémon's level, picked as a wild battle picks one. It jumps into the ring in the middle with its HP over it and 20 seconds on a gold ring round it. Each hit of the ball is the stronger of your Pokémon's two moves, its damage worked out as in a battle (its type against the wild one's), but always between two and five hits to knock it out. While one is in the ring the grass takes no ball, and losing the ball ends the battle. Nothing outside Pinball changes: it isn't caught or added to the Pokédex.
+- **Dugtrio:** beat Diglett twice and the next one up evolves into Dugtrio (it can't be hit while it evolves). It stays up 20 seconds, three gold dots under it for its three heads: each hit knocks one down (1000), and the third knocks it out (2000 more). Then it's Diglett again and the count starts over. If Dugtrio gets away, it comes back as Dugtrio.
+- **The battle in the ring:** the ball into the gap in the tall grass by the right wall (on the night table, into the cave's mouth) brings out a wild Pokémon of about your Pokémon's level that lives there, picked as a Search in its zone picks one: out of the grass one of the Forest's or the Field's, out of the cave one of the Cave's (never Diglett or Dugtrio, the bumpers' own; a zone's legendary, seldom). It jumps into the ring in the middle with its HP over it and 20 seconds on a gold ring round it. Each hit of the ball is the stronger of your Pokémon's two moves, its damage worked out as in a battle (its type against the wild one's), but always between two and five hits to knock it out. While one is in the ring the grass (or the cave) takes no ball, and losing the ball ends the battle. Nothing outside Pinball changes: it isn't caught or added to the Pokédex.
 - **Rewards:** joy and speed training from the score, a point for every 400, as the table above. A ball stuck still for 2.5 seconds (anywhere but held up on a flipper) gets a nudge.
 - **The pace:** the Knomi draws about 10 frames a second, so the table is a gentle one, low gravity and a top speed the eye can follow, and the ball moves in many small steps between frames so it never passes through a flipper.
 

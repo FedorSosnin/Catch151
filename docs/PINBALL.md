@@ -3,8 +3,8 @@
 The seventh cartridge (Fedor, 2026-11-15: "let's branch off to make a pinball mini game"), on the Games menu's second
 page (four cartridges a page now). Built 2026-11-16 (Fedor: "Build it") and released the same day in 2.2.7: playable on the
 Knomi, the Mac and Windows apps and the web. Reworked the same day after Fedor played the Mac test copy: the battle
-moved onto the table, a smooth ramp, no trail behind the ball, a song of its own, and a smaller patch of grass. Then
-(after 2.2.7): a bigger ball, the corners where the wall meets the guides rounded off, Diglett evolving into Dugtrio,
+moved onto the table, a smooth ramp, no trail behind the ball, a song of its own, and a smaller patch of grass. Then,
+in 2.2.8: a bigger ball, the corners where the wall meets the guides rounded off, Diglett evolving into Dugtrio,
 and a cave for the grass on the night table.
 
 - **The rules and the physics** are `src/pinball.h` (no drawing), checked by `test/test_pinball.cpp`: the serve,

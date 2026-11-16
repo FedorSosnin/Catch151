@@ -6,8 +6,11 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.8] - 2026-11-16
 
+- **Pinball, Dugtrio:** beat Diglett twice and the next time the bumpers bring it up, it evolves into Dugtrio, blinking white between the two the way your own Pokémon does when it evolves. Then you have 20 seconds to hit its three heads, three gold dots under it counting them down: 1000 a head, and 2000 more for all three. If it gets away it comes back as Dugtrio, without evolving again.
+- **Pinball, a cave at night:** on the night table the tall grass is a cave, a moonlit pile of boulders with eyes glinting in its mouth, and cave Pokémon come out of it (Zubat, Geodude, Clefairy, Onix, Cubone...). Out of the meadow's grass come forest and field ones (Pidgey, Weedle, Oddish, Pikachu...). Something unseen rustles round the grass now, shaking the blades and throwing up bits of leaf, and the cave's eyes blink; both go quiet while the wild one is out in the ring.
+- **Pinball, a bigger ball and round corners:** the ball is bigger (13 pixels across its middle, from 10), and the slingshots sit a little higher to leave it room. Where the wall meets the rails down to the flippers, the sharp corner is now a smooth curve, so a ball rolling round the rim keeps its speed onto the flipper instead of stopping dead in the corner.
 - **Asleep, the home is a clock:** when your Pokemon goes to sleep, the clock glides down from the top to between it and the icons, about three times bigger, so a Knomi left on a desk is a bedside clock. It glides back up when it wakes. It shifts by a pixel or two each minute, so the screen isn't lighting the same pixels all night.
 
 ## [2.2.7] - 2026-11-16
