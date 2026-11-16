@@ -141,6 +141,10 @@ static int v2Sign(const char *s, int y = V2_BOARD_Y) { return v2SignIn(s, y, C56
 // mark 0: an X; -1, 1: an arrow left, right. 52 px across, as before
 static bool v2BtnMark(int mark, int dx, int dy) {
   if (mark == 0) return dx >= -11 && dx <= 11 && dy >= -11 && dy <= 11 && (abs(dx - dy) <= 3 || abs(dx + dy) <= 3);
+  if (mark == 2) {  // pointing up (the zoomed keyboard's way back to the whole one), a pixel above the middle
+    int u = -dy - 1;
+    return u >= -7 && u <= 9 && abs(dx) * 16 <= (9 - u) * 11 + 2;
+  }
   int x = (mark > 0 ? dx : -dx) - 1;  // pointing right, a pixel right of the middle: it looks centred
   return x >= -7 && x <= 9 && abs(dy) * 16 <= (9 - x) * 11 + 2;
 }
@@ -2301,9 +2305,10 @@ static int v2KbNext(int L, int code) {
 // ----- the zoom (Fedor: "The current keyboard makes it pretty hard to type on the Knomi Screen. Like for wifi", then
 // of three ideas "Just the zoom one"). Ten keys a row are 2.5 mm wide on the Knomi, where a fingertip is 8 or more. A
 // tap on a character zooms the three rows of characters in round it, 3 times as wide and 5/3 as tall, so about four
-// keys a row show, each about as big as a fingertip; the next tap types one and zooms back out. The keys already wide
-// (shift, backspace, the layer key, SPACE and OK) act at once, as before; zoomed, shift stays zoomed (for a capital
-// next). A tap off the keys, or on the back button where the X was, goes back to the whole keyboard without typing.
+// keys a row show, each about as big as a fingertip. It stays zoomed while you type (Fedor: "doesnt zoom out until
+// you hit a blue up arrow in the spot the red X usually goes ... you can tap a few keys, zoom out, zoom in, tap a few
+// keys"): the up arrow is the only way back to the whole keyboard. The keys already wide (shift, backspace, the layer
+// key, SPACE and OK) act at once there, as before.
 // One zoom for every keyboard (only one is open at a time): v2KbZoomX, with the open screens' flags in the sketch
 #define V2_KZ_X 3     // how much wider
 #define V2_KZ_YN 5    // and taller: 5/3
@@ -2341,11 +2346,11 @@ static int v2KbTapZ(int L, int x, int y) {
     return c;
   }
   int c = v2KbAtZ(L, x, y);
-  if (c != V2K_SHIFT) {
-    if (c < 0) sfxPlay(SFX_TAP);  // off the keys: back out
+  if (c < 0 && closeHit(x, y)) {  // the up arrow where the X was: the whole keyboard again
+    sfxPlay(SFX_TAP);
     v2KbZoomX = -1;
   }
-  return c;
+  return c;  // (zoomed, a key typed or acted on stays zoomed)
 }
 // a key in the V2 button style (key()): a dark rim, a lit stripe along its top; held: a bar under its label
 static void v2Key(const V2Key &k, const char *lab, uint16_t col, uint16_t ink, int size, bool held) {
@@ -2426,7 +2431,7 @@ static void v2Keyboard(int L, const char *title, const char *typed, int hot, boo
     printT(big);
     classicFontEnd(c2);
   }
-  if (zoom) v2RoundBtn(CX, V2_CLOSE_Y, -1, 0x4F93C4, 0x8CC0E4, 0x2E6A98);  // back to the whole keyboard (a blue back arrow)
+  if (zoom) v2RoundBtn(CX, V2_CLOSE_Y, 2, 0x4F93C4, 0x8CC0E4, 0x2E6A98);  // back to the whole keyboard (a blue up arrow)
   else v2CloseX();
 }
 

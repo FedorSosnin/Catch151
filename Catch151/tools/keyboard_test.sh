@@ -3,8 +3,8 @@
 # (it never visits the real pets), no relay, and another bundle id. It opens on the name's keyboard with a Squirtle.
 # The test state isn't saved (NOSAVE): each launch starts the same.
 #   tools/keyboard_test.sh
-# Click a letter and the keyboard zooms in round it; click one of the big keys to type it (it zooms back out). The
-# blue back button, or a click off the keys, zooms out without typing. Shift, backspace, 123, SPACE and OK work at once.
+# Click a letter and the keyboard zooms in round it; click the big keys to type (it stays zoomed). The blue up arrow
+# where the X was zooms back out. Shift, backspace, 123, SPACE and OK work at once.
 # Hold the mouse down to see the key under it big; slide off before letting go to change your mind. The Terminal
 # window takes console commands too:
 #   KEYBOARD   the keyboard again (after OK or the X)

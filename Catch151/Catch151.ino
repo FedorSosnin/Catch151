@@ -8778,7 +8778,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   if (kbOpen) {
     V2Key k;  // V2: round the key under the finger, where it's drawn (zoomed in, if it is)
     int c = v2KbAtZ(v2NameLayer, x, y, &k);
-    if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, v2KbZoomX < 0 ? "X" : "<");
+    if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, v2KbZoomX < 0 ? "X" : "\x18");  // (zoomed: the up arrow)
     return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2NameLayer, buf));
   }
   if (clockOpen) {
