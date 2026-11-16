@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""V2's trophies: the trophy room's 25 medals as pixel art in the game's own style, drawn the way the food and the
+"""V2's trophies: the trophy room's 27 medals as pixel art in the game's own style, drawn the way the food and the
 Pokemon are: a dark outline, four or five shades lit from the top left, a white glint. Each is drawn twice from the
 same shapes: small for the room (2 screen px a pixel, a Knomi pixel each) and big for its card (3 px a pixel, the
 food's size).
@@ -815,6 +815,91 @@ def cup(i, big):
     return cv
 
 
+# ---------------------------------------------------------------- the high score: a golden game cartridge
+def gold_cart(big):
+    """MED_HISCORE (Fedor: "a badge/achievement for holding a global high score. Make it a golden game cart trophy"):
+    a Game Boy cartridge in gold standing on the cups' ebony base: its corner notched, ridges along its top, a recessed
+    label with a star raised in it, the little arrow under the label; a sparkle on it when it's won"""
+    metal = GOLD
+    W, H = (34, 44) if big else (22, 29)
+    cv = Cv(W, H)
+    cx = (W - 1) / 2
+    hb = 6 if big else 4  # the base, as the cups have it: two tiers of ebony, a gold plate on the lower
+    yb0 = H - 1 - hb
+    wb = round(W * .78) // 2 * 2 + (W % 2)
+    lower = {(x, y) for x in range(int(cx - wb / 2 + .5), int(cx + wb / 2 + .5)) for y in range(yb0, H - 1)}
+    ht = 3 if big else 2
+    wu = round(W * .62) // 2 * 2 + (W % 2)
+    upper = {(x, y) for x in range(int(cx - wu / 2 + .5), int(cx + wu / 2 + .5)) for y in range(yb0 - ht, yb0)}
+
+    def ebc(x, y, s):
+        xs = sorted(xx for xx, yy in s if yy == y)
+        ys = sorted(yy for xx, yy in s if xx == x)
+        if y == ys[0]:
+            return EBONY[1]
+        if x == xs[-1] or y == ys[-1]:
+            return EBONY[3]
+        return EBONY[2]
+    cv.over(part(W, H, lower, lambda x, y: ebc(x, y, lower)))
+    pw = max(4, round(wb * .5))
+    ph = 2 if big else 1
+    py = yb0 + (hb - ph) // 2
+    for x in range(int(cx - pw / 2 + .5), int(cx + pw / 2 + .5)):
+        for y in range(py, py + ph):
+            cv.put(x, y, metal[1] if y == py else metal[3])
+    cv.over(part(W, H, upper, lambda x, y: ebc(x, y, upper)))
+    # the cartridge, standing on the upper tier
+    cw = W - (6 if big else 4)
+    x0, x1 = int(round(cx - cw / 2 + .5)), int(round(cx + cw / 2 - .5))
+    y0, y1 = 1, yb0 - ht - 1
+    notch = 5 if big else 3  # its top right corner cut off, as a Game Boy cartridge's is
+    body = {(x, y) for y in range(y0, y1 + 1) for x in range(x0, x1 + 1) if not (x - (x1 - notch) > y - y0)}
+    shade = {}
+    for x, y in body:
+        lit = x == x0 or y == y0 or (x - (x1 - notch) == y - y0 - 1)  # its left, top and cut edges catch the light
+        dark = x == x1 or y == y1
+        shade[(x, y)] = metal[1] if lit and not dark else metal[3] if dark else metal[2]
+        if not lit and not dark and x <= x0 + (2 if big else 1):
+            shade[(x, y)] = metal[1]  # a lit strip down its left side, as the cups' metal has
+    cv.over(part(W, H, body, lambda x, y: shade[(x, y)]))
+    # ridges along its top, for fingers
+    for k in range(2 if big else 1):
+        yr = y0 + 2 + k * 2
+        for x in range(x0 + 2, x1 - notch - 1):
+            cv.put(x, yr, metal[3])
+            cv.put(x, yr + 1, metal[1])
+    # the label: recessed, dark along its top and left edges, lit along the others, a star raised in it
+    lx0, lx1 = x0 + (3 if big else 2), x1 - (3 if big else 2)
+    ly0 = y0 + (7 if big else 4)
+    ly1 = ly0 + (14 if big else 9)
+    for y in range(ly0, ly1 + 1):
+        for x in range(lx0, lx1 + 1):
+            edge_d = x == lx0 or y == ly0
+            edge_l = x == lx1 or y == ly1
+            cv.put(x, y, metal[4] if edge_d else metal[1] if edge_l else metal[3])
+    rows = STAR_B if big else STAR_S
+    sx = int(round((lx0 + lx1) / 2 - len(rows[0]) / 2 + .5))
+    sy = int(round((ly0 + ly1) / 2 - len(rows) / 2 + .5))
+    emboss(cv, rows, sx, sy, metal[0], metal[4])
+    # the little arrow under the label, cut in
+    ay = ly1 + (3 if big else 2)
+    aw = 2 if big else 1
+    for j in range(aw + 1):
+        for x in range(int(round(cx)) - (aw - j), int(round(cx)) + (aw - j) + 1):
+            cv.put(x, ay + j, metal[4])
+    cv.outline()
+    glint(cv, [(x0 + 1, y0 + 1)] + ([(x0 + 2, y0 + 1), (x0 + 1, y0 + 2)] if big else []))
+    # a sparkle at its top right, on a medal won
+    sp = C('#ffffff', 255, won=True)
+    sxp, syp, r = x1 + (1 if big else 0), y0 + (2 if big else 1), (2 if big else 1)
+    for d in range(-r, r + 1):
+        if cv.get(sxp + d, syp) is None:
+            cv.put(sxp + d, syp, sp)
+        if cv.get(sxp, syp + d) is None:
+            cv.put(sxp, syp + d, sp)
+    return cv
+
+
 # ---------------------------------------------------------------- the buddy frames
 CRIT = {  # a little Pokemon in a photo: its colours, ears, cheeks
     'pika': (YELLOW, 'pika'), 'eevee': (R('#f8e0c0', '#d8a670', '#b07a46', '#86562c', '#5a3818'), 'eevee'),
@@ -1048,7 +1133,7 @@ def rosette(i, big):
     return cv
 
 
-# ---------------------------------------------------------------- all 26, by medal number
+# ---------------------------------------------------------------- all 27, by medal number
 def art(m, big):
     return art_(m, big).trim()
 
@@ -1068,11 +1153,13 @@ def art_(m, big):
         return cup(m - 21, big)
     if 14 <= m <= 16:
         return frame(m - 14, big)
+    if m == 26:  # the high score: a golden cartridge, on the shelf with the cups
+        return gold_cart(big)
     return rosette(m, big)
 
 
-MED_COUNT = 26
-ORDER = [17, 18, 19, 20, 21, 25, 9, 10, 11, 12, 8, 13, 22, 23, 24, 14, 15, 16, 0, 1, 2, 3, 4, 5, 6, 7]  # the room's
+MED_COUNT = 27
+ORDER = [17, 18, 19, 20, 21, 25, 9, 10, 11, 12, 8, 13, 22, 23, 24, 26, 14, 15, 16, 0, 1, 2, 3, 4, 5, 6, 7]  # the room's
 
 
 # ---------------------------------------------------------------- looking at them

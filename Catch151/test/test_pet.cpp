@@ -2033,6 +2033,10 @@ TEST(save, state_survives_a_reboot) {
   CHECK_EQ(b.pinHi, (uint32_t)123450);
   CHECK_STREQ(b.gamerTag, "PIKA");
   CHECK(b.tagAsked);
+  CHECK(!b.hasMedal(MED_HISCORE));  // the high score's golden cartridge: once, kept as the trainer's
+  CHECK(b.topScore());
+  CHECK(b.hasMedal(MED_HISCORE) && b.newMedal == MED_HISCORE);
+  CHECK(!b.topScore());
   CHECK_STREQ(b.nick, "SPARKY");
   CHECK(b.isRegistered(25));
   CHECK(!b.awaitingStarter());

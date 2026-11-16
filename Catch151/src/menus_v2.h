@@ -822,13 +822,13 @@ static void trArt(const TrArt &a, int x, int base, int s, bool won, Rgb sil = TR
 }
 // where each medal stands in the room: the middle of its bottom edge (V2_TROPHY_ORDER walks them in this order)
 static void trSpot(int m, int &x, int &base) {
-  static const int16_t STATUE_X[4] = { 118, 176, 234, 292 }, CUP_X[4] = { 127, 190, 257, 330 };
+  static const int16_t STATUE_X[4] = { 118, 176, 234, 292 }, CUP_X[5] = { 112, 170, 230, 292, 350 };  // (the golden cartridge last)
   if ((m >= 17 && m <= 21) || m == 25) {  // the badges, each in the middle of its place in the case (25: Knomi Tower's, last)
     x = 148 + (m == 25 ? 5 : m - 17) * 34;
     base = 80 + TR_ART_SMALL[m].h;  // (2 px a pixel: half its height under the middle, 80)
   } else if (m >= 9 && m <= 12) x = STATUE_X[m - 9], base = 170;
   else if (m == 8) x = 350, base = 170;
-  else if (m == 13 || (m >= 22 && m <= 24)) x = CUP_X[m == 13 ? 0 : m - 21], base = 246;
+  else if (m == 13 || (m >= 22 && m <= 24) || m == 26) x = CUP_X[m == 13 ? 0 : m == 26 ? 4 : m - 21], base = 246;
   else if (m >= 14 && m <= 16) x = 72 + (m - 14) * 58, base = 308;  // three photos in a row
   else x = 268 + (m % 4) * 38 + (m < 4 ? 0 : 19), base = m < 4 ? 298 : 334;  // the rosettes: two rows of four, the
 }                                                                            // second between the first's tails
@@ -1035,7 +1035,7 @@ static int v2ShelfTitle(int g, char *b, int len) {
   int first = V2_TR_GROUP_FIRST[g], n = v2TrophyGroupSize(g), got = 0;
   for (int k = 0; k < n; k++)
     if (pet.hasMedal(1UL << V2_TROPHY_ORDER[first + k])) got++;
-  static const StrId TITLE[V2_TR_GROUPS] = { S_ZONE_MEDALS_FMT, S_DEX_TITLE, S_LV100_FMT, S_TRG_BUDDIES_FMT, S_TRG_CARE_FMT };
+  static const StrId TITLE[V2_TR_GROUPS] = { S_ZONE_MEDALS_FMT, S_DEX_TITLE, S_TRG_CUPS_FMT, S_TRG_BUDDIES_FMT, S_TRG_CARE_FMT };  // (the cups' shelf: the high score's cartridge too)
   if (g == 1) snprintf(b, len, "%s %d/%d", T(S_DEX_TITLE), got, n);  // ("POKEDEX" has no count of its own)
   else snprintf(b, len, T(TITLE[g]), got, n);
   return got;

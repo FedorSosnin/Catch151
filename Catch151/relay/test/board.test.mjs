@@ -1,8 +1,8 @@
-// The world board's rules (src/board.js): run with  node --test relay/test/*.test.mjs
+// The high scores' rules (src/board.js): run with  node --test relay/test/*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, boardSvg, idHash, BM_SCORE, TOP } from '../src/board.js';
+import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID } from '../src/board.js';
 import { boardPublic, fishReport } from '../src/index.js';
 
 const HERE = new URL('.', import.meta.url).pathname;
@@ -88,4 +88,17 @@ test('the board as /stats shows it hides ids and rude tags, and the picture is d
   const svg = boardSvg(7, b);
   assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'));
   assert.ok(svg.includes('7 playing now') && svg.includes('<image') && svg.includes('id="c87"'));  // a W, drawn
+});
+
+test('the first of a game is told so: a BM_SCORE from the relay to it, as src/buddy.h reads one', () => {
+  const v = new DataView(topReply(1234, 6, 48250));
+  assert.equal(v.byteLength, 65);
+  assert.equal(String.fromCharCode(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3)), 'PKG1');
+  assert.equal(v.getUint8(5), BM_SCORE);
+  assert.equal(v.getUint32(6, true), RELAY_ID);
+  assert.equal(v.getUint32(10, true), 1234);
+  assert.equal(v.getUint32(14, true), 48250);
+  assert.equal(v.getUint8(18), 6);
+  const h = readFileSync(HERE + '../../src/buddy.h', 'utf8');
+  assert.match(h, /#define BUDDY_RELAY_ID 0xFFFFFFFFu/);
 });

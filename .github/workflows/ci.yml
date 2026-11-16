@@ -108,7 +108,7 @@ jobs:
           path: Catch151/build/win/PokeWinGochi.exe
 
   relay:
-    name: Relay's world board (node --test)
+    name: Relay's high scores (node --test)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

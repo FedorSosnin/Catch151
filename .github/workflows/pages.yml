@@ -1,5 +1,5 @@
 # Publishes to GitHub Pages: the Knomi installer at the root (the README's link, and where Knomis
-# download Wi-Fi updates from), the Waveshare one under /waveshare/, the world board under /scores/, /play/ pointing to
+# download Wi-Fi updates from), the Waveshare one under /waveshare/, the high scores under /scores/, /play/ pointing to
 # Catch 151 for Web's own site (tools/publish_web.sh), the Catch 151 Dex under /sprites/, built from the packs, and the
 # soundtrack under /music/ (web/music).
 name: Pages
@@ -40,7 +40,7 @@ jobs:
           cp -R web/knomi/. site/
           # the soundtrack page (tools/build_music_page.sh builds its player)
           cp -R web/music site/music
-          # the world board's page, live from the buddy relay (relay/src/board.js)
+          # the high scores' page, live from the buddy relay (relay/src/board.js)
           cp -R web/scores site/scores
           # the web game lives at its own address only (a second one would keep a second save)
           mkdir -p site/play

@@ -11,6 +11,8 @@
 #   GAMERTAG   the gamer tag's keyboard again (four at most; a rude one gets PICK ANOTHER)
 #   KEYBOARD   the name's keyboard
 #   GAMES      the Games menu, with the gamer tag's label on the Game Boy (a click there opens its keyboard)
+#   TOPSCORE   as if the relay said one of your bests is the first: the High Score medal (the golden cartridge)
+#   TROPHIES   the trophy room (the cartridge is on the trophies' shelf, with the cups)
 # Close it with its menu (the Poke Ball) or Cmd-Q.
 set -e
 cd "${0:A:h}/.."

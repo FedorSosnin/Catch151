@@ -1,10 +1,11 @@
-// The world board (Fedor, 2026-11-16: "a section in the Repo showing live players, biggest fish, longest run, highest
+// The high scores (Fedor, 2026-11-16, first called the world board, then "High Scores": "a section in the Repo showing live players, biggest fish, longest run, highest
 // pinball score, etc." with each best's "score, date, and tag"). The relay keeps each game's top ten: the score, the
 // gamer tag it came with and the day, one entry a device (by a hash of its id: nothing about who or where). The README
 // shows it as a picture (/board.svg) and the website's scores page reads it from /stats.
 import { FONT, CART, CART_W, CART_H } from './board_art.js';
 
 export const BM_SCORE = 18;  // src/buddy.h
+export const RELAY_ID = 0xffffffff;  // the relay as a message's sender (src/buddy.h BUDDY_RELAY_ID)
 export const TOP = 10;       // kept a game
 // the games on the board, as the Games menu numbers them (src/menus_v2.h V2_CART_GAME), with the most a real one can
 // score (the game's own limits: Berry Drop's is a byte, Dungeon Crawler's floor too, times in seconds), and how a
@@ -67,6 +68,21 @@ export function scoreReport(data, MSG_SIZE = 65) {
   const game = v.getUint8(18), score = v.getUint32(14, true), g = GAMES[game];
   if (!g || score < 1 || score > g.max) return null;
   return { game, score, tag: tagOf(new Uint8Array(data, 34, 12)), id: idHash(v.getUint32(6, true)) };
+}
+
+// the relay's answer to a device whose best is the first of its game's ten (Fedor: "a badge/achievement for holding a
+// global high score"): a BM_SCORE from RELAY_ID to it, the game and the score as it sent them. The game gives the
+// golden cartridge for it, once
+export function topReply(to, game, score) {
+  const b = new ArrayBuffer(65), v = new DataView(b);
+  [0x50, 0x4b, 0x47, 0x31].forEach((c, i) => v.setUint8(i, c));  // "PKG1"
+  v.setUint8(4, 1);  // BUDDY_VER
+  v.setUint8(5, BM_SCORE);
+  v.setUint32(6, RELAY_ID, true);
+  v.setUint32(10, to, true);
+  v.setUint32(14, score, true);
+  v.setUint8(18, game);
+  return b;
 }
 
 // adds an entry ({ id, score, tag, day, ... }) to a top ten, best first: a device's own entry takes its new tag
@@ -142,9 +158,9 @@ export function boardSvg(online, board) {
   out.push(`<rect width="${W}" height="${H}" rx="22" fill="${RIM}"/><rect x="5" y="5" width="${W - 10}" height="${H - 10}" rx="18" fill="${BG}"/>`);
   out.push(`<rect x="12" y="12" width="${W - 24}" height="${H - 24}" rx="14" fill="none" stroke="${LINE}" stroke-width="2"/>`);
   // the title on a wooden board, as the game's screens have theirs
-  const tw = textW('WORLD BOARD', 4) + 44;
+  const tw = textW('HIGH SCORES', 4) + 44;
   out.push(`<rect x="32" y="30" width="${tw + 8}" height="52" fill="#3a2414"/><rect x="36" y="34" width="${tw}" height="44" fill="#8a5a30"/><rect x="40" y="36" width="${tw - 8}" height="3" fill="#b07a45"/>`);
-  text(58, 42, 'WORLD BOARD', 4, CREAM);
+  text(58, 42, 'HIGH SCORES', 4, CREAM);
   const live = `${online} PLAYING NOW`, lx = W - 40 - textW(live, 2);
   out.push(`<circle cx="${lx - 19}" cy="54" r="7" fill="#58b868"/>`);
   text(lx, 47, live, 2, '#a0dcaa');
@@ -172,5 +188,5 @@ export function boardSvg(online, board) {
   text((W - textW(foot, 1)) / 2, H - 32, foot, 1, MUTED);
   const defs = [...used].map((c) => `<path id="c${c}" d="${glyph(c)}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">` +
-    `<title>${esc(`Catch 151 world board: ${online} playing now`)}</title><defs>${defs}</defs>${out.join('')}</svg>`;
+    `<title>${esc(`Catch 151 high scores: ${online} playing now`)}</title><defs>${defs}</defs>${out.join('')}</svg>`;
 }

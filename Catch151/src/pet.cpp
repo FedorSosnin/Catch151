@@ -860,6 +860,17 @@ bool Pet::setGamerTag(const char *tag) {
   return true;
 }
 
+bool Pet::topScore() {
+  if (trainerMedals & MED_HISCORE) return false;
+  trainerMedals |= MED_HISCORE;  // celebrated as any medal (the trainer's: kept through a goodbye)
+  totalMedals++;
+  newMedal = MED_HISCORE;
+  medalUntil = millis() + CELEBRATE_MS;
+  if (!sleeping) sfxPlay(SFX_MEDAL);
+  pendingSave = true;
+  return true;
+}
+
 void Pet::askedForTag() {
   if (tagAsked) return;
   tagAsked = true;

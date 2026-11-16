@@ -441,6 +441,14 @@ static void testRelay() {
   fishMsg.from = 0x4321;
   hostRelayReceived((const uint8_t *)&fishMsg, sizeof(fishMsg));
   CHECK(!buddyNetPoll(back));  // a BM_FISH is never taken from a buddy
+  BuddyMsg top;  // a BM_SCORE: only the relay's answer to ours (you're the first of a game), never a buddy's
+  buddyInit(top, BM_SCORE, 0x4321, me, 48250);
+  top.kind = 6;
+  hostRelayReceived((const uint8_t *)&top, sizeof(top));
+  CHECK(!buddyNetPoll(back));
+  top.from = BUDDY_RELAY_ID;
+  hostRelayReceived((const uint8_t *)&top, sizeof(top));
+  CHECK(buddyNetPoll(back) && back.type == BM_SCORE && back.kind == 6 && back.session == 48250);
   hostRelayPeers(1);
   buddyNetSend(hello);
   CHECK(gRelayOut.size() == 1 && gRelayOut[0].size() == 65);

@@ -95,11 +95,14 @@ enum : uint32_t {
   MED_LV100_3 = 1UL << 22, MED_LV100_5 = 1UL << 23, MED_LV100_10 = 1UL << 24,
   // V2: Knomi Tower beaten, its Legend won (tower_v2.h); its badge goes in the case with the zones' badges
   MED_TOWER = 1UL << 25,
+  // V2: a game's best score on the high scores, the first of its ten (the relay says so: Fedor, "a badge/achievement
+  // for holding a global high score. Make it a golden game cart trophy"); on the shelf with the cups
+  MED_HISCORE = 1UL << 26,
 };
 #define MED_PET_COUNT 8  // medals 0..7 belong to the individual, the rest to the trainer (V2: all kept, earned once)
 #define MED_FIRST_ZONE 17  // MED_ZONE_FOREST's bit: the zone medals have their own card page
 #define MED_FIRST_LV100 22  // MED_LV100_3's bit: the level 100 medals too
-#define MED_COUNT 26  // (V2: with Knomi Tower's)
+#define MED_COUNT 27  // (V2: with Knomi Tower's, and the high score's golden cartridge)
 #define LEVEL_MAX 100  // past it a Pokemon would be too strong to battle: it stays at 100
 // Every form in the Pokedex has 1-3 stars: its genes, kept simple. A raised one's are the band of its
 // genes' average (90-96, 97-103, 104-110); a catch rolls them: 1 star 50%, 2 stars 35%, 3 stars 15%
@@ -167,6 +170,7 @@ public:
   bool tagAsked = false;
   bool setGamerTag(const char *tag);  // false for one that's empty or rude (gamertag.h): then it's not changed
   void askedForTag();                 // the keyboard for it was offered: not again by itself
+  bool topScore();                   // the relay says one of your bests is the first on the high scores: its medal (once)
   bool hasScore() const { return gameHi || runHi || surfHi || dungeonHi || pinHi || fishBig; }  // a record on the board
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;

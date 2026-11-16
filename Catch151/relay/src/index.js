@@ -22,7 +22,7 @@
 // "621.7 lb Gyarados"}. Each device tells the relay its own heaviest (a BM_FISH message, only to the
 // relay) when it connects and when it lands a heavier one; the relay keeps the heaviest of all.
 //
-// And the world board (board.js): each game's best ten, with the gamer tag each came with and the day
+// And the high scores (board.js): each game's best ten, with the gamer tag each came with and the day
 // ({"board": {"games": [...], "fish": [...]}} in /stats), from BM_SCORE messages (and BM_FISH for the
 // fish), and as a picture for the README:
 //
@@ -31,7 +31,7 @@
 // It keeps the scores, the tags, the days and a hash of each device's id (one entry a device), nothing
 // about who or where.
 
-import { BM_SCORE, GAMES, scoreReport, boardAdd, boardSvg, tagOf, idHash, tagShown } from './board.js';
+import { BM_SCORE, GAMES, scoreReport, boardAdd, boardSvg, tagOf, idHash, tagShown, topReply } from './board.js';
 
 const MSG_SIZE = 65;
 const MAX_PER_GROUP = 16;  // a home has a few devices: more is someone filling a group on purpose
@@ -161,7 +161,7 @@ export class Lobby {
     return this.fish;
   }
 
-  // the world board: each game's top ten ({ game: [entry] }) and the fish's, from storage once. The heaviest fish
+  // the high scores: each game's top ten ({ game: [entry] }) and the fish's, from storage once. The heaviest fish
   // kept before there was a board starts the fish's (with no tag)
   async board() {
     if (this.scores === undefined) {
@@ -221,8 +221,9 @@ export class Lobby {
       if (!f) return;
       const day = new Date().toISOString().slice(0, 10);
       const { fishTop } = await this.board();
-      const id = idHash(new DataView(data).getUint32(6, true)), tag = tagOf(new Uint8Array(data, 34, 12));
+      const from = new DataView(data).getUint32(6, true), id = idHash(from), tag = tagOf(new Uint8Array(data, 34, 12));
       if (boardAdd(fishTop, { id, tag, score: f.kg10, dex: f.dex, shiny: f.shiny, day })) await this.ctx.storage.put('fishTop', fishTop);
+      if (fishTop[0].id === id) this.tellTop(ws, from, 5, f.kg10);  // the heaviest of all: Reel Fishing's first
       const best = await this.biggest();
       if (!best || f.kg10 > best.kg10) {
         this.fish = { ...f, day };
@@ -237,11 +238,19 @@ export class Lobby {
       const list = scores[s.game] || (scores[s.game] = []);
       if (boardAdd(list, { id: s.id, tag: s.tag, score: s.score, day: new Date().toISOString().slice(0, 10) }))
         await this.ctx.storage.put('scores', scores);
+      if (list[0].id === s.id) this.tellTop(ws, new DataView(data).getUint32(6, true), s.game, s.score);
       return;
     }
     for (const o of this.others(ws, a.groups)) {
       try { o.send(data); } catch (e) {}
     }
+  }
+
+  // tells a device its best is the first of its game's ten (its high score medal: the game gives it once). A copy
+  // older than the high scores drops it (BM_SCORE is past its BM_END)
+  tellTop(ws, from, game, score) {
+    if (from === 0) return;
+    try { ws.send(topReply(from, game, score)); } catch (e) {}
   }
 
   async webSocketClose(ws) {

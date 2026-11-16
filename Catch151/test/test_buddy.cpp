@@ -290,3 +290,16 @@ TEST(buddy, surf_messages_are_checked) {
   m.move = 2;    // neither surfing nor crashed
   CHECK(!parseCopy(m, out));
 }
+
+// the high scores (relay/src/board.js): a BM_SCORE goes to the relay alone, and only the relay's answer comes back in
+TEST(buddy, a_score_is_taken_only_from_the_relay) {
+  BuddyMsg m;
+  buddyInit(m, BM_SCORE, 0x1234, 0x99, 48250);
+  m.kind = 6;
+  BuddyMsg out;
+  CHECK(!buddyParse((const uint8_t *)&m, sizeof(m), out));
+  m.from = BUDDY_RELAY_ID;
+  CHECK(buddyParse((const uint8_t *)&m, sizeof(m), out));
+  CHECK_EQ(out.session, (uint32_t)48250);
+  CHECK_EQ((int)out.kind, 6);
+}

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 // The gamer tag (Fedor: "lets call it a gamer tag and I think 4 gives lots of freedom"): up to four characters typed
-// on the keyboard, shown with your best scores on the world board (relay/src/index.js draws it). Asked for after your
+// on the keyboard, shown with your best scores in the high scores (relay/src/board.js draws them). Asked for after your
 // first scored game, changed from its label on the Games menu.
 //
 // Words nobody should see on the board (Fedor: "a list of typical cursewords that would force a name to show up as

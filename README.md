@@ -26,9 +26,9 @@
 
 **[Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/)**: all 151, regular and shiny, in every view the game has (standing, turning, walking, from behind, asleep, attacking and more), sorted by number or type, each credited to its artists. Each one's page says what the game's Pokédex says about it, with its stats and every move it learns; pick a few to see their match-ups, and tick the ones you have. Its **Catching** tab gives the chances of each star, 1★ to 3★, regular and shiny: of a catch, and of a Search in its zone or a Wild Encounter turning it up that way.
 
-**[World Board](https://fedorsosnin.github.io/Catch151/scores/)**: each minigame's best, live from copies of the game everywhere, with the gamer tag that set it and the day. You make your gamer tag after your first game, and change it from its label in the Games menu.
+**[High Scores](https://fedorsosnin.github.io/Catch151/scores/)**: each minigame's best, live from copies of the game everywhere, with the gamer tag that set it and the day. You make your gamer tag after your first game, and change it from its label in the Games menu.
 
-<p align="center"><a href="https://fedorsosnin.github.io/Catch151/scores/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The World Board, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
+<p align="center"><a href="https://fedorsosnin.github.io/Catch151/scores/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The high scores, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
 
 ## What's in it
 
@@ -58,7 +58,7 @@
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **A trophy room.** All 26 medals as things in one room: badges in a case (Knomi Tower's too), statues, cups, a shiny gem, a gleam sweeping over the ones you've won. Tap a group for its shelf, then a medal for how to earn it.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **A trophy room.** All 27 medals as things in one room: badges in a case (Knomi Tower's too), statues, cups, a golden cartridge for holding a high score, a shiny gem, a gleam sweeping over the ones you've won. Tap a group for its shelf, then a medal for how to earn it.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
 
