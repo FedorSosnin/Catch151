@@ -663,21 +663,91 @@ static void v2NameText(const char *name, int y) {
   }
 }
 
-// The clock on top, then the level, the name (big and bold) and the status. No battery (the Knomi has none)
-// and no streak flame (it's on the card).
-static void v2Header(const char *name, uint16_t nameColor, const char *msg, const char *level) {
-  static uint32_t clockAt = 0;
-  static char clk[12] = "";
+// the time for the home's clock, read once a second (on the Waveshare the clock is read over I2C): 0 before it's known
+static uint32_t v2ClockEpoch() {
+  static uint32_t at = 0, e = 0;
   uint32_t now = millis();
-  if (!clockAt || now - clockAt >= 1000) {  // once a second: on the Waveshare the clock is read over I2C
-    clockAt = now ? now : 1;
-    uint32_t e = rtcEpoch();
-    int h = (e / 3600) % 24;
-    if (e) snprintf(clk, sizeof(clk), "%d:%02d %s", clock12Hour(h), (int)((e / 60) % 60), h < 12 ? "AM" : "PM");
-    else clk[0] = 0;  // no time yet: no clock
+  if (!at || now - at >= 1000) {
+    at = now ? now : 1;
+    e = rtcEpoch();
   }
+  return e;
+}
+
+// While your Pokemon sleeps the clock glides down from the top to between it and the icons, big, and back up when it
+// wakes (Fedor: "When the pokemon is asleep and the music drifts away, lets have the clock move from the top to the
+// spot above where the icons sit but below your pokemon and larger. That way, when a device is on your desk and in
+// rest mode, it becomes a clock"). 0 on top, 1 down; already down if it was asleep when the game started
+#define V2_SLEEP_CLOCK_Y 280    // the big clock's top, asleep: between its feet (and shadow) and the icons
+#define V2_SLEEP_CLOCK_MS 1200  // the glide down or up
+static float v2SleepClockP() {
+  static int8_t down = -1;  // -1: not seen yet
+  static uint32_t at = 0;
+  bool want = pet.sleeping && !pet.ceremony && !pet.isEgg();
+  uint32_t now = millis();
+  if (down < 0) {
+    down = want;
+    at = now - V2_SLEEP_CLOCK_MS;
+  } else if (want != (down > 0)) {  // turned round, mid-glide too: back from where it is
+    uint32_t el = now - at;
+    if (el > V2_SLEEP_CLOCK_MS) el = V2_SLEEP_CLOCK_MS;
+    at = now - (V2_SLEEP_CLOCK_MS - el);
+    down = want;
+  }
+  float t = (now - at) / (float)V2_SLEEP_CLOCK_MS;
+  if (t > 1) t = 1;
+  float e = t * t * (3 - 2 * t);  // eased in and out
+  return down ? e : 1 - e;
+}
+
+// The big clock, asleep: h:mm big and AM/PM small beside it, their bottoms level, as the clock screen's
+// (drawBigTime()) but smaller, in white on a dark shadow so it reads on the dimmed night. Drawn after the icons, so a
+// poop under it never covers the time. Each minute it moves a pixel or two round a small loop, so an AMOLED panel
+// isn't holding the same bright pixels all night
+static void v2SleepClockDraw() {
+  float p = v2SleepClockP();
+  uint32_t e = v2ClockEpoch();
+  if (p <= 0 || !e) return;
+  int h = (e / 3600) % 24;
+  char t[8];
+  snprintf(t, sizeof(t), "%d:%02d", clock12Hour(h), (int)((e / 60) % 60));
+  const char *ap = h < 12 ? "AM" : "PM";
+#ifdef BOARD_HOST
+  int d = 2 + (int)lroundf(4 * p);  // the digits' size: 2 on top (as the clock there), 6 down
+#else
+  int d = 2 + 2 * (int)lroundf(2 * p);  // even sizes only, so each font pixel lands whole on the Knomi
+#endif
+  static const int8_t DX[8] = { 0, 2, 4, 2, 0, -2, -4, -2 }, DY[8] = { 0, -2, 0, 2, 0, -2, 0, 2 };
+  int k = (e / 60) % 8;
+  int tw = textW(t, d) - d, aw = textW(ap, 2) - 2, gap = 10;  // (the widths without the blank after the last letter)
+  int x0 = CX - (tw + gap + aw) / 2 + (int)lroundf(DX[k] * p);
+  if (t[0] == '1') x0 -= d / 2;  // a 1's ink sits right of its cell's middle
+  int y0 = V2_CLOCK_Y + (int)lroundf((V2_SLEEP_CLOCK_Y - V2_CLOCK_Y + DY[k]) * p);
+  x0 = SNAP2(x0);
+  y0 = SNAP2(y0);
+  int ax = SNAP2(x0 + tw + gap), ay = y0 + 7 * d - 14;  // the bottoms of their ink level
+  bool cjk = classicFontBegin();
+  for (int s = 1; s >= 0; s--) {  // the shadow, then the time
+    gfx->setTextColor(s ? C565(0x0a, 0x0e, 0x1e) : UI_WHITE);
+    setSize(d);
+    setCur(x0 + 2 * s, y0 + 2 * s);
+    printT(t);
+    setSize(2);
+    setCur(ax + 2 * s, ay + 2 * s);
+    printT(ap);
+  }
+  classicFontEnd(cjk);
+}
+
+// The clock on top (asleep, it's down under your Pokemon: v2SleepClockDraw()), then the level, the name (big and
+// bold) and the status. No battery (the Knomi has none) and no streak flame (it's on the card).
+static void v2Header(const char *name, uint16_t nameColor, const char *msg, const char *level) {
+  uint32_t e = v2ClockEpoch();
   gfx->setTextColor(inkColor());
-  if (clk[0]) {
+  if (e && v2SleepClockP() <= 0) {  // (no time yet: no clock)
+    char clk[12];
+    int h = (e / 3600) % 24;
+    snprintf(clk, sizeof(clk), "%d:%02d %s", clock12Hour(h), (int)((e / 60) % 60), h < 12 ? "AM" : "PM");
     bool cjk = classicFontBegin();  // digits and AM/PM in the classic font, as on the clock screen
     setSize(2);
     setCur(centerX(clk, 2), V2_CLOCK_Y);

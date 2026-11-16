@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Asleep, the home is a clock:** when your Pokemon goes to sleep, the clock glides down from the top to between it and the icons, about three times bigger, so a Knomi left on a desk is a bedside clock. It glides back up when it wakes. It shifts by a pixel or two each minute, so the screen isn't lighting the same pixels all night.
+
 ## [2.2.7] - 2026-11-16
 
 - **Pinball, a seventh game:** the round screen is the table and its rim the wall. Hold the left or right half to raise that flipper (on a computer the Left and Right arrows; the Knomi's button or Space raises both). A ramp straight up the left into the top corner, arrows chasing up it, goes over the orbit lane and becomes a wire rail down the rim back to your left flipper; the ball rolls under the wire round the orbit, lighting berries (all six double the points). Three bumpers, painted as a Poke, a Great and an Ultra Ball: hit all three and Diglett pops up between them, to hit before it ducks back down (+1000). Roll the ball into the tall grass by the right wall and a wild Pokemon jumps out into the ring in the middle of the table: every hit of the ball on it is your Pokemon's move (with its real damage and type), 20 seconds to knock it out (+500). The ball is a Poke Ball that rolls as it goes. Two tables, one at random each game: night-blue on chrome, or a meadow on wood, and a song of its own, **Pinball**, on the [soundtrack page](https://fedorsosnin.github.io/Catch151/music/#pinball) too. Three balls; the best score is kept.

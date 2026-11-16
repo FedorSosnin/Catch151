@@ -25,7 +25,7 @@ Everything your Pokémon needs, what each action does, and how to fill the Poké
 | 🫐 **Other berries** | +25 | | | | | | |
 | 🍬 **Candy** | +10 | +12 | Full | | | +12 | 2 a day (3 on the day the visitor brings one): a red number on it shows how many are left, and it leaves the menu at 0 |
 | 🛁 **Bath** | | | | Full | +1 | | Also clears every poop |
-| 🌙 **Sleep** | | | +6 a minute | | | | Turn the light off, then back on to wake it |
+| 🌙 **Sleep** | | | +6 a minute | | | | Turn the light off, then back on to wake it. While it sleeps the clock moves down under it, big, so a Knomi left on a desk is a bedside clock |
 
 There are three berries, a Razz, an Oran and a Pinap Berry, and each Pokémon has one favorite. Try them to find out which: once found, it shows on the Pokémon's card. Berries and candy are in the backpack, the first icon: tap one and it drops onto your Pokémon, and the backpack stays open for another. Your Repels are in there too (see [Items](#items)).
 
