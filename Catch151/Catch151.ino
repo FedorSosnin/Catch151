@@ -153,9 +153,11 @@ uint8_t dexArtCount = 0;
 bool screenOff = false;       // short press of the PWR button
 bool cardOpen = false;        // pet card (vertical swipe)
 bool kbOpen = false;          // keyboard for renaming the pet
-int8_t v2TagMock = -1;        // V2: the tag picker's mockup on screen (TAGMOCK n, tag_v2.h), or -1
 int16_t v2KbZoomX = -1;       // V2: a keyboard zoomed in round this x of the whole one, or -1 (menus_v2.h)
 void openKeyboard();          // (the console's KEYBOARD opens it)
+uint32_t v2KbScreenKey();     // what the open keyboard shows (menus_v2.h)
+void openTagKeyboard(bool fromGames);  // the gamer tag's keyboard (menus_v2.h)
+void scoreReport(uint8_t g);  // a game's best to the relay, for the world board
 char nameBuf[12] = "";
 uint8_t nameLen = 0;
 int cardNameBottom = 84;      // where the card's name (and the species under a nickname) ends: tapping above renames
@@ -1075,11 +1077,11 @@ void handleSerial() {
     startDungeon();
     dnBot = true;
     Serial.println("DONE");
+  } else if (line == "GAMERTAG") {  // V2: the gamer tag's keyboard, as the Games menu's label opens it (testing)
+    openTagKeyboard(false);
+    Serial.println("DONE");
   } else if (line == "KEYBOARD") {  // V2: the name's keyboard, as a tap on the card's name opens it (testing)
     openKeyboard();
-    Serial.println("DONE");
-  } else if (line.startsWith("TAGMOCK ")) {  // V2: the tag picker's mockups (tag_v2.h); -1 off
-    v2TagMock = (int8_t)line.substring(8).toInt();
     Serial.println("DONE");
   } else if (line == "PINBALL") {  // Pinball, under its card (testing)
     gamesMenuOpen = false;
@@ -2200,6 +2202,7 @@ static uint32_t screenKey() {
   h = mixKey(h, partyBoostOn());  // the stats page shows the boost
   h = mixKey(h, (uint32_t)(v2KbZoomX + 1));  // V2: a keyboard zoomed in or out
   if (kbOpen) {
+    h = mixKey(h, v2KbScreenKey());  // V2: its layer, and the gamer tag's (menus_v2.h)
     h = mixKey(h, nameLen);
     for (int i = 0; i < nameLen; i++) h = mixKey(h, (uint8_t)nameBuf[i]);
   } else if (clockOpen) {
@@ -2251,11 +2254,6 @@ bool render() {
   gKnomiLiftOn = false;  // V2: nothing over the Knomi's rim until this frame's need bars mark their labels (knomi_rim.h)
 #endif
   if (v2Sliding()) {  // V2: a page sliding: its frames are made from the two pages, nothing drawn (slide_v2.h)
-    gfx->flush();
-    return true;
-  }
-  if (v2TagMock >= 0) {  // V2: the tag picker's mockups (tag_v2.h)
-    v2TagMockDraw(v2TagMock);
     gfx->flush();
     return true;
   }
@@ -2650,6 +2648,7 @@ void stepGame() {
     if (++gameMisses >= 3) {
       gameNewHi = (gameScore > pet.gameHi);
       pet.playResult(gameScore);  // updates the record and gives happiness
+      scoreReport(0);  // V2: the world board
       sfxPlay(gameNewHi && gameScore > 0 ? SFX_MEDAL : SFX_LEVEL);
       gameOverUntil = now + 3500;
       return;
@@ -2715,6 +2714,8 @@ void gameEndToMenu(int g) {
   v2GamesShow(g);
   if (pet.isEgg() || pet.sleeping || pet.ceremony || choiceKind) return;
   openGamesMenu();
+  // V2: after a first scored game (one with a place on the world board: not Who's That?), the gamer tag, once
+  if (g != 1 && gamesMenuOpen && !pet.gamerTag[0] && !pet.tagAsked && pet.hasScore()) openTagKeyboard(true);
 }
 
 void openGamesMenu() {
@@ -2930,6 +2931,11 @@ void drawIntroCard() {
 }
 
 void gamesMenuTap(int16_t x, int16_t y) {
+  if (v2TagChipHit(x, y)) {  // V2: the gamer tag's label: its keyboard, back to the menu after (menus_v2.h)
+    sfxPlay(SFX_TAP);
+    openTagKeyboard(true);
+    return;
+  }
   if (int d = v2GamesArrowAt(x, y)) {  // V2: a page arrow turns the page, and the menu stays
     if (v2GamesTurn(d)) sfxPlay(SFX_TAP);
     return;
@@ -4401,6 +4407,7 @@ void dungeonAfterStep() {
   if (dn.dead) {
     dnNewHi = dn.floor > pet.dungeonHi;
     pet.dungeonResult(dn.floor);  // the reward and record only on a real fall
+    scoreReport(3);  // V2: the world board
     sfxPlay(dnNewHi ? SFX_MEDAL : SFX_DENY);
     dnOverT = now;
     Serial.printf("dungeon: B%uF, %u KO\n", dn.floor, dn.kos);
@@ -4600,6 +4607,7 @@ void renderRun() {
       uint16_t secs = (uint16_t)run.t;
       runNewHi = secs > pet.runHi;
       pet.runResult(secs);  // the reward and record only when it really ends
+      scoreReport(2);  // V2: the world board
       sfxPlay(runNewHi ? SFX_MEDAL : SFX_DENY);
       runOverT = millis();
       Serial.printf("pokerun: %u s, %lu frames\n", secs, (unsigned long)runFrames);
@@ -4677,7 +4685,27 @@ void fishReport() {
   m.dex = pet.fishBigDex;
   m.shiny = pet.fishBigShiny ? 1 : 0;
   m.hp = pet.fishBig;
+  strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);  // V2: the gamer tag, for the world board
   buddyNetReport(m);
+}
+
+// V2: a game's best to the relay with the gamer tag, for the world board (relay/src/index.js), as fishReport() sends the
+// biggest fish: Berry Drop's score (game 0), Rock Hopper's seconds (2), Dungeon Crawler's floor (3), PikaSurf's
+// seconds (4), Pinball's score (6), as the Games menu numbers them. Nothing before there's one. Sent at each game's
+// end (the relay keeps the best), all of them when the relay is reached anew or the tag changes
+void scoreReport(uint8_t g) {
+  uint32_t v = g == 0 ? pet.gameHi : g == 2 ? pet.runHi : g == 3 ? pet.dungeonHi : g == 4 ? pet.surfHi : g == 6 ? pet.pinHi : 0;
+  if (!v) return;
+  BuddyMsg m;
+  buddyInit(m, BM_SCORE, buddyNetId(), 0, v);  // (the session field carries the score)
+  m.kind = g;
+  strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);
+  buddyNetReport(m);
+}
+void scoreReportAll() {
+  static const uint8_t G[] = { 0, 2, 3, 4, 6 };
+  for (uint8_t g : G) scoreReport(g);
+  fishReport();
 }
 
 void startFish() {
@@ -4902,6 +4930,7 @@ void pinEvents(uint32_t ev) {
   if (ev & PE_END) {
     pinNewHi = pin.score > pet.pinHi;
     pet.pinResult(pin.score);  // the reward and record only at the end
+    scoreReport(6);  // V2: the world board
     sfxPlay(pinNewHi ? SFX_MEDAL : SFX_PLAY);
     pinOverT = now | 1;
     Serial.printf("pinball: %lu\n", (unsigned long)pin.score);
@@ -5220,6 +5249,7 @@ void renderSurf() {
       uint16_t secs = (uint16_t)surf.t;
       surfNewHi = secs > pet.surfHi;
       pet.surfResult(secs);  // the reward and record only when it really ends
+      scoreReport(4);  // V2: the world board
       sfxPlay(surfNewHi ? SFX_MEDAL : SFX_DENY);
       surfOverT = millis();
       Serial.printf("pikasurf: %u s\n", secs);
@@ -6697,7 +6727,7 @@ void buddyTick(uint32_t now) {
     }
     BuddyMsg m;
     for (int i = 0; i < 8 && buddyNetPoll(m); i++) buddyHandle(m, now);
-    if (buddyNetRelayFresh()) fishReport();  // the relay keeps the heaviest fish anyone has landed
+    if (buddyNetRelayFresh()) scoreReportAll();  // the relay keeps the world board: each game's best, and the heaviest fish
     buddyReadyTick(now);
   }
   // touches and messages have already stamped bsT and trT with millis(): with the old now the subtraction would wrap around
@@ -8687,6 +8717,11 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return pressSet(t, 83 + inset, QUIZ_OPT_Y + i * (QUIZ_OPT_H + QUIZ_OPT_GAP), 300 - 2 * inset, QUIZ_OPT_H, dexName(quizOpts[i]));
   }
   if (gamesMenuOpen) {
+    if (v2TagChipHit(x, y)) {  // V2: the gamer tag's label
+      int x0, w;
+      v2TagChipBox(x0, w);
+      return pressSet(t, x0 - 2, V2_TAG_CHIP_Y - 2, w + 4, 26, pet.gamerTag[0] ? pet.gamerTag : "____");
+    }
     int g = gameAt(x, y);
     if (g < 0) return v2PressNav(x, y, t, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, true);  // V2: its page arrows and X
     if (g < 0) return false;
@@ -8777,9 +8812,9 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   }
   if (kbOpen) {
     V2Key k;  // V2: round the key under the finger, where it's drawn (zoomed in, if it is)
-    int c = v2KbAtZ(v2NameLayer, x, y, &k);
-    if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, v2KbZoomX < 0 ? "X" : "\x18");  // (zoomed: the up arrow)
-    return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2NameLayer, buf));
+    int c = v2KbAtZ(v2KbLayerNow(), x, y, &k);
+    if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, v2KbZoomX < 0 ? "X" : "\x19");  // (zoomed: the down arrow)
+    return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2KbLayerNow(), buf));
   }
   if (clockOpen) {
     if (tzPickOpen && clockPage == 0 && closeHit(x, y)) return v2PressNav(x, y, t, 0, 0, 0, true);  // the picker's X

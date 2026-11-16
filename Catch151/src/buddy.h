@@ -36,10 +36,14 @@ enum BuddyType : uint8_t {
   BM_SURF,                         // PikaSurf: where you are on the water, your time, and if you've crashed
   BM_READY,                        // any Play together game: pressed Ready, GO! on its card
   BM_FISH,                         // to the relay alone, never to a buddy: the heaviest fish this one has landed (dex,
-                                   // shiny, hp = its weight in tenths of a kg); the relay keeps the heaviest of all
+                                   // shiny, hp = its weight in tenths of a kg, nick = the gamer tag); the relay keeps
+                                   // the heaviest of all
+  BM_SCORE,                        // to the relay alone, never to a buddy: a game's best (kind = the game as the Games
+                                   // menu numbers them, session = the score, nick = the gamer tag); the world board
   BM_END
 };
 static_assert(BM_FISH == 17, "relay/src/index.js reads BM_FISH as 17");
+static_assert(BM_SCORE == 18, "relay/src/index.js reads BM_SCORE as 18");
 enum BuddyKind : uint8_t { BK_BATTLE = 1, BK_TRADE, BK_SHOWDOWN, BK_VOLLEY, BK_SURF };
 
 struct __attribute__((packed)) BuddyMsg {
@@ -79,7 +83,7 @@ inline bool buddyParse(const uint8_t *buf, size_t len, BuddyMsg &m) {
   if (len != sizeof(BuddyMsg)) return false;
   memcpy(&m, buf, sizeof(BuddyMsg));
   if (memcmp(m.magic, "PKG1", 4) != 0 || m.ver != BUDDY_VER) return false;
-  if (m.type < BM_HELLO || m.type >= BM_END || m.type == BM_FISH || m.from == 0) return false;
+  if (m.type < BM_HELLO || m.type >= BM_END || m.type == BM_FISH || m.type == BM_SCORE || m.from == 0) return false;
   if (m.type == BM_HELLO || m.type == BM_FIGHTER || m.type == BM_OFFER || m.type == BM_CONFIRM) {
     if (!buddyDexOk(m.dex)) return false;
   }

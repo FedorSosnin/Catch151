@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include "savename.h"  // the save's storage name
+#include "gamertag.h"  // the gamer tag's length and checks
 
 // 1 tick = 1 game minute. Lower this value to test faster
 // (e.g. 5000UL = stats drop 12x faster).
@@ -160,6 +161,13 @@ public:
   int16_t fishBigDex = 0;  // what it was (0: none yet)
   bool fishBigShiny = false;
   uint32_t pinHi = 0;      // Pinball's record: the best score
+  // V2: the gamer tag (gamertag.h): the trainer's, kept through a goodbye, shown with the best scores on the world
+  // board. tagAsked: asked for once already, after a first scored game (the Games menu's label changes it after that)
+  char gamerTag[GAMER_TAG_LEN + 1] = "";
+  bool tagAsked = false;
+  bool setGamerTag(const char *tag);  // false for one that's empty or rude (gamertag.h): then it's not changed
+  void askedForTag();                 // the keyboard for it was offered: not again by itself
+  bool hasScore() const { return gameHi || runHi || surfHi || dungeonHi || pinHi || fishBig; }  // a record on the board
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;
   uint8_t candyToday = 0;  // treats given on day candyDay

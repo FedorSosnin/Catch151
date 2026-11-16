@@ -141,6 +141,7 @@ enum StrId : STRID_BASE {
   S_FISH_TOO_SOON, S_FISH_TOO_SLOW, S_FISH_AWAY, S_FISH_WEIGH, S_FISH_BACK, S_FISH_BIG, S_FISH_LINE,
   S_FISH_SMALL_FMT, S_FISH_FINE_FMT, S_FISH_LARGE_FMT,  // ...the weigh-in: how big it is for its kind (%s its name)
   S_FISH_BRONZE, S_FISH_SILVER, S_FISH_GOLD, S_FISH_LB_FMT, S_FISH_REC_FMT, S_FISH_BIGGEST,  // ...its goals and weights
+  S_GAMER_TAG, S_TAG_WHY, S_TAG_PICK_ANOTHER,  // V2: the gamer tag's keyboard: its title, what it's for, a rude one
   S_GAME_PINBALL, S_HOW_PINBALL, S_HOW_PINBALL_KEYS,  // Pinball: its name and how-to cards
   S_PIN_HINT, S_PIN_FLIP, S_PIN_BOTH, S_PIN_SPACE, S_PIN_BALL_FMT, S_PIN_BERRIES_FMT, S_PIN_DIG_FMT,  // ...in play
   S_PIN_RAMP, S_PIN_WIN_FMT,

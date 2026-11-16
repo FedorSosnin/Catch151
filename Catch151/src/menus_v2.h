@@ -141,8 +141,8 @@ static int v2Sign(const char *s, int y = V2_BOARD_Y) { return v2SignIn(s, y, C56
 // mark 0: an X; -1, 1: an arrow left, right. 52 px across, as before
 static bool v2BtnMark(int mark, int dx, int dy) {
   if (mark == 0) return dx >= -11 && dx <= 11 && dy >= -11 && dy <= 11 && (abs(dx - dy) <= 3 || abs(dx + dy) <= 3);
-  if (mark == 2) {  // pointing up (the zoomed keyboard's way back to the whole one), a pixel above the middle
-    int u = -dy - 1;
+  if (mark == 2) {  // pointing down (the zoomed keyboard's way back to the whole one), a pixel below the middle
+    int u = dy - 1;
     return u >= -7 && u <= 9 && abs(dx) * 16 <= (9 - u) * 11 + 2;
   }
   int x = (mark > 0 ? dx : -dx) - 1;  // pointing right, a pixel right of the middle: it looks centred
@@ -1938,8 +1938,40 @@ static void v2GbBack(const char *title) {
   v2GbLight(millis());
   v2Sign(v2Caps(title, b, sizeof(b)), 24);
 }
+// your gamer tag on the Game Boy under GAMES (Fedor: "somewhere on the games menu"), as a label stuck on it with a
+// pencil: a tap there changes it (gamertag.h). Four bars before there is one
+static void v2TagChipBox(int &x0, int &w) {
+  setSize(2);
+  int tw = textW(pet.gamerTag[0] ? pet.gamerTag : "____", 2) - 2;
+  w = tw + 40;
+  x0 = SNAP2(CX - w / 2);
+}
+#define V2_TAG_CHIP_Y 62
+static void v2TagChip() {
+  bool cjk = classicFontBegin();
+  int x0, w, y0 = V2_TAG_CHIP_Y;
+  v2TagChipBox(x0, w);
+  V2_HOVER(x0 - 2, y0 - 2, w + 4, 26);  // under the mouse: lifted (hover_v2.h)
+  gfx->fillRoundRect(x0 - 2, y0 - 2, w + 4, 26, 6, V2_RIM);
+  gfx->fillRoundRect(x0, y0, w, 22, 5, C565(0xf4, 0xec, 0xd8));
+  gfx->setTextColor(pet.gamerTag[0] ? UI_INK : V2_INK_MUTED);
+  setSize(2);
+  setCur(x0 + 8, y0 + 4);
+  printT(pet.gamerTag[0] ? pet.gamerTag : "____");
+  int px = x0 + w - 20, py = y0 + 4;  // the pencil: a pink end, a yellow body, a dark tip, at 45 degrees
+  for (int i = 0; i < 6; i++)
+    gfx->fillRect(px + 10 - i * 2, py + i * 2, 4, 4, i < 1 ? C565(0xe8, 0x80, 0x90) : i < 5 ? C565(0xf0, 0xc0, 0x4a) : UI_INK);
+  classicFontEnd(cjk);
+}
+// a tap on the label (a finger's width round it: it's small)
+static bool v2TagChipHit(int16_t x, int16_t y) {
+  int x0, w;
+  v2TagChipBox(x0, w);
+  return x >= x0 - 16 && x < x0 + w + 16 && y >= V2_TAG_CHIP_Y - 12 && y < V2_TAG_CHIP_Y + 30;
+}
 static void v2GamesTv() {
   v2GbBack(T(S_GAMES));
+  v2TagChip();
   if (v2GamesPage >= V2_CART_PAGES) v2GamesPage = V2_CART_PAGES - 1;
   for (int k = 0, c = v2GamesPage * V2_CARTS_PAGE; k < v2CartsOn(v2GamesPage); k++, c++)
     v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[c]), gameLabel(V2_CART_GAME[c]), V2_CART_COL[c]);
@@ -2307,8 +2339,9 @@ static int v2KbNext(int L, int code) {
 // tap on a character zooms the three rows of characters in round it, 3 times as wide and 5/3 as tall, so about four
 // keys a row show, each about as big as a fingertip. It stays zoomed while you type (Fedor: "doesnt zoom out until
 // you hit a blue up arrow in the spot the red X usually goes ... you can tap a few keys, zoom out, zoom in, tap a few
-// keys"): the up arrow is the only way back to the whole keyboard. The keys already wide (shift, backspace, the layer
-// key, SPACE and OK) act at once there, as before.
+// keys", then "swap the blue upward arrow to the blue downward facing arrow"): that arrow, pointing down, is the only
+// way back to the whole keyboard. The keys already wide (shift, backspace, the layer key, SPACE and OK) act at once
+// there, as before.
 // One zoom for every keyboard (only one is open at a time): v2KbZoomX, with the open screens' flags in the sketch
 #define V2_KZ_X 3     // how much wider
 #define V2_KZ_YN 5    // and taller: 5/3
@@ -2346,7 +2379,7 @@ static int v2KbTapZ(int L, int x, int y) {
     return c;
   }
   int c = v2KbAtZ(L, x, y);
-  if (c < 0 && closeHit(x, y)) {  // the up arrow where the X was: the whole keyboard again
+  if (c < 0 && closeHit(x, y)) {  // the down arrow where the X was: the whole keyboard again
     sfxPlay(SFX_TAP);
     v2KbZoomX = -1;
   }
@@ -2369,24 +2402,42 @@ static void v2Key(const V2Key &k, const char *lab, uint16_t col, uint16_t ink, i
 }
 // the whole keyboard: its title, what's been typed (the end of it, if it's long), the keys of layer L; hot:
 // the key under the finger, lit, and big over the text (the finger hides the real one); ready: OK is green
-static void v2Keyboard(int L, const char *title, const char *typed, int hot, bool ready) {
+// slots: a box a character, that many (the gamer tag's four), in place of the line of text
+static void v2Keyboard(int L, const char *title, const char *typed, int hot, bool ready, int slots = 0) {
   v2MenuBackdrop();
   gfx->setTextColor(C565(0xff, 0xf3, 0xdc));
   setSize(2);
   setCur(centerX(title, 2), 36);
   printT(title);
-  v2Panel(84, 58, 382, 104, 8);
   bool cjk = classicFontBegin();
   size_t len = strlen(typed);
-  const char *show = len > 15 ? typed + len - 15 : typed;  // 15 letters at size 3 fill the panel
-  char line[20];
-  snprintf(line, sizeof(line), "%s_", show);
-  gfx->setTextColor(UI_INK);
-  setSize(4);
-  int ts = textW(line, 4) <= 266 ? 4 : 2;  // (an even size: on the Knomi each font pixel lands whole; 3 spread over a pixel and a half, Fedor: crisp as the battles)
-  setSize(ts);
-  setCur(100, ts == 4 ? 66 : 74);
-  printT(line);
+  if (slots) {  // each character in a box of its own, a bar in the next one to fill
+    const int bw = 48, gap = 12, x0 = SNAP2(CX - (slots * bw + (slots - 1) * gap) / 2);
+    for (int i = 0; i < slots; i++) {
+      int x = x0 + i * (bw + gap);
+      v2Panel(x, 58, x + bw - 1, 104, 6);
+      if (i < (int)len) {
+        char c[2] = { typed[i], 0 };
+        gfx->setTextColor(UI_INK);
+        setSize(4);
+        setCur(x + 14, 68);
+        printT(c);
+      } else if (i == (int)len) {
+        gfx->fillRect(x + 12, 92, bw - 24, 4, V2_INK_MUTED);
+      }
+    }
+  } else {
+    v2Panel(84, 58, 382, 104, 8);
+    const char *show = len > 15 ? typed + len - 15 : typed;  // 15 letters at size 3 fill the panel
+    char line[20];
+    snprintf(line, sizeof(line), "%s_", show);
+    gfx->setTextColor(UI_INK);
+    setSize(4);
+    int ts = textW(line, 4) <= 266 ? 4 : 2;  // (an even size: on the Knomi each font pixel lands whole; 3 spread over a pixel and a half, Fedor: crisp as the battles)
+    setSize(ts);
+    setCur(100, ts == 4 ? 66 : 74);
+    printT(line);
+  }
   classicFontEnd(cjk);
   V2Key k[40];
   int n = v2KbKeys(L, k);
@@ -2431,21 +2482,112 @@ static void v2Keyboard(int L, const char *title, const char *typed, int hot, boo
     printT(big);
     classicFontEnd(c2);
   }
-  if (zoom) v2RoundBtn(CX, V2_CLOSE_Y, 2, 0x4F93C4, 0x8CC0E4, 0x2E6A98);  // back to the whole keyboard (a blue up arrow)
+  if (zoom) v2RoundBtn(CX, V2_CLOSE_Y, 2, 0x4F93C4, 0x8CC0E4, 0x2E6A98);  // back to the whole keyboard (a blue down arrow: Fedor, "swap the blue upward arrow to the blue downward facing arrow")
   else v2CloseX();
+}
+
+// ----- the gamer tag's keyboard (gamertag.h): the same keyboard, four boxes for what's typed, in capitals unless shift
+// turns them small (they stay as chosen). Under the keys (not zoomed): what it's for, or PICK ANOTHER after a rude one.
+// OK keeps it and sends the best scores again with it; the X leaves it as it was. Asked for once by itself, after a
+// first scored game (Fedor: "after a player plays their first game and adds a score, they will be asked to make their
+// tag"); its label on the Games menu changes it after that
+static bool v2TagKbOn = false;     // the keyboard open (kbOpen) is the gamer tag's, not the name's
+static bool v2TagToGames = false;  // ...and closing it goes back to the Games menu
+static char v2TagBuf[GAMER_TAG_LEN + 1] = "";
+static uint8_t v2TagLayer = 1;
+static uint32_t v2TagRudeAt = 0;   // when OK found it rude: PICK ANOTHER for a while
+#define V2_TAG_RUDE_MS 2500
+void scoreReportAll();  // every best to the relay, with the tag (the sketch)
+void openGamesMenu();
+static bool v2TagRudeShown() { return v2TagRudeAt && millis() - v2TagRudeAt < V2_TAG_RUDE_MS; }
+void openTagKeyboard(bool fromGames) {
+  strcpy(v2TagBuf, pet.gamerTag);
+  v2TagLayer = 1;
+  v2TagRudeAt = 0;
+  v2KbZoomX = -1;
+  v2TagToGames = fromGames;
+  v2TagKbOn = true;
+  gamesMenuOpen = false;
+  kbOpen = true;
+  pet.askedForTag();
+}
+static void v2TagKbClose() {
+  kbOpen = false;
+  v2TagKbOn = false;
+  v2KbZoomX = -1;
+  if (v2TagToGames) openGamesMenu();
+}
+static void v2TagKb() {
+  bool rude = v2TagRudeShown();
+  v2Keyboard(v2TagLayer, T(S_GAMER_TAG), v2TagBuf, -1, v2TagBuf[0] != 0, GAMER_TAG_LEN);
+  if (v2KbZoomX >= 0) return;  // (the zoomed keys reach down there)
+  const char *s = rude ? T(S_TAG_PICK_ANOTHER) : T(S_TAG_WHY);
+  gfx->setTextColor(rude ? C565(0xff, 0x8a, 0x7a) : C565(0xff, 0xf3, 0xdc));
+  setSize(2);
+  setCur(centerX(s, 2), 362);
+  printT(s);
+}
+static void v2TagKbTap(int16_t x, int16_t y) {
+  if (v2KbZoomX < 0 && closeHit(x, y)) {  // the X: as it was
+    sfxPlay(SFX_TAP);
+    v2TagKbClose();
+    return;
+  }
+  int c = v2KbTapZ(v2TagLayer, x, y);
+  if (c < 0) return;
+  size_t n = strlen(v2TagBuf);
+  if (c == V2K_SHIFT || c == V2K_LAYER) {
+    sfxPlay(SFX_TAP);
+    v2TagLayer = v2KbNext(v2TagLayer, c);
+  } else if (c == V2K_BKSP) {
+    sfxPlay(SFX_TAP);
+    if (n) v2TagBuf[n - 1] = 0;
+    v2TagRudeAt = 0;
+  } else if (c == V2K_OK) {
+    if (!n || !pet.setGamerTag(v2TagBuf)) {  // nothing typed, or a rude one: PICK ANOTHER
+      sfxPlay(SFX_DENY);
+      if (n) v2TagRudeAt = millis() | 1;
+      return;
+    }
+    sfxPlay(SFX_TAP);
+    scoreReportAll();
+    v2TagKbClose();
+  } else if (n < GAMER_TAG_LEN) {
+    sfxPlay(SFX_TAP);
+    v2TagBuf[n] = (char)c;
+    v2TagBuf[n + 1] = 0;
+  } else {
+    sfxPlay(SFX_DENY);  // four already
+  }
 }
 
 // the nickname's keyboard: it starts in capitals for an empty name, and turns small after the first letter
 static uint8_t v2NameLayer = 0;
+static int v2KbLayerNow() { return v2TagKbOn ? v2TagLayer : v2NameLayer; }  // the open keyboard's layer
+// what the open keyboard shows, for redrawing it only when that changes (screenKey())
+uint32_t v2KbScreenKey() {
+  uint32_t h = (v2TagKbOn ? 7u : 3u) + v2KbLayerNow() * 131u + (v2TagRudeShown() ? 977u : 0u);
+  for (const char *p = v2TagBuf; *p; p++) h = h * 31 + (uint8_t)*p;
+  return h;
+}
 static void v2NameKbOpen() {
   v2NameLayer = nameLen ? 0 : 1;
   v2KbZoomX = -1;
+  v2TagKbOn = false;
 }
 static void v2NameKb() {
+  if (v2TagKbOn) {
+    v2TagKb();
+    return;
+  }
   char title[24];
   v2Keyboard(v2NameLayer, v2Caps(T(S_NAME), title, sizeof(title)), nameBuf, -1, true);  // (the key under the finger: press.h)
 }
 static void v2NameKbTap(int16_t x, int16_t y) {
+  if (v2TagKbOn) {
+    v2TagKbTap(x, y);
+    return;
+  }
   if (v2KbZoomX < 0 && closeHit(x, y)) {  // the X: out without renaming (V1 had only OK)
     sfxPlay(SFX_TAP);
     kbOpen = false;

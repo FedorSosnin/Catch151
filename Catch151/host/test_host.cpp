@@ -629,6 +629,10 @@ static void testGame() {
   };
   hostSerialPush("NOSAVE");
   runTicks(100);
+  {
+    extern Pet pet;
+    pet.tagAsked = true;  // (the gamer tag's own checks are testKeyboard()'s: here a game's end goes to the menu)
+  }
   hostSerialPush("SPEC 5");
   runTicks(100);
   hostSerialPush("AWAKE");
@@ -1266,8 +1270,8 @@ static void testGame() {
 }
 
 // the keyboard zooms (Fedor: "Just the zoom one"): a tap on a letter zooms in round it and types nothing; zoomed, a
-// tap types the letter under it and it stays zoomed (Fedor: "doesnt zoom out until you hit a blue up arrow"), a tap
-// off the keys does nothing, and the up arrow where the X was zooms out; the X closes
+// tap types the letter under it and it stays zoomed (Fedor: "doesnt zoom out until you hit a blue up arrow", now a down one), a
+// tap off the keys does nothing, and that arrow where the X was zooms out; the X closes
 static void testKeyboard() {
   extern bool kbOpen;
   extern char nameBuf[12];
@@ -1291,7 +1295,7 @@ static void testKeyboard() {
   CHECK(v2KbZoomX >= 0 && nameLen == n0 + 2 && nameBuf[n0 + 1] == 'e');
   tapAt(233, 60);  // off the keys: nothing
   CHECK(v2KbZoomX >= 0 && nameLen == n0 + 2);
-  tapAt(233, 422);  // the up arrow: the whole keyboard
+  tapAt(233, 422);  // the down arrow: the whole keyboard
   CHECK(v2KbZoomX < 0 && nameLen == n0 + 2 && kbOpen);
   tapAt(413, 146);  // P, at the right end: zooms in (no further than the keyboard's end)
   CHECK(v2KbZoomX > 0 && nameLen == n0 + 2);
@@ -1301,6 +1305,50 @@ static void testKeyboard() {
   CHECK(v2KbZoomX < 0 && nameLen == n0 + 1);
   tapAt(233, 422);  // the X: out without renaming
   CHECK(!kbOpen);
+
+  // the gamer tag (gamertag.h): asked for once, after a first scored game's end (not Who's That?'s); typed on the same
+  // keyboard, four at most; a rude one isn't kept; the Games menu's label opens it again, and back to the menu after
+  extern Pet pet;
+  extern bool gamesMenuOpen;
+  extern void gameEndToMenu(int g);
+  pet.gamerTag[0] = 0;
+  pet.tagAsked = false;
+  uint16_t hi = pet.gameHi;
+  pet.gameHi = 0, pet.runHi = 0, pet.surfHi = 0, pet.dungeonHi = 0, pet.pinHi = 0, pet.fishBig = 0;
+  gameEndToMenu(0);  // no score yet: just the menu
+  CHECK(gamesMenuOpen && !kbOpen);
+  pet.gameHi = 12;
+  gameEndToMenu(1);  // Who's That? has no place on the board
+  CHECK(gamesMenuOpen && !kbOpen);
+  gameEndToMenu(0);  // a scored game's end: the tag's keyboard
+  CHECK(kbOpen && !gamesMenuOpen && pet.tagAsked);
+  runTicks(200);
+  tapAt(253, 146);  // Y: zooms in
+  tapAt(233, 150);  // types it
+  tapAt(233, 150);
+  tapAt(233, 150);
+  tapAt(233, 150);
+  tapAt(233, 150);  // a fifth: four at most
+  tapAt(233, 422);  // the down arrow
+  tapAt(375, 320);  // OK
+  CHECK(!kbOpen && gamesMenuOpen && !strcmp(pet.gamerTag, "YYYY"));
+  gamesMenuOpen = false;
+  gameEndToMenu(0);  // asked once: not again
+  CHECK(gamesMenuOpen && !kbOpen);
+  tapAt(233, 72);  // the label on the Game Boy: its keyboard again
+  CHECK(kbOpen && !gamesMenuOpen);
+  for (int i = 0; i < 4; i++) tapAt(397, 262);  // backspace
+  tapAt(73, 204);  // A: zooms in round it
+  tapAt(149, 250);  // A
+  tapAt(269, 250);  // S
+  tapAt(269, 250);  // S
+  tapAt(233, 422);
+  tapAt(375, 320);  // OK: rude, not kept, still open
+  CHECK(kbOpen && !strcmp(pet.gamerTag, "YYYY"));
+  tapAt(233, 422);  // the X: back to the menu, as it was
+  CHECK(!kbOpen && gamesMenuOpen && !strcmp(pet.gamerTag, "YYYY"));
+  gamesMenuOpen = false;
+  pet.gameHi = hi;
 }
 
 // the Catch 151 Dex page says what the game says: tools/dex.json is the game's Pokedex, moves and type chart as they

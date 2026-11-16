@@ -851,6 +851,21 @@ void Pet::pinResult(uint32_t score) {
 }
 
 // Reel Fishing's heaviest single fish, with what it was (saved by fishResult(), at the game's end)
+bool Pet::setGamerTag(const char *tag) {
+  char t[GAMER_TAG_LEN + 1];
+  if (!gamerTagClean(tag, t) || gamerTagRude(t)) return false;
+  strcpy(gamerTag, t);
+  tagAsked = true;
+  pendingSave = true;
+  return true;
+}
+
+void Pet::askedForTag() {
+  if (tagAsked) return;
+  tagAsked = true;
+  pendingSave = true;
+}
+
 bool Pet::fishBiggest(uint16_t kg10, int16_t dex, bool shiny) {
   if (ceremony != CER_NONE || isEgg() || kg10 <= fishBig) return false;
   fishBig = kg10, fishBigDex = dex, fishBigShiny = shiny;
@@ -1245,6 +1260,8 @@ void Pet::save() {
   prefs.putShort("fsbd", fishBigDex);
   prefs.putBool("fsbs", fishBigShiny);
   prefs.putUInt("pnhi", pinHi);
+  prefs.putString("gtag", gamerTag);
+  prefs.putBool("gtak", tagAsked);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
   prefs.putUInt("cdyd", candyDay);
@@ -1357,6 +1374,12 @@ void Pet::load() {
   fishBigDex = prefs.getShort("fsbd", 0);
   fishBigShiny = prefs.getBool("fsbs", false);
   pinHi = prefs.getUInt("pnhi", 0);
+  {
+    char t[16] = "";
+    prefs.getString("gtag", t, sizeof(t));
+    if (!gamerTagClean(t, gamerTag)) gamerTag[0] = 0;
+  }
+  tagAsked = prefs.getBool("gtak", false);
   dungeonHi = prefs.getUChar("dhi", 0);
   candyToday = prefs.getUChar("cdyn", 0);
   candyDay = prefs.getUInt("cdyd", 0);
