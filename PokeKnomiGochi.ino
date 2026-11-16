@@ -14,6 +14,8 @@
 #include "Arduino_GFX_Library.h"
 #ifdef BOARD_HOST  // Mac and others: built as a Knomi with different hardware underneath (see host/README.md)
 #include "host/host_hal.h"
+#elif defined(BOARD_WS21)  // Waveshare ESP32-S3-Touch-LCD-2.1: also a Knomi with other hardware underneath (docs/WAVESHARE_21.md)
+#include "src/ws21_hal.h"
 #elif defined(BOARD_KNOMI_V2)
 #include "src/knomi_hal.h"
 #else
@@ -74,7 +76,16 @@ bool otaChecking = false;  // it says "Searching..." while the check runs
 // (autoUpdateLoad / autoUpdateSet, by checkUpdate()).
 bool autoUpdate = true;
 
-#ifdef BOARD_KNOMI_V2
+#if defined(BOARD_WS21)
+// ST7701S over 16-bit RGB; its setup commands go once over a 3-wire SPI whose CS and reset are on the TCA9554 IO
+// expander (ws21_hal.h)
+Ws21InitBus *bus = new Ws21InitBus();
+Ws21Panel *panel = new Ws21Panel(PANEL_SIZE, PANEL_SIZE, ws21RgbPanel(), 0 /*rotation*/, false /*auto flush*/, bus,
+                                 GFX_NOT_DEFINED /*reset: on the expander*/, WS21_INIT_OPS, sizeof(WS21_INIT_OPS));
+Ws21Canvas *gfx = new Ws21Canvas(panel);
+
+KnomiTouch touch;
+#elif defined(BOARD_KNOMI_V2)
 Arduino_DataBus *bus = new Arduino_ESP32SPI(LCD_DC, LCD_CS, LCD_SCLK, LCD_MOSI, GFX_NOT_DEFINED);
 KnomiPanel *panel = new KnomiPanel(bus, LCD_RESET, 0 /*rotation*/, true /*IPS*/, PANEL_SIZE, PANEL_SIZE);
 ScaledCanvas *gfx = new ScaledCanvas(panel);
@@ -93,7 +104,9 @@ TouchDrvCST92xx touch;
 // active CJK font: always false for now, loading will arrive with
 // Japanese/Korean/Chinese support (see PR #13)
 bool gCjkFont = false;
-#ifdef BOARD_KNOMI_V2
+#if defined(BOARD_WS21)
+#define TOUCH_ADDR TOUCH_I2C_ADDR  // CST820 (pin_config.h)
+#elif defined(BOARD_KNOMI_V2)
 #define TOUCH_ADDR 0x15  // CST816S
 #else
 #define TOUCH_ADDR 0x5A  // CST9217
@@ -504,7 +517,7 @@ void setup() {
   // CRITICAL: without this, Serial.print BLOCKS the game when no
   // serial monitor is open on the host (the USB CDC TX buffer fills up
   // and nobody drains it) -> with timeout 0 messages are dropped
-#ifndef BOARD_KNOMI_V2  // the Knomi sends serial through a CH340 (UART0): it never blocks
+#ifndef BOARD_KNOMI_V2  // the Knomi sends serial through a CH340 (UART0): it never blocks (the Waveshare 2.1 a CH343)
   Serial.setTxTimeoutMs(0);
 #endif
   Serial.printf("Catch 151 fw v%s\n", FW_VERSION);

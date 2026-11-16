@@ -2,7 +2,9 @@
 #include "savename.h"
 #include "pin_config.h"
 
-#ifdef BOARD_KNOMI_V2
+// The Waveshare 2.1 sounds only with an I2S amplifier added (a MAX98357A, docs/WAVESHARE_21.md): its pins in
+// pin_config.h turn it on (WS21_AUDIO_I2S). It plays the same tones as the AMOLED 1.75, without a codec to set up.
+#if defined(BOARD_KNOMI_V2) && !(defined(BOARD_WS21) && defined(WS21_AUDIO_I2S))
 // The Knomi V2 has no codec or speaker: the game calls the same and nothing sounds.
 void audioBegin() {}
 void sfxPlay(uint8_t) {}
@@ -15,6 +17,9 @@ void audioSetIdle(bool) {}
 #include <Arduino.h>
 #include <Wire.h>
 #include <ESP_I2S.h>
+#ifdef WS21_AMP_EXIO
+#include "ws21_exio.h"  // the Waveshare 2.1's amplifier is turned on and off by an expander line
+#endif
 #include <Preferences.h>
 #include "sfx_notes.h"
 
@@ -54,10 +59,17 @@ static void updateAmplifierPower() {
   if (want != last) {
     last = want;
     if (want == HIGH) gAmpOnAt = millis();
+#ifdef WS21_AMP_EXIO
+    gExio.write(WS21_AMP_EXIO, want == HIGH);
+#else
     digitalWrite(PA, want);
+#endif
   }
 }
 
+#ifdef WS21_AUDIO_I2S
+static bool es8311Init() { return true; }  // a MAX98357A takes I2S as it comes: there is no codec to set up
+#else
 // ---- codec I2C ----
 static bool esW(uint8_t reg, uint8_t val) {
   Wire.beginTransmission(ES8311_ADDR);
@@ -111,6 +123,7 @@ static bool es8311Init() {
   { uint8_t r = esR(0x31); r &= 0x9F; esW(0x31, r); }  // unmute
   return true;
 }
+#endif  // WS21_AUDIO_I2S
 
 // ---- square-wave tone synthesizer ----
 static int16_t buf[256 * 2];  // interleaved stereo (L=R)
@@ -160,10 +173,18 @@ static void audioTask(void *) {
 
 void audioBegin() {
   // I2S first: starts the MCLK the codec needs to lock on
+#ifdef WS21_AMP_EXIO
+  gExio.write(WS21_AMP_EXIO, false);  // until we know whether sound is enabled
+#else
   pinMode(PA, OUTPUT);
   digitalWrite(PA, LOW);   // until we know whether sound is enabled
+#endif
 
+#ifdef WS21_AUDIO_I2S
+  i2s.setPins(I2S_BCK_IO, I2S_WS_IO, I2S_DO_IO);  // (no MCLK and no input: the MAX98357A needs neither)
+#else
   i2s.setPins(I2S_BCK_IO, I2S_WS_IO, I2S_DO_IO, I2S_DI_IO, I2S_MCK_IO);
+#endif
   if (!i2s.begin(I2S_MODE_STD, SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT,
                  I2S_SLOT_MODE_STEREO, I2S_STD_SLOT_BOTH)) {
     Serial.println("I2S begin failed");

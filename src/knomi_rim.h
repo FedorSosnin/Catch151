@@ -11,12 +11,16 @@
 #define KNOMI_RIM 1  // (scene_v2.h: the need bars' labels go over it)
 
 static uint8_t *gKnomiRim = nullptr;  // each panel pixel's darkening, 255 = none (PSRAM)
-static int16_t gKnomiRimX0[256], gKnomiRimX1[256];  // each row's columns on the round screen (the rest is black)
-static int16_t gKnomiRimI0[256], gKnomiRimI1[256];  // ...and those in the middle, left as they are
+#ifndef KNOMI_RIM_ROWS
+#define KNOMI_RIM_ROWS 256  // the longest side it's made for (the Waveshare 2.1 makes it for the 466 canvas: ws21_hal.h)
+#endif
+static int16_t gKnomiRimX0[KNOMI_RIM_ROWS], gKnomiRimX1[KNOMI_RIM_ROWS];  // each row's columns on the round screen (the rest is black)
+static int16_t gKnomiRimI0[KNOMI_RIM_ROWS], gKnomiRimI1[KNOMI_RIM_ROWS];  // ...and those in the middle, left as they are
 
 // the table, once (n: the panel's side); false if there's no room (then the frame goes out as it is)
 static bool knomiRimBegin(int n) {
   if (gKnomiRim) return true;
+  if (n > KNOMI_RIM_ROWS) return false;
   gKnomiRim = (uint8_t *)ps_malloc((size_t)n * n);
   if (!gKnomiRim) return false;
   // as host_crt.cpp's rim: a soft darkening n/30 wide, and the picture fading into a black edge 1.2% in
