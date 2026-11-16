@@ -223,6 +223,7 @@ bool bTower = false;       // V2: this battle is a Knomi Tower fight (tower_v2.h
                            // goes back to the climb
 void towerOpen();  // (tower_v2.h, included with the V2 screens further down)
 void fishMockSet(uint8_t n);  // (fishing_v2.h: Reel Fishing's mockups)
+void pinMockSet(uint8_t n);   // (pinball_v2.h: Pinball's mockups)
 void towerJump(uint8_t step);
 bool towerClimbing();
 bool bFromIsland = false;  // V2: a Wild Encounter from Knomi Island: its end goes back there, as a zone's does (Fedor:
@@ -1093,6 +1094,10 @@ void handleSerial() {
     Serial.println("DONE");
   } else if (line == "ZONES") {
     openZones();
+    Serial.println("DONE");
+  } else if (line.startsWith("PINMOCK ")) {  // V2: Pinball's mockups, 1..9 (0: off)
+    openZones();
+    pinMockSet((uint8_t)atoi(line.c_str() + 8));
     Serial.println("DONE");
   } else if (line.startsWith("FISHMOCK ")) {  // V2: Reel Fishing's mockups, 1..19 (0: off)
     openZones();
@@ -7688,6 +7693,11 @@ void renderZones() {
   char b[32];
   if (fsMock) {  // V2: a Reel Fishing mockup (fishing_v2.h)
     fishMockRender();
+    gfx->flush();
+    return;
+  }
+  if (pbMock) {  // V2: a Pinball mockup (pinball_v2.h)
+    pinMockRender();
     gfx->flush();
     return;
   }

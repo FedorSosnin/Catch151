@@ -39,6 +39,20 @@ gentle table looks smooth there too.
   gives them, and Repel seconds for the time actually played.
 - **Play Again!** and the X at the end, as in every game.
 
+## The mockups (2026-11-15, Fedor: "Mockups first")
+
+Drawn in the real game by `src/pinball_v2.h`, on a computer's console: `PINMOCK n` (1 to 9, 0 off).
+
+1. The start: the ball rolls in at the top, nothing lit yet, and TAP LEFT OR RIGHT over the flippers.
+2. Its how-to card over the table.
+3. A flip: a finger on the left half (that half's rim glows), the left flipper up, the ball flying off it.
+4. A bumper: the ball off the right one, which lights up and kicks it, +10.
+5. Your Pokemon hit: it lights up, +100, the second of three toward its bonus.
+6. Every berry lit: BERRIES x2!, and x2 by the score from then on.
+7. A lost ball: down the drain between the flippers, the bottom glowing red, BALL 2.
+8. The end, as every game's: the score, NEW RECORD!, the joy, PLAY AGAIN!, the Repel row and the X.
+9. The other look: a meadow on a wooden rim, by day (the same moment as 4).
+
 ## To decide (Fedor)
 
 1. Is the table as above (round, bumpers, your Pokemon as the target), or something else?
