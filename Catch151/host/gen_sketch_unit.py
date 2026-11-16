@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Converts PokeKnomiGochi.ino into a C++ unit to compile on the host.
+"""Converts Catch151.ino into a C++ unit to compile on the host.
 
 Does what the Arduino IDE does before compiling an .ino: adds the prototypes of its
 functions before the first one. That way the sketch does not change and the host needs neither
 arduino-cli nor ctags. host_game.inc, the entry point into the game from host.h, is included at the end.
 
-  python3 host/gen_sketch_unit.py PokeKnomiGochi.ino build/host/sketch_unit.cpp
+  python3 host/gen_sketch_unit.py Catch151.ino build/host/sketch_unit.cpp
 """
 import os
 import re

@@ -36,7 +36,7 @@ $(BUILD)/%.o: $(ROOT)/src/%.cpp $(HEADERS)
 	@mkdir -p $(BUILD)
 	$(CXX) $(ALLFLAGS) -c -o $@ $<
 
-$(UNIT): $(ROOT)/PokeKnomiGochi.ino gen_sketch_unit.py
+$(UNIT): $(ROOT)/Catch151.ino gen_sketch_unit.py
 	@mkdir -p $(BUILD)
 	python3 -I gen_sketch_unit.py $< $@
 

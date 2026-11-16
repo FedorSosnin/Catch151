@@ -21,7 +21,7 @@ if [[ -z $ZLIB_DIR ]]; then
 fi
 
 python3 -I tools/pack_flash.py $B/res/sprites.tpkz >/dev/null
-python3 -I host/gen_sketch_unit.py PokeKnomiGochi.ino $B/sketch_unit.cpp
+python3 -I host/gen_sketch_unit.py Catch151.ino $B/sketch_unit.cpp
 
 FLAGS=(-O2 -DBOARD_HOST -DBOARD_KNOMI_V2 -I host -I host/shim -I . -I src -I $ZLIB_DIR)
 # PERF_REPORT=<a Mac's address>: a test copy that sends its timings there (tools/perf_listen.py); never a release

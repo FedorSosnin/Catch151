@@ -16,7 +16,7 @@ The game is playable on the Knomi, Mac, Windows and the web, released in 2.2.5.
   sloppy one among them).
 - `src/fishing_v2.h`: the drawing (`fsGame()`), from the mockups' pieces. The LINE arc and the rim glow use tables
   worked out once, so a frame stays cheap on the Knomi.
-- `PokeKnomiGochi.ino`: the sixth cartridge (3 x 2), its card, the input (a cast, a strike and each reel on the touch
+- `Catch151.ino`: the sixth cartridge (3 x 2), its card, the input (a cast, a strike and each reel on the touch
   going down; the Knomi's button and Space too), the sounds and the backlight flash, the end with PLAY AGAIN!, the
   record (`fishHi`) and the reward. `FISHBOT` on the console plays it by itself.
 - 21 new strings in all 8 languages, 12 new effects (each with a buzz on a phone and a rumble on a controller, none
@@ -291,7 +291,7 @@ by `tools/fishing_trophies.py`, shown by FISHMOCK 17 to 19. The medals use 26 of
   (`FISH_KG10`), the strike windows, the pace model, the goals. Unit-tested.
 - `src/fishing_v2.h`: the drawing. The mockups' pieces (pier, float, rod, line, rings, rim glow, blobs, the LINE arc,
   the slots, the scale) become the game's. The scene is cached in the one scene buffer, as the other games' are.
-- `PokeKnomiGochi.ino`: `GAMES_COUNT` 6, the name and card arrays, start, close and render, `introBegin()`, the sixth
+- `Catch151.ino`: `GAMES_COUNT` 6, the name and card arrays, start, close and render, `introBegin()`, the sixth
   cartridge (3 x 2 on the Game Boy, six in all, mockup 1) and its label picture; the button while Reel Fishing is
   open.
 - `pet.h`, `pet.cpp`: `fishHi` and `fishResult()`.

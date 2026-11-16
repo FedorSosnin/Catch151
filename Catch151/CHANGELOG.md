@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **The repository's front page:** everything is in one `Catch151` folder now, so the README, its art and its moving pictures come straight after a short list of files instead of a long one. To build it yourself, clone it and work in `Catch151/Catch151`, the Arduino sketch (`Catch151.ino`, which was `PokeKnomiGochi.ino`). Knomis keep updating over Wi-Fi as before, and the Mac and Windows apps too.
+
 ## [2.2.8] - 2026-11-16
 
 - **Pinball, Dugtrio:** beat Diglett twice and the next time the bumpers bring it up, it evolves into Dugtrio, blinking white between the two the way your own Pokémon does when it evolves. Then you have 20 seconds to hit its three heads, three gold dots under it counting them down: 1000 a head, and 2000 more for all three. If it gets away it comes back as Dugtrio, without evolving again.

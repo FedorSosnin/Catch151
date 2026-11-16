@@ -12,7 +12,7 @@ rm -rf $B/res
 mkdir -p $OUT $B/res/fonts
 python3 -I tools/pack_flash.py $B/res/sprites.tpkz >/dev/null
 cp host/fonts/*.u8g2 $B/res/fonts/
-python3 -I host/gen_sketch_unit.py PokeKnomiGochi.ino $B/sketch_unit.cpp
+python3 -I host/gen_sketch_unit.py Catch151.ino $B/sketch_unit.cpp
 
 em++ -std=c++17 -O2 -DBOARD_HOST -DBOARD_KNOMI_V2 -I host -I host/shim -I . -I src \
   webgame/main.cpp \

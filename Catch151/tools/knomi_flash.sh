@@ -17,8 +17,8 @@ PORT="${1:-$PORTS[1]}"
 BOOTAPP=$(ls ~/Library/Arduino15/packages/esp32/hardware/esp32/*/tools/partitions/boot_app0.bin | tail -1)
 ESPTOOL=$(ls ~/Library/Arduino15/packages/esp32/tools/esptool_py/*/esptool | tail -1)
 "$ESPTOOL" --port "$PORT" --baud 230400 write-flash \
-  0x0 "$OUT/PokeKnomiGochi.ino.bootloader.bin" \
-  0x8000 "$OUT/PokeKnomiGochi.ino.partitions.bin" \
+  0x0 "$OUT/Catch151.ino.bootloader.bin" \
+  0x8000 "$OUT/Catch151.ino.partitions.bin" \
   0xe000 "$BOOTAPP" \
-  0x10000 "$OUT/PokeKnomiGochi.ino.bin" \
+  0x10000 "$OUT/Catch151.ino.bin" \
   0x610000 "$OUT/sprites.tpkz"

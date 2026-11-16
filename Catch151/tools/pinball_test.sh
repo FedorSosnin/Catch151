@@ -15,7 +15,7 @@ set -e
 cd "${0:A:h}/.."
 SRC=build/mac/PokeMacGochi.app
 APP=build/mac/PinballTest.app
-if [[ ! -d $SRC || -n "$(find src host mac PokeKnomiGochi.ino -newer $SRC/Contents/MacOS/PokeMacGochi -print -quit)" ]]; then
+if [[ ! -d $SRC || -n "$(find src host mac Catch151.ino -newer $SRC/Contents/MacOS/PokeMacGochi -print -quit)" ]]; then
   mac/build_app.sh
 fi
 if [[ ! -d $APP || $SRC/Contents/MacOS/PokeMacGochi -nt $APP/Contents/MacOS/PokeMacGochi ]]; then

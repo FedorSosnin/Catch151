@@ -1,21 +1,22 @@
-# build artifacts
+# build artifacts (Catch151/build, and the old ones at the top from before everything moved into Catch151/)
 build/
+build-knomi/
 
 # caches and regenerable workshop artifacts
-tools/downloads/
-tools/__pycache__/
+Catch151/tools/downloads/
+Catch151/tools/__pycache__/
 __pycache__/
-tools/sheet.png
-tools/import_sheet.png
-tools/emitted_sprites.js
-tools/demo_anim.js
-tools/demo_compare.js
+.ruff_cache/
+Catch151/tools/sheet.png
+Catch151/tools/import_sheet.png
+Catch151/tools/emitted_sprites.js
+Catch151/tools/demo_anim.js
+Catch151/tools/demo_compare.js
 
 .DS_Store
-tools/pmd_cache/
-test/build/
+Catch151/tools/pmd_cache/
+Catch151/test/build/
 
 # local draft of the MakerWorld listing and an abandoned case model
 MAKERWORLD.md
 case/
-build-knomi/

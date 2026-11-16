@@ -34,7 +34,7 @@ done
 touch $SITE/.nojekyll
 $GIT -C $SITE add -A
 if $GIT -C $SITE diff --cached --quiet; then echo "nothing new to publish"; exit 0; fi
-VER=$(sed -n 's/^#define FW_VERSION "\(.*\)"/\1/p' PokeKnomiGochi.ino)
+VER=$(sed -n 's/^#define FW_VERSION "\(.*\)"/\1/p' Catch151.ino)
 $GIT -C $SITE commit -q -m "Catch 151 for Web $VER ($(cat web/play/version.json | tr -d '\n'))"
 $GIT -C $SITE push -q origin HEAD:main
 echo "published $VER to https://$DOMAIN"

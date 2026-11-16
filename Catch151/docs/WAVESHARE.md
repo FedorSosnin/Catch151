@@ -18,7 +18,7 @@ a PCF85063 clock and an ES8311 audio codec. The pins are in `pin_config.h`.
 
 ## Build and flash
 
-Set up arduino-cli, the ESP32 core and the libraries as in "Build it yourself" in the [README](../README.md),
+Set up arduino-cli, the ESP32 core and the libraries as in "Build it yourself" in the [README](../../README.md),
 then:
 
 ```bash

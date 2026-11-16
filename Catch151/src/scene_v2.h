@@ -1,6 +1,6 @@
 #pragma once
 // V2, the new look: the home screen's header, need bars, icon band and icons (step 1 of the V2 build).
-// PokeKnomiGochi.ino includes this after its drawing helpers: it draws with them
+// Catch151.ino includes this after its drawing helpers: it draws with them
 // (gfx, setSize, printT, drawMap...) and reads the sketch's state (pet, gNight). Positions are in
 // layout_v2.h and colours in palettes_v2.h.
 #include "../host/glcdfont.h"  // the classic 5x7 font's pixels, for the labels turned along the bars

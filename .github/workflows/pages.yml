@@ -7,8 +7,9 @@ name: Pages
 on:
   push:
     branches: [main]
-    paths: ['web/**', '.github/workflows/pages.yml', 'tools/sdcard/mons/**', 'tools/dex_data.py',
-            'tools/make_sprite_gallery.py', 'tools/sprite_gallery.html', 'tools/voices.json', 'tools/dex.json', 'tools/assets/brand/**']
+    paths: ['Catch151/web/**', '.github/workflows/pages.yml', 'Catch151/tools/sdcard/mons/**', 'Catch151/tools/dex_data.py',
+            'Catch151/tools/make_sprite_gallery.py', 'Catch151/tools/sprite_gallery.html', 'Catch151/tools/voices.json',
+            'Catch151/tools/dex.json', 'Catch151/tools/assets/brand/**']
   workflow_dispatch:
 
 permissions:
@@ -19,6 +20,11 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: true
+
+# everything is in Catch151/: the steps run from there
+defaults:
+  run:
+    working-directory: Catch151
 
 jobs:
   deploy:
@@ -47,6 +53,6 @@ jobs:
       # (v5 of both: with v3 and v4 the deploy stopped finding the uploaded site, "Found 0 artifact(s)", 2.0.7)
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: site
+          path: Catch151/site
       - id: deployment
         uses: actions/deploy-pages@v5
