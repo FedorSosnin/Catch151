@@ -4,9 +4,10 @@
 # (NOSAVE): each launch starts the same.
 #   tools/pinball_test.sh          Pinball
 #   tools/pinball_test.sh night    the same at night
-# Hold Left or Right (or click and hold either half) to raise that flipper, Space for both. In the tall grass's battle,
-# Left or Right (or a click on either half) uses that move. The Terminal window takes console commands too:
+# Hold Left or Right (or click and hold either half) to raise that flipper, Space for both. Into the tall grass and a
+# wild one jumps into the ring in the middle: hit it with the ball. The Terminal window takes console commands too:
 #   PINBOT     Pinball plays by itself (again: stops)
+#   PINGRASS   the ball into the grass, for a battle
 #   PINBALL    a new game of Pinball
 #   GAMES      the Games menu
 # Close it with its menu (the Poke Ball) or Cmd-Q.

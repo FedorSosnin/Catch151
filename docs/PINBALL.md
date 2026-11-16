@@ -2,17 +2,19 @@
 
 The seventh cartridge (Fedor, 2026-11-15: "let's branch off to make a pinball mini game"), on the Games menu's second
 page (four cartridges a page now). Built 2026-11-16 (Fedor: "Build it"), on the `pinball` branch: playable on the
-Knomi, the Mac and Windows apps and the web.
+Knomi, the Mac and Windows apps and the web. Reworked the same day after Fedor played the Mac test copy: the battle
+moved onto the table, a smooth ramp, no trail behind the ball, a song of its own, and a smaller patch of grass.
 
 - **The rules and the physics** are `src/pinball.h` (no drawing), checked by `test/test_pinball.cpp`: the serve,
   gravity and the rim, the flippers' throw, the drain and the three balls, the bumpers and Diglett, the berries'
-  multiplier, the ramp and the wire rail, the grass and its battle, your Pokemon as a target, and 30 whole games
-  played by a simple bot, the ball never leaving the table.
-- **The drawing** is `src/pinball_v2.h`: the live game (`pinDraw()`, `pbBattleDraw()`), and the mockups it grew from
-  (`PINMOCK n` on a computer's console).
+  multiplier, the ramp's smooth turn and the wire rail, the grass and the battle in the ring, and 30 whole games played
+  by a simple bot, the ball never leaving the table.
+- **The drawing** is `src/pinball_v2.h` (`pinDraw()`). The mockups it grew from (`PINMOCK n`) are gone from the code;
+  they're in the history, at commit 9eacb87.
 - **In the sketch:** `startPinball()`, `pinEvents()` (the sounds), `pinInput()` (the flippers from a finger, the
-  arrow keys or the button), `pinBattleSetup()` and `pinMove()` (the battle), `renderPinball()`. The console's
-  `PINBALL` starts it and `PINBOT` plays it by itself.
+  arrow keys or the button), `pinBattleSetup()` (who comes out of the grass, and what each hit does),
+  `renderPinball()`. The console's `PINBALL` starts it, `PINBOT` plays it by itself and `PINGRASS` drops the ball
+  into the grass for a battle (the last two a test copy's only).
 - **To try it on a Mac:** `tools/pinball_test.sh` (or double-click `tools/Pinball Test.command`): a test copy with its
   own save and buddy port, never the real app or its save, opening on Pinball's card.
 
@@ -24,18 +26,22 @@ Knomi, the Mac and Windows apps and the web.
   so the inlanes under them are wide enough for the ball to roll down to the flippers (it got stuck between them), and
   the orbit's inner rail is shorter (200 to 340 degrees round, r 180), so its mouths open down each side.
 - **A stuck ball** (nearly still for 2.5 s anywhere but held up on a flipper) gets a nudge.
-- **The battle:** a wild Pokemon picked as a wild battle picks one, at about your level; your Pokemon's two moves do
-  their real damage (gen 1's formula, type matchups and all); a move lands every 0.35 s at most; 6 seconds to knock it
-  out. Nothing outside Pinball changes (the Pokedex, the battle record): only points.
-- **The songs** are, for now, the pier's calm one at night and the Field zone's by day, the wild battle's in a
-  battle. Two songs of its own would come next.
+- **The ramp** (Fedor: "The ramp's sharp angle makes it feel like there is a physics issue"): straight up from its
+  mouth, then a smooth hairpin over the top into the wire rail, one track from mouth to cup; no bend between two of its
+  steps is sharper than 35 degrees, so the ball follows it without a jolt.
+- **No trail behind the ball** (Fedor: "I dont like the trail the ball leaves").
+- **The battle, on the table** (Fedor: "The battles need to happen inside the pinball game"): see The battle below.
+  Nothing outside Pinball changes (the Pokedex, the battle record): only points.
+- **The song:** its own, **Pinball** (`tools/music/songs.py`), a little faster (x1.12) while a wild one is in the ring.
+  It's on the soundtrack page with the other games' songs.
 - **Rewards:** as the other games: the best score is kept (`pinHi`), and a point of exercise for every 400.
 
 ## Still to tune once it's played
 
 - The orbit is a skill shot: up either side along the rim. The bot never makes one; a person aiming should.
 - How long a game lasts: 30 bot games ran 10 to 100 seconds.
-- The battle's 6 seconds and the wild one's HP.
+- The battle's 20 seconds, and two to five hits to knock the wild one out.
+- Diglett's 12 seconds (it was 7: Fedor, "The diglet in the middle was too quick to leave").
 
 ## The design
 
@@ -46,8 +52,8 @@ Knomi, the Mac and Windows apps and the web.
   is the drain.
 - **Two looks, one each game at random, each with its own song** (Fedor: "I like both looks. Maybe its random which
   you get with music to match"): a **night table**, night-blue with stars on a chrome rim, and a **meadow table**, grass
-  and flowers on a wooden rim. The battle window takes the same look (a starry clearing, or a sunny one). Two new songs
-  for the game's own synthesizer, as Reel Fishing has its two: a mellow night tune and a bright meadow one.
+  and flowers on a wooden rim. (Built, they share one song, Pinball's own: Fedor, "We need to compose a custom tune
+  for this".)
 - **The ball** is a Poke Ball that **rolls**: as it moves, its red half, band and button turn over the way a real ball
   would (Fedor: "make sure the ball spins as it moves"). Each pixel of it is a point on a sphere, turned by how far it
   has rolled, so it rolls true in any direction, and it's lit from one side so it reads as round.
@@ -63,15 +69,19 @@ Knomi, the Mac and Windows apps and the web.
 - **Diglett** (Fedor: "hitting all three of those pins in the middles makes some mini event happen? Like diglet pops up
   there and you have some set time to hit him with the ball to beat him and get points"): there's a dirt hole between
   the bumpers. Light all three bumpers and **Diglett pops out of it**, throwing up dirt, with a gold ring round it
-  for the time left (a few seconds). Hit it with the ball before the ring runs out: knocked dizzy, **+1000**, and back
-  down its hole. Too slow and it ducks back down. Then the bumpers start over.
-- **Your own Pokemon** on a pad in the middle: hit it 3 times for a bonus (+100 a hit).
-- **The tall grass**, on the right, where wild Pokemon wait (it took the rock cave's place: Fedor, "minus the cave",
+  for the time left (12 seconds). Hit it with the ball before the ring runs out: knocked dizzy, **+1000**, and back
+  down its hole. Too slow and it ducks back down. Then the bumpers start over. (Fedor asked whether the bumpers
+  should bring out a random Pokemon instead, "Or should be stick to a theme?": Diglett stays, the bumpers' own event,
+  and the random wild Pokemon are the grass's.)
+- **The ring** in the middle, where your own Pokemon stood as a target (Fedor: "its hard to get over there because of
+  the squirtle"): a ring painted on the floor, empty until a wild one jumps into it from the grass.
+- **The tall grass**, by the right wall, where wild Pokemon wait (it took the rock cave's place: Fedor, "minus the cave",
   then "If we use the grass"). It's drawn in the Game Boy games' spirit (Fedor: "grass that resembles grass from
   Pokemon Blue"): an original 16 px tile, 8 x 8 Knomi pixels with two staggered tufts, each a dark edge round light
   blades on a mid green, in a night and a meadow colouring (two tufts a tile, not four: Fedor, "Maybe its the density
   of the grass thats a bit much"). The patch has a dark edge, and tufts poke up along its top for
-  height.
+  height. It's a small patch close to the wall, so a shot off the right flipper reaches the upper right past it
+  (Fedor: "It was very hard to get to the upper right size of the screen since the island blocks it mostly").
 - **The way into the grass** (Fedor, of the stone hole: "That entrance there still doesnt look good"): a gap where the
   grass parts on its lower-left side, turned to the left flipper. The floor shows through it, darkening deeper in, the
   grass's dark edge runs down both its sides with tufts leaning over, and a lit arrow on the floor points up it. A
@@ -87,23 +97,20 @@ Knomi, the Mac and Windows apps and the web.
 - **Under it:** a ball going round the orbit passes **under the wire rail** along the left (in its shade, the wires
   across it). On the ramp the ball is drawn bigger and its shadow falls further off, so it's plain which level it's on.
 
-### The battle (Fedor: "The mini battle is cool too", then "the battle scene should be a bit stronger")
+### The battle, in the ring (Fedor: "The battles need to happen inside the pinball game. Not taken out")
 
-- In goes the ball, and **the game's own battle** takes the whole screen: the wild battle's scene with its two bases,
-  a wild Pokemon of the zone you're in **standing in tall grass** on its base (the grass in front of its feet), yours
-  from behind on its base, and both HP boxes, all as in a real battle (Fedor: "I like the island your opponent floats
-  on"). No grass along the bottom (Fedor: "I would remove the gras frome the bottomof the battle screen"). First it
-  says **Wild ODDISH!**
-- **Tapping does your attack** (Fedor: "Tapping to attack should do your attack skill"). The buttons are your
-  Pokemon's own two moves, as in a battle (Squirtle's BITE and WATER GUN, say), in their types' colours, with
-  **TAP A MOVE!** under them. Tap the left or right half (or press Left or Right on a computer) to use that move, as
-  often as you can. Each lands as in a battle: yours lunges, the move's effect hits, a line says
-  **SQUIRTLE: WATER GUN!**, and its HP drops; type matchups count.
-- A **gold ring round the rim** is the time left (a few seconds). Knock it out in time: **ODDISH fainted...**,
-  **WIN! +500**; if not, no bonus.
-- Either way, the ball flies back out of the grass, down the gap toward the left flipper, and play goes on. The
-  flippers rest during the battle, so nothing is lost while you're tapping.
-- Open: should a win also count for something outside Pinball (seen in the Pokedex, say), or stay just points?
+- In goes the ball, a "!" over the grass, and a **wild Pokemon** (picked as a wild battle picks one, at about your
+  level) **jumps out of the grass into the ring** in the middle of the table, the ball rolling back out toward the
+  right flipper. **Wild ODDISH!**
+- It stands in the ring with its **HP over it** and a **gold ring round it** for the time left (20 seconds). The
+  flippers keep working: it's the ball that fights.
+- **Each hit of the ball on it is your Pokemon's move:** the stronger of its two, its damage worked out as in a battle
+  (gen 1's formula, type matchups and all), but always two to five hits to knock it out. A hit flashes it white, the
+  move's effect bursts on it, a line says **SQUIRTLE: WATER GUN!**, its HP drops, **+50**, and the ball is kicked
+  away.
+- Knocked out in time: it flashes and fades, **YOU WON!**, **+500**. If the time runs out: **ODDISH got away...** and
+  it hops back into the grass.
+- While one's in the ring the grass takes no ball. Losing the ball ends the battle.
 
 ## Controls
 
@@ -125,42 +132,22 @@ gentle table looks smooth there too.
 
 ## A game
 
-- **3 balls.** Bumpers 10, the orbit 50, your Pokemon 100, the ramp 250, a battle won 500, Diglett 1000, and the x2
-  on top.
+- **3 balls.** Slingshots 5, bumpers 10, the orbit 50, a hit on the wild one 50, the ramp 250, a battle won 500,
+  Diglett 1000, and the x2 on top.
 - **Records and rewards** work as in the other games: a best score with NEW RECORD!, joy and energy as Berry Drop
   gives them, and Repel seconds for the time actually played.
 - **Play Again!** and the X at the end, as in every game.
 
-## The mockups (2026-11-15; fourth pass after Fedor's third look)
+## The mockups (2026-11-15)
 
-Drawn in the real game by `src/pinball_v2.h`, on a computer's console: `PINMOCK n` (1 to 26, 0 off).
-
-1. The night table at the start: the ball rolling in along the orbit, TAP LEFT OR RIGHT over the flippers. 2: the
-   meadow table, the same moment.
-3. The how-to card (the Knomi's words). 21: the same on a computer, saying the keys.
-4. A flip: a finger on the left half (that half's rim glows), the ball off the left flipper toward the ramp.
-5. Over: the ball up the ramp, over the orbit lane, bigger and its shadow further off: RAMP! +250.
-6. Under: the ball round the orbit under the wire rail, lighting a berry: ORBIT +50.
-7. A bumper (the Great Ball), +10.
-8. All three bumpers lit: Diglett pops out of its hole, its time ring round it: HIT DIGLETT! 9: hit, dizzy, +1000.
-10. Into the tall grass: the ball gone into the blades, the grass rustling, a "!" over it.
-11. The battle: Wild ODDISH!, standing in tall grass on its base, yours from behind, both HP boxes.
-12. Tap a move: your Pokemon's two moves as the buttons, TAP A MOVE!, the time ring round the rim.
-13. Your move landing: SQUIRTLE: WATER GUN!, its splash on Oddish, Oddish's HP down.
-14. Won: Oddish gone, ODDISH fainted..., WIN! +500.
-15. Spat back out of the grass toward the left flipper, +500.
-16. Your Pokemon hit, +100. 17. Every berry lit: BERRIES x2!
-18. A lost ball: down the drain, the bottom glowing red, BALL 2.
-19. The end, as every game's: the score, NEW RECORD!, the joy, PLAY AGAIN!, the Repel row and the X.
-20. On a computer: the keys over the flippers (Left and Right flip, Space both) in place of the touch hint.
-22. Moving: the ball rolling round the orbit. 23: the ball close up, rolling right, down and left.
-24 to 26: the meadow look of 5, 8 and 10.
+Four passes of mockups, drawn in the real game (`PINMOCK n` on a computer's console), came before the build; they're
+gone from the code now, and in the history at commit 9eacb87.
 
 ## To decide (Fedor)
 
 1. Does a battle won count for anything outside Pinball (seen in the Pokedex, say), or only points?
-2. Anything more on the table, or ready to build?
 
-(Decided: mockups first; both looks, one at random each game with its own song; Left and Right arrows flip on
-computers; the ball rolls; Diglett for all three bumpers; the tall grass for the battles, its way in a gap where the
-grass parts; the battle in the game's own battle scene, a tap using your Pokemon's move.)
+(Decided: mockups first; both looks, one at random each game; Left and Right arrows flip on computers; the ball rolls;
+Diglett for all three bumpers; the tall grass for the battles, its way in a gap where the grass parts. After the first
+play: the battle on the table, in a ring where your Pokemon stood, each hit of the ball your Pokemon's move; a smooth
+ramp; no trail; Pinball's own song; a smaller patch of grass; Diglett up longer.)

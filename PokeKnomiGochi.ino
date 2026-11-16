@@ -224,7 +224,7 @@ bool bTower = false;       // V2: this battle is a Knomi Tower fight (tower_v2.h
                            // goes back to the climb
 void towerOpen();  // (tower_v2.h, included with the V2 screens further down)
 void fishMockSet(uint8_t n);  // (fishing_v2.h: Reel Fishing's mockups)
-void pinMockSet(uint8_t n);   // (pinball_v2.h: Pinball's mockups)
+void pinEvents(uint32_t ev);  // (Pinball's, further on: the console's PINGRASS)
 void towerJump(uint8_t step);
 bool towerClimbing();
 bool bFromIsland = false;  // V2: a Wild Encounter from Knomi Island: its end goes back there, as a zone's does (Fedor:
@@ -288,9 +288,6 @@ uint32_t pinLast = 0, pinOverT = 0;
 bool pinBot = false;                   // PINBOT on the console: it plays by itself (testing, screenshots)
 float pinBotHeld[2] = { 0, 0 };
 bool pinBtnHeld = false;               // the Knomi's button (Space on a computer) held: both flippers up
-bool pinKeyWas[2] = { false, false };  // a computer's Left and Right, last frame (in a battle each press is a move)
-BtlFighter pinMe, pinFoe;              // the battle in the grass: yours, the wild one,
-float pinFoeShown = 0;                 // and its HP as shown (chasing the real one)
 uint32_t fishBotT = 0;
 uint32_t gBacklightFlashUntil = 0;     // the Knomi's backlight to full until then (the bite; too tight)
 // a PikaSurf duel with a buddy (BK_SURF): both on the same course (the session id is the seed), each
@@ -1083,6 +1080,9 @@ void handleSerial() {
   } else if (line == "PINBOT" && pet.noSave) {  // Pinball plays by itself (testing)
     pinBot = !pinBot;
     Serial.println("DONE");
+  } else if (line == "PINGRASS" && pet.noSave) {  // Pinball: the ball into the grass, for a battle (testing)
+    if (pinOpen && pin.phase == PIN_PLAY && !pin.btlOn) pinEvents(pinIntoGrass(pin));
+    Serial.println("DONE");
   } else if (line == "FISHBOT" && pet.noSave) {  // Reel Fishing plays by itself, as a careful player (testing)
     fishBot = !fishBot;
     Serial.println("DONE");
@@ -1113,10 +1113,6 @@ void handleSerial() {
     Serial.println("DONE");
   } else if (line == "ZONES") {
     openZones();
-    Serial.println("DONE");
-  } else if (line.startsWith("PINMOCK ")) {  // V2: Pinball's mockups, 1..26 (0: off)
-    openZones();
-    pinMockSet((uint8_t)atoi(line.c_str() + 8));
     Serial.println("DONE");
   } else if (line.startsWith("FISHMOCK ")) {  // V2: Reel Fishing's mockups, 1..19 (0: off)
     openZones();
@@ -1397,7 +1393,6 @@ void handleTouch() {
       wakeUI();
       if (runOpen && !introUp() && !swallowGesture) runJump = true;
       if (fishOpen && !introUp() && !swallowGesture) fishTouchDown(x, y);  // a cast, a strike, a reel: on the touch
-      if (pinOpen && !introUp() && !swallowGesture) pinTouchDown(x, y);    // a move in Pinball's battle: on the touch
     }
     if (pressed) {
       pressUpdate(x, y);
@@ -4808,8 +4803,8 @@ void renderFish() {
 // ---------- Pinball ----------
 // The round screen is the table (pinball.h has its rules and physics, pinball_v2.h draws it; the plan is
 // docs/PINBALL.md). Hold the left or right half of the screen to raise that flipper (on a computer the Left and Right
-// arrows; the Knomi's button, or Space, raises both). Into the tall grass and it's a battle in the game's own battle
-// scene: tap a half (or press Left or Right) to use that move. Three balls; the score is the record.
+// arrows; the Knomi's button, or Space, raises both). Into the tall grass and a wild Pokemon jumps out into the ring
+// in the middle of the table: each hit of the ball on it is your Pokemon's move. Three balls; the score is the record.
 void pinEvents(uint32_t ev);
 void startPinball() {
   if (pet.isEgg() || pet.sleeping || pet.ceremony || !pmd.loaded) { sfxPlay(SFX_DENY); return; }
@@ -4820,35 +4815,32 @@ void startPinball() {
   pinLast = millis();
   pinBotHeld[0] = pinBotHeld[1] = 0;
   pinBtnHeld = false;
-  pinKeyWas[0] = pinKeyWas[1] = false;
 }
 
 void closePinball() {
   pinOpen = false;
   introCard = -1;
   gBacklightFlashUntil = 0;
-  wildPmd.unload();
 }
 
-// into the grass: a wild one of your level or near it, as a wild battle picks it, its sprite, and your two moves
+// into the grass: a wild one of your level or near it, as a wild battle picks it. Each hit of the ball on it is the
+// stronger of your Pokemon's two moves, its damage worked out as a battle would (type and all), but between two and
+// five hits to knock it out, so it's a battle the time can hold
 void pinBattleSetup() {
   uint8_t lvl = btlCapLevel(pet.level()), foeLvl = btlWildLevel(lvl, random(4));
   int16_t dex = pet.pickWildSpecies(foeLvl);
-  wildPmd.load(dex, false);  // (without it, the battle goes on with no sprite)
-  pinMe = petFighter(lvl);
-  pinFoe = btlMakeWild(dex, foeLvl, btlWildGene(random(16)));
-  bMeMoves = btlMovesFor(pinMe.dex, lvl, dex);
-  pinFoeShown = pinFoe.hp;
-  pinBattleStart(pin, dex, pinFoe.hp);
-}
-
-// a move used in the battle (0 the left one, 1 the right): its damage as a battle works it out, type and all
-void pinMove(uint8_t i) {
-  if (!pinOpen || pin.phase != PIN_BATTLE || !pin.wildMax || i >= bMeMoves.count) return;
-  v2PlayInputAt = millis();
-  const BtlMove &m = MOVE_TBL[bMeMoves.ids[i]];
-  uint16_t dmg = btlDamage(pinMe.level, m, pinMe.atk, pinFoe.def, DEX_TBL[pinMe.dex].type, DEX_TBL[pinFoe.dex].type, 85 + random(16));
-  pinEvents(pinBattleHit(pin, i, dmg));
+  BtlFighter me = petFighter(lvl), foe = btlMakeWild(dex, foeLvl, btlWildGene(random(16)));
+  BtlMoves mv = btlMovesFor(me.dex, lvl, dex);
+  uint16_t dmg = 0;
+  uint8_t move = mv.ids[0];
+  for (uint8_t i = 0; i < mv.count; i++) {
+    const BtlMove &m = MOVE_TBL[mv.ids[i]];
+    uint16_t d = btlDamage(me.level, m, me.atk, foe.def, DEX_TBL[me.dex].type, DEX_TBL[foe.dex].type, 92);
+    if (d > dmg) dmg = d, move = mv.ids[i];
+  }
+  uint16_t lo = (foe.hp + 4) / 5, hi = (foe.hp + 1) / 2;
+  dmg = dmg < lo ? lo : dmg > hi ? hi : dmg;
+  pinBattleStart(pin, dex, foe.hp, dmg, move);
 }
 
 // what happened: its sound (and through it its buzz), the backlight's flash
@@ -4858,21 +4850,19 @@ void pinEvents(uint32_t ev) {
   if (ev & PE_FLIP) sfxPlay(SFX_TAP);
   if (ev & (PE_BUMP | PE_BTL_HIT)) sfxPlay(SFX_PLAY);
   if (ev & PE_SLING) sfxPlay(SFX_FISH_NIBBLE);
-  if (ev & (PE_RAMP_IN | PE_BTL_OUT)) sfxPlay(SFX_FISH_CAST);
+  if (ev & (PE_RAMP_IN | PE_BATTLE)) sfxPlay(SFX_FISH_CAST);
   if (ev & (PE_RAMP | PE_ORBIT)) sfxPlay(SFX_LEVEL);
   if (ev & PE_DROP) sfxPlay(SFX_FISH_PLIP);
   if (ev & PE_BERRY) sfxPlay(SFX_EAT);
-  if (ev & PE_PET) sfxPlay(SFX_HEART);
-  if (ev & (PE_BERRIES | PE_PET3 | PE_BTL_WON)) sfxPlay(SFX_MEDAL);
+  if (ev & (PE_BERRIES | PE_BTL_WON)) sfxPlay(SFX_MEDAL);
   if (ev & PE_DIG_UP) sfxPlay(SFX_FISH_BITE);
   if (ev & PE_DIG_HIT) sfxPlay(SFX_FISH_LANDED);
-  if (ev & (PE_DIG_GONE | PE_LOST)) sfxPlay(SFX_DENY);
+  if (ev & (PE_DIG_GONE | PE_BTL_GONE | PE_LOST)) sfxPlay(SFX_DENY);
   if (ev & PE_GRASS) {
     sfxPlay(SFX_FISH_BITE);
     gBacklightFlashUntil = now + 160;  // the Knomi's backlight flashes, as at a bite
   }
   if (ev & PE_BATTLE) pinBattleSetup();
-  if (ev & PE_BTL_OUT) wildPmd.unload();
   if (ev & PE_BALL) sfxPlay(SFX_TAP);
   if (ev & PE_END) {
     pinNewHi = pin.score > pet.pinHi;
@@ -4883,15 +4873,7 @@ void pinEvents(uint32_t ev) {
   }
 }
 
-// a finger down: in the battle, that half's move (on the touch, as fast as you can tap); on the table the flippers
-// follow the finger held (pinInput())
-void pinTouchDown(int16_t x, int16_t y) {
-  if (pinOverT) return;
-  v2PlayInputAt = millis();
-  if (pin.phase == PIN_BATTLE) pinMove(x < CX ? 0 : (bMeMoves.count > 1 ? 1 : 0));
-}
-
-// the Knomi's button (Space on a computer), down or up: the card's READY, GO!, both flippers, the move of its own type
+// the Knomi's button (Space on a computer), down or up: the card's READY, GO!, both flippers
 void pinButton(bool down) {
   pinBtnHeld = down;
   if (!pinOpen || pinOverT || !down) return;
@@ -4900,11 +4882,10 @@ void pinButton(bool down) {
     introDismiss(0, -1);
     return;
   }
-  if (pin.phase == PIN_BATTLE) pinMove(bMeMoves.count > 1 ? 1 : 0);
 }
 
 // PINBOT: flicks a flipper (up for a quarter second) when the ball is out on it, misses now and then as a person
-// would, and in a battle uses the move of its own type: test/test_pinball.cpp's bot
+// would: test/test_pinball.cpp's bot
 void pinBotStep(bool held[2]) {
   for (int k = 0; k < 2; k++) {
     float px = k ? 465 - PB_FLIP_LX : PB_FLIP_LX, out = k ? px - pin.x : pin.x - px;
@@ -4917,25 +4898,15 @@ void pinBotStep(bool held[2]) {
     else if (near) h = random(100) < 30 ? -0.4f : dt;
     held[k] = held[k] || h > 0;
   }
-  static uint32_t lastMove = 0;
-  if (pin.phase == PIN_BATTLE && pin.wildMax && millis() - lastMove > 400) {
-    lastMove = millis();
-    pinMove(bMeMoves.count > 1 ? 1 : 0);
-  }
 }
 
-// the flippers, from what's held: a finger on either half, the arrow keys, the button (and, in a battle, the keys'
-// presses are moves)
+// the flippers, from what's held: a finger on either half, the arrow keys, the button
 void pinInput(uint32_t now) {
   bool held[2] = { false, false };
   if (wasPressed && !introUp() && !swallowGesture) held[tXl < CX ? 0 : 1] = true;
 #ifdef BOARD_HOST
   bool keys[2] = { hostArrowLeft(), hostArrowRight() };
-  for (int k = 0; k < 2; k++) {
-    if (pin.phase == PIN_BATTLE && keys[k] && !pinKeyWas[k]) pinMove(k ? (bMeMoves.count > 1 ? 1 : 0) : 0);
-    pinKeyWas[k] = keys[k];
-    held[k] = held[k] || keys[k];
-  }
+  for (int k = 0; k < 2; k++) held[k] = held[k] || keys[k];
 #endif
   held[0] = held[0] || pinBtnHeld, held[1] = held[1] || pinBtnHeld;
   if (pinBot) pinBotStep(held);
@@ -4955,20 +4926,17 @@ void renderPinball() {
   if (!introPaused() && !pinOverT) {
     pinInput(now);
     pinEvents(pinStep(pin, dt));
-    if (pin.phase == PIN_BATTLE && pin.wildMax) pinFoeShown += (pin.wildHp - pinFoeShown) * 0.3f;
     if (pin.phase != PIN_END) lastInteract = now;  // a ball in play keeps the screen awake
   }
-  if (pin.phase == PIN_BATTLE && pin.wildMax && !pinOverT) {
-    int ph = pin.won ? 2 : pin.btlLeft <= 0 ? 3 : pin.t < 0.9f ? 0 : 1;
-    pbBattleDraw(ph, pin.btlLeft / PB_BTL_S, pinFoe, pinFoeShown, pinMe, pin.lastMove, pin.hitT / PB_BTL_HIT_S);
-  } else {
-    pinDraw(pin, playKeysUi);
-    if (pinOverT) {  // the end: the score, the record, the joy, as every game shows it
-      char big[16], rec[32];
-      snprintf(big, sizeof(big), "%lu", (unsigned long)pin.score);
-      snprintf(rec, sizeof(rec), T(S_RECORD_FMT), (unsigned)pet.pinHi);
-      v2GameResult(gameLabel(GAME_PINBALL), nullptr, big, pinNewHi && pin.score > 0, rec, pin.score >= 4000 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
-    }
+#if HAS_MUSIC
+  musicTempo(pin.btlOn && pin.wildMax && pin.outT <= 0 ? 1.12f : 1.0f);  // its song a little faster in a battle
+#endif
+  pinDraw(pin, playKeysUi);
+  if (pinOverT) {  // the end: the score, the record, the joy, as every game shows it
+    char big[16], rec[32];
+    snprintf(big, sizeof(big), "%lu", (unsigned long)pin.score);
+    snprintf(rec, sizeof(rec), T(S_RECORD_FMT), (unsigned)pet.pinHi);
+    v2GameResult(gameLabel(GAME_PINBALL), nullptr, big, pinNewHi && pin.score > 0, rec, pin.score >= 4000 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
   }
   drawIntroCard();
   gfx->flush();
@@ -7887,11 +7855,6 @@ void renderZones() {
   char b[32];
   if (fsMock) {  // V2: a Reel Fishing mockup (fishing_v2.h)
     fishMockRender();
-    gfx->flush();
-    return;
-  }
-  if (pbMock) {  // V2: a Pinball mockup (pinball_v2.h)
-    pinMockRender();
     gfx->flush();
     return;
   }

@@ -37,6 +37,7 @@ enum MusicTrack : uint8_t {
   MUS_ZONE_FIELD,
   MUS_FISH,        // Reel Fishing: at the pier, waiting for a bite
   MUS_FISH_FIGHT,  // ...and a fish on the line, played at its pace (musicTempo)
+  MUS_PINBALL,     // Pinball
   MUS_COUNT
 };
 
@@ -56,7 +57,8 @@ void musicSetVolume(uint8_t level);
 // a Pokemon's cry (cry.h): with the effects, at SOUND's level, never while the pet sleeps
 void voiceSay(int16_t dex, uint8_t mood);
 // Reel Fishing: the fight song (MUS_FISH_FIGHT) at the hooked fish's pace, its tempo times f (1: as written); the
-// pitch stays. The other songs are never touched
+// pitch stays. Pinball's (MUS_PINBALL) the same way, a little faster while a wild one is in the ring. The other songs
+// are never touched
 void musicTempo(float f);
 #else
 #define HAS_MUSIC 0

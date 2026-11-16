@@ -22,7 +22,7 @@
 
 **No Knomi? [Play it in your browser](https://catch151.3dprintsos.com)** on a computer, phone or tablet, or get the [Mac app](#catch-151-for-mac) or the [Windows app](#catch-151-for-windows). **CRT effect:** each scanline a soft beam, a warm glow, a slightly curved glass for that nostalgia look.
 
-**[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**: 30 original chiptune songs, written for the game and played live in your browser by its own synthesizer, with a scope for each of the four voices. See [Original music and sound](#original-music-and-sound).
+**[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**: 31 original chiptune songs, written for the game and played live in your browser by its own synthesizer, with a scope for each of the four voices. See [Original music and sound](#original-music-and-sound).
 
 **[Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/)**: all 151, regular and shiny, in every view the game has (standing, turning, walking, from behind, asleep, attacking and more), sorted by number or type, each credited to its artists. Each one's page says what the game's Pokédex says about it, with its stats and every move it learns; pick a few to see their match-ups, and tick the ones you have. Its **Catching** tab gives the chances of each star, 1★ to 3★, regular and shiny: of a catch, and of a Search in its zone or a Wild Encounter turning it up that way.
 
@@ -163,12 +163,13 @@ How it all works, floor by floor: [Knomi Tower](docs/HOW_IT_WORKS.md#knomi-tower
 
 https://github.com/user-attachments/assets/f82808d7-1e92-4fdf-b180-c83dea43f1dd
 
-Everything you hear in Catch 151 was made for it. **All 30 songs are original**: none comes from any other game. A home
+Everything you hear in Catch 151 was made for it. **All 31 songs are original**: none comes from any other game. A home
 tune that slows down at night, Knomi Tower, the legends, every minigame, evolving and saying goodbye, and two songs for
 every zone of Knomi Island, one while you explore it and one for its wild battles. Reel Fishing has two: a lazy swing
 while you wait at the pier ([▶&nbsp;Reel Fishing](https://fedorsosnin.github.io/Catch151/music/#reel-fishing)), and
 [▶&nbsp;On the Line](https://fedorsosnin.github.io/Catch151/music/#on-the-line), which plays at the pace of the fish
-you're reeling in, one tap a beat. Pick a zone to hear its two:
+you're reeling in, one tap a beat, and Pinball has its own,
+[▶&nbsp;Pinball](https://fedorsosnin.github.io/Catch151/music/#pinball). Pick a zone to hear its two:
 
 <table align="center">
 <tr>
@@ -181,8 +182,8 @@ you're reeling in, one tap a beat. Pick a zone to hear its two:
 </table>
 
 - **Written as notes.** Each song is a melody, a harmony, a bassline and a drum pattern over its chords, written out in
-  [`tools/music/songs.py`](tools/music/songs.py), checked bar by bar, and compiled into a few bytes: all 30 fit in
-  about 43 KB.
+  [`tools/music/songs.py`](tools/music/songs.py), checked bar by bar, and compiled into a few bytes: all 31 fit in
+  about 45 KB.
 - **Played like the old handhelds.** There are no recordings or samples. A small synthesizer in the game
   ([`src/music_synth.h`](src/music_synth.h)) makes every note as it plays, with the four voices those consoles had: two
   pulse waves for the tune and the harmony, a stepped triangle or 4-bit wave for the bass, and noise for the drums.

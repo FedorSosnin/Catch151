@@ -591,6 +591,25 @@ s.section('A2', 4, 'Em | C | D | B7', FIGHT_A, 'thirds', FIGHT_B, [CRASH, DRIVE,
           insts=('lead', 'soft25', 'bass'))
 s.form(['I'], ['A', 'B', 'A2', 'B'])
 
+# ------------------------------------------------------------------ Pinball: the table's own, bright and bouncing
+# Arcade lights: a round pulse on a tune that bounces about its chords as the ball does off the bumpers (its repeated
+# notes the bells), an eighth pulse picking out quick arpeggios under it like the lights chasing round the rim, the bass
+# jumping octaves, a rock beat; in the B part the flat six (Bb) before the A7, for the lift up the ramp
+s = add(song('PINBALL', 'Pinball', 148, key=('D', 'major'), insts=('lead50', 'pluck12', 'bass'), vols=(13, 7, 15, 10)))
+PIN_B = '8: R O R O R O 5 O'
+PIN_A = """
+  o5 d8 f+8 a8 o6 d8 r8 o5 a8 o6 d4 | c+8 o5 b8 r8 f+8 b4 f+4 | g8 b8 o6 d8 g8 r8 f+8 e8 d8 | e4. c+8 o5 a2 |
+  a8 a8 r8 a8 o6 d8 e8 f+4 | f+8 e8 d8 o5 b8 r8 b8 o6 d4 | e8 d8 o5 b8 g8 a8 b8 o6 c+8 e8 | d4 o5 a4 o6 d4 r4 |"""
+PIN_CA = 'D | Bm | G | A | D | Bm | Em7 A7 | D'
+s.section('I', 2, 'D | A7', None, ARP16, PIN_B, [ROCK, ROCK_FILL])
+s.section('A', 8, PIN_CA, PIN_A, ARP16, PIN_B, [CRASH] + [ROCK] * 6 + [ROCK_FILL])
+s.section('B', 8, 'G | A | F#m | Bm | Em7 | A | Bb | A7', """
+  o5 b4 o6 d8 g8 r8 g8 f+8 e8 | e4 c+8 o5 a8 o6 c+4 o5 a4 | o6 c+8 o5 a8 f+8 a8 o6 c+8 e8 f+4 | d4. c+8 o5 b2 |
+  g8 b8 o6 d8 e8 r8 d8 o5 b8 g8 | a8 o6 c+8 e8 g8 r8 e8 c+8 o5 a8 | b-8 o6 d8 f8 d8 o5 b-8 f8 b-8 o6 d8 | e4 c+4 o5 a4 g4 |""",
+          ARP16, PIN_B, [ROCK] * 7 + [ROCK_FILL])
+s.section('A2', 8, PIN_CA, PIN_A, 'thirds', PIN_B, [CRASH] + [ROCK] * 6 + [ROCK_FILL], insts=('lead50', 'soft25', 'bass'))
+s.form(['I'], ['A', 'B', 'A2', 'B'])
+
 # ------------------------------------------------------------------ how loud each plays
 # Measured (each voice's RMS: host/music_wav.cpp prints the mix's) so they all sit about 8 dB under the effects: the
 # home and the menus at -24.5 dBFS, the battles and the games at -24, the night and the goodbye softer, the jingles
@@ -602,7 +621,7 @@ GAINS = {
     'BERRY': 1.24, 'RUN': 0.88, 'SURF': 0.91, 'DUNGEON': 1.29, 'QUIZ': 1.41, 'VOLLEY': 0.89,
     'EVOLVE': 0.90, 'GOODBYE': 0.86,
     'ZONE_FOREST': 0.95, 'ZONE_BEACH': 1.10, 'ZONE_CAVE': 1.55, 'ZONE_MANSION': 1.50, 'ZONE_FIELD': 0.84,
-    'FISH': 1.16, 'FISH_FIGHT': 0.85,
+    'FISH': 1.16, 'FISH_FIGHT': 0.85, 'PINBALL': 0.87,
 }
 
 
