@@ -9,6 +9,8 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 ## [Unreleased]
 
 - **Reel Fishing weighs in pounds:** every weight in the game now shows in pounds (lb), to a tenth: the weigh-in and its gauge (marked every 100 lb), the total along the top while you fish, and the end with each fish, the total and your record. The goal lines are where they were, about 110, 331 and 661 lb. Records already set carry on and show in pounds too.
+- **Your biggest fish:** Reel Fishing now keeps the heaviest single fish you've landed, with what it was. When one beats it, the weigh-in says **YOUR BIGGEST EVER!** under how big it is for its kind.
+- **The biggest fish of all, on the README:** each copy of the game tells the buddy relay its heaviest fish (only the weight, the kind and if it's shiny; nothing about who), and the relay keeps the heaviest anyone has landed. It shows on a **biggest fish** badge next to **live players** at the top of the README. A weight a fish can't reach is ignored.
 
 ## [2.2.6] - 2026-11-14 (Windows)
 

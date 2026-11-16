@@ -10,3 +10,6 @@ void buddyNetSetPeer(uint32_t id);       // 0 = none
 // Holds the relay's connection closed while true. Wi-Fi updates need it: two TLS connections
 // at once don't fit in memory (with the relay open, update checks failed with http -1).
 void buddyNetRelayHold(bool hold);
+// To the relay alone, even with nobody else there: a report it keeps (BM_FISH). Nothing when it isn't connected
+void buddyNetReport(const BuddyMsg &m);
+bool buddyNetRelayFresh();  // true once each time the relay has newly connected (a report goes then)

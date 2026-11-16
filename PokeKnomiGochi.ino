@@ -273,6 +273,7 @@ uint8_t surfScale = 3;
 float surfAcc = 0;  // time not yet stepped: the game moves in fixed steps (SURF_FIXED_DT)
 // Reel Fishing (fishing.h): five casts off the Beach's pier, each fish weighed and let go (fishing_v2.h draws it)
 bool fishOpen = false, fishNewHi = false;
+bool fishBigNew = false;  // the fish on the scale is the heaviest yet (its weigh-in says so)
 FishState fish;
 uint32_t fishLast = 0, fishOverT = 0;
 uint32_t fishTapT = 0, fishBiteT = 0, fishSoonT = 0, fishStrainT = 0;  // when each last happened (the screen's flashes)
@@ -4599,11 +4600,24 @@ void renderRun() {
 // keys move the aim ring, and the button or Space casts there), tap when the float goes under, then tap at the fish's
 // pace to reel it in; each one is weighed and let go. It all reads on the screen alone (the Knomi has no speaker):
 // the sounds, and the buzzes that come with them on a phone or a controller, only add to it.
+// Reel Fishing's heaviest fish, to the relay alone (BM_FISH): it keeps the heaviest anyone has landed for its /stats,
+// the weight and the kind and nothing about who. Sent each time the relay connects and when there's a new one
+void fishReport() {
+  if (!pet.fishBig || !buddyDexOk(pet.fishBigDex)) return;
+  BuddyMsg m;
+  buddyInit(m, BM_FISH, buddyNetId(), 0, 0);
+  m.dex = pet.fishBigDex;
+  m.shiny = pet.fishBigShiny ? 1 : 0;
+  m.hp = pet.fishBig;
+  buddyNetReport(m);
+}
+
 void startFish() {
   if (pet.isEgg() || pet.sleeping || pet.ceremony) { sfxPlay(SFX_DENY); return; }
   fishStart(fish, esp_random());
   fishOpen = true;
   fishNewHi = false;
+  fishBigNew = false;
   fishOverT = 0;
   fishLast = millis();
   fishTapT = fishBiteT = fishSoonT = fishStrainT = 0;
@@ -4649,6 +4663,9 @@ void fishEvents(uint32_t ev) {
   if (ev & FE_SNAP) sfxPlay(SFX_FISH_SNAP);
   if (ev & FE_LANDED) sfxPlay(fish.target == FISH_GIANT ? SFX_MEDAL : SFX_FISH_LANDED);
   if (ev & FE_WEIGH) {
+    uint16_t big = pet.fishBig;  // the heaviest before this one: ever, and earlier this game
+    for (int i = 0; i < fish.cast; i++) big = fish.slot[i] > 0 && fish.slotKg10[i] > big ? fish.slotKg10[i] : big;
+    fishBigNew = !pet.isEgg() && fish.slotKg10[fish.cast] > big;
     sfxPlay(SFX_FISH_SCALE);
 #if HAS_MUSIC
     voiceSay(fish.slot[fish.cast], VOICE_WIN);  // its own cry as it goes back in
@@ -4656,10 +4673,14 @@ void fishEvents(uint32_t ev) {
   }
   if (ev & FE_END) {
     fishNewHi = fish.total > pet.fishHi;
+    bool big = false;  // the heaviest single fish, kept (fishResult() saves it)
+    for (int i = 0; i < FISH_CASTS; i++)
+      if (fish.slot[i] > 0) big |= pet.fishBiggest(fish.slotKg10[i], fish.slot[i], fish.slotShiny[i]);
     pet.fishResult((uint16_t)(fish.total > 65535 ? 65535 : fish.total));  // the reward and record only at the end
     sfxPlay(fishNewHi || fishGoal(fish.total) == 3 ? SFX_MEDAL : SFX_PLAY);
     fishOverT = now | 1;
     Serial.printf("reel fishing: %u.%u kg\n", (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
+    if (big) fishReport();
   }
 }
 
@@ -6456,6 +6477,7 @@ void buddyTick(uint32_t now) {
     }
     BuddyMsg m;
     for (int i = 0; i < 8 && buddyNetPoll(m); i++) buddyHandle(m, now);
+    if (buddyNetRelayFresh()) fishReport();  // the relay keeps the heaviest fish anyone has landed
     buddyReadyTick(now);
   }
   // touches and messages have already stamped bsT and trT with millis(): with the old now the subtraction would wrap around

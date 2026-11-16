@@ -421,6 +421,7 @@ static void testRelay() {
   CHECK(!buddyNetUp());
   hostRelayConnected(relayOut);
   CHECK(buddyNetUp());
+  CHECK(buddyNetRelayFresh() && !buddyNetRelayFresh());  // newly connected: once
   uint32_t me = buddyNetId();
   BuddyMsg hello;
   buddyInit(hello, BM_HELLO, buddyNetId(), 0, 0);
@@ -428,6 +429,17 @@ static void testRelay() {
   hello.level = 5;
   buddyNetSend(hello);
   CHECK(gRelayOut.empty());  // alone: nothing sent
+  BuddyMsg fishMsg;  // ...but a report goes even alone (the relay keeps the heaviest fish), and comes back to nobody
+  buddyInit(fishMsg, BM_FISH, me, 0, 0);
+  fishMsg.dex = 130;
+  fishMsg.hp = 2418;
+  buddyNetReport(fishMsg);
+  CHECK(gRelayOut.size() == 1 && gRelayOut[0].size() == 65 && gRelayOut[0][5] == BM_FISH);
+  gRelayOut.clear();
+  BuddyMsg back;
+  fishMsg.from = 0x4321;
+  hostRelayReceived((const uint8_t *)&fishMsg, sizeof(fishMsg));
+  CHECK(!buddyNetPoll(back));  // a BM_FISH is never taken from a buddy
   hostRelayPeers(1);
   buddyNetSend(hello);
   CHECK(gRelayOut.size() == 1 && gRelayOut[0].size() == 65);
@@ -451,7 +463,9 @@ static void testRelay() {
 
   hostRelayConnected(nullptr);  // dropped: off again, and nothing more goes out
   CHECK(!buddyNetUp());
+  CHECK(!buddyNetRelayFresh());
   buddyNetSend(hello);
+  buddyNetReport(fishMsg);
   CHECK(gRelayOut.size() == 1);
 }
 

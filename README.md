@@ -10,6 +10,7 @@
   <a href="https://fedorsosnin.github.io/Catch151/sprites/"><img src="https://img.shields.io/badge/online-Catch_151_Dex-d4a017" alt="The online Catch 151 Dex"></a>
   <a href="https://fedorsosnin.github.io/Catch151/music/"><img src="https://img.shields.io/badge/listen-the%20soundtrack-8a5a30" alt="Listen to Catch 151's soundtrack"></a>
   <a href="relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
+  <a href="relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.biggest&label=biggest%20fish&color=1f6feb&cacheSeconds=300" alt="The heaviest fish anyone has landed in Reel Fishing"></a>
 </p>
 
 **Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play six mini games by tapping and tilting, the newest a fishing contest off the Beach's pier.

@@ -1077,6 +1077,7 @@ static void fsWeighDraw(int16_t dex, bool shiny, uint16_t kg10, uint16_t kindKg1
     v2Caps(dexName(dex), nm, sizeof(nm));
     snprintf(line, sizeof(line), T(frac < 0.34f ? S_FISH_SMALL_FMT : frac < 0.67f ? S_FISH_FINE_FMT : S_FISH_LARGE_FMT), nm);
     fsSay(line, cx, 296, 0xFFE27A);
+    if (fishBigNew) fsSay(T(S_FISH_BIGGEST), cx, 330, 0x9CF0A0);  // heavier than any landed before
   }
   fsSay(T(S_FISH_BACK), CX, 376, 0xFFFFFF);
 }

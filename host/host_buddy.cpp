@@ -33,11 +33,13 @@ uint32_t buddyNetId() {
 // ---- the relay: the front end calls these on the game's thread ----
 static HostRelaySend gRelaySend = nullptr;
 static int gRelayOthers = 0;
+static bool gRelayFresh = false;  // newly connected: buddyNetRelayFresh()
 static uint8_t gRelayQ[RELAY_QUEUE][sizeof(BuddyMsg)];
 static int gRelayHead = 0, gRelayCount = 0;
 
 void hostRelayConnected(HostRelaySend send) {
   gRelaySend = send;
+  gRelayFresh = send != nullptr;
   if (!send) gRelayOthers = 0;
 }
 void hostRelayPeers(int n) { gRelayOthers = n > 0 ? n : 0; }
@@ -324,6 +326,16 @@ bool buddyNetPoll(BuddyMsg &out) { return udpPoll(out) || relayPoll(out); }
 void buddyNetSend(const BuddyMsg &m) {
   udpSend(m);
   relaySend(m);
+}
+
+void buddyNetReport(const BuddyMsg &m) {
+  if (gRelaySend) gRelaySend((const uint8_t *)&m, sizeof(m));
+}
+
+bool buddyNetRelayFresh() {
+  bool f = gRelayFresh && gRelaySend;
+  gRelayFresh = false;
+  return f;
 }
 
 void buddyNetSetPeer(uint32_t id) { udpSetPeer(id); }

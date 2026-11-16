@@ -842,6 +842,13 @@ void Pet::fishResult(uint16_t kg10) {
   save();
 }
 
+// Reel Fishing's heaviest single fish, with what it was (saved by fishResult(), at the game's end)
+bool Pet::fishBiggest(uint16_t kg10, int16_t dex, bool shiny) {
+  if (ceremony != CER_NONE || isEgg() || kg10 <= fishBig) return false;
+  fishBig = kg10, fishBigDex = dex, fishBigShiny = shiny;
+  return true;
+}
+
 void Pet::friendlyBattle(bool won) {
   if (ceremony != CER_NONE || isEgg()) return;
   joy = clamp100(joy + (won ? 15 : 8));
@@ -1226,6 +1233,9 @@ void Pet::save() {
   prefs.putUShort("rhi", runHi);
   prefs.putUShort("sfhi", surfHi);
   prefs.putUShort("fshi", fishHi);
+  prefs.putUShort("fsbg", fishBig);
+  prefs.putShort("fsbd", fishBigDex);
+  prefs.putBool("fsbs", fishBigShiny);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
   prefs.putUInt("cdyd", candyDay);
@@ -1334,6 +1344,9 @@ void Pet::load() {
   runHi = prefs.getUShort("rhi", 0);
   surfHi = prefs.getUShort("sfhi", 0);
   fishHi = prefs.getUShort("fshi", 0);
+  fishBig = prefs.getUShort("fsbg", 0);
+  fishBigDex = prefs.getShort("fsbd", 0);
+  fishBigShiny = prefs.getBool("fsbs", false);
   dungeonHi = prefs.getUChar("dhi", 0);
   candyToday = prefs.getUChar("cdyn", 0);
   candyDay = prefs.getUInt("cdyd", 0);

@@ -34,6 +34,7 @@ static bool relayOn = false;
 static int relayOthers = 0;  // the relay's {"n": ...}: alone, nothing is sent
 static uint32_t relayT = 0, relayWait = RELAY_FIRST_MS, relayPingT = 0;
 static bool relayHeld = false;  // buddyNetRelayHold: closed for a Wi-Fi update
+static bool relayFresh = false;  // newly connected: buddyNetRelayFresh()
 
 static void relayClose(bool failed) {
   if (rc) {
@@ -149,6 +150,7 @@ static void relayCollect(bool wanted) {
     relayOn = true;
     relayWait = RELAY_RETRY_MS;
     relayPingT = millis();
+    relayFresh = true;
     Serial.println("buddy: relay connected");
     return;
   }
@@ -253,6 +255,16 @@ void buddyNetSend(const BuddyMsg &m) {
   if (relayOn && relayOthers > 0 && !wsSend(0x2, (const uint8_t *)&m, sizeof(m))) relayClose(true);
 }
 
+void buddyNetReport(const BuddyMsg &m) {
+  if (relayOn && !wsSend(0x2, (const uint8_t *)&m, sizeof(m))) relayClose(true);
+}
+
+bool buddyNetRelayFresh() {
+  bool f = relayFresh && relayOn;
+  relayFresh = false;
+  return f;
+}
+
 void buddyNetSetPeer(uint32_t id) {
   if (id != peerId) peerIp = IPAddress();
   peerId = id;
@@ -280,6 +292,8 @@ void buddyNetRelayHold(bool) {}
 bool buddyNetUp() { return false; }
 bool buddyNetPoll(BuddyMsg &) { return false; }
 void buddyNetSend(const BuddyMsg &) {}
+void buddyNetReport(const BuddyMsg &) {}
+bool buddyNetRelayFresh() { return false; }
 void buddyNetSetPeer(uint32_t) {}
 
 #endif

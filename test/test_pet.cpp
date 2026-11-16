@@ -2007,6 +2007,7 @@ TEST(save, state_survives_a_reboot) {
   a.gameHi = 21;
   a.runHi = 48;
   a.surfHi = 52;
+  a.fishBig = 2418, a.fishBigDex = 130, a.fishBigShiny = true;
   a.rename("SPARKY");  // rename persists the whole state
 
   Pet b;
@@ -2021,6 +2022,9 @@ TEST(save, state_survives_a_reboot) {
   CHECK_EQ(b.gameHi, (uint16_t)21);
   CHECK_EQ(b.runHi, (uint16_t)48);
   CHECK_EQ(b.surfHi, (uint16_t)52);
+  CHECK_EQ(b.fishBig, (uint16_t)2418);
+  CHECK_EQ(b.fishBigDex, (int16_t)130);
+  CHECK(b.fishBigShiny);
   CHECK_STREQ(b.nick, "SPARKY");
   CHECK(b.isRegistered(25));
   CHECK(!b.awaitingStarter());

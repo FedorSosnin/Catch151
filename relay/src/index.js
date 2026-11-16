@@ -2,8 +2,9 @@
 // messages) meet Knomis, Macs and other browsers on the same home network.
 //
 // It only passes along the game's own buddy messages (65 bytes, "PKG1", see buddy.h) between
-// devices that share an internet address, as devices on one home Wi-Fi do. It stores nothing:
-// battles, trades and every check on the messages stay on the devices, exactly as on the Wi-Fi.
+// devices that share an internet address, as devices on one home Wi-Fi do. Battles, trades and
+// every check on the messages stay on the devices, exactly as on the Wi-Fi. It stores one thing:
+// the heaviest fish anyone has landed (below).
 //
 //   wss://<relay>/ws?v4=<the device's public IPv4, when it connects over IPv6>
 //
@@ -16,12 +17,46 @@
 //
 // How many devices are connected right now, all of them together (Knomis on Wi-Fi, the Mac and
 // Windows apps, open browser tabs). Only the number: nothing about who or where.
+//
+// And the heaviest fish anyone has landed in Reel Fishing: {"online": 12, "fish": {...}, "biggest":
+// "621.7 lb Gyarados"}. Each device tells the relay its own heaviest (a BM_FISH message, only to the
+// relay) when it connects and when it lands a heavier one; the relay keeps the heaviest of all. That's
+// the one thing it stores: the weight, the kind and the day, nothing about who.
 
 const MSG_SIZE = 65;
 const MAX_PER_GROUP = 16;  // a home has a few devices: more is someone filling a group on purpose
 const RATE_PER_S = 8;      // the game sends a few messages a second at most, during a battle
 const BURST = 16;
 const STATS_CACHE_S = 60;  // the count is kept a minute: looking often doesn't wake the lobby each time
+
+// Reel Fishing (src/fishing.h): the Beach's water Pokemon and their Pokedex weights in tenths of a kg. A fish
+// weighs 0.8 to 1.2 times its kind's, so a report over 1.2 times can't be real and is ignored
+const BM_FISH = 17;  // src/buddy.h
+const FISH = {
+  90: ['Shellder', 40], 98: ['Krabby', 65], 116: ['Horsea', 80], 129: ['Magikarp', 100], 60: ['Poliwag', 124],
+  54: ['Psyduck', 196], 79: ['Slowpoke', 360], 118: ['Goldeen', 150], 61: ['Poliwhirl', 200], 117: ['Seadra', 250],
+  120: ['Staryu', 345], 119: ['Seaking', 390], 72: ['Tentacool', 455], 73: ['Tentacruel', 550], 99: ['Kingler', 600],
+  55: ['Golduck', 766], 80: ['Slowbro', 785], 121: ['Starmie', 800], 86: ['Seel', 900], 87: ['Dewgong', 1200],
+  91: ['Cloyster', 1325], 131: ['Lapras', 2200], 130: ['Gyarados', 2350],
+};
+
+// a BM_FISH message's fish ({ kg10, dex, shiny }), or null if it isn't one that can be caught
+export function fishReport(data) {
+  if (!(data instanceof ArrayBuffer) || data.byteLength !== MSG_SIZE) return null;
+  const v = new DataView(data);
+  if (v.getUint8(5) !== BM_FISH) return null;
+  const dex = v.getInt16(22, true), shiny = v.getUint8(25) === 1, kg10 = v.getUint16(26, true);
+  const kind = FISH[dex];
+  if (!kind || kg10 < 1 || kg10 * 5 > kind[1] * 6) return null;
+  return { kg10, dex, shiny };
+}
+
+// as the game shows it: tenths of a pound, rounded (fishLb10() in src/fishing.h)
+export function fishText(f) {
+  if (!f || !FISH[f.dex]) return 'none yet';
+  const lb10 = Math.floor((f.kg10 * 22046 + 5000) / 10000);
+  return `${Math.floor(lb10 / 10)}.${lb10 % 10} lb ${f.shiny ? 'shiny ' : ''}${FISH[f.dex][0]}`;
+}
 
 export default {
   async fetch(request, env) {
@@ -41,8 +76,9 @@ export default {
       let res = await cache.match(key);
       if (!res) {
         const lobby = env.LOBBY.get(env.LOBBY.idFromName('lobby'));
-        const { online } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
-        res = new Response(JSON.stringify({ online }), {
+        const { online, fish } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
+        const big = fish ? { lb: Math.floor((fish.kg10 * 22046 + 5000) / 10000) / 10, kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
+        res = new Response(JSON.stringify({ online, fish: big, biggest: fishText(fish) }), {
           headers: {
             'content-type': 'application/json',
             'cache-control': `public, max-age=${STATS_CACHE_S}`,
@@ -95,9 +131,15 @@ export class Lobby {
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
   }
 
+  // the heaviest fish reported, kept in the object's storage (read once, then from memory)
+  async biggest() {
+    if (this.fish === undefined) this.fish = (await this.ctx.storage.get('fish')) || null;
+    return this.fish;
+  }
+
   async fetch(request) {
     if (new URL(request.url).pathname === '/stats')  // each socket once, whatever its groups
-      return Response.json({ online: this.ctx.getWebSockets().length });
+      return Response.json({ online: this.ctx.getWebSockets().length, fish: await this.biggest() });
     const groups = (request.headers.get('X-Groups') || '').split(',').filter(Boolean);
     for (const g of groups)
       if (this.ctx.getWebSockets(g).length >= MAX_PER_GROUP) return new Response('group full', { status: 429 });
@@ -135,6 +177,15 @@ export class Lobby {
     if (a.tokens < 1) return;  // too fast: dropped, like a lost Wi-Fi packet
     a.tokens -= 1;
     ws.serializeAttachment(a);
+    if (new Uint8Array(data)[5] === BM_FISH) {  // a device's heaviest fish: kept if it's the heaviest yet, never passed on
+      const f = fishReport(data);
+      const best = await this.biggest();
+      if (f && (!best || f.kg10 > best.kg10)) {
+        this.fish = { ...f, day: new Date().toISOString().slice(0, 10) };
+        await this.ctx.storage.put('fish', this.fish);
+      }
+      return;
+    }
     for (const o of this.others(ws, a.groups)) {
       try { o.send(data); } catch (e) {}
     }

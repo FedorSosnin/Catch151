@@ -116,6 +116,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ORO!",
     "%u.%u lb",
     "RECORD: %u.%u lb",
+    "TU MAYOR CAPTURA!",
   },
   // ---------------- EN ----------------
   {
@@ -226,6 +227,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "GOLD!",
     "%u.%u lb",
     "BEST: %u.%u lb",
+    "YOUR BIGGEST EVER!",
   },
   // ---------------- FR ----------------
   {
@@ -336,6 +338,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "OR!",
     "%u.%u lb",
     "RECORD: %u.%u lb",
+    "TA PLUS GROSSE PRISE!",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -451,6 +454,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "GOLD!",
     "%u.%u lb",
     "REKORD: %u.%u lb",
+    "DEIN GROESSTER FANG!",
   },
   // ---------------- IT ----------------
   {
@@ -561,6 +565,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ORO!",
     "%u.%u lb",
     "RECORD: %u.%u lb",
+    "LA PRESA PIU GROSSA!",
   },
   // ---------------- PT ----------------
   {
@@ -671,6 +676,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "OURO!",
     "%u.%u lb",
     "RECORDE: %u.%u lb",
+    "SUA MAIOR PESCA!",
   },
   // ---------------- JA ----------------
   {
@@ -804,6 +810,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ゴールド！",
     "%u.%u lb",
     "きろく: %u.%u lb",
+    "いちばん おおきい！",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -919,6 +926,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "금메달!",
     "%u.%u lb",
     "최고: %u.%u lb",
+    "가장 큰 물고기!",
   },
 };
 
