@@ -9,11 +9,12 @@
   <a href="https://catch151.3dprintsos.com"><img src="https://img.shields.io/badge/play-in%20your%20browser-de2121" alt="Play Catch 151 in your browser"></a>
   <a href="https://fedorsosnin.github.io/Catch151/sprites/"><img src="https://img.shields.io/badge/online-Catch_151_Dex-d4a017" alt="The online Catch 151 Dex"></a>
   <a href="https://fedorsosnin.github.io/Catch151/music/"><img src="https://img.shields.io/badge/listen-the%20soundtrack-8a5a30" alt="Listen to Catch 151's soundtrack"></a>
+  <a href="#minigame-leaderboard"><img src="https://img.shields.io/badge/minigame-leaderboard-c8961e" alt="The minigame leaderboard"></a>
   <a href="Catch151/relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
   <a href="Catch151/relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.biggest&label=biggest%20fish&color=1f6feb&cacheSeconds=300" alt="The heaviest fish anyone has landed in Reel Fishing"></a>
 </p>
 
-**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play seven mini games by tapping and tilting, the newest Pinball on a round table and a fishing contest off the Beach's pier.
+**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play seven mini games by tapping and tilting, the newest Pinball on a round table and a fishing contest off the Beach's pier, with a live [minigame leaderboard](#minigame-leaderboard) for each one's best.
 
 | | |
 |:--:|:--:|
@@ -26,9 +27,7 @@
 
 **[Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/)**: all 151, regular and shiny, in every view the game has (standing, turning, walking, from behind, asleep, attacking and more), sorted by number or type, each credited to its artists. Each one's page says what the game's Pokédex says about it, with its stats and every move it learns; pick a few to see their match-ups, and tick the ones you have. Its **Catching** tab gives the chances of each star, 1★ to 3★, regular and shiny: of a catch, and of a Search in its zone or a Wild Encounter turning it up that way.
 
-**[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**: each minigame's best, live from copies of the game everywhere, with the gamer tag that set it and the day. You make your gamer tag after your first game, and change it from its label in the Games menu.
-
-<p align="center"><a href="https://fedorsosnin.github.io/Catch151/leaderboard/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The leaderboard, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
+**[Minigame Leaderboard](#minigame-leaderboard)**: each minigame's best, live from copies of the game everywhere, with the gamer tag that set it and the day.
 
 ## What's in it
 
@@ -217,6 +216,12 @@ you're reeling in, one tap a beat, and Pinball has its own,
 **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)** in your browser. The page runs the game's
 own synthesizer and songs, built for the web ([`host/music_web.cpp`](Catch151/host/music_web.cpp), about 70 KB), so it plays
 exactly what the game plays, looping the way the game loops, with a scope for each of the four voices.
+
+## Minigame Leaderboard
+
+<p align="center"><a href="https://fedorsosnin.github.io/Catch151/leaderboard/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The leaderboard, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
+
+The best score in each of the minigames, not the whole game: live from copies of Catch 151 everywhere, with the gamer tag that set it and the day. Each game's [top 10](https://fedorsosnin.github.io/Catch151/leaderboard/) is on its own page. You make your gamer tag after your first game and change it from its label in the Games menu; the best score in any game earns the **High Score** medal, a golden cartridge.
 
 ## Install
 
