@@ -137,8 +137,8 @@ TEST(pinball, bumpers_kick_and_score_and_all_three_bring_up_diglett) {
   CHECK(!s.digUp);
 }
 
-// each Diglett beaten digs a hole beside its own; with both dug, the next one up evolves into Dugtrio: no hit counts
-// while it evolves, then three heads to hit; knocked out, the holes fill in and it's Diglett again
+// two Digletts beaten, and the next one up evolves into Dugtrio: no hit counts while it evolves, then three heads to
+// hit; knocked out, it's Diglett again and the count starts over
 static uint32_t hitDig(PinState &s) {
   putBall(s, PB_DIG_X - 50, PB_DIG_Y - 18, 300, 0);
   s.digCool = 0;
@@ -153,7 +153,7 @@ TEST(pinball, two_digletts_beaten_and_the_next_evolves_into_dugtrio) {
     CHECK(!(ev & PE_DIG_EVOLVE));
     CHECK(!s.dug);
     CHECK(hitDig(s) & PE_DIG_HIT);
-    CHECK_EQ(s.digBeat, (uint8_t)(k + 1));  // a hole dug beside its own
+    CHECK_EQ(s.digBeat, (uint8_t)(k + 1));
   }
   uint32_t ev = pinDigUp(s);  // the third: it evolves
   CHECK(ev & PE_DIG_EVOLVE);
@@ -175,7 +175,7 @@ TEST(pinball, two_digletts_beaten_and_the_next_evolves_into_dugtrio) {
   ev = hitDig(s);  // the third head: knocked out
   CHECK(ev & PE_DIG_HIT);
   CHECK(!s.digUp && !s.dug);
-  CHECK_EQ(s.digBeat, (uint8_t)0);  // the holes fill in
+  CHECK_EQ(s.digBeat, (uint8_t)0);  // the count starts over
   CHECK(s.score >= score + 3 * PB_PTS_DIG + PB_PTS_DUG);
   CHECK(!(pinDigUp(s) & PE_DIG_EVOLVE));  // Diglett again
   CHECK(!s.dug);

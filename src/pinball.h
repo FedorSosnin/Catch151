@@ -38,8 +38,6 @@
 #define PB_GRASS_RY 30
 #define PB_DIG_X 233        // Diglett's hole, between the three bumpers
 #define PB_DIG_Y 178
-// the holes a beaten Diglett digs beside its own, the left one first: with both dug, Dugtrio comes up out of all three
-static const int16_t PB_DUG_HOLE[2][2] = { { 198, 208 }, { 268, 208 } };
 #define PB_BUMP_R 23
 // the way into the grass: a gap in its lower-left side, from its mouth (on the floor) to its end (in the grass)
 static const float PB_NOTCH[2][2] = { { 366, 264 }, { 388, 244 } };
@@ -79,7 +77,7 @@ static const float PB_SLING[3][2] = { { 82, 266 }, { 82, 312 }, { 122, 334 } }; 
 #define PB_BALLS 3
 #define PB_LOST_S 1.6f       // a lost ball: this long before the next
 #define PB_DIG_S 12.0f       // Diglett stays up this long (it was 7: Fedor, "too quick to leave")
-#define PB_DIG_EVOLVE 2      // Digletts beaten (each digs a hole beside its own) before the next comes up as Dugtrio
+#define PB_DIG_EVOLVE 2      // Digletts beaten before the next comes up evolving into Dugtrio
 #define PB_EVO_S 2.0f        // its evolution, on show (it can't be hit meanwhile, and its time doesn't run)
 #define PB_DUG_S 20.0f       // Dugtrio stays up this long: three heads to hit
 #define PB_CATCH_S 0.9f      // into the grass: the "!", then the wild one comes out and the ball with it
@@ -137,9 +135,9 @@ struct PinState {
   float berryFlash;             // all six just lit: BERRIES x2!
   bool digUp;                   // Diglett up out of its hole,
   float digT, digHitT;          // for this long; knocked dizzy, this long ago
-  // Dugtrio (Fedor: "lets find a reason to evolve diglet to digtrio"): each Diglett beaten digs a hole beside its own;
-  // with both dug, the next one up evolves, and comes up out of all three holes as Dugtrio, three heads to hit
-  uint8_t digBeat;              // Digletts beaten since the last Dugtrio (its holes dug)
+  // Dugtrio (Fedor: "lets find a reason to evolve diglet to digtrio"): two Digletts beaten, and the next one up
+  // evolves into Dugtrio, three heads to hit (the holes it dug beside its own at first are gone: "They look strange")
+  uint8_t digBeat;              // Digletts beaten since the last Dugtrio
   bool dug;                     // Dugtrio: up, or the next to come up (it got away: it comes back evolved)
   uint8_t dugHeads;             // its heads still up
   float evoT, digCool;          // its evolution on show; a head just hit (the next can't be, so soon)
@@ -255,7 +253,7 @@ inline void pinStart(PinState &s, uint32_t seed) {
   pinServe(s);
 }
 
-// all three bumpers lit: Diglett pops up out of its hole; with both its holes dug beside it, it evolves first, and
+// all three bumpers lit: Diglett pops up out of its hole; with two beaten since the last Dugtrio, it evolves first, and
 // comes up as Dugtrio (got away once evolved: it comes back as Dugtrio, no evolving again)
 inline uint32_t pinDigUp(PinState &s) {
   s.bumpLit = 0;
@@ -529,14 +527,14 @@ inline uint32_t pinBallStep(PinState &s, float h) {
       s.digUp = false;
       s.digHitT = 1.2f;
       s.lastDug = false;
-      if (s.digBeat < PB_DIG_EVOLVE) s.digBeat++;  // it digs a hole beside its own as it goes
+      if (s.digBeat < PB_DIG_EVOLVE) s.digBeat++;  // (one more toward Dugtrio)
       pinAdd(s, PB_PTS_DIG, PB_DIG_X, PB_DIG_Y - 60);
       ev |= PE_DIG_HIT;
     } else if (--s.dugHeads) {  // one of Dugtrio's heads
       s.digCool = 0.4f;
       pinAdd(s, PB_PTS_DIG, PB_DIG_X, PB_DIG_Y - 60);
       ev |= PE_DUG_HEAD;
-    } else {  // all three: back down, and the holes fill in (Diglett next, and it starts over)
+    } else {  // all three: back down (Diglett next, and the count starts over)
       s.digUp = false, s.dug = false;
       s.digBeat = 0;
       s.digHitT = 1.2f;

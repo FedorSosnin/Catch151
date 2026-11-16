@@ -4,7 +4,8 @@ The seventh cartridge (Fedor, 2026-11-15: "let's branch off to make a pinball mi
 page (four cartridges a page now). Built 2026-11-16 (Fedor: "Build it") and released the same day in 2.2.7: playable on the
 Knomi, the Mac and Windows apps and the web. Reworked the same day after Fedor played the Mac test copy: the battle
 moved onto the table, a smooth ramp, no trail behind the ball, a song of its own, and a smaller patch of grass. Then
-(after 2.2.7): a bigger ball, the corners where the wall meets the guides rounded off, and Diglett evolving into Dugtrio.
+(after 2.2.7): a bigger ball, the corners where the wall meets the guides rounded off, Diglett evolving into Dugtrio,
+and a cave for the grass on the night table.
 
 - **The rules and the physics** are `src/pinball.h` (no drawing), checked by `test/test_pinball.cpp`: the serve,
   gravity and the rim, the flippers' throw, the drain and the three balls, the bumpers, Diglett and Dugtrio, the
@@ -85,14 +86,14 @@ moved onto the table, a smooth ramp, no trail behind the ball, a song of its own
   the bumpers. Light all three bumpers and **Diglett pops out of it**, throwing up dirt, with a gold ring round it
   for the time left (12 seconds). Hit it with the ball before the ring runs out: knocked dizzy, **+1000**, and back
   down its hole. Too slow and it ducks back down. Then the bumpers start over.
-- **Dugtrio** (Fedor: "lets find a reason to evolve diglet to digtrio"): each Diglett you beat digs a new hole beside
-  its own as it goes, the left one first. With both dug, the next time the bumpers bring it up, it comes up out of all
-  three holes and **evolves**, as a Pokemon does at home: a gold glow, and it blinks white between Diglett and Dugtrio,
+- **Dugtrio** (Fedor: "lets find a reason to evolve diglet to digtrio"): beat Diglett twice, and the next time the
+  bumpers bring it up, it **evolves**, as a Pokemon does at home: a gold glow, and it blinks white between Diglett and Dugtrio,
   faster and faster (a dark rim round the white, so the shape reads), EVOLVING!, then HIT DUGTRIO!. It can't be hit
   while it evolves and its time doesn't run. Then it's up 20 seconds, three gold dots under it for its three heads:
-  each hit knocks one down (+1000), and the third knocks it out (+2000 more) and fills the holes in: Diglett again.
-  If it gets away it comes back as Dugtrio, without evolving again. Two beaten, so a third time is Dugtrio: three
-  holes for its three heads. (In 300 bot games it evolved in most of them.) (Fedor asked whether the bumpers
+  each hit knocks one down (+1000), and the third knocks it out (+2000 more): Diglett again, and the count starts
+  over. If it gets away it comes back as Dugtrio, without evolving again. Two beaten, so the third is Dugtrio, three
+  heads. (In 300 bot games it evolved in most of them.) At first each Diglett beaten dug a hole beside its own, to
+  count toward it; they went (Fedor: "No need for the three holes. They look strange"). (Fedor asked whether the bumpers
   should bring out a random Pokemon instead, "Or should be stick to a theme?": Diglett stays, the bumpers' own event,
   and the random wild Pokemon are the grass's.)
 - **The ring** in the middle, where your own Pokemon stood as a target (Fedor: "its hard to get over there because of
@@ -104,6 +105,12 @@ moved onto the table, a smooth ramp, no trail behind the ball, a song of its own
   of the grass thats a bit much"). The patch has a dark edge, and tufts poke up along its top for
   height. It's a small patch close to the wall, so a shot off the right flipper reaches the upper right past it
   (Fedor: "It was very hard to get to the upper right size of the screen since the island blocks it mostly").
+- **At night, a cave** (Fedor: "On the darker version of the game, Lets change the grassy patch with the entrance to
+  a cave entrance"): on the night table the grass is a moonlit mound of rock, as big and in the same place, the same
+  to the ball. Boulders along its top, each dark on its far side; its mouth an arch standing on the floor where the
+  grass's gap is, turned to the left flipper, rocks hanging from it, two eyes glinting in the dark, pebbles by the way
+  in. A ball that goes in is gone into it, its mouth glowing gold, and the wild one jumps out of it into the ring.
+  The meadow table keeps its grass.
 - **The way into the grass** (Fedor, of the stone hole: "That entrance there still doesnt look good"): a gap where the
   grass parts on its lower-left side, turned to the left flipper. The floor shows through it, darkening deeper in, the
   grass's dark edge runs down both its sides with tufts leaning over, and a lit arrow on the floor points up it. A
@@ -174,4 +181,5 @@ Diglett for all three bumpers; the tall grass for the battles, its way in a gap 
 play: the battle on the table, in a ring where your Pokemon stood, each hit of the ball your Pokemon's move; a smooth
 ramp; no trail; Pinball's own song; a smaller patch of grass; Diglett up longer. Then: the ramp up into the top corner,
 clear of the bumper, with arrows; a game's end back on its own page of the Games menu. After 2.2.7: the ball 13 px;
-the corners at the guides rounded; Diglett evolving into Dugtrio after two are beaten.)
+the corners at the guides rounded; Diglett evolving into Dugtrio after two are beaten (without the holes counting
+toward it); a cave for the grass on the night table.)

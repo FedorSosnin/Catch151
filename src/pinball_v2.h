@@ -271,15 +271,15 @@ static void pbBerry(int k, bool lit) {
   drawMap(SPR[k], HOME_ICON_N, x - 9, y - 9, 1, false);
   if (!lit) fsBlend(x - 12, y - 12, x + 12, y + 12, pbDay ? 0x4E9A3E : 0x1E2056, 150);
 }
-// a hole in the dirt: Diglett's between the bumpers (rx 20), or one a beaten Diglett dug beside it
+// Diglett's hole in the dirt between the bumpers
 static void pbDigHole(int x, int y, int rx, int ry, bool up) {
   const Rgb dirt = pbDay ? 0x8A6A44 : 0x6A5A6E, dirtLit = pbDay ? 0xB08A5A : 0x8A7A90;
   pbEllipse(x, y, rx, ry, 0x1B1B25);
   pbEllipse(x, y, rx - 2, ry - 2, dirtLit);
   pbEllipse(x, y + 1, rx * 3 / 5, ry / 2, up ? dirt : 0x1B1B25);
 }
-// Diglett's hole between the bumpers; up: Diglett (dex 50) out of it, or Dugtrio (51) out of it and the two dug beside
-// it, the time to hit it a gold ring round it (hit: knocked dizzy, stars round its head); heads: Dugtrio's still up,
+// Diglett's hole between the bumpers; up: Diglett (dex 50) out of it, or Dugtrio (51), the time to hit it a gold ring
+// round it (hit: knocked dizzy, stars round its head); heads: Dugtrio's still up,
 // a gold dot each under it
 static void pbDiglett(bool up, bool hit = false, float timeLeft = 0, int dex = 50, int heads = 0) {
   const Rgb dirtLit = pbDay ? 0xB08A5A : 0x8A7A90;
@@ -403,7 +403,12 @@ static Rgb pbFloorAt(int x, int y) {
 // grass parts on its lower-left side (Fedor: the stone hole "still doesnt look good"): the floor shows through it, the
 // grass's dark edge runs down both its sides, tufts lean out over them, and it darkens toward its end, where the grass
 // closes over the ball. A lit arrow on the floor points up it from the left flipper
+static void pbCave(bool lit);
 static void pbGrass(bool lit) {
+  if (!pbDay) {  // the night table's is a cave
+    pbCave(lit);
+    return;
+  }
   pbEllipse(PB_GRASS_X + 4, PB_GRASS_Y + 8, PB_GRASS_RX + 2, PB_GRASS_RY + 2, pbFloorDark(), 140);  // its shadow
   pbEllipse(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX + 3, PB_GRASS_RY + 3, 0x1B1B25);
   pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, 0, true);
@@ -431,8 +436,71 @@ static void pbGrass(bool lit) {
   pbGrassTufts(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, 196, 344, lit);
   pbArrow((int)(ax - dx * 1.05f), (int)(ay - dy * 1.05f), dx, dy, lit ? 0xFFE27A : 0xB06AE0);
 }
-// the patch's front, over a ball that has gone into it (from row y down): only its lower half shows over the blades
-static void pbGrassFront(int y, bool lit) { pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, SNAP2(y), true); }
+// The night table's cave (Fedor: "On the darker version of the game, Lets change the grassy patch with the entrance to
+// a cave entrance"), where the meadow's grass is and as big, the same to the ball: a moonlit mound of rock, lumpy along
+// its top, its mouth on its lower-left side where the grass's gap is, turned to the left flipper. Two eyes glint in the
+// dark of it; lit (the ball going in, a wild one coming out), its mouth glows. A lit arrow on the floor points into it
+// an arch: the oval (cx, cy, rx, ry) down to row flat, where it stands on the floor
+static void pbArch(int cx, int cy, int rx, int ry, int flat, Rgb col) {
+  uint16_t c = sc565(col);
+  for (int y = SNAP2(cy - ry); y <= flat; y += 2)
+    for (int x = SNAP2(cx - rx); x <= cx + rx; x += 2) {
+      float dx = (x + 1 - cx) / (float)rx, dy = y + 1 < cy ? (y + 1 - cy) / (float)ry : 0;
+      if (dx * dx + dy * dy <= 1) pbPx2(x, y, c);
+    }
+}
+static void pbCave(bool lit) {
+  const Rgb rock = 0x5E5A78, rockLit = 0x8A84A8, rockHi = 0xB4AED0, rockDark = 0x3A3652, edge = 0x1B1B25;
+  const int cx = PB_GRASS_X, cy = PB_GRASS_Y, rx = PB_GRASS_RX, ry = PB_GRASS_RY;
+  static const int8_t BUMP[4][3] = { { -13, -18, 14 }, { 8, -22, 13 }, { 21, -6, 10 }, { -24, 2, 8 } };
+  pbEllipse(cx + 4, cy + 8, rx + 2, ry + 2, pbFloorDark(), 140);  // its shadow
+  for (int k = 0; k < 4; k++) pbEllipse(cx + BUMP[k][0], cy + BUMP[k][1], BUMP[k][2] + 3, BUMP[k][2] + 3, edge);
+  pbEllipse(cx, cy, rx + 3, ry + 3, edge);
+  for (int k = 0; k < 4; k++) {  // boulders along its top: each dark on its far side, lit from the top left
+    int bx = cx + BUMP[k][0], by = cy + BUMP[k][1], r = BUMP[k][2];
+    pbEllipse(bx, by, r, r, rockDark);
+    pbEllipse(bx - 2, by - 2, r - 2, r - 2, rock);
+    pbEllipse(bx - 4, by - 4, r - 6, r - 6, rockLit);
+  }
+  pbEllipse(cx, cy, rx, ry, rockDark);  // the mound
+  pbEllipse(cx - 3, cy - 3, rx - 4, ry - 4, rock);
+  pbEllipse(cx - 6, cy - 10, rx - 14, ry - 16, rockLit);
+  pbEllipse(cx - 10, cy - 14, 4, 3, rockHi);
+  pbEllipse(cx - 18, cy - 26, 3, 2, rockHi);
+  pbEllipse(cx + 2, cy - 32, 3, 2, rockHi);
+  scRect(cx + 8, cy - 12, cx + 9, cy - 2, edge);  // cracks
+  scRect(cx + 10, cy - 2, cx + 11, cy + 4, edge);
+  scRect(cx - 4, cy - 22, cx + 1, cy - 21, edge);
+  // the mouth, where the grass's gap is: an arch standing on the floor, a lit lip of rock round it, darker deeper in
+  float ax = PB_NOTCH[0][0], ay = PB_NOTCH[0][1], bx = PB_NOTCH[1][0], by = PB_NOTCH[1][1];
+  const int mx = SNAP2((int)(ax + (bx - ax) * 0.55f)), my = SNAP2((int)(ay + (by - ay) * 0.55f)), flat = my + 12;
+  if (lit) twGlow(mx, my, 40, 0xFFE27A, 170);
+  pbArch(mx, my, 17, 17, flat, rockLit);
+  pbArch(mx, my, 15, 15, flat, edge);
+  pbArch(mx, my + 2, 12, 12, flat, 0x16141E);
+  pbArch(mx + 1, my + 2, 8, 8, flat, 0x0A0A12);
+  if (lit) twGlow(mx, my + 4, 16, 0xFFE27A, 110);  // (lit: a gold haze in the dark, no eyes)
+  pbEllipse(mx, flat + 2, 14, 3, pbFloorDark());  // the way in, worn and shaded
+  for (int k = 0; k < 3; k++) {  // rocks hanging from the arch
+    int tx = SNAP2(mx - 7 + k * 7), ty = SNAP2(my - 12 + (k == 1 ? -2 : 0));
+    scRect(tx - 2, ty, tx + 3, ty + 3, edge);
+    scRect(tx, ty + 4, tx + 1, ty + 5, edge);
+  }
+  if (!lit) {  // two eyes in the dark: something waits in there
+    scRect(mx - 6, my + 2, mx - 3, my + 5, 0xFFE27A);
+    scRect(mx + 4, my + 2, mx + 7, my + 5, 0xFFE27A);
+  }
+  for (int k = 0; k < 3; k++)  // pebbles by the way in
+    pbEllipse(mx - 22 + k * 8, flat + 6 + (k % 2) * 4, 3, 2, k == 1 ? rockLit : rock);
+  float dx = bx - ax, dy = by - ay;
+  pbArrow((int)(ax - dx * 1.05f), (int)(ay - dy * 1.05f), dx, dy, lit ? 0xFFE27A : 0xB06AE0);
+}
+// the patch's front, over a ball that has gone into it (from row y down): only its lower half shows over the blades (at
+// night, the cave: the ball gone into it)
+static void pbGrassFront(int y, bool lit) {
+  if (!pbDay) pbCave(lit);
+  else pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, SNAP2(y), true);
+}
 // the arrows up the ramp (Fedor: "maybe have some arrows or something going upward up the ramp"), on its climb: arrow k
 // (0 the lowest) unlit, or lit, as they chase up it one after another (pinDraw())
 #define PB_RAMP_ARROWS 5
@@ -683,11 +751,8 @@ static void pinDraw(const PinState &s, bool keys) {
     }
   for (int k = 0; k < 3; k++)
     if (s.bumpFlash[k] > 0 || ((s.bumpLit >> k) & 1)) pbBumper(k, true);
-  // Diglett's dug holes (both while Dugtrio's up or due, or just knocked dizzy), then it, or Dugtrio, or it evolving
+  // Diglett, or Dugtrio (up, or just knocked dizzy), or it evolving
   bool dugOn = s.dug || (s.lastDug && s.digHitT > 0);
-  for (int k = 0; k < (dugOn ? 2 : s.digBeat); k++) {
-    pbDigHole(PB_DUG_HOLE[k][0], PB_DUG_HOLE[k][1], 13, 7, dugOn && (s.digUp || s.digHitT > 0));
-  }
   if (s.digUp && s.evoT > 0) pbDigEvolve(1 - s.evoT / PB_EVO_S);
   else if (s.digUp || s.digHitT > 0)
     pbDiglett(true, !s.digUp, s.digUp ? s.digT / (s.dug ? PB_DUG_S : PB_DIG_S) : 0, dugOn ? 51 : 50, s.digUp ? s.dugHeads : 0);
