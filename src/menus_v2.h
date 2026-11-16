@@ -1731,7 +1731,7 @@ static void v2Cart(int x, int y, const uint16_t *pic, const char *title, Rgb she
 static uint16_t *v2LblArt = nullptr;
 static uint16_t *v2Lbl(int i) { return v2LblArt ? v2LblArt + i * V2_LBL_W * V2_LBL_H : nullptr; }
 static bool v2LblStart() {
-  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(9 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));  // (8: Reel Fishing's)
+  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(10 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));  // (8: Reel Fishing's, 9: Pinball's)
   return v2LblArt != nullptr;
 }
 static void v2LblKeep(int i) {
@@ -1837,6 +1837,29 @@ static void v2PaintGameLabels() {
   v2LblThumb(129, 54, 30, false);
   for (int k = 0; k < 4; k++) gfx->fillRect(40 + k * 6, 34 - (k % 2) * 3, 2, 2, UI_WHITE);  // drops
   v2LblKeep(8);
+  // Pinball: a night-blue table seen from above, three bumpers, the two flippers at the bottom, and the ball (a
+  // Poke Ball) flying up off the left one, Pikachu standing on the right one's rail
+  v2LblSky(0x2A2A5E, 0x3C3C84, 0, 0, 0);
+  for (int y = 2; y < V2_LBL_H; y += 6) gfx->fillRect(4, y, 2, 2, sc565(0x5A5AA8));    // the lane's lights
+  for (int y = 4; y < V2_LBL_H; y += 6) gfx->fillRect(73, y, 2, 2, sc565(0x5A5AA8));
+  static const int8_t BUMP[3][2] = { { 22, 10 }, { 44, 6 }, { 34, 20 } };
+  static const Rgb BUMPC[3] = { 0xE8503A, 0xF2C230, 0x4FB0E8 };
+  for (int k = 0; k < 3; k++) {
+    v2LblOval(BUMP[k][0] - 6, BUMP[k][1] - 6, BUMP[k][0] + 5, BUMP[k][1] + 5, 0x1B1B25);
+    v2LblOval(BUMP[k][0] - 5, BUMP[k][1] - 5, BUMP[k][0] + 4, BUMP[k][1] + 4, BUMPC[k]);
+    v2LblOval(BUMP[k][0] - 2, BUMP[k][1] - 3, BUMP[k][0] + 1, BUMP[k][1], 0xFFFFFF);
+  }
+  for (int k = 0; k < 12; k += 2) {  // the flippers, sloping in
+    gfx->fillRect(18 + k, 34 + k / 2, 3, 3, sc565(0xF4F4F8));
+    gfx->fillRect(58 - k, 34 + k / 2, 3, 3, sc565(0xF4F4F8));
+  }
+  v2LblOval(23, 23, 30, 30, 0x1B1B25);  // the ball: a Poke Ball
+  v2LblOval(24, 24, 29, 26, 0xE8503A);
+  v2LblOval(24, 27, 29, 29, 0xF4F4F8);
+  gfx->fillRect(25, 26, 4, 1, sc565(0x1B1B25));
+  for (int k = 0; k < 3; k++) gfx->fillRect(16 - k * 3, 30 + k * 2, 4, 1, UI_WHITE);  // its trail
+  v2LblThumb(25, 64, 30, false);
+  v2LblKeep(9);
 }
 static void v2PaintPlayLabels() {
   if (!v2LblStart()) return;
@@ -1863,13 +1886,22 @@ static void v2PaintPlayLabels() {
 }
 
 // ----- the two Game Boys -----
-// six, 3 x 2 (Fedor: "a 3x2, 6 total carts"), a little higher than five were, so the bottom row's corners clear the rim
-#define V2_CARTS 6
-static const int16_t V2_CART_XY[V2_CARTS][2] = { { 56, 96 }, { 180, 96 }, { 304, 96 }, { 56, 238 }, { 180, 238 }, { 304, 238 } };
-static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing)
-static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
+// The games: four a page, 2 x 2, and a second page (Fedor, 2026-11-15: "4 carts on the screen max instead of the
+// current 6 and add another page"; it was 3 x 2, "a 3x2, 6 total carts"). The rows are the 3 x 2's, the columns its
+// middle one's either side of the middle; the page arrows sit inside the screen either side of them (clear of the
+// power light on the bezel), and "Page 1 of 2" under them, as the other paged screens say it
+#define V2_CARTS 7
+#define V2_CARTS_PAGE 4
+#define V2_CART_PAGES ((V2_CARTS + V2_CARTS_PAGE - 1) / V2_CARTS_PAGE)
+static const int16_t V2_CART_XY[V2_CARTS_PAGE][2] = { { 118, 96 }, { 242, 96 }, { 118, 238 }, { 242, 238 } };
+static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5, 6 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball)
+static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8, 9 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
 // the colours the games came in: Green, Silver, Red, Yellow, Blue; Play together's Gold, Crystal, Yellow
-static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A };  // (Reel Fishing: Magikarp's orange)
+static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A, 0x7A52C8 };  // (Reel Fishing: Magikarp's orange; Pinball: purple)
+#define V2_GAMES_ARROW_Y 234   // the page arrows: between the rows, inside the screen
+#define V2_GAMES_ARROW_DX 155  // ...CX less and more this (x 78 and 388)
+static int v2GamesPage = 0;    // the page the Games menu is on (kept, so a game ends back on its own page)
+static int v2CartsOn(int page) { int n = V2_CARTS - page * V2_CARTS_PAGE; return n < V2_CARTS_PAGE ? n : V2_CARTS_PAGE; }
 static const int16_t V2_PLAY_XY[3][2] = { { 56, 150 }, { 180, 150 }, { 304, 150 } };
 static const Rgb V2_PLAY_COL[3] = { 0xC9A43C, 0x5AC8D8, 0xF2C230 };
 // the power light, on (Fedor: lit up, as a real Game Boy's is when it's switched on, and flickering a little): drawn
@@ -1904,8 +1936,29 @@ static void v2GbBack(const char *title) {
 }
 static void v2GamesTv() {
   v2GbBack(T(S_GAMES));
-  for (int k = 0; k < V2_CARTS; k++) v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[k]), gameLabel(V2_CART_GAME[k]), V2_CART_COL[k]);
+  if (v2GamesPage >= V2_CART_PAGES) v2GamesPage = V2_CART_PAGES - 1;
+  for (int k = 0, c = v2GamesPage * V2_CARTS_PAGE; k < v2CartsOn(v2GamesPage); k++, c++)
+    v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[c]), gameLabel(V2_CART_GAME[c]), V2_CART_COL[c]);
+  if (v2GamesPage > 0) v2PageArrow(CX - V2_GAMES_ARROW_DX, V2_GAMES_ARROW_Y, -1);
+  if (v2GamesPage < V2_CART_PAGES - 1) v2PageArrow(CX + V2_GAMES_ARROW_DX, V2_GAMES_ARROW_Y, 1);
+  v2PageOf(V2_CART_PAGES, v2GamesPage, 400);
   v2CloseX();
+}
+// the Games menu's page arrow under a tap: -1 back, 1 on, 0 neither (or one not shown)
+static int v2GamesArrowAt(int16_t x, int16_t y) {
+  for (int d = -1; d <= 1; d += 2) {
+    int dx = x - (CX + d * V2_GAMES_ARROW_DX), dy = y - V2_GAMES_ARROW_Y;
+    bool shown = d < 0 ? v2GamesPage > 0 : v2GamesPage < V2_CART_PAGES - 1;
+    if (shown && dx * dx + dy * dy <= (V2_CLOSE_R + 12) * (V2_CLOSE_R + 12)) return d;
+  }
+  return 0;
+}
+// turns the Games menu's page (a swipe or an arrow): false if there's no page that way
+static bool v2GamesTurn(int d) {
+  int p = v2GamesPage + d;
+  if (p < 0 || p >= V2_CART_PAGES) return false;
+  v2GamesPage = p;
+  return true;
 }
 static void v2PlayTv() {
   v2GbBack(T(S_PLAY_TOGETHER));
@@ -1925,13 +1978,13 @@ static int v2CartAt(int16_t x, int16_t y, const int16_t (*xy)[2], int n) {
     if (x >= xy[k][0] - 5 && x < xy[k][0] + 110 && y >= xy[k][1] - 5 && y < xy[k][1] + 135) return k;
   return -1;
 }
-static int v2GameAt(int16_t x, int16_t y) {  // V1's game number
-  int k = v2CartAt(x, y, V2_CART_XY, V2_CARTS);
-  return k < 0 ? -1 : V2_CART_GAME[k];
+static int v2GameAt(int16_t x, int16_t y) {  // V1's game number, on this page
+  int k = v2CartAt(x, y, V2_CART_XY, v2CartsOn(v2GamesPage));
+  return k < 0 ? -1 : V2_CART_GAME[v2GamesPage * V2_CARTS_PAGE + k];
 }
-static int v2CartOfGame(int g) {
+static int v2CartOfGame(int g) {  // its place on its page (0..3)
   for (int k = 0; k < V2_CARTS; k++)
-    if (V2_CART_GAME[k] == g) return k;
+    if (V2_CART_GAME[k] == g) return k % V2_CARTS_PAGE;
   return 0;
 }
 

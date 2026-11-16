@@ -117,6 +117,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "RECORD: %u.%u lb",
     "TU MAYOR CAPTURA!",
+    "PINBALL",
+    "Toca el lado izquierdo o derecho para mover su flipper! Manten la bola en juego y dale a los bumpers.",
+    "Pulsa Izquierda o Derecha (o haz clic en un lado) para mover su flipper! Manten la bola en juego y dale a los bumpers.",
   },
   // ---------------- EN ----------------
   {
@@ -228,6 +231,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "BEST: %u.%u lb",
     "YOUR BIGGEST EVER!",
+    "PINBALL",
+    "Tap the left or right side to flip that flipper! Keep the ball in play and hit the bumpers to score.",
+    "Press Left or Right (or click either side) to flip that flipper! Keep the ball in play and hit the bumpers to score.",
   },
   // ---------------- FR ----------------
   {
@@ -339,6 +345,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "RECORD: %u.%u lb",
     "TA PLUS GROSSE PRISE!",
+    "FLIPPER",
+    "Touche a gauche ou a droite pour lever ce flipper ! Garde la bille en jeu et touche les bumpers.",
+    "Gauche ou Droite (ou un clic d'un cote) pour lever ce flipper ! Garde la bille en jeu et touche les bumpers.",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -455,6 +464,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "REKORD: %u.%u lb",
     "DEIN GROESSTER FANG!",
+    "FLIPPER",
+    "Tippe links oder rechts, um diesen Flipper zu heben! Halte die Kugel im Spiel und triff die Bumper.",
+    "Links oder Rechts (oder ein Klick auf eine Seite) hebt den Flipper! Halte die Kugel im Spiel und triff die Bumper.",
   },
   // ---------------- IT ----------------
   {
@@ -566,6 +578,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "RECORD: %u.%u lb",
     "LA PRESA PIU GROSSA!",
+    "FLIPPER",
+    "Tocca a sinistra o a destra per alzare quel flipper! Tieni la palla in gioco e colpisci i bumper.",
+    "Sinistra o Destra (o un clic su un lato) alza il flipper! Tieni la palla in gioco e colpisci i bumper.",
   },
   // ---------------- PT ----------------
   {
@@ -677,6 +692,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "RECORDE: %u.%u lb",
     "SUA MAIOR PESCA!",
+    "PINBALL",
+    "Toque na esquerda ou na direita para bater com aquele flipper! Mantenha a bola em jogo e acerte os bumpers.",
+    "Esquerda ou Direita (ou um clique de um lado) bate com o flipper! Mantenha a bola em jogo e acerte os bumpers.",
   },
   // ---------------- JA ----------------
   {
@@ -811,6 +829,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "きろく: %u.%u lb",
     "いちばん おおきい！",
+    "ピンボール",
+    "ひだりか みぎを タッチで フリッパーを うごかそう！ ボールを おとさずに バンパーに あてよう！",
+    "ひだり・みぎキー（または クリック）で フリッパーを うごかそう！ ボールを おとさずに バンパーに あてよう！",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -927,6 +948,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%u.%u lb",
     "최고: %u.%u lb",
     "가장 큰 물고기!",
+    "핀볼",
+    "왼쪽이나 오른쪽을 눌러 플리퍼를 움직이세요! 공을 떨어뜨리지 말고 범퍼를 맞히세요!",
+    "왼쪽/오른쪽 키(또는 클릭)로 플리퍼를 움직이세요! 공을 떨어뜨리지 말고 범퍼를 맞히세요!",
   },
 };
 

@@ -663,7 +663,7 @@ static void testGame() {
   gameOpen = false;
   hostSerialPush("GAMES");
   runTicks(300);
-  tapAt(316, 128);  // Rock Hopper's tile (V2: its cartridge, from 299)
+  tapAt(170, 300);  // Rock Hopper's tile (V2: its cartridge, the first page's third, from 118 x 238)
   runTicks(500);
   tapAt(233, 335);  // Ready, GO!
   for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);  // until it has ended
@@ -686,7 +686,7 @@ static void testGame() {
     cardPage = 0;
     hostSerialPush("GAMES");
     runTicks(300);
-    tapAt(316, 128);  // Rock Hopper again
+    tapAt(170, 300);  // Rock Hopper again
     runTicks(500);
     tapAt(233, 335);
     for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);
@@ -695,6 +695,28 @@ static void testGame() {
   }
   tapAt(233, 422);  // the X
   CHECK(!runOpen && gamesMenuOpen);
+  {  // the Games menu's two pages, four cartridges a page (Fedor): the right arrow turns to the second, where
+     // Dungeon Crawler, Reel Fishing and Pinball are; Pinball isn't made yet and leaves the menu open; a swipe right
+     // goes back to the first
+    extern int gameAt(int16_t x, int16_t y);
+    extern bool fishOpen;
+    CHECK(gameAt(150, 128) == 0 && gameAt(300, 300) == 4);  // Berry Drop; PikaSurf
+    tapAt(388, 234);
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == -1);
+    tapAt(170, 300);  // Pinball
+    CHECK(gamesMenuOpen && !gameOpen && !fishOpen);
+    tapAt(388, 234);  // no third page: nothing (and the menu stays)
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
+    hostPointer(130, 300, true);
+    runTicks(50);
+    hostPointer(230, 300, true);
+    runTicks(50);
+    hostPointer(330, 300, true);
+    runTicks(50);
+    hostPointer(330, 300, false);
+    runTicks(300);
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
+  }
 
   // auto-update: on unless turned off, and kept apart from the pet's save; an update found waits for the
   // home screen and a minute with nobody touching it

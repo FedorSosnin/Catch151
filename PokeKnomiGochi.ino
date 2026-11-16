@@ -1264,6 +1264,7 @@ bool v2DexEntryArrowTap(int16_t x, int16_t y);
 bool v2PressNav(int16_t x, int16_t y, PressTarget &t, int page, int pages, int arrowY, bool hasX, int cy = CLOSE_Y);
 bool v2PressDexEntry(int16_t x, int16_t y, PressTarget &t);  // the side buttons' and the X's press previews,
 bool v2PressTrophies(int16_t x, int16_t y, PressTarget &t);  // the trophy room's (menus_v2.h)
+static bool v2GamesTurn(int d);  // the Games menu's pages (menus_v2.h)
 void gameTap(int16_t x, int16_t y);
 
 // screens that only repaint on a change must repaint when the highlight moves
@@ -1388,6 +1389,8 @@ void handleTouch() {
           else quitGame();
         } else if (zoneScreen && abs(tXl - tX0) >= 40 && abs(tYl - tY0) < abs(tXl - tX0)) {
           zoneTurnPage(tXl > tX0 ? -1 : 1);  // left advances, as in the Pokedex
+        } else if (gamesMenuOpen && abs(tXl - tX0) >= 40 && abs(tYl - tY0) < abs(tXl - tX0)) {
+          if (v2GamesTurn(tXl > tX0 ? -1 : 1)) sfxPlay(SFX_TAP);  // V2: the Games menu's pages, left advancing
         } else if (abs(tXl - tX0) < 40 && abs(tYl - tY0) < 40) {
           gameTap(tX0, tY0);
         }
@@ -2612,19 +2615,20 @@ void stepGame() {
 
 // ---------- games menu ----------
 // As the zones: a round window onto each game, its own scene with your Pokemon in it, the name under.
-#define GAMES_COUNT 6    // battles have their own icon on the home screen
+#define GAMES_COUNT 7    // battles have their own icon on the home screen
+#define GAME_PINBALL 6   // (its cartridge is in the menu; the game itself is still being made)
 #define GAME_ICON_R 50
 
 const char *gameLabel(int row) {
-  static const StrId L[GAMES_COUNT] = { S_GAME_TILT, S_GAME_WHO, S_GAME_RUN, S_GAME_DUNGEON, S_GAME_SURF, S_GAME_FISH };
+  static const StrId L[GAMES_COUNT] = { S_GAME_TILT, S_GAME_WHO, S_GAME_RUN, S_GAME_DUNGEON, S_GAME_SURF, S_GAME_FISH, S_GAME_PINBALL };
   return T(L[row]);
 }
 
 // how to play it, plainly: the ways to move and the point. Two versions where the controls differ: the
 // Knomi's (tilting, touch) and the one for computers and the web (the arrow keys too); neither names a device
 const char *gameHowTo(int row) {
-  static const StrId H[GAMES_COUNT] = { S_HOW_BERRY, S_HOW_WHO, S_HOW_RUN, S_HOW_DN, S_HOW_SURF, S_HOW_FISH };
-  static const StrId K[GAMES_COUNT] = { S_HOW_BERRY_KEYS, S_HOW_WHO, S_HOW_RUN, S_HOW_DN_KEYS, S_HOW_SURF_KEYS, S_HOW_FISH_KEYS };
+  static const StrId H[GAMES_COUNT] = { S_HOW_BERRY, S_HOW_WHO, S_HOW_RUN, S_HOW_DN, S_HOW_SURF, S_HOW_FISH, S_HOW_PINBALL };
+  static const StrId K[GAMES_COUNT] = { S_HOW_BERRY_KEYS, S_HOW_WHO, S_HOW_RUN, S_HOW_DN_KEYS, S_HOW_SURF_KEYS, S_HOW_FISH_KEYS, S_HOW_PINBALL_KEYS };
   return T(playKeysUi ? K[row] : H[row]);
 }
 
@@ -2875,8 +2879,19 @@ void drawIntroCard() {
 }
 
 void gamesMenuTap(int16_t x, int16_t y) {
-  gamesMenuOpen = false;
+  if (int d = v2GamesArrowAt(x, y)) {  // V2: a page arrow turns the page, and the menu stays
+    if (v2GamesTurn(d)) sfxPlay(SFX_TAP);
+    return;
+  }
   int g = gameAt(x, y);
+  if (g == GAME_PINBALL) {  // not made yet: the menu stays
+    sfxPlay(SFX_DENY);
+    return;
+  }
+  // a tap on the screen between the cartridges does nothing (four a page leave room round them, where a page
+  // arrow may not be): the X, or a tap off the screen, closes it
+  if (g < 0 && x >= V2_GB_X0 && x < V2_GB_X1 && y >= V2_GB_Y0 && y < V2_GB_Y1) return;
+  gamesMenuOpen = false;
   if (g < 0) sfxPlay(SFX_TAP);  // V2: its X (or a tap beside the cartridges) closes it with the click every X has (Fedor)
   if (g < 0) return;  // outside = go back
   sfxPlay(SFX_TAP);
@@ -8467,6 +8482,8 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return pressSet(t, 83 + inset, QUIZ_OPT_Y + i * (QUIZ_OPT_H + QUIZ_OPT_GAP), 300 - 2 * inset, QUIZ_OPT_H, dexName(quizOpts[i]));
   }
   if (gamesMenuOpen) {
+    if (int d = v2GamesArrowAt(x, y))  // V2: its page arrows
+      return v2PressSet(t, CX + d * V2_GAMES_ARROW_DX - CLOSE_R, V2_GAMES_ARROW_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, d < 0 ? "<" : ">");
     int g = gameAt(x, y);
     if (g < 0) return v2PressNav(x, y, t, 0, 0, 0, true);  // V2: its X
     if (g < 0) return false;
