@@ -110,7 +110,15 @@ and a cave for the grass on the night table.
   to the ball. Boulders along its top, each dark on its far side; its mouth an arch standing on the floor where the
   grass's gap is, turned to the left flipper, rocks hanging from it, two eyes glinting in the dark, pebbles by the way
   in. A ball that goes in is gone into it, its mouth glowing gold, and the wild one jumps out of it into the ring.
-  The meadow table keeps its grass.
+  The meadow table keeps its grass. The eyes blink now and then, and are gone while the wild one's out in the ring.
+- **Something in the grass** (Fedor: "make it look like there is a pokemon rustling through the grass there"):
+  unseen, it wanders round the patch, two seconds on the move, then a moment still. Where it is, a shadow under the
+  blades, the blades shaking and three pushed up over it swaying, and bits of leaf jumping up while it moves. The
+  patch is still while the wild one's out in the ring.
+- **Who comes out** (Fedor: "cave pokemon for the cave and forest/field pokemon for the grass patch"): picked as a
+  zone's Search picks (`zones.h`), from the zones that fit: out of the grass the Forest's or the Field's, out of the
+  cave the Cave's (Zubat, Geodude, Clefairy, Onix, Cubone and the rest), but never Diglett or Dugtrio, the bumpers'
+  own. Each zone's legendary can come out, seldom, as on a Search.
 - **The way into the grass** (Fedor, of the stone hole: "That entrance there still doesnt look good"): a gap where the
   grass parts on its lower-left side, turned to the left flipper. The floor shows through it, darkening deeper in, the
   grass's dark edge runs down both its sides with tufts leaning over, and a lit arrow on the floor points up it. A
@@ -128,8 +136,8 @@ and a cave for the grass on the night table.
 
 ### The battle, in the ring (Fedor: "The battles need to happen inside the pinball game. Not taken out")
 
-- In goes the ball, a "!" over the grass, and a **wild Pokemon** (picked as a wild battle picks one, at about your
-  level) **jumps out of the grass into the ring** in the middle of the table, the ball rolling back out toward the
+- In goes the ball, a "!" over the grass, and a **wild Pokemon** (one that lives there, at about your level: see
+  Who comes out, above) **jumps out of the grass into the ring** in the middle of the table, the ball rolling back out toward the
   right flipper. **Wild ODDISH!**
 - It stands in the ring with its **HP over it** and a **gold ring round it** for the time left (20 seconds). The
   flippers keep working: it's the ball that fights.
@@ -182,4 +190,5 @@ play: the battle on the table, in a ring where your Pokemon stood, each hit of t
 ramp; no trail; Pinball's own song; a smaller patch of grass; Diglett up longer. Then: the ramp up into the top corner,
 clear of the bumper, with arrows; a game's end back on its own page of the Games menu. After 2.2.7: the ball 13 px;
 the corners at the guides rounded; Diglett evolving into Dugtrio after two are beaten (without the holes counting
-toward it); a cave for the grass on the night table.)
+toward it); a cave for the grass on the night table; cave Pokemon out of the cave and forest and field ones out of
+the grass, and something rustling through the grass.)

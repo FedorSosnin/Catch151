@@ -4833,12 +4833,18 @@ void closePinball() {
   gBacklightFlashUntil = 0;
 }
 
-// into the grass: a wild one of your level or near it, as a wild battle picks it. Each hit of the ball on it is the
+// into the grass (or the cave): a wild one of your level or near it, as a zone's Search picks it, from the zones that
+// fit: the Forest's or the Field's out of the grass, the Cave's out of the cave. Each hit of the ball on it is the
 // stronger of your Pokemon's two moves, its damage worked out as a battle would (type and all), but between two and
 // five hits to knock it out, so it's a battle the time can hold
 void pinBattleSetup() {
   uint8_t lvl = btlCapLevel(pet.level()), foeLvl = btlWildLevel(lvl, random(4));
-  int16_t dex = pet.pickWildSpecies(foeLvl);
+  // who lives there (Fedor: "cave pokemon for the cave and forest/field pokemon for the grass patch"): the meadow's
+  // grass, the Forest's or the Field's; the night's cave, the Cave's, but not Diglett's line (the bumpers' own)
+  int16_t dex = 0;
+  for (int k = 0; k < 6 && (!dex || dex == 50 || dex == 51); k++)
+    dex = pet.pickZoneSpecies(pin.day ? (random(2) ? Z_FOREST : Z_FIELD) : Z_CAVE, foeLvl);
+  if (dex == 50 || dex == 51) dex = 41;  // (Zubat, if the cave kept offering Diglett)
   BtlFighter me = petFighter(lvl), foe = btlMakeWild(dex, foeLvl, btlWildGene(random(16)));
   BtlMoves mv = btlMovesFor(me.dex, lvl, dex);
   uint16_t dmg = 0;

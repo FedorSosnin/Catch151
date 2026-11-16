@@ -449,6 +449,18 @@ static void pbArch(int cx, int cy, int rx, int ry, int flat, Rgb col) {
       if (dx * dx + dy * dy <= 1) pbPx2(x, y, c);
     }
 }
+// the cave's mouth (its middle), and the eyes in it: open, or shut (blinking, or nobody in there: dark)
+static void pbCaveMouth(int &mx, int &my) {
+  mx = SNAP2((int)(PB_NOTCH[0][0] + (PB_NOTCH[1][0] - PB_NOTCH[0][0]) * 0.55f));
+  my = SNAP2((int)(PB_NOTCH[0][1] + (PB_NOTCH[1][1] - PB_NOTCH[0][1]) * 0.55f));
+}
+static void pbCaveEyes(bool open) {
+  int mx, my;
+  pbCaveMouth(mx, my);
+  Rgb c = open ? 0xFFE27A : 0x16141E;
+  scRect(mx - 6, my + 2, mx - 3, my + 5, c);
+  scRect(mx + 4, my + 2, mx + 7, my + 5, c);
+}
 static void pbCave(bool lit) {
   const Rgb rock = 0x5E5A78, rockLit = 0x8A84A8, rockHi = 0xB4AED0, rockDark = 0x3A3652, edge = 0x1B1B25;
   const int cx = PB_GRASS_X, cy = PB_GRASS_Y, rx = PB_GRASS_RX, ry = PB_GRASS_RY;
@@ -473,7 +485,9 @@ static void pbCave(bool lit) {
   scRect(cx - 4, cy - 22, cx + 1, cy - 21, edge);
   // the mouth, where the grass's gap is: an arch standing on the floor, a lit lip of rock round it, darker deeper in
   float ax = PB_NOTCH[0][0], ay = PB_NOTCH[0][1], bx = PB_NOTCH[1][0], by = PB_NOTCH[1][1];
-  const int mx = SNAP2((int)(ax + (bx - ax) * 0.55f)), my = SNAP2((int)(ay + (by - ay) * 0.55f)), flat = my + 12;
+  int mx, my;
+  pbCaveMouth(mx, my);
+  const int flat = my + 12;
   if (lit) twGlow(mx, my, 40, 0xFFE27A, 170);
   pbArch(mx, my, 17, 17, flat, rockLit);
   pbArch(mx, my, 15, 15, flat, edge);
@@ -486,10 +500,7 @@ static void pbCave(bool lit) {
     scRect(tx - 2, ty, tx + 3, ty + 3, edge);
     scRect(tx, ty + 4, tx + 1, ty + 5, edge);
   }
-  if (!lit) {  // two eyes in the dark: something waits in there
-    scRect(mx - 6, my + 2, mx - 3, my + 5, 0xFFE27A);
-    scRect(mx + 4, my + 2, mx + 7, my + 5, 0xFFE27A);
-  }
+  if (!lit) pbCaveEyes(true);  // two eyes in the dark: something waits in there
   for (int k = 0; k < 3; k++)  // pebbles by the way in
     pbEllipse(mx - 22 + k * 8, flat + 6 + (k % 2) * 4, 3, 2, k == 1 ? rockLit : rock);
   float dx = bx - ax, dy = by - ay;
@@ -500,6 +511,49 @@ static void pbCave(bool lit) {
 static void pbGrassFront(int y, bool lit) {
   if (!pbDay) pbCave(lit);
   else pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, SNAP2(y), true);
+}
+// Something in the grass (Fedor: "make it look like there is a pokemon rustling through the grass there"): unseen,
+// it wanders round the patch, two seconds on the move, then a moment still. Where it is, the blades shake over a
+// shadow, and bits of leaf jump up while it moves; still, they only twitch now and then. t: seconds
+#define PB_RUSTLE_R 10
+static void pbGrassRustle(float t) {
+  const float period = 3.2f, move = 2.0f;
+  float cyc = fmodf(t, period), way = floorf(t / period) * move + fminf(cyc, move);  // (how far it has gone)
+  bool moving = cyc < move;
+  float sx = PB_GRASS_X + 4 + 12 * sinf(way * 0.9f), sy = PB_GRASS_Y - 6 + 12 * sinf(way * 1.37f + 1);
+  int shake = moving ? ((int)(t * 10) % 2 ? 4 : -4) : ((int)(t * 4) % 6 == 0 ? 2 : 0);
+  Rgb b, l, d;
+  pbGrassCols(b, l, d);
+  const uint16_t B = sc565(b), L = sc565(l), D = sc565(d), S = sc565(scMix(b, d, 0.8f));
+  float ax = PB_NOTCH[0][0], ay = PB_NOTCH[0][1], dx = PB_NOTCH[1][0] - ax, dy = PB_NOTCH[1][1] - ay;
+  for (int y = SNAP2((int)sy - PB_RUSTLE_R); y <= sy + PB_RUSTLE_R; y += 2)
+    for (int x = SNAP2((int)sx - PB_RUSTLE_R); x <= sx + PB_RUSTLE_R; x += 2) {
+      float r2 = (x + 1 - sx) * (x + 1 - sx) + (y + 1 - sy) * (y + 1 - sy);
+      if (r2 > PB_RUSTLE_R * PB_RUSTLE_R) continue;
+      float ex = (x + 1 - PB_GRASS_X) / (float)PB_GRASS_RX, ey = (y + 1 - PB_GRASS_Y) / (float)PB_GRASS_RY;
+      if (ex * ex + ey * ey > 1) continue;
+      float k = ((x + 1 - ax) * dx + (y + 1 - ay) * dy) / (dx * dx + dy * dy);  // (not in the gap)
+      k = k < 0 ? 0 : k > 1 ? 1 : k;
+      float qx = x + 1 - ax - k * dx, qy = y + 1 - ay - k * dy;
+      if (qx * qx + qy * qy < 12 * 12) continue;
+      uint16_t c = pbTuftAt(x + shake, y + (r2 < 30 ? 2 : 0), false, B, L, D);
+      if (r2 < 56 && c != L) c = S;  // its shadow under the blades
+      pbPx2(x, y, c);
+    }
+  for (int k = -1; k <= 1; k++) {  // blades pushed up over it, swaying as it goes
+    int sway = moving ? ((int)(t * 10) + k) % 2 ? 2 : -2 : 0;
+    int x = SNAP2((int)sx + k * 6 + sway), y = SNAP2((int)sy - 6 - (k ? 0 : 4));
+    scRect(x - 2, y - 10, x + 3, y + 1, d);
+    scRect(x + sway, y - 12, x + sway + 1, y - 11, d);
+    scRect(x, y - 10, x + 1, y - 1, l);
+  }
+  if (!moving) return;
+  for (int k = 0; k < 3; k++) {  // bits of leaf jumping up and falling back
+    float life = fmodf(t * 1.7f + k * 0.37f, 1.0f);
+    int x = SNAP2((int)(sx + (k - 1) * (4 + 10 * life))), y = SNAP2((int)(sy - 12 - 22 * sinf(life * 3.14159f)));
+    scRect(x - 4, y - 2, x + 3, y + 3, d);
+    scRect(x - 2, y, x + 1, y + 1, l);
+  }
 }
 // the arrows up the ramp (Fedor: "maybe have some arrows or something going upward up the ramp"), on its climb: arrow k
 // (0 the lowest) unlit, or lit, as they chase up it one after another (pinDraw())
@@ -757,6 +811,11 @@ static void pinDraw(const PinState &s, bool keys) {
   else if (s.digUp || s.digHitT > 0)
     pbDiglett(true, !s.digUp, s.digUp ? s.digT / (s.dug ? PB_DUG_S : PB_DIG_S) : 0, dugOn ? 51 : 50, s.digUp ? s.dugHeads : 0);
   if (s.grassT > 0 || s.phase == PIN_CATCH) pbGrass(true);
+  else if (!s.btlOn) {  // something in there: rustling through the grass, or eyes blinking in the cave
+    float t = millis() / 1000.0f;
+    if (pbDay) pbGrassRustle(t);
+    else if (fmodf(t, 3.7f) < 0.18f) pbCaveEyes(false);
+  } else if (!pbDay) pbCaveEyes(false);  // (out in the ring: nobody in there)
   pbWild(s, MOVE_TBL[s.move].type);
   pbFlipperAt(-1, s.flipA[0]);
   pbFlipperAt(1, s.flipA[1]);
