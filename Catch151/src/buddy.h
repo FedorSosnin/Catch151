@@ -47,6 +47,10 @@ enum BuddyType : uint8_t {
 static_assert(BM_FISH == 17, "relay/src/index.js reads BM_FISH as 17");
 static_assert(BM_SCORE == 18, "relay/src/index.js reads BM_SCORE as 18");
 #define BUDDY_RELAY_ID 0xFFFFFFFFu  // the relay, when it answers a BM_SCORE (relay/src/board.js RELAY_ID)
+// the leaderboard's mark on a BM_SCORE or BM_FISH (in turn): a best made since the board started over (2.2.10; Fedor:
+// the first scores "were made during testing when the games were still evolving"). The relay takes only these
+// (relay/src/board.js SEASON); 2.2.9 sent its all-time records without it
+#define BOARD_SEASON 1
 enum BuddyKind : uint8_t { BK_BATTLE = 1, BK_TRADE, BK_SHOWDOWN, BK_VOLLEY, BK_SURF };
 
 struct __attribute__((packed)) BuddyMsg {

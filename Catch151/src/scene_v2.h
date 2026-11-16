@@ -680,7 +680,8 @@ static uint32_t v2ClockEpoch() {
 // clock"). When it wakes, the big clock fades out where it is and the clock is back on top as soon as it's gone
 // (Fedor: the glide back up "is just too jarring to move across over your Pokemon ... let's just do that fade
 // effect"; the way down "lets you know what happened. Not very jarring ... Maybe just increase that speed a little").
-// Already down if it was asleep when the game started
+// Already down if it was asleep when the game started. Only on a device (the Knomi, the Waveshare): it's a bedside
+// clock there
 #define V2_SLEEP_CLOCK_Y 280      // the big clock's top, asleep: between its feet (and shadow) and the icons
 #define V2_SLEEP_CLOCK_MS 900     // the glide down (it was 1200)
 #define V2_SLEEP_CLOCK_FADE_MS 400  // the fade on waking
@@ -689,7 +690,12 @@ static float v2SleepClockP(int *alpha = nullptr) {
   static int8_t down = -1;  // -1: not seen yet
   static uint32_t at = 0;
   static float from = 1;    // where the big clock was when it woke: it fades out there
+#ifdef BOARD_HOST
+  bool want = false;  // a computer and the web: it stays on top (Fedor: it "looks kind of wacky" there; on the Knomi "it
+                      // looks proper and like it belongs")
+#else
   bool want = pet.sleeping && !pet.ceremony && !pet.isEgg();
+#endif
   uint32_t now = millis();
   float t = (now - at) / (float)(down > 0 ? V2_SLEEP_CLOCK_MS : V2_SLEEP_CLOCK_FADE_MS);
   if (t > 1) t = 1;

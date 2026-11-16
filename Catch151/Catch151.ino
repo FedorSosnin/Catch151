@@ -4679,15 +4679,17 @@ void renderRun() {
 // keys move the aim ring, and the button or Space casts there), tap when the float goes under, then tap at the fish's
 // pace to reel it in; each one is weighed and let go. It all reads on the screen alone (the Knomi has no speaker):
 // the sounds, and the buzzes that come with them on a phone or a controller, only add to it.
-// Reel Fishing's heaviest fish, to the relay alone (BM_FISH): it keeps the heaviest anyone has landed for its /stats,
-// the weight and the kind and nothing about who. Sent each time the relay connects and when there's a new one
+// Reel Fishing's heaviest fish since the leaderboard started over (pet.boardHi[5]), to the relay alone (BM_FISH,
+// marked BOARD_SEASON): the weight, the kind and the gamer tag. Sent each time the relay connects and at each
+// game's end
 void fishReport() {
-  if (!pet.fishBig || !buddyDexOk(pet.fishBigDex)) return;
+  if (!pet.boardHi[5] || !buddyDexOk(pet.boardFishDex)) return;
   BuddyMsg m;
   buddyInit(m, BM_FISH, buddyNetId(), 0, 0);
-  m.dex = pet.fishBigDex;
-  m.shiny = pet.fishBigShiny ? 1 : 0;
-  m.hp = pet.fishBig;
+  m.dex = pet.boardFishDex;  // V2: the biggest since the leaderboard started over (pet.boardHi), marked so
+  m.shiny = pet.boardFishShiny ? 1 : 0;
+  m.hp = (uint16_t)pet.boardHi[5];
+  m.turn = BOARD_SEASON;
   strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);  // V2: the gamer tag, for the leaderboard
   buddyNetReport(m);
 }
@@ -4697,11 +4699,12 @@ void fishReport() {
 // seconds (4), Pinball's score (6), as the Games menu numbers them. Nothing before there's one. Sent at each game's
 // end (the relay keeps the best), all of them when the relay is reached anew or the tag changes
 void scoreReport(uint8_t g) {
-  uint32_t v = g == 0 ? pet.gameHi : g == 2 ? pet.runHi : g == 3 ? pet.dungeonHi : g == 4 ? pet.surfHi : g == 6 ? pet.pinHi : 0;
+  uint32_t v = g < 7 && g != 1 && g != 5 ? pet.boardHi[g] : 0;  // the best since the leaderboard started over
   if (!v) return;
   BuddyMsg m;
   buddyInit(m, BM_SCORE, buddyNetId(), 0, v);  // (the session field carries the score)
   m.kind = g;
+  m.turn = BOARD_SEASON;  // the mark the relay takes it by (buddy.h)
   strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);
   buddyNetReport(m);
 }
@@ -4779,7 +4782,8 @@ void fishEvents(uint32_t ev) {
     sfxPlay(fishNewHi || fishGoal(fish.total) == 3 ? SFX_MEDAL : SFX_PLAY);
     fishOverT = now | 1;
     Serial.printf("reel fishing: %u.%u kg\n", (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
-    if (big) fishReport();
+    (void)big;
+    fishReport();  // V2: the biggest since the leaderboard started over (the relay keeps the heaviest)
   }
 }
 

@@ -2,19 +2,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID } from '../src/board.js';
+import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf } from '../src/board.js';
 import { boardPublic, fishReport } from '../src/index.js';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
 // a 65-byte buddy message as the game builds it (src/buddy.h)
-function msg(type, { from = 1234, session = 0, kind = 0, dex = 0, shiny = 0, hp = 0, nick = '' } = {}) {
+function msg(type, { from = 1234, session = 0, kind = 0, dex = 0, shiny = 0, hp = 0, nick = '', season = SEASON } = {}) {
   const b = new ArrayBuffer(65), v = new DataView(b);
   'PKG1'.split('').forEach((c, i) => v.setUint8(i, c.charCodeAt(0)));
   v.setUint8(5, type);
   v.setUint32(6, from, true);
   v.setUint32(14, session, true);
   v.setUint8(18, kind);
+  v.setUint8(20, season);  // the board's mark (src/buddy.h BOARD_SEASON)
   v.setInt16(22, dex, true);
   v.setUint8(25, shiny);
   v.setUint16(26, hp, true);
@@ -49,6 +50,7 @@ test('a score message is read, and one past what a game can score is ignored', (
   assert.equal(scoreReport(msg(BM_SCORE, { kind: 1, session: 9 })), null);     // Who's That? isn't on the board
   assert.equal(scoreReport(msg(BM_SCORE, { kind: 3, session: 0 })), null);
   assert.equal(scoreReport(msg(17, { kind: 6, session: 5 })), null);           // not a score
+  assert.equal(scoreReport(msg(BM_SCORE, { kind: 6, session: 5, season: 0 })), null);  // unmarked: 2.2.9's all-time records
   assert.equal(scoreReport(new ArrayBuffer(64)), null);
 });
 
@@ -101,4 +103,11 @@ test('the first of a game is told so: a BM_SCORE from the relay to it, as src/bu
   assert.equal(v.getUint8(18), 6);
   const h = readFileSync(HERE + '../../src/buddy.h', 'utf8');
   assert.match(h, /#define BUDDY_RELAY_ID 0xFFFFFFFFu/);
+});
+
+test('the board started over: only a fish or score with the mark counts, and the mark is the game\'s', () => {
+  assert.equal(seasonOf(msg(17, { dex: 130, hp: 2500 })), SEASON);
+  assert.equal(seasonOf(msg(17, { dex: 130, hp: 2500, season: 0 })), 0);
+  const h = readFileSync(HERE + '../../src/buddy.h', 'utf8');
+  assert.match(h, new RegExp('#define BOARD_SEASON ' + SEASON + '\\b'));
 });

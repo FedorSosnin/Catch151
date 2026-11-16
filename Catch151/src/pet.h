@@ -171,7 +171,19 @@ public:
   bool setGamerTag(const char *tag);  // false for one that's empty or rude (gamertag.h): then it's not changed
   void askedForTag();                 // the keyboard for it was offered: not again by itself
   bool topScore();                   // the relay says one of your bests is the first on the leaderboard: its medal (once)
-  bool hasScore() const { return gameHi || runHi || surfHi || dungeonHi || pinHi || fishBig; }  // a record on the board
+  // V2: the leaderboard's bests (Fedor: the board's first scores "were made during testing when the games were still
+  // evolving ... put them all to zeros until someone plays the game and gets their score put there"): each game's
+  // best since 2.2.10, by the Games menu's numbers (Berry Drop 0, Rock Hopper 2, Dungeon Crawler 3, PikaSurf 4, the
+  // biggest fish's tenths of a kg 5 with its kind, Pinball 6), from zero, beside the all-time records above. What
+  // goes to the relay (marked BOARD_SEASON, buddy.h)
+  uint32_t boardHi[7] = {};
+  int16_t boardFishDex = 0;
+  bool boardFishShiny = false;
+  bool hasScore() const {  // a best on the board since it started over: the gamer tag is asked for after the first
+    for (int g = 0; g < 7; g++)
+      if (boardHi[g]) return true;
+    return false;
+  }
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;
   uint8_t candyToday = 0;  // treats given on day candyDay

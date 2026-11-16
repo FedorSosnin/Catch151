@@ -6,6 +6,12 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **The Leaderboard starts over:** its first scores came from games still changing while they were made (a Berry Drop of 255 from before it sped up), and from before gamer tags. The board is empty again, and each game keeps a best for the board from now on, from zero, beside its all-time record: only games you play from this version count, and the gamer tag is asked for after the first of them. Copies on 2.2.9 no longer put their all-time records on the board.
+- **The bedside clock wakes up quietly:** when your Pokémon wakes, the big clock fades out where it is and the clock is back on top straight after, instead of gliding back up over your Pokémon. Its glide down when it falls asleep is a little quicker.
+- **The bedside clock on the Knomi only:** on a computer and in the browser the clock stays on top while your Pokémon sleeps.
+
 ## [2.2.9] - 2026-11-16
 
 2.2.8 went out in this release too: its Pinball changes and the bedside clock are under 2.2.8 below.

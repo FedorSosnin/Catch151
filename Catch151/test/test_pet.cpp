@@ -2033,6 +2033,21 @@ TEST(save, state_survives_a_reboot) {
   CHECK_EQ(b.pinHi, (uint32_t)123450);
   CHECK_STREQ(b.gamerTag, "PIKA");
   CHECK(b.tagAsked);
+  CHECK_EQ(b.boardHi[6], (uint32_t)0);  // the leaderboard's bests: from zero, not the all-time records
+  CHECK(!b.hasScore());
+  b.pinResult(5000);  // a game played: on the board (below the all-time 123450)
+  CHECK_EQ(b.boardHi[6], (uint32_t)5000);
+  CHECK_EQ(b.pinHi, (uint32_t)123450);
+  CHECK(b.hasScore());
+  CHECK(!b.fishBiggest(900, 86, false));  // a Seel under the all-time Gyarados: not the biggest ever...
+  CHECK_EQ(b.boardHi[5], (uint32_t)900);  // ...but the board's
+  CHECK_EQ((int)b.boardFishDex, 86);
+  b.rename("SPARKY");
+  Pet c;
+  c.begin();
+  CHECK_EQ(c.boardHi[6], (uint32_t)5000);
+  CHECK_EQ(c.boardHi[5], (uint32_t)900);
+  CHECK_EQ((int)c.boardFishDex, 86);
   CHECK(!b.hasMedal(MED_HISCORE));  // the high score's golden cartridge: once, kept as the trainer's
   CHECK(b.topScore());
   CHECK(b.hasMedal(MED_HISCORE) && b.newMedal == MED_HISCORE);

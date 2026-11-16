@@ -815,6 +815,7 @@ void Pet::exerciseReward(uint8_t score, bool costsFood) {
 void Pet::playResult(uint8_t score) {
   if (ceremony != CER_NONE || isEgg()) return;
   if (score > gameHi) gameHi = score;  // new record
+  if (score > boardHi[0]) boardHi[0] = score;  // ...and on the leaderboard
   exerciseReward(score, false);
   fullness = clamp100(fullness + 5);   // what falls are berries: catching also feeds
   save();
@@ -823,6 +824,7 @@ void Pet::playResult(uint8_t score) {
 void Pet::runResult(uint16_t secs) {
   if (ceremony != CER_NONE || isEgg()) return;
   if (secs > runHi) runHi = secs;
+  if (secs > boardHi[2]) boardHi[2] = secs;
   exerciseReward(secs / 4 > 255 ? 255 : secs / 4);
   save();
 }
@@ -830,6 +832,7 @@ void Pet::runResult(uint16_t secs) {
 void Pet::surfResult(uint16_t secs) {
   if (ceremony != CER_NONE || isEgg()) return;
   if (secs > surfHi) surfHi = secs;
+  if (secs > boardHi[4]) boardHi[4] = secs;
   exerciseReward(secs / 4 > 255 ? 255 : secs / 4);
   save();
 }
@@ -846,6 +849,7 @@ void Pet::fishResult(uint16_t kg10) {
 void Pet::pinResult(uint32_t score) {
   if (ceremony != CER_NONE || isEgg()) return;
   if (score > pinHi) pinHi = score;
+  if (score > boardHi[6]) boardHi[6] = score;
   exerciseReward(score / 400 > 255 ? 255 : score / 400);
   save();
 }
@@ -878,7 +882,9 @@ void Pet::askedForTag() {
 }
 
 bool Pet::fishBiggest(uint16_t kg10, int16_t dex, bool shiny) {
-  if (ceremony != CER_NONE || isEgg() || kg10 <= fishBig) return false;
+  if (ceremony != CER_NONE || isEgg()) return false;
+  if (kg10 > boardHi[5]) boardHi[5] = kg10, boardFishDex = dex, boardFishShiny = shiny;  // the leaderboard's
+  if (kg10 <= fishBig) return false;
   fishBig = kg10, fishBigDex = dex, fishBigShiny = shiny;
   return true;
 }
@@ -895,6 +901,7 @@ void Pet::friendlyBattle(bool won) {
 void Pet::dungeonResult(uint8_t floor) {
   if (ceremony != CER_NONE || isEgg()) return;
   if (floor > dungeonHi) dungeonHi = floor;
+  if (floor > boardHi[3]) boardHi[3] = floor;
   exerciseReward(floor > 100 ? 200 : floor * 2);
   save();
 }
@@ -1272,6 +1279,9 @@ void Pet::save() {
   prefs.putBool("fsbs", fishBigShiny);
   prefs.putUInt("pnhi", pinHi);
   prefs.putString("gtag", gamerTag);
+  prefs.putBytes("lbhi", boardHi, sizeof(boardHi));
+  prefs.putShort("lbfd", boardFishDex);
+  prefs.putBool("lbfs", boardFishShiny);
   prefs.putBool("gtak", tagAsked);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
@@ -1391,6 +1401,10 @@ void Pet::load() {
     if (!gamerTagClean(t, gamerTag)) gamerTag[0] = 0;
   }
   tagAsked = prefs.getBool("gtak", false);
+  if (prefs.getBytes("lbhi", boardHi, sizeof(boardHi)) != sizeof(boardHi))
+    memset(boardHi, 0, sizeof(boardHi));  // (a save from before 2.2.10 has none: the board starts from zero)
+  boardFishDex = prefs.getShort("lbfd", 0);
+  boardFishShiny = prefs.getBool("lbfs", false);
   dungeonHi = prefs.getUChar("dhi", 0);
   candyToday = prefs.getUChar("cdyn", 0);
   candyDay = prefs.getUInt("cdyd", 0);

@@ -1321,11 +1321,13 @@ static void testKeyboard() {
   extern void gameEndToMenu(int g);
   pet.gamerTag[0] = 0;
   pet.tagAsked = false;
-  uint16_t hi = pet.gameHi;
-  pet.gameHi = 0, pet.runHi = 0, pet.surfHi = 0, pet.dungeonHi = 0, pet.pinHi = 0, pet.fishBig = 0;
-  gameEndToMenu(0);  // no score yet: just the menu
+  uint32_t board[7];
+  memcpy(board, pet.boardHi, sizeof(board));
+  memset(pet.boardHi, 0, sizeof(pet.boardHi));
+  pet.gameHi = 40;  // an all-time record from before the leaderboard started over doesn't count
+  gameEndToMenu(0);  // no score on the board yet: just the menu
   CHECK(gamesMenuOpen && !kbOpen);
-  pet.gameHi = 12;
+  pet.boardHi[0] = 12;
   gameEndToMenu(1);  // Who's That? has no place on the board
   CHECK(gamesMenuOpen && !kbOpen);
   gameEndToMenu(0);  // a scored game's end: the tag's keyboard
@@ -1356,7 +1358,7 @@ static void testKeyboard() {
   tapAt(233, 422);  // the X: back to the menu, as it was
   CHECK(!kbOpen && gamesMenuOpen && !strcmp(pet.gamerTag, "YYYY"));
   gamesMenuOpen = false;
-  pet.gameHi = hi;
+  memcpy(pet.boardHi, board, sizeof(board));
 }
 
 // the Catch 151 Dex page says what the game says: tools/dex.json is the game's Pokedex, moves and type chart as they

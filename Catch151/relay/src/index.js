@@ -31,7 +31,7 @@
 // It keeps the scores, the tags, the days and a hash of each device's id (one entry a device), nothing
 // about who or where.
 
-import { BM_SCORE, GAMES, scoreReport, boardAdd, boardSvg, tagOf, idHash, tagShown, topReply } from './board.js';
+import { BM_SCORE, GAMES, SEASON, seasonOf, scoreReport, boardAdd, boardSvg, tagOf, idHash, tagShown, topReply } from './board.js';
 
 const MSG_SIZE = 65;
 const MAX_PER_GROUP = 16;  // a home has a few devices: more is someone filling a group on purpose
@@ -102,7 +102,7 @@ export default {
         const lobby = env.LOBBY.get(env.LOBBY.idFromName('lobby'));
         // (board: none from a lobby still on the code from before the leaderboard, for a moment after a deploy)
         const { online, fish, board = { games: [], fish: [] } } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
-        const big = fish ? { lb: lb(fish.kg10), kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
+        const big = fish && FISH[fish.dex] ? { lb: lb(fish.kg10), kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
         res = new Response(svg ? boardSvg(online, board) : JSON.stringify({ online, fish: big, biggest: fishText(fish), board }), {
           headers: {
             'content-type': svg ? 'image/svg+xml' : 'application/json',
@@ -156,20 +156,13 @@ export class Lobby {
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
   }
 
-  // the heaviest fish reported, kept in the object's storage (read once, then from memory)
-  async biggest() {
-    if (this.fish === undefined) this.fish = (await this.ctx.storage.get('fish')) || null;
-    return this.fish;
-  }
-
-  // the leaderboard: each game's top ten ({ game: [entry] }) and the fish's, from storage once. The heaviest fish
-  // kept before there was a board starts the fish's (with no tag)
+  // the leaderboard: each game's top ten ({ game: [entry] }) and the fish's, from storage once. Kept under the
+  // season's keys (board.js SEASON): the board before it started over is still in storage, as scores, fishTop and
+  // fish, and nothing reads it
   async board() {
     if (this.scores === undefined) {
-      this.scores = (await this.ctx.storage.get('scores')) || {};
-      this.fishTop = (await this.ctx.storage.get('fishTop')) || [];
-      const f = await this.biggest();
-      if (!this.fishTop.length && f) this.fishTop.push({ id: '', tag: '', score: f.kg10, dex: f.dex, shiny: f.shiny, day: f.day });
+      this.scores = (await this.ctx.storage.get('scores' + SEASON)) || {};
+      this.fishTop = (await this.ctx.storage.get('fishTop' + SEASON)) || [];
     }
     return { scores: this.scores, fishTop: this.fishTop };
   }
@@ -177,7 +170,9 @@ export class Lobby {
   async fetch(request) {
     if (new URL(request.url).pathname === '/stats') {  // each socket once, whatever its groups
       const { scores, fishTop } = await this.board();
-      return Response.json({ online: this.ctx.getWebSockets().length, fish: await this.biggest(), board: boardPublic(scores, fishTop) });
+      const f = fishTop[0];  // the biggest fish (the README's badge): the board's first
+      const fish = f ? { kg10: f.score, dex: f.dex, shiny: f.shiny, day: f.day } : null;
+      return Response.json({ online: this.ctx.getWebSockets().length, fish, board: boardPublic(scores, fishTop) });
     }
     const groups = (request.headers.get('X-Groups') || '').split(',').filter(Boolean);
     for (const g of groups)
@@ -217,19 +212,14 @@ export class Lobby {
     a.tokens -= 1;
     ws.serializeAttachment(a);
     const type = new Uint8Array(data)[5];
-    if (type === BM_FISH) {  // a device's heaviest fish: the board's, and kept if it's the heaviest yet; never passed on
+    if (type === BM_FISH) {  // a device's heaviest fish since the board started over: the board's; never passed on
       const f = fishReport(data);
-      if (!f) return;
+      if (!f || seasonOf(data) !== SEASON) return;  // (unmarked: an all-time one from 2.2.9 or before)
       const day = new Date().toISOString().slice(0, 10);
       const { fishTop } = await this.board();
       const from = new DataView(data).getUint32(6, true), id = idHash(from), tag = tagOf(new Uint8Array(data, 34, 12));
-      if (boardAdd(fishTop, { id, tag, score: f.kg10, dex: f.dex, shiny: f.shiny, day })) await this.ctx.storage.put('fishTop', fishTop);
+      if (boardAdd(fishTop, { id, tag, score: f.kg10, dex: f.dex, shiny: f.shiny, day })) await this.ctx.storage.put('fishTop' + SEASON, fishTop);
       if (fishTop[0].id === id) this.tellTop(ws, from, 5, f.kg10);  // the heaviest of all: Reel Fishing's first
-      const best = await this.biggest();
-      if (!best || f.kg10 > best.kg10) {
-        this.fish = { ...f, day };
-        await this.ctx.storage.put('fish', this.fish);
-      }
       return;
     }
     if (type === BM_SCORE) {  // a game's best, with the gamer tag: the board's; never passed on
@@ -238,7 +228,7 @@ export class Lobby {
       const { scores } = await this.board();
       const list = scores[s.game] || (scores[s.game] = []);
       if (boardAdd(list, { id: s.id, tag: s.tag, score: s.score, day: new Date().toISOString().slice(0, 10) }))
-        await this.ctx.storage.put('scores', scores);
+        await this.ctx.storage.put('scores' + SEASON, scores);
       if (list[0].id === s.id) this.tellTop(ws, new DataView(data).getUint32(6, true), s.game, s.score);
       return;
     }

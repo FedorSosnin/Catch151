@@ -73,7 +73,7 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 Each minigame's best ten, from every copy of the game, are on the **[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**, with the gamer tag that set each one and the day: Berry Drop's score, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball's score. The README shows each game's best.
 
 - **Your gamer tag:** up to four characters, typed on the keyboard. The game asks for it once, after your first game with a score; after that, the label on the Game Boy under **GAMES** in the Games menu changes it (four bars until you have one). A rude one gets **PICK ANOTHER**, and one that gets through anyway shows as `****` on the leaderboard.
-- **What's sent:** your best in each game, your tag, and nothing else about you, when the game reaches the buddy relay, at each game's end, and when your tag changes. Only your best counts, once a game: a better one replaces it.
+- **What's sent:** your best in each game since the board started over (2.2.10: each game keeps a best for the board from zero, beside its all-time record), your tag, and nothing else about you, when the game reaches the buddy relay, at each game's end, and when your tag changes. Only your best counts, once a game: a better one replaces it.
 
 ### The keyboard
 

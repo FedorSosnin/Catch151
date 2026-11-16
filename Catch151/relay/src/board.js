@@ -5,6 +5,12 @@
 import { FONT, CART, CART_W, CART_H } from './board_art.js';
 
 export const BM_SCORE = 18;  // src/buddy.h
+// The board started over on 2026-11-16 (Fedor: some of the first scores "were made during testing when the games were
+// still evolving ... we should put them all to zeros until someone plays the game and gets their score put there"):
+// only a score or a fish sent with this mark (the message's turn byte, offset 20: src/buddy.h BOARD_SEASON) counts, a
+// best made since. 2.2.9 sent its all-time records unmarked: those are ignored
+export const SEASON = 1;
+export const seasonOf = (data) => new Uint8Array(data)[20];
 export const RELAY_ID = 0xffffffff;  // the relay as a message's sender (src/buddy.h BUDDY_RELAY_ID)
 export const TOP = 10;       // kept a game
 // the games on the board, as the Games menu numbers them (src/menus_v2.h V2_CART_GAME), with the most a real one can
@@ -64,7 +70,7 @@ export function idHash(from) {
 export function scoreReport(data, MSG_SIZE = 65) {
   if (!(data instanceof ArrayBuffer) || data.byteLength !== MSG_SIZE) return null;
   const v = new DataView(data);
-  if (v.getUint8(5) !== BM_SCORE) return null;
+  if (v.getUint8(5) !== BM_SCORE || v.getUint8(20) !== SEASON) return null;
   const game = v.getUint8(18), score = v.getUint32(14, true), g = GAMES[game];
   if (!g || score < 1 || score > g.max) return null;
   return { game, score, tag: tagOf(new Uint8Array(data, 34, 12)), id: idHash(v.getUint32(6, true)) };
