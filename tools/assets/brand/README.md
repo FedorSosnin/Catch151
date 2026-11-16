@@ -12,6 +12,7 @@ multiple of it, with `image-rendering: pixelated`.
 |---|---|
 | `catch151.svg`, `.png`, `@2x`, `@3x` | The game: its icon, then CATCH 151 |
 | `catch151-large.*` | The same drawn larger (12 px letters, a 28 px icon), not scaled: the game's About page shows it |
+| `catch151-large-spin.gif` | The large logo moving, the island in its screen turning clockwise, a turn every 4 s, round and round (40 frames, 6x: shown at 363 wide, sharp on a Retina screen). The README's top |
 | `catch151-name.*` | The name alone |
 | `catch151-dex.*` | Its Pokédex: the sparkle icon, CATCH 151 and a gold DEX sign |
 | `catch151-soundtrack.svg`, `@2x.png` | Its soundtrack page (`web/music/`): the logo and a wooden SOUNDTRACK sign |

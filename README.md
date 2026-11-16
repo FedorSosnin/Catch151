@@ -1,6 +1,6 @@
 # Catch 151
 
-<p align="center"><img src="tools/assets/brand/catch151-large@3x.png" width="363" alt="Catch 151"></p>
+<p align="center"><img src="tools/assets/brand/catch151-large-spin.gif" width="363" alt="Catch 151, the island in its logo turning"></p>
 
 <p align="center">
   <a href="https://fedorsosnin.github.io/Catch151/"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ffedorsosnin.github.io%2FCatch151%2Fupdate.json&query=%24.version&label=Knomi%20V2&prefix=install%20v&color=e8742a&cacheSeconds=3600" alt="Install on the Knomi V2 from your browser"></a>
