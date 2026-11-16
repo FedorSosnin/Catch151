@@ -32,11 +32,16 @@ This is a proposal to decide on before building. Nothing below is settled yet.
   for the time left (a few seconds). Hit it with the ball before the ring runs out: knocked dizzy, **+1000**, and back
   down its hole. Too slow and it ducks back down. Then the bumpers start over.
 - **Your own Pokemon** on a pad in the middle: hit it 3 times for a bonus (+100 a hit).
-- **The battle spot**, turned to the left flipper. The rock cave is gone (Fedor: "minus the cave"). Two ideas for what
-  replaces it:
-  - **A: a patch of tall grass** on the right (the pick). It's where wild Pokemon come from in the games, with a
-    hole of stones in its front and two eyes glowing in it.
-  - **B: a tunnel into the right wall**, a stone arch round a dark mouth.
+- **The tall grass**, on the right, where wild Pokemon wait (it took the rock cave's place: Fedor, "minus the cave",
+  then "If we use the grass"). It's drawn in the Game Boy games' spirit (Fedor: "grass that resembles grass from
+  Pokemon Blue"): an original 16 px tile, 8 x 8 Knomi pixels of staggered tufts, each a dark edge round light blades
+  on a mid green, in a night and a meadow colouring. The patch has a dark edge, and tufts poke up along its top for
+  height.
+- **The way into the grass** (Fedor, of the stone hole: "That entrance there still doesnt look good"): a gap where the
+  grass parts on its lower-left side, turned to the left flipper. The floor shows through it, darkening deeper in, the
+  grass's dark edge runs down both its sides with tufts leaning over, and a lit arrow on the floor points up it. A
+  ball that goes in disappears into the blades (the grass in front draws over it), the grass rustles (every other row
+  of tufts shifts), and a "!" pops up over the patch, as when a trainer spots you.
 - **Slingshots** over the flippers, and the guides down to them.
 
 ### Raised: over and under (Fedor: "ramps and areas the ball can go under and over")
@@ -47,14 +52,21 @@ This is a proposal to decide on before building. Nothing below is settled yet.
 - **Under it:** a ball going round the orbit passes **under the wire rail** along the left (in its shade, the wires
   across it). On the ramp the ball is drawn bigger and its shadow falls further off, so it's plain which level it's on.
 
-### The battle (Fedor: "The mini battle is cool too")
+### The battle (Fedor: "The mini battle is cool too", then "the battle scene should be a bit stronger")
 
-- In goes the ball; **BATTLE!**, and a round window opens over the dimmed table: a clearing in the tall grass, a wild
-  Pokemon of the zone you're in, and yours facing it.
-- **Tap (or press any key) to attack**, as fast as you like. A gold ring round the window is the time left (a few
-  seconds). Knock it out in time: **WIN! +500**; if not, no bonus.
-- Either way, out comes the ball, shot from the hole toward the left flipper, and play goes on. The flippers rest
-  during the battle, so nothing is lost while you're tapping.
+- In goes the ball, and **the game's own battle** takes the whole screen: the wild battle's scene with its two bases,
+  a wild Pokemon of the zone you're in **standing in tall grass** on its base (the grass in front of its feet), yours
+  from behind on its base, and both HP boxes, all as in a real battle. The same tall grass frames the bottom of the
+  scene. First it says **Wild ODDISH!**
+- **Tapping does your attack** (Fedor: "Tapping to attack should do your attack skill"). The buttons are your
+  Pokemon's own two moves, as in a battle (Squirtle's BITE and WATER GUN, say), in their types' colours, with
+  **TAP A MOVE!** under them. Tap the left or right half (or press Left or Right on a computer) to use that move, as
+  often as you can. Each lands as in a battle: yours lunges, the move's effect hits, a line says
+  **SQUIRTLE: WATER GUN!**, and its HP drops; type matchups count.
+- A **gold ring round the rim** is the time left (a few seconds). Knock it out in time: **ODDISH fainted...**,
+  **WIN! +500**; if not, no bonus.
+- Either way, the ball flies back out of the grass, down the gap toward the left flipper, and play goes on. The
+  flippers rest during the battle, so nothing is lost while you're tapping.
 - Open: should a win also count for something outside Pinball (seen in the Pokedex, say), or stay just points?
 
 ## Controls
@@ -83,33 +95,36 @@ gentle table looks smooth there too.
   gives them, and Repel seconds for the time actually played.
 - **Play Again!** and the X at the end, as in every game.
 
-## The mockups (2026-11-15; third pass after Fedor's second look)
+## The mockups (2026-11-15; fourth pass after Fedor's third look)
 
-Drawn in the real game by `src/pinball_v2.h`, on a computer's console: `PINMOCK n` (1 to 25, 0 off).
+Drawn in the real game by `src/pinball_v2.h`, on a computer's console: `PINMOCK n` (1 to 26, 0 off).
 
 1. The night table at the start: the ball rolling in along the orbit, TAP LEFT OR RIGHT over the flippers. 2: the
    meadow table, the same moment.
-3. The how-to card (the Knomi's words). 20: the same on a computer, saying the keys.
+3. The how-to card (the Knomi's words). 21: the same on a computer, saying the keys.
 4. A flip: a finger on the left half (that half's rim glows), the ball off the left flipper toward the ramp.
 5. Over: the ball up the ramp, over the orbit lane, bigger and its shadow further off: RAMP! +250.
 6. Under: the ball round the orbit under the wire rail, lighting a berry: ORBIT +50.
 7. A bumper (the Great Ball), +10.
 8. All three bumpers lit: Diglett pops out of its hole, its time ring round it: HIT DIGLETT! 9: hit, dizzy, +1000.
-10. Into the tall grass: the grass rustling, its hole glowing, BATTLE! 11: the other idea, a tunnel in the right wall.
-12. The battle in a clearing in the grass: a wild Oddish, yours facing it, TAP TO ATTACK! 13: won, +500.
-14. Spat back out of the grass toward the left flipper, +500.
-15. Your Pokemon hit, +100. 16. Every berry lit: BERRIES x2!
-17. A lost ball: down the drain, the bottom glowing red, BALL 2.
-18. The end, as every game's: the score, NEW RECORD!, the joy, PLAY AGAIN!, the Repel row and the X.
-19. On a computer: the keys over the flippers (Left and Right flip, Space both) in place of the touch hint.
-21. Moving: the ball rolling round the orbit. 22: the ball close up, rolling right, down and left.
-23 to 25: the meadow look of 5, 8 and 12.
+10. Into the tall grass: the ball gone into the blades, the grass rustling, a "!" over it.
+11. The battle: Wild ODDISH!, standing in tall grass on its base, yours from behind, both HP boxes.
+12. Tap a move: your Pokemon's two moves as the buttons, TAP A MOVE!, the time ring round the rim.
+13. Your move landing: SQUIRTLE: WATER GUN!, its splash on Oddish, Oddish's HP down.
+14. Won: Oddish gone, ODDISH fainted..., WIN! +500.
+15. Spat back out of the grass toward the left flipper, +500.
+16. Your Pokemon hit, +100. 17. Every berry lit: BERRIES x2!
+18. A lost ball: down the drain, the bottom glowing red, BALL 2.
+19. The end, as every game's: the score, NEW RECORD!, the joy, PLAY AGAIN!, the Repel row and the X.
+20. On a computer: the keys over the flippers (Left and Right flip, Space both) in place of the touch hint.
+22. Moving: the ball rolling round the orbit. 23: the ball close up, rolling right, down and left.
+24 to 26: the meadow look of 5, 8 and 10.
 
 ## To decide (Fedor)
 
-1. The battle spot: the tall grass (A) or a tunnel in the wall (B)?
-2. Does a battle won count for anything outside Pinball (seen in the Pokedex, say), or only points?
-3. Anything more on the table, or ready to build?
+1. Does a battle won count for anything outside Pinball (seen in the Pokedex, say), or only points?
+2. Anything more on the table, or ready to build?
 
 (Decided: mockups first; both looks, one at random each game with its own song; Left and Right arrows flip on
-computers; the ball rolls; Diglett for all three bumpers.)
+computers; the ball rolls; Diglett for all three bumpers; the tall grass for the battles, its way in a gap where the
+grass parts; the battle in the game's own battle scene, a tap using your Pokemon's move.)

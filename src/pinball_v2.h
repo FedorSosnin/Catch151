@@ -2,8 +2,8 @@
 // built (as Reel Fishing's were, FISHMOCK n). The plan is docs/PINBALL.md: the round screen is the table, its rim the
 // wall. On the floor: an orbit lane round the top with berry lights in it, three bumpers (a Poke Ball, a Great Ball
 // and an Ultra Ball) with Diglett's hole between them, your own Pokemon on a pad as a target, a patch of tall grass
-// where a wild Pokemon waits (in goes the ball, a short battle, out it comes), slingshots, and two flippers over the
-// drain. Raised over the floor (Fedor: "ramps and areas the ball can go under and over"): a ramp up the left that
+// where a wild Pokemon waits (in goes the ball, a battle in the game's own battle scene, out it comes), slingshots, and
+// two flippers over the drain. Raised over the floor (Fedor: "ramps and areas the ball can go under and over"): a ramp up the left that
 // crosses over the orbit and runs down the rim as a wire rail to the left inlane. Two looks, one each game at random
 // (Fedor: "Maybe its random which you get with music to match"): a night-blue table on a chrome rim, or a meadow on a
 // wooden one. The ball is a Poke Ball that rolls (Fedor: "make sure the ball spins as it moves"). scene_v2.h includes
@@ -29,14 +29,16 @@ void pinMockSet(uint8_t n) { pbMock = n; }
 #define PB_WIRE_A0 228
 #define PB_WIRE_A1 166      // ...to where it drops the ball into the left inlane
 #define PB_PET_FEET 296     // your Pokemon on its pad, in the middle
-#define PB_GRASS_X 358      // the tall grass on the right, its hole turned down to the left flipper
+#define PB_GRASS_X 358      // the tall grass on the right
 #define PB_GRASS_Y 246
-#define PB_HOLE_X 340
-#define PB_HOLE_Y 264
+#define PB_GRASS_RX 50
+#define PB_GRASS_RY 36
+// the way into it: a trodden notch in its lower-left side, from its mouth (on the floor) to its end (in the grass),
+// turned to the left flipper
+static const float PB_NOTCH[2][2] = { { 314, 280 }, { 344, 254 } };
 #define PB_DIG_X 233        // Diglett's hole, between the three bumpers
 #define PB_DIG_Y 178
 static bool pbDay = false;   // the meadow on a wooden rim (else the night-blue table on a chrome one)
-static uint8_t pbSpot = 0;   // where the battles are: 0 the tall grass, 1 a tunnel in the right wall (the other idea)
 static const int16_t PB_BUMP[3][2] = { { 158, 176 }, { 308, 176 }, { 233, 104 } };
 static const int16_t PB_BERRY_A[6] = { 212, 234, 246, 294, 306, 328 };  // the berry lights, in the orbit lane
 // the ramp: from its mouth left of the middle, up the left and over the orbit lane, where the wire rail takes over
@@ -319,58 +321,105 @@ static void pbDiglett(bool up, bool hit = false, float timeLeft = 0) {
       scGridRect(x - 4, y, x + 8, y + 4, 0xFFE27A);
     }
 }
-// the tall grass on the right, where wild Pokemon wait: blades in rows, the back ones higher, a hole in its front
-// turned to the left flipper (lit: the grass rustling, the hole glowing)
-static void pbGrass(bool lit) {
-  const Rgb dark = pbDay ? 0x2E6A2A : 0x1E5A4A, mid = pbDay ? 0x3E8A34 : 0x2A7A5E, tip = pbDay ? 0x8ED06A : 0x5EC08A;
-  pbEllipse(PB_GRASS_X + 4, PB_GRASS_Y + 10, 50, 38, pbFloorDark(), 140);  // its shadow
-  pbEllipse(PB_GRASS_X, PB_GRASS_Y + 4, 48, 34, 0x1B1B25);
-  pbEllipse(PB_GRASS_X, PB_GRASS_Y + 4, 45, 31, dark);
-  for (int row = 0; row < 5; row++) {  // the blades, back rows first
-    int y = PB_GRASS_Y - 22 + row * 12;
-    float f = (y - PB_GRASS_Y - 4) / 34.0f;
-    int half = (int)(44 * sqrtf(fmaxf(0, 1 - f * f)));
-    for (int x = PB_GRASS_X - half + 6; x <= PB_GRASS_X + half - 6; x += 10) {
-      int sway = lit ? ((x / 10 + row) % 2 ? 4 : -4) : ((x / 10 + row) % 3 - 1) * 2, h = 16 + ((x * 7 + row * 3) % 3) * 3;
-      gfx->fillTriangle(x - 6, y + 4, x + 6, y + 4, x + sway, y - h, sc565(0x1B1B25));
-      gfx->fillTriangle(x - 4, y + 3, x + 4, y + 3, x + sway, y - h + 3, sc565(row % 2 ? mid : dark));
-      gfx->fillTriangle(x - 1, y - h / 2, x + 2, y - h / 2, x + sway, y - h + 4, sc565(tip));
+// Tall grass in the spirit of the Game Boy games (Fedor: "grass that resembles grass from Pokemon Blue"): an original
+// 16 px tile, 8 x 8 Knomi pixels of staggered tufts, each a dark edge round light blades, on a mid green. Tiled to a
+// fixed grid so neighbouring patches line up; rustling, every other row of tiles shifts a Knomi pixel
+static const char PB_TUFT[8][9] = {
+  "........",
+  ".D...D..",
+  "DLD.DLD.",
+  "DLLDLLD.",
+  "....D...",
+  "..D...D.",
+  ".DLD.DLD",
+  ".DLLDLLD",
+};
+static void pbGrassCols(Rgb &base, Rgb &lite, Rgb &dark) {
+  base = pbDay ? 0x4E9A3E : 0x2A6A4E;
+  lite = pbDay ? 0xA8E080 : 0x6ED09A;
+  dark = pbDay ? 0x2E5A22 : 0x14402E;
+}
+static inline uint16_t pbTuftAt(int x, int y, bool rustle, uint16_t b, uint16_t l, uint16_t d) {
+  if (rustle && (y / 16) % 2) x += 2;
+  char c = PB_TUFT[(y / 2) & 7][(x / 2) & 7];
+  return c == 'L' ? l : c == 'D' ? d : b;
+}
+// the tiles inside an oval (cx, cy, rx, ry), from row y0 down; skip: leave the notch out (the table's patch)
+static void pbGrassOval(int cx, int cy, int rx, int ry, bool rustle, int y0 = 0, bool skip = false) {
+  Rgb b, l, d;
+  pbGrassCols(b, l, d);
+  const uint16_t B = sc565(b), L = sc565(l), D = sc565(d);
+  for (int y = SNAP2(cy - ry); y <= cy + ry; y += 2) {
+    if (y < y0) continue;
+    for (int x = SNAP2(cx - rx); x <= cx + rx; x += 2) {
+      float ex = (x + 1 - cx) / (float)rx, ey = (y + 1 - cy) / (float)ry;
+      if (ex * ex + ey * ey > 1) continue;
+      if (skip) {  // in the notch: the trodden way in
+        float ax = PB_NOTCH[0][0], ay = PB_NOTCH[0][1], dx = PB_NOTCH[1][0] - ax, dy = PB_NOTCH[1][1] - ay;
+        float t = ((x + 1 - ax) * dx + (y + 1 - ay) * dy) / (dx * dx + dy * dy);
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        float qx = x + 1 - ax - t * dx, qy = y + 1 - ay - t * dy;
+        if (qx * qx + qy * qy < 12 * 12) continue;
+      }
+      pbPx2(x, y, pbTuftAt(x, y, rustle, B, L, D));
     }
   }
-  if (lit) twGlow(PB_HOLE_X, PB_HOLE_Y, 44, 0xFFE27A, 170);
-  pbEllipse(PB_HOLE_X, PB_HOLE_Y, 22, 13, 0x1B1B25);  // the hole, a ring of stones round it
-  for (int k = 0; k < 10; k++) {
-    float a = k * 0.6283f;
-    pbEllipse(PB_HOLE_X + (int)(20 * cosf(a)), PB_HOLE_Y + (int)(12 * sinf(a)), 5, 4, pbDay ? 0xB8B0A0 : 0x9A94B0);
-  }
-  pbEllipse(PB_HOLE_X, PB_HOLE_Y + 1, 16, 8, lit ? 0x8A5A20 : 0x0A0A12);
-  if (!lit) {  // two eyes in the dark
-    gfx->fillRect(PB_HOLE_X - 7, PB_HOLE_Y - 2, 4, 4, sc565(0xFFE27A));
-    gfx->fillRect(PB_HOLE_X + 3, PB_HOLE_Y - 2, 4, 4, sc565(0xFFE27A));
-  }
-  pbArrow(PB_HOLE_X - 46, PB_HOLE_Y + 40, 0.75f, -0.66f, lit ? 0xFFE27A : 0xB06AE0);  // the shot's way in
 }
-// the other idea for the battles: a tunnel into the right wall, a stone arch round its dark mouth
-static void pbTunnel(bool lit) {
-  const int x = CX + PB_R - 8, y = 236;
-  if (lit) twGlow(x - 12, y, 50, 0xFFE27A, 170);
-  for (int k = -5; k <= 5; k++) {  // the arch's stones
-    int sx = x - 22 + (k * k) / 2, sy = y + k * 8;
-    pbEllipse(sx, sy, 9, 6, 0x1B1B25);
-    pbEllipse(sx, sy - 1, 7, 4, k % 2 ? 0xA8A4B8 : 0x8A86A0);
+// tufts poking up along an oval's top edge (from a0 to a1 degrees round it), for height
+static void pbGrassTufts(int cx, int cy, int rx, int ry, int a0, int a1, bool rustle) {
+  Rgb b, l, d;
+  pbGrassCols(b, l, d);
+  for (int a = a0; a <= a1; a += 9) {
+    float r = pbRad(a);
+    int x = SNAP2(cx + (int)(rx * cosf(r))), y = SNAP2(cy + (int)(ry * sinf(r)));
+    int sway = rustle ? ((a / 9) % 2 ? 2 : -2) : 0;
+    for (int k = 0; k < 2; k++) {  // a tuft: two blades, a dark edge round each
+      int bx = x - 4 + k * 6 + sway;
+      scRect(bx, y - 8, bx + 1, y - 7, d);
+      scRect(bx - 2, y - 6, bx + 3, y - 1, d);
+      scRect(bx, y - 6, bx + 1, y - 1, l);
+    }
   }
-  pbEllipse(x, y, 18, 34, 0x0A0A12);
-  pbEllipse(x - 2, y, 12, 28, lit ? 0x8A5A20 : 0x14141E);
-  if (!lit) {
-    gfx->fillRect(x - 10, y - 4, 4, 4, sc565(0xFFE27A));
-    gfx->fillRect(x - 2, y - 4, 4, 4, sc565(0xFFE27A));
-  }
-  pbArrow(x - 80, y + 24, 1, -0.3f, lit ? 0xFFE27A : 0xB06AE0);
 }
-static void pbSpotDraw(bool lit) {
-  if (pbSpot) pbTunnel(lit);
-  else pbGrass(lit);
+// the floor's own colour at (x, y), under where something was drawn (the notch shows it through the grass)
+static Rgb pbFloorAt(int x, int y) {
+  const Rgb mid = pbDay ? 0x7CC85A : 0x34388A, edge = pbDay ? 0x4E9A3E : 0x1C1E4A;
+  return scMix(mid, edge, hypotf(x + 1 - CX, y + 1 - CY) / PB_R);
 }
+// the patch on the table, where wild Pokemon wait (lit: rustling, something's in it). The way in is a gap where the
+// grass parts on its lower-left side (Fedor: the stone hole "still doesnt look good"): the floor shows through it, the
+// grass's dark edge runs down both its sides, tufts lean out over them, and it darkens toward its end, where the grass
+// closes over the ball. A lit arrow on the floor points up it from the left flipper
+static void pbGrass(bool lit) {
+  pbEllipse(PB_GRASS_X + 4, PB_GRASS_Y + 8, PB_GRASS_RX + 2, PB_GRASS_RY + 2, pbFloorDark(), 140);  // its shadow
+  pbEllipse(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX + 3, PB_GRASS_RY + 3, 0x1B1B25);
+  pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, 0, true);
+  float ax = PB_NOTCH[0][0], ay = PB_NOTCH[0][1], bx = PB_NOTCH[1][0], by = PB_NOTCH[1][1];
+  float dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy, L = sqrtf(L2);
+  for (int y = SNAP2((int)fminf(ay, by) - 12); y <= fmaxf(ay, by) + 12; y += 2)  // the gap: the floor, shaded deeper in
+    for (int x = SNAP2((int)fminf(ax, bx) - 12); x <= fmaxf(ax, bx) + 12; x += 2) {
+      float ex = (x + 1 - PB_GRASS_X) / (float)(PB_GRASS_RX + 3), ey = (y + 1 - PB_GRASS_Y) / (float)(PB_GRASS_RY + 3);
+      if (ex * ex + ey * ey > 1) continue;
+      float t = ((x + 1 - ax) * dx + (y + 1 - ay) * dy) / L2;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      float qx = x + 1 - ax - t * dx, qy = y + 1 - ay - t * dy;
+      if (qx * qx + qy * qy > 9.5f * 9.5f) continue;
+      pbPx2(x, y, sc565(scMix(pbFloorAt(x, y), 0x0A0A12, 0.15f + 0.55f * t)));
+    }
+  Rgb b, l, d;
+  pbGrassCols(b, l, d);
+  for (int side = -1; side <= 1; side += 2)  // tufts leaning out over the gap's two sides
+    for (float t = 0.35f; t <= 1.0f; t += 0.3f) {
+      int x = SNAP2((int)(ax + dx * t - dy / L * 11 * side)), y = SNAP2((int)(ay + dy * t + dx / L * 11 * side));
+      scRect(x - 2, y - 6, x + 3, y - 1, d);
+      scRect(x + side * 2, y - 8, x + side * 2 + 1, y - 7, d);
+      scRect(x, y - 6, x + 1, y - 1, l);
+    }
+  pbGrassTufts(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, 196, 344, lit);
+  pbArrow((int)(ax - dx * 1.05f), (int)(ay - dy * 1.05f), dx, dy, lit ? 0xFFE27A : 0xB06AE0);
+}
+// the patch's front, over a ball that has gone into it (from row y down): only its lower half shows over the blades
+static void pbGrassFront(int y, bool lit) { pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, SNAP2(y), true); }
 // the ramp's middle line at t (0 its mouth, 1 its top)
 static void pbRampAt(float t, float &x, float &y) {
   float u = 1 - t;
@@ -519,55 +568,110 @@ static void pbStill(const PbState &s) {
   pbDiglett(s.digUp, s.digHit, s.digTime);
   for (int k = 0; k < 3; k++) pbBumper(k, s.bumpLit == k || s.bumpLit == 3);
   pbPet(s.petHits, s.petHit);
-  pbSpotDraw(s.spotLit);
+  pbGrass(s.spotLit);
   pbFlipper(-1, s.upL);
   pbFlipper(1, s.upR);
 }
 
-// ===================================================================== the battle in the grass
-// In goes the ball, and a window opens over the dimmed table: a clearing in the tall grass, a wild Pokemon of the zone
-// you're in and yours facing it. Tap (or any key) to attack, as fast as you like, for a few seconds: the ring round
-// the window is the time left. Knocked out in time: +500, and the ball comes flying out; not: it comes out anyway
-#define PB_WIN_R 150
-static void pbBattleBack(int16_t wild, bool won, float timeLeft) {
-  v2DimFrame(150);
-  const int cx = CX, cy = 236;
-  gfx->fillCircle(cx, cy, PB_WIN_R + 8, sc565(0x1B1B25));
-  for (int k = 0; k < 360; k += 2) {  // the time left: a gold ring, emptying the way a clock goes
+// ===================================================================== the battle
+// In goes the ball, and the game's own battle takes the screen (Fedor: "the battle scene should be a bit stronger"):
+// the wild battle's scene with its two bases, a wild Pokemon of the zone you're in standing in tall grass on its base,
+// yours from behind, both HP boxes, and your Pokemon's two real moves as the buttons (Fedor: "Tapping to attack should
+// do your attack skill"). Tap the left or right half (or press Left or Right) to use that move, as often as you can;
+// the gold ring round the rim is the time left, a few seconds. Knocked out in time: +500; then the ball flies back
+// out of the grass. Tall grass frames the bottom of the scene too
+#define PB_BTL_FOE_X 330     // where the battle puts them (BTL_FOE_X and the rest, further on in the sketch)
+#define PB_BTL_FOE_GROUND 186
+#define PB_BTL_ME_X 128
+#define PB_BTL_ME_GROUND 322
+#define PB_WILD 43           // the mockups' wild one: Oddish
+static void fxBurst(uint8_t ty, int cx, int cy, float k);  // (the battle's, further on in the sketch)
+void drawBattlePanel(int x, int y, const BtlFighter &f, float shown, bool numbers);
+void battleMoveRect(uint8_t i, int &x0, int &x1);
+BtlFighter petFighter(uint8_t lvl);
+int pmdTopY(const PmdMon &m, int groundY, uint8_t maxS);
+static bool pbWildLoaded = false;
+// a line over the scene in a text box, as the battle says things
+static void pbBtlLine(const char *s, int y) {
+  gfx->setTextColor(UI_INK);
+  setSize(2);
+  v2LineBox(s, y);
+  setCur(centerX(s, 2), y);
+  printT(s);
+}
+// phase: 0 it appears, 1 pick a move, 2 your move landing, 3 won
+static void pbBattle(int phase, float timeLeft) {
+  if (!pbWildLoaded) pbWildLoaded = wildPmd.load(PB_WILD, false);
+  uint8_t lvl = btlCapLevel(pet.level());
+  BtlFighter me = petFighter(lvl), foe = btlMakeWild(PB_WILD, lvl, 0);
+  bMeMoves = btlMovesFor(me.dex, lvl, PB_WILD);
+  uint8_t used = bMeMoves.count > 1 ? 1 : 0;  // the move landing: its own type's (the right one)
+  v2BattleScene(-1, true, PB_BTL_FOE_X, PB_BTL_FOE_GROUND, PB_BTL_ME_X, PB_BTL_ME_GROUND);
+  uint32_t now = millis();
+  // tall grass on the wild one's base, tufts round its back edge, then it, then the grass in front of its feet
+  const int gy = PB_BTL_FOE_GROUND - 4 + v2BtlBobFoe;
+  pbGrassOval(PB_BTL_FOE_X, gy, 74, 15, phase == 0);
+  pbGrassTufts(PB_BTL_FOE_X, gy, 74, 15, 192, 348, phase == 0);
+  if (phase != 3 && wildPmd.loaded)
+    drawPmdActM(wildPmd, phase == 2 && wildPmd.has(PMD_HURT) ? PMD_HURT : PMD_IDLE, PB_BTL_FOE_X, PB_BTL_FOE_GROUND + v2BtlBobFoe, now, true, false, 3);
+  pbGrassOval(PB_BTL_FOE_X, gy, 74, 15, phase == 0, gy + 2);
+  pbGrassTufts(PB_BTL_FOE_X, gy + 6, 60, 8, 200, 340, phase == 0);
+  // yours, from behind, lunging as its move goes
+  uint8_t act = phase == 2 ? PMD_ATTACKUR : PMD_IDLEUR;
+  if (!pmd.has(act)) act = phase == 2 && pmd.has(PMD_ATTACK) ? PMD_ATTACK : PMD_IDLE;
+  drawPmdActM(pmd, act, PB_BTL_ME_X + (phase == 2 ? 34 : 0), PB_BTL_ME_GROUND + (phase == 2 ? -14 : 0) + v2BtlBobMe, now, true, false, 4);
+  if (phase == 2 && wildPmd.loaded)
+    fxBurst(MOVE_TBL[bMeMoves.ids[used]].type, PB_BTL_FOE_X, (PB_BTL_FOE_GROUND + pmdTopY(wildPmd, PB_BTL_FOE_GROUND, 3)) / 2, 0.5f);
+  drawBattlePanel(72, 64, foe, phase == 3 ? 0 : phase == 2 ? foe.hp * 0.45f : foe.hp, false);
+  drawBattlePanel(226, 256, me, me.hp, true);
+  // the tall grass along the bottom, framing the clearing
+  Rgb b, l, d;
+  pbGrassCols(b, l, d);
+  for (int y = 394; y < V2_W; y += 2)
+    for (int x = 0; x < V2_W; x += 2)
+      if (hypotf(x + 1 - CX, y + 1 - CY) < 234) pbPx2(x, y, pbTuftAt(x, y, false, sc565(b), sc565(l), sc565(d)));
+  for (int x = 50; x < V2_W - 50; x += 12) {  // its top edge, in tufts
+    int y = 394;
+    scRect(x, y - 8, x + 1, y - 7, d);
+    scRect(x - 2, y - 6, x + 3, y - 1, d);
+    scRect(x, y - 6, x + 1, y - 1, l);
+  }
+  // the time left: a gold ring round the rim, emptying the way a clock goes
+  for (int k = 0; k < 360; k += 2) {
     if (k > timeLeft * 360) break;
     float a = pbRad(k - 90);
-    fsSq(cx + (int)((PB_WIN_R + 4) * cosf(a)), cy + (int)((PB_WIN_R + 4) * sinf(a)), 6, 0xF2C230);
+    fsSq(CX + (int)(226 * cosf(a)), CY + (int)(226 * sinf(a)), 6, 0xF2C230);
   }
-  const Rgb sky0 = pbDay ? 0x7FBDE6 : 0x22264E, sky1 = pbDay ? 0xD8EEE8 : 0x3A4078;
-  const Rgb g0 = pbDay ? 0x79BD4F : 0x2E5A4A, g1 = pbDay ? 0x5A9A3A : 0x1E4A3A;
-  for (int y = cy - PB_WIN_R; y < cy + PB_WIN_R; y += 2)  // a clearing in the grass: the sky, then the ground
-    for (int x = cx - PB_WIN_R; x < cx + PB_WIN_R; x += 2) {
-      float d = hypotf(x + 1 - cx, y + 1 - cy);
-      if (d > PB_WIN_R) continue;
-      Rgb c = y < cy - 20 ? scMix(sky0, sky1, (y - (cy - PB_WIN_R)) / (float)(PB_WIN_R - 20)) : scMix(g0, g1, (y - cy + 20) / 170.0f);
-      if (!pbDay && y < cy - 20 && ((x * 13 + y * 7) / 2) % 89 == 0) c = 0xE8ECFF;  // stars
-      pbPx2(x, y, sc565(c));
-    }
-  for (int x = cx - PB_WIN_R + 14; x < cx + PB_WIN_R - 8; x += 12) {  // the tall grass along the far edge
-    int top = cy - 20, h = 22 + (x * 7 % 3) * 6;
-    if (hypotf(x - cx, top - h - cy) > PB_WIN_R - 4) continue;
-    gfx->fillTriangle(x - 7, top + 4, x + 7, top + 4, x + 2, top - h, sc565(pbDay ? 0x3E8A34 : 0x2A7A5E));
+  char line[48], nm[24];
+  switch (phase) {
+    case 0:
+      snprintf(line, sizeof(line), T(S_BTL_WILD), dexName(PB_WILD));
+      pbBtlLine(line, 380);
+      break;
+    case 1:
+      for (uint8_t i = 0; i < bMeMoves.count; i++) {  // your two moves, as in a battle: the left half, the right half
+        BtlMove m = MOVE_TBL[bMeMoves.ids[i]];
+        int x0, x1;
+        battleMoveRect(i, x0, x1);
+        v2Button(x0, 346, x1 - x0, 40, TYPE_ACCENT[m.type]);
+        gfx->setTextColor(UI_WHITE);
+        setSize(2);
+        setCur((x0 + x1) / 2 - (int)strlen(m.name) * 6, 359);
+        printT(m.name);
+      }
+      pbBtlLine("TAP A MOVE!", 410);
+      break;
+    case 2:
+      v2Caps(dexName(me.dex), nm, sizeof(nm));
+      snprintf(line, sizeof(line), "%s: %s!", nm, MOVE_TBL[bMeMoves.ids[used]].name);
+      pbBtlLine(line, 380);
+      break;
+    case 3:
+      snprintf(line, sizeof(line), T(S_BTL_LOST), dexName(PB_WILD));
+      pbBtlLine(line, 380);
+      fsSay("WIN! +500", CX, 196, 0xFFE27A, 4);
+      break;
   }
-  pbEllipse(cx + 58, cy - 4, 50, 12, pbDay ? 0x5A9A3A : 0x1E4A3A);   // where the wild one stands
-  pbEllipse(cx - 58, cy + 86, 58, 14, pbDay ? 0x5A9A3A : 0x1E4A3A);  // and yours
-  const uint8_t *tw = thumbs.getForm(wild, false);
-  fsThumb(tw, cx + 58, cy - 2, 3);
-  if (won) fsThumb(tw, cx + 58, cy - 2, 3, false, 0xFFFFFF, 200);  // knocked out: a white flash, fading
-  int16_t d = pet.speciesId > 0 ? pet.speciesId : 25;
-  fsThumb(thumbs.getForm(d, pet.shiny), cx - 58, cy + 88, 3, true);
-  char nm[24];  // its name and HP, over it
-  v2Caps(dexName(wild), nm, sizeof(nm));
-  setSize(2);
-  int nx = cx + 6, ny = cy - 118;
-  fsSay(nm, nx + textW(nm, 2) / 2, ny, 0xFFFFFF);
-  gfx->fillRoundRect(nx - 2, ny + 22, 104, 12, 4, sc565(0x1B1B25));
-  gfx->fillRoundRect(nx, ny + 24, 100, 8, 3, sc565(0x4A4660));
-  if (!won) gfx->fillRoundRect(nx, ny + 24, 40, 8, 3, sc565(0xE8503A));
 }
 
 // ===================================================================== the mock screens
@@ -657,67 +761,37 @@ static void pbMockDigHit() {
   fsSay("+1000", CX, 210, 0xFFE27A, 4);
   pbHud("2,290", 3);
 }
-// 10: into the grass: the hole glowing, the grass rustling, BATTLE!
+// 10: into the grass: the ball up the notch and into it (the blades in front of it), the grass rustling, a "!" over it
 static void pbMockSpotIn() {
   PbState s;
   s.berries = 3, s.petHits = 1, s.spotLit = true;
   pbStill(s);
-  pbBall(PB_HOLE_X - 8, PB_HOLE_Y + 6, 6, -6, 2.5f);
+  pbBall(360, 244, 6, -5, 2.5f);
+  pbGrassFront(244, true);
   pbRaised();
-  fsBoard("BATTLE!", 196);
+  fsBang(392, 182);
   pbHud("2,290", 3);
 }
-// 11: the other idea for it: a tunnel into the right wall (the same moment)
-static void pbMockTunnel() {
-  pbSpot = 1;
-  PbState s;
-  s.berries = 3, s.petHits = 1, s.spotLit = true;
-  pbStill(s);
-  pbBall(CX + PB_R - 38, 246, 8, -2, 2.5f);
-  pbRaised();
-  fsBoard("BATTLE!", 196);
-  pbHud("2,290", 3);
-  pbSpot = 0;
-}
-// 12: the battle: a wild Oddish in the grass, yours facing it, TAP TO ATTACK!, the time ring two thirds full
-static void pbMockBattle() {
-  PbState s;
-  s.berries = 3, s.petHits = 1, s.spotLit = true;
-  pbStill(s);
-  pbRaised();
-  pbHud("2,290", 3);
-  pbBattleBack(43, false, 0.66f);
-  for (int k = 0; k < 6; k++) {  // a hit landing on it
-    float a = k * 1.047f;
-    fsSq(CX + 58 + (int)(26 * cosf(a)), 200 + (int)(26 * sinf(a)), 6, 0xFFF3B0);
-  }
-  fsSay("TAP TO ATTACK!", CX, 350, 0xFFFFFF, 2);
-}
-// 13: won: the wild one knocked out (a white flash), +500
-static void pbMockWon() {
-  PbState s;
-  s.berries = 3, s.petHits = 1, s.spotLit = true;
-  pbStill(s);
-  pbRaised();
-  pbHud("2,290", 3);
-  pbBattleBack(43, true, 0.3f);
-  fsSay("WIN! +500", CX, 330, 0xFFE27A, 4);
-}
-// 14: out it comes: the ball shot out of the hole toward the left flipper, the grass rustling, +500 over it
+// 11 to 14: the battle: a wild Oddish appears in the grass; pick a move; your move landing; won
+static void pbMockBtlIntro() { pbBattle(0, 1.0f); }
+static void pbMockBattle() { pbBattle(1, 0.7f); }
+static void pbMockBtlHit() { pbBattle(2, 0.55f); }
+static void pbMockWon() { pbBattle(3, 0.4f); }
+// 15: out it comes: the ball shot back down the notch toward the left flipper, the grass rustling, +500 over it
 static void pbMockSpit() {
   PbState s;
   s.berries = 3, s.petHits = 1, s.spotLit = true;
   pbStill(s);
-  for (int k = 0; k < 5; k++) {  // the burst from the hole
-    float a = pbRad(120 + k * 18);
-    pbCapsule(PB_HOLE_X + 26 * cosf(a), PB_HOLE_Y + 18 * sinf(a), PB_HOLE_X + 42 * cosf(a), PB_HOLE_Y + 32 * sinf(a), 2, 2, 0xFFF3B0);
+  for (int k = 0; k < 5; k++) {  // the burst out of the notch
+    float a = pbRad(110 + k * 22), x = PB_NOTCH[0][0], y = PB_NOTCH[0][1];
+    pbCapsule(x + 18 * cosf(a), y + 18 * sinf(a), x + 32 * cosf(a), y + 32 * sinf(a), 2, 2, 0xFFF3B0);
   }
-  pbBall(276, 306, -10, 9, 1.0f);
+  pbBall(282, 306, -10, 9, 1.0f);
   pbRaised();
-  fsSay("+500", PB_GRASS_X - 6, 200, 0xFFE27A, 3);
+  fsSay("+500", PB_GRASS_X - 6, 196, 0xFFE27A, 3);
   pbHud("2,790", 3);
 }
-// 15: your Pokemon hit: it lights up, +100, the second of three toward its bonus
+// 16: your Pokemon hit: it lights up, +100, the second of three toward its bonus
 static void pbMockPet() {
   PbState s;
   s.berries = 3, s.petHits = 2, s.petHit = true;
@@ -733,7 +807,7 @@ static void pbMockPet() {
   }
   pbHud("2,890", 3);
 }
-// 16: every berry lit: the score doubles from then on (x2 by the score)
+// 17: every berry lit: the score doubles from then on (x2 by the score)
 static void pbMockBerries() {
   PbState s;
   s.upR = true, s.berries = 6, s.petHits = 2;
@@ -744,7 +818,7 @@ static void pbMockBerries() {
   fsSay("BERRIES x2!", CX, 214, 0xFFE27A, 4);
   pbHud("3,840", 3, "x2");
 }
-// 17: the ball lost: down the drain between the flippers, the bottom glowing red, BALL 2 next
+// 18: the ball lost: down the drain between the flippers, the bottom glowing red, BALL 2 next
 static void pbMockDrain() {
   PbState s;
   s.berries = 4, s.petHits = 1;
@@ -760,7 +834,7 @@ static void pbMockDrain() {
   fsBoard("BALL 2", 214);
   pbHud("2,110", 2);
 }
-// 18: the end: the game's result as every game shows it (the score, NEW RECORD!, the joy), PLAY AGAIN! and the X
+// 19: the end: the game's result as every game shows it (the score, NEW RECORD!, the joy), PLAY AGAIN! and the X
 static void pbMockEnd() {
   PbState s;
   s.berries = 4, s.petHits = 1;
@@ -769,7 +843,7 @@ static void pbMockEnd() {
   pbHud("12,340", 0);
   v2GameResult("PINBALL", nullptr, "12,340", true, "BEST: 9,870", "+23 HAPPINESS");
 }
-// 19: on a computer: the keys in place of the touch hint (Left and Right flip, Space both)
+// 20: on a computer: the keys in place of the touch hint (Left and Right flip, Space both)
 static void pbMockKeys() {
   pbStill(PbState());
   pbBall(392, 108, -7, 5, 2.1f);
@@ -784,14 +858,14 @@ static void pbMockKeys() {
   fsSay("BOTH", x2 + textW("BOTH", 2) / 2, y + 44, 0xFFFFFF);
   pbHud("0", 3);
 }
-// 20: on a computer, its how-to card says the keys
+// 21: on a computer, its how-to card says the keys
 static void pbMockHowKeys() {
   pbStill(PbState());
   pbRaised();
   pbHud("0", 3);
   v2IntroCard(CX, CY, true, "PINBALL", T(S_HOW_PINBALL_KEYS));
 }
-// 21: the ball rolling round the top of the table, moving (for a moving picture)
+// 22: the ball rolling round the top of the table, moving (for a moving picture)
 static void pbMockRoll() {
   pbStill(PbState());
   float t = (millis() % 3000) / 3000.0f, a = pbRad(200 + 140 * t);
@@ -802,7 +876,7 @@ static void pbMockRoll() {
   pbRaised();
   pbHud("0", 3);
 }
-// 22: the ball close up, rolling right, then down, then left (a second each): how it turns as it goes
+// 23: the ball close up, rolling right, then down, then left (a second each): how it turns as it goes
 static void pbMockRollBig() {
   pbTable();
   uint32_t ms = millis() % 3000;
@@ -815,9 +889,9 @@ static void pbMockRollBig() {
 }
 
 static void pinMockRender() {
-  bool day = pbMock >= 23;  // 23 to 25: the meadow look of 5, 8 and 12; 2: of 1
-  pbDay = day || pbMock == 2;
-  switch (day ? (pbMock == 23 ? 5 : pbMock == 24 ? 8 : 12) : pbMock) {
+  int n = pbMock >= 24 ? (pbMock == 24 ? 5 : pbMock == 25 ? 8 : 10) : pbMock;  // 24 to 26: the meadow look of 5, 8, 10
+  pbDay = pbMock >= 24 || pbMock == 2;
+  switch (n) {
     case 1: case 2: pbMockStart(); break;
     case 3: pbMockHow(); break;
     case 4: pbMockFlip(); break;
@@ -827,18 +901,19 @@ static void pinMockRender() {
     case 8: pbMockDigUp(); break;
     case 9: pbMockDigHit(); break;
     case 10: pbMockSpotIn(); break;
-    case 11: pbMockTunnel(); break;
+    case 11: pbMockBtlIntro(); break;
     case 12: pbMockBattle(); break;
-    case 13: pbMockWon(); break;
-    case 14: pbMockSpit(); break;
-    case 15: pbMockPet(); break;
-    case 16: pbMockBerries(); break;
-    case 17: pbMockDrain(); break;
-    case 18: pbMockEnd(); break;
-    case 19: pbMockKeys(); break;
-    case 20: pbMockHowKeys(); break;
-    case 21: pbMockRoll(); break;
-    case 22: pbMockRollBig(); break;
+    case 13: pbMockBtlHit(); break;
+    case 14: pbMockWon(); break;
+    case 15: pbMockSpit(); break;
+    case 16: pbMockPet(); break;
+    case 17: pbMockBerries(); break;
+    case 18: pbMockDrain(); break;
+    case 19: pbMockEnd(); break;
+    case 20: pbMockKeys(); break;
+    case 21: pbMockHowKeys(); break;
+    case 22: pbMockRoll(); break;
+    case 23: pbMockRollBig(); break;
   }
   pbDay = false;
 }
