@@ -1,11 +1,12 @@
-// V2: your tag, for the world high-score board. MOCKUPS only for now (TAGMOCK n on a computer's console), until
+// V2: your gamer tag (Fedor: "lets call it a gamer tag and I think 4 gives lots of freedom"), for the world
+// high-score board. MOCKUPS only for now (TAGMOCK n on a computer's console), until
 // Fedor picks. scene_v2.h includes this at its end.
 //
 // Fedor (2026-11-16): "after a player plays their first game and adds a score, they will be asked to make their tag.
 // With a scrolling style letter/number/symbol picker. Then maybe in settings they can switch it or somewhere on the
 // games menu". The board shows each game's best with its "score, date, and tag".
-//   0: the picker after a first score: three reels, the middle one the one being turned
-//   1: the same with four
+//   0: the picker after a first score: four reels (Fedor's pick), the second the one being turned
+//   1: the same with three, as it was first drawn
 //   2: the Games menu with your tag on the Game Boy, under its title: a tap there opens the picker
 // (v2TagMock, the mockup shown or -1, is with the other screens' flags in the sketch: the console sets it)
 
@@ -77,7 +78,7 @@ static void v2TagReel(int cx, int w, char c, float roll, bool hot) {
 static void v2TagPicker(const char *tag, int hot, float roll) {
   int n = (int)strlen(tag), w = n == 3 ? 70 : 58, gap = n == 3 ? 16 : 12, span = n * w + (n - 1) * gap;
   v2DimFrame(115);
-  v2Sign("YOUR TAG", 60);
+  v2Sign("GAMER TAG", 60);
   v2Panel(70, 100, 396, 318, 12);
   gfx->setTextColor(V2_INK_MUTED);
   setSize(2);
@@ -105,9 +106,9 @@ static void v2TagGamesChip(const char *tag) {
 }
 static void v2TagMockDraw(int n) {
   if (n == 2) {
-    v2TagGamesChip("FED");
+    v2TagGamesChip("PIKA");
     return;
   }
   v2MenuBackdrop();
-  v2TagPicker(n == 1 ? "PIKA" : "FED", 1, 0);
+  v2TagPicker(n == 1 ? "FED" : "PIKA", 1, 0);
 }
