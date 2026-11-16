@@ -279,15 +279,77 @@ static void fsBang(int cx, int cy) {
   scRect(cx - 4, cy - 15, cx + 3, cy + 5, 0xE8503A);
   scRect(cx - 4, cy + 9, cx + 3, cy + 16, 0xE8503A);
 }
-// the screen's edge glowing: the 4 px cells within w of the rim pulled toward col, stronger toward the edge
-static void fsRimGlow(Rgb col, int a256, int w) {
-  for (int y = 0; y < V2_W; y += 4)
-    for (int x = 0; x < V2_W; x += 4) {
-      float d = 233 - hypotf(x + 2 - CX, y + 2 - CY);
-      if (d < 0 || d > w) continue;
-      if (d > w * 0.5f && (scFl4(x) + scFl4(y)) % 2) continue;
-      fsBlend(x, y, x + 3, y + 3, col, (int)(a256 * (1 - d / w)));
+// The screen's edge glowing (gold at the bite, red with the line too tight, blue too slack): col laid over the scene,
+// a256 of the way at the rim and fading to nothing w px in. It was 4 px cells, a checker over its outer half and a
+// straight fade that stopped in an edge, which looked coarse in a big window (Fedor, 2026-11-15: "look low quality
+// when large on the mac"). Now each pixel fades on its own (a Knomi pixel on the Knomi: one blend for its four, fewer
+// than the cells cost), easing out so the glow has no inner edge. On a computer and the web the colour is also
+// dithered (4 x 4 ordered) as it's rounded to the screen's 16 bits, so a large window shows a smooth fade, not bands.
+// Each pixel's distance from the rim, in quarter px, is worked out once.
+#define FS_RIM_MAX 40  // the widest glow
+struct FsRimPx { uint32_t i; uint8_t d4; };  // where in the frame, and how far in from the rim (quarter px)
+static FsRimPx *fsRim = nullptr;
+static int fsRimN = 0;
+#ifdef BOARD_HOST
+#define FS_RIM_STEP 1
+#else
+#define FS_RIM_STEP 2  // the Knomi's pixels
+#endif
+static void fsRimBuild() {
+  if (fsRim) return;
+  for (int pass = 0, n = 0; pass < 2; pass++) {
+    for (int y = 0; y < V2_W; y += FS_RIM_STEP)
+      for (int x = 0; x < V2_W; x += FS_RIM_STEP) {
+        float d = 233 - hypotf(x + FS_RIM_STEP * 0.5f - CX, y + FS_RIM_STEP * 0.5f - CY);
+        if (d < 0 || d > FS_RIM_MAX) continue;
+        if (pass) fsRim[n] = { (uint32_t)(y * V2_W + x), (uint8_t)(d * 4) };
+        n++;
+      }
+    if (!pass) {
+      fsRim = (FsRimPx *)ps_malloc((size_t)n * sizeof(FsRimPx));
+      if (!fsRim) return;
+      fsRimN = n;
+      n = 0;
     }
+  }
+}
+static void fsRimGlow(Rgb col, int a256, int w) {
+  fsRimBuild();
+  if (!fsRim || w <= 0) return;
+  if (w > FS_RIM_MAX) w = FS_RIM_MAX;
+  const int w4 = w * 4;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+#ifdef BOARD_HOST
+  static const uint8_t BAYER[4][4] = { { 0, 8, 2, 10 }, { 12, 4, 14, 6 }, { 3, 11, 1, 9 }, { 15, 7, 13, 5 } };
+  const int cr = (col >> 16) & 255, cg = (col >> 8) & 255, cb = col & 255;
+#else
+  const uint16_t c = sc565(col);
+#endif
+  uint8_t fade[FS_RIM_MAX * 4];  // how much at each quarter px in: a256 at the rim, eased out (smoothstep) to 0 at w
+  for (int d = 0; d < w4; d++) {
+    int t = 255 - d * 255 / w4;
+    int f = a256 * (t * t / 255 * (765 - 2 * t) / 255) / 255;
+    fade[d] = (uint8_t)(f > 255 ? 255 : f);
+  }
+  for (int k = 0; k < fsRimN; k++) {
+    const FsRimPx &p = fsRim[k];
+    if (p.d4 >= w4) continue;
+    int a = fade[p.d4];
+    if (!a) continue;
+    uint16_t *q = fb + p.i;
+#ifdef BOARD_HOST
+    uint16_t v = *q;
+    int r = (v >> 11) & 31, g = (v >> 5) & 63, b = v & 31;
+    r = (r << 3) | (r >> 2), g = (g << 2) | (g >> 4), b = (b << 3) | (b >> 2);
+    r += (cr - r) * a >> 8, g += (cg - g) * a >> 8, b += (cb - b) * a >> 8;
+    int x = (int)(p.i % V2_W), y = (int)(p.i / V2_W), dz = BAYER[y & 3][x & 3];
+    r = (r + (dz >> 1)) >> 3, g = (g + (dz >> 2)) >> 2, b = (b + (dz >> 1)) >> 3;
+    *q = (uint16_t)((r > 31 ? 31 : r) << 11 | (g > 63 ? 63 : g) << 5 | (b > 31 ? 31 : b));
+#else
+    uint16_t v = v2Blend(q[0], c, a);
+    q[0] = q[1] = q[V2_W] = q[V2_W + 1] = v;
+#endif
+  }
 }
 // how tight the line is: an arc on the right rim (where the need bars sit at home) in three zones, blue at the
 // bottom (too slow: it'll slip off), green in the middle (keep it there), red at the top (too fast: it'll snap). It
@@ -1086,37 +1148,6 @@ static void fsMockWeighGauge() {  // (the game's own, over and over: Staryu, 36.
   fsAngler(FS_TIP_X, FS_TIP_Y);
   fsWeighDraw(120, false, 361, 345, (millis() % 2800) / 1000.0f);
 }
-// the rim's cells within 40 px of the edge, worked out once
-struct FsRimCell { int16_t x, y; uint8_t d; };
-static FsRimCell *fsRim = nullptr;
-static int fsRimN = 0;
-static void fsRimGlowFast(Rgb col, int a256, int w) {
-  if (!fsRim) {
-    int n = 0;
-    for (int pass = 0; pass < 2; pass++) {
-      for (int y = 0; y < V2_W; y += 4)
-        for (int x = 0; x < V2_W; x += 4) {
-          float d = 233 - hypotf(x + 2 - CX, y + 2 - CY);
-          if (d < 0 || d > 40) continue;
-          if (pass) fsRim[n] = { (int16_t)x, (int16_t)y, (uint8_t)d };
-          n++;
-        }
-      if (!pass) {
-        fsRim = (FsRimCell *)ps_malloc(n * sizeof(FsRimCell));
-        if (!fsRim) return;
-        fsRimN = n;
-        n = 0;
-      }
-    }
-  }
-  if (!fsRim) return;
-  for (int i = 0; i < fsRimN; i++) {
-    const FsRimCell &c = fsRim[i];
-    if (c.d > w || (c.d > w / 2 && (scFl4(c.x) + scFl4(c.y)) % 2)) continue;
-    fsBlend(c.x, c.y, c.x + 3, c.y + 3, col, a256 * (w - c.d) / w);
-  }
-}
-
 // a blob of any size (s px a unit, as fsBlob). At night the moon catches its top edge, so its size still shows
 static void fsBlobF(float cx, float cy, float s, int a256) {
   Rgb col = fsNight ? 0x050A18 : 0x0E2A5C;
@@ -1362,7 +1393,7 @@ static void fsGame(uint32_t now) {
     case FP_BITE: {
       int fx = (int)fish.floatX;
       float w = FISH_CLASS[fish.b[fish.target].cls].window, p = fish.t / w;
-      fsRimGlowFast(fsNight ? 0xFFE27A : 0xFFF3B0, (int)(220 * (1 - p * 0.5f)), 34);
+      fsRimGlow(fsNight ? 0xFFE27A : 0xFFF3B0, (int)(220 * (1 - p * 0.5f)), 34);
       fsAngler(tx, ty, bx, by);
       fsLine(tx, ty, fx, FS_SURF + 30, 0, 0xFFE27A);
       fsFloat(fx, FS_SURF + 34, fsNight);
@@ -1378,8 +1409,8 @@ static void fsGame(uint32_t now) {
     }
     case FP_REEL: {
       const FishClassDef &c = FISH_CLASS[fish.b[fish.target].cls];
-      if (fish.zone == 2) fsRimGlowFast(0xE8503A, 150 + (int)(80 * sinf(now * 0.019f)), 40);  // pulsing, 3 times a second
-      else if (fish.zone == 0) fsRimGlowFast(0x7CC4EA, 170, 34);
+      if (fish.zone == 2) fsRimGlow(0xE8503A, 150 + (int)(80 * sinf(now * 0.019f)), 40);  // pulsing, 3 times a second
+      else if (fish.zone == 0) fsRimGlow(0x7CC4EA, 170, 34);
       fsAngler(tx, ty, bx, by);
       fsGameReel(now, tx, ty);
       fsArcDraw(fish.T, c.lo, c.hi, fish.beat < 0.2f);
