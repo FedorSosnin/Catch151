@@ -62,6 +62,8 @@ static uint8_t v2MusicPick(uint32_t now) {
   if (runOpen) return MUS_RUN;
   if (surfOpen) return MUS_SURF;
   if (fishOpen) return fish.phase == FP_REEL ? MUS_FISH_FIGHT : MUS_FISH;  // a fish on the line: its own, at its pace
+  if (pinOpen)  // Pinball: a battle in the grass, the wild battle's; the table, its look's (for now the pier's calm one by
+    return pin.phase == PIN_BATTLE ? MUS_FIELD : pin.day ? MUS_ZONE_FIELD : MUS_FISH;  // night, the Field's by day)
   if (battleOpen && bPhase != BP_TIRED) return v2MusicBattle();  // (tired: a notice over what was there)
   if (buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || galleryOpen || gamesMenuOpen || kbOpen || clockOpen ||
       cardOpen)

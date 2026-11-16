@@ -1,11 +1,45 @@
-# Pinball: the plan
+# Pinball
 
-The seventh cartridge (Fedor, 2026-11-15: "let's branch off to make a pinball mini game"). The Games menu already
-has its cartridge, on its second page (four cartridges a page now); tapping it says no until the game is in.
+The seventh cartridge (Fedor, 2026-11-15: "let's branch off to make a pinball mini game"), on the Games menu's second
+page (four cartridges a page now). Built 2026-11-16 (Fedor: "Build it"), on the `pinball` branch: playable on the
+Knomi, the Mac and Windows apps and the web.
 
-This is a proposal to decide on before building. Nothing below is settled yet.
+- **The rules and the physics** are `src/pinball.h` (no drawing), checked by `test/test_pinball.cpp`: the serve,
+  gravity and the rim, the flippers' throw, the drain and the three balls, the bumpers and Diglett, the berries'
+  multiplier, the ramp and the wire rail, the grass and its battle, your Pokemon as a target, and 30 whole games
+  played by a simple bot, the ball never leaving the table.
+- **The drawing** is `src/pinball_v2.h`: the live game (`pinDraw()`, `pbBattleDraw()`), and the mockups it grew from
+  (`PINMOCK n` on a computer's console).
+- **In the sketch:** `startPinball()`, `pinEvents()` (the sounds), `pinInput()` (the flippers from a finger, the
+  arrow keys or the button), `pinBattleSetup()` and `pinMove()` (the battle), `renderPinball()`. The console's
+  `PINBALL` starts it and `PINBOT` plays it by itself.
+- **To try it on a Mac:** `tools/pinball_test.sh` (or double-click `tools/Pinball Test.command`): a test copy with its
+  own save and buddy port, never the real app or its save, opening on Pinball's card.
 
-## The table: the round screen is the table
+## As built
+
+- **Pace:** gravity 300 px/s^2 and a top speed of 560 px/s, so the ball reads at the Knomi's 10 frames a second; the
+  physics runs 240 steps a second, the flippers swinging in those steps, so the ball never passes through one.
+- **The table changed from the mockups in two places,** both for the ball's sake: the slingshots sit 22 px higher,
+  so the inlanes under them are wide enough for the ball to roll down to the flippers (it got stuck between them), and
+  the orbit's inner rail is shorter (200 to 340 degrees round, r 180), so its mouths open down each side.
+- **A stuck ball** (nearly still for 2.5 s anywhere but held up on a flipper) gets a nudge.
+- **The battle:** a wild Pokemon picked as a wild battle picks one, at about your level; your Pokemon's two moves do
+  their real damage (gen 1's formula, type matchups and all); a move lands every 0.35 s at most; 6 seconds to knock it
+  out. Nothing outside Pinball changes (the Pokedex, the battle record): only points.
+- **The songs** are, for now, the pier's calm one at night and the Field zone's by day, the wild battle's in a
+  battle. Two songs of its own would come next.
+- **Rewards:** as the other games: the best score is kept (`pinHi`), and a point of exercise for every 400.
+
+## Still to tune once it's played
+
+- The orbit is a skill shot: up either side along the rim. The bot never makes one; a person aiming should.
+- How long a game lasts: 30 bot games ran 10 to 100 seconds.
+- The battle's 6 seconds and the wild one's HP.
+
+## The design
+
+### The table: the round screen is the table
 
 - **The rim is the wall.** The ball rolls inside the Knomi's circle, so the table is round, not a tall rectangle
   squeezed onto a round screen. The circle's own edge bounces it back, and at the bottom a gap between the two flippers

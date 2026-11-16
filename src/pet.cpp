@@ -842,6 +842,14 @@ void Pet::fishResult(uint16_t kg10) {
   save();
 }
 
+// Pinball: the record, and exercise as the other games give it (a point for every 400)
+void Pet::pinResult(uint32_t score) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (score > pinHi) pinHi = score;
+  exerciseReward(score / 400 > 255 ? 255 : score / 400);
+  save();
+}
+
 // Reel Fishing's heaviest single fish, with what it was (saved by fishResult(), at the game's end)
 bool Pet::fishBiggest(uint16_t kg10, int16_t dex, bool shiny) {
   if (ceremony != CER_NONE || isEgg() || kg10 <= fishBig) return false;
@@ -1236,6 +1244,7 @@ void Pet::save() {
   prefs.putUShort("fsbg", fishBig);
   prefs.putShort("fsbd", fishBigDex);
   prefs.putBool("fsbs", fishBigShiny);
+  prefs.putUInt("pnhi", pinHi);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
   prefs.putUInt("cdyd", candyDay);
@@ -1347,6 +1356,7 @@ void Pet::load() {
   fishBig = prefs.getUShort("fsbg", 0);
   fishBigDex = prefs.getShort("fsbd", 0);
   fishBigShiny = prefs.getBool("fsbs", false);
+  pinHi = prefs.getUInt("pnhi", 0);
   dungeonHi = prefs.getUChar("dhi", 0);
   candyToday = prefs.getUChar("cdyn", 0);
   candyDay = prefs.getUInt("cdyd", 0);

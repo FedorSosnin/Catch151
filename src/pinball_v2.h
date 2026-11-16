@@ -1,48 +1,19 @@
-// V2: Pinball's MOCKUPS (PINMOCK n): still screens drawn in the real game, so the look can be judged before any of it is
-// built (as Reel Fishing's were, FISHMOCK n). The plan is docs/PINBALL.md: the round screen is the table, its rim the
-// wall. On the floor: an orbit lane round the top with berry lights in it, three bumpers (a Poke Ball, a Great Ball
-// and an Ultra Ball) with Diglett's hole between them, your own Pokemon on a pad as a target, a patch of tall grass
-// where a wild Pokemon waits (in goes the ball, a battle in the game's own battle scene, out it comes), slingshots, and
-// two flippers over the drain. Raised over the floor (Fedor: "ramps and areas the ball can go under and over"): a ramp up the left that
-// crosses over the orbit and runs down the rim as a wire rail to the left inlane. Two looks, one each game at random
-// (Fedor: "Maybe its random which you get with music to match"): a night-blue table on a chrome rim, or a meadow on a
-// wooden one. The ball is a Poke Ball that rolls (Fedor: "make sure the ball spins as it moves"). scene_v2.h includes
-// this after fishing_v2.h, whose painters it borrows (fsSay, fsBoard, fsThumb, fsCircle, fsSq, fsBlend). On a board
-// nothing calls them: they're a computer's only.
+// V2: Pinball, drawn: the game from pinball.h's state (pinDraw()), and the mockups it grew from (PINMOCK n, a
+// computer's console only). The plan is docs/PINBALL.md: the round screen is the table, its rim the wall. On the
+// floor: an orbit lane round the top with berry lights in it, three bumpers (a Poke Ball, a Great Ball and an Ultra
+// Ball) with Diglett's hole between them, your own Pokemon on a pad as a target, a patch of tall grass where a wild
+// Pokemon waits (in goes the ball, a battle in the game's own battle scene, out it comes), slingshots, and two
+// flippers over the drain. Raised over the floor (Fedor: "ramps and areas the ball can go under and over"): a ramp up
+// the left that crosses over the orbit and runs down the rim as a wire rail to the left inlane. Two looks, one each
+// game at random (Fedor: "Maybe its random which you get with music to match"): a night-blue table on a chrome rim,
+// or a meadow on a wooden one. The ball is a Poke Ball that rolls (Fedor: "make sure the ball spins as it moves").
+// scene_v2.h includes this after fishing_v2.h, whose painters it borrows (fsSay, fsBoard, fsThumb, fsCircle, fsSq,
+// fsBlend). The table's numbers are pinball.h's.
 
 static uint8_t pbMock = 0;  // the mockup on screen (0: none)
 void pinMockSet(uint8_t n) { pbMock = n; }
 
-#ifdef BOARD_HOST
-// ===================================================================== the table
-#define PB_R 218            // the table's inside; the rim wall from here out to the screen's edge
-#define PB_FLIP_LX 148      // the left flipper's pivot (the right one's mirrored about the middle)
-#define PB_FLIP_Y 390
-#define PB_FLIP_LEN 70
-#define PB_FLIP_REST 0.50f  // its angle at rest (radians below level, the tip down toward the middle)
-#define PB_FLIP_UP -0.42f   // raised
-#define PB_BALL_R 10
-#define PB_ORBIT_R0 184     // the orbit lane: between its inner rail (this far out) and the wall,
-#define PB_ORBIT_A0 192     // from here round the top to here (degrees, 0 to the right, y down: 270 is the top)
-#define PB_ORBIT_A1 348
-#define PB_WIRE_R 201       // the wire rail: down the left rim over the orbit lane, from where the ramp meets it
-#define PB_WIRE_A0 228
-#define PB_WIRE_A1 166      // ...to where it drops the ball into the left inlane
-#define PB_PET_FEET 296     // your Pokemon on its pad, in the middle
-#define PB_GRASS_X 358      // the tall grass on the right
-#define PB_GRASS_Y 246
-#define PB_GRASS_RX 50
-#define PB_GRASS_RY 36
-// the way into it: a trodden notch in its lower-left side, from its mouth (on the floor) to its end (in the grass),
-// turned to the left flipper
-static const float PB_NOTCH[2][2] = { { 314, 280 }, { 344, 254 } };
-#define PB_DIG_X 233        // Diglett's hole, between the three bumpers
-#define PB_DIG_Y 178
 static bool pbDay = false;   // the meadow on a wooden rim (else the night-blue table on a chrome one)
-static const int16_t PB_BUMP[3][2] = { { 158, 176 }, { 308, 176 }, { 233, 104 } };
-static const int16_t PB_BERRY_A[6] = { 212, 234, 246, 294, 306, 328 };  // the berry lights, in the orbit lane
-// the ramp: from its mouth left of the middle, up the left and over the orbit lane, where the wire rail takes over
-static const float PB_RAMP[3][2] = { { 146, 266 }, { 104, 198 }, { 98, 84 } };  // start, the curve's pull, end
 
 static inline float pbRad(float deg) { return deg * 0.01745329f; }
 static inline void pbPx2(int x, int y, uint16_t c) {  // a Knomi pixel (2 x 2)
@@ -215,9 +186,9 @@ static void pbRail(float ax, float ay, float bx, float by) {  // a guide on the 
   pbCapsule(ax, ay, bx, by, 4, 4, pbSteel());
   pbCapsule(ax, ay - 2, bx, by - 2, 1, 1, pbSteelLit());
 }
-// a flipper: side -1 left, 1 right; up: raised
-static void pbFlipper(int side, bool up) {
-  float px = side < 0 ? PB_FLIP_LX : V2_W - 1 - PB_FLIP_LX, a = up ? PB_FLIP_UP : PB_FLIP_REST;
+// a flipper: side -1 left, 1 right, at angle a (PB_FLIP_REST down, PB_FLIP_UP raised)
+static void pbFlipperAt(int side, float a) {
+  float px = side < 0 ? PB_FLIP_LX : V2_W - 1 - PB_FLIP_LX;
   float tx = px - side * PB_FLIP_LEN * cosf(a), ty = PB_FLIP_Y + PB_FLIP_LEN * sinf(a);
   pbCapsule(px + 2, PB_FLIP_Y + 5, tx + 2, ty + 5, 11, 6, pbFloorDark(), 130);  // its shadow
   pbCapsule(px, PB_FLIP_Y, tx, ty, 13, 8, 0x1B1B25);
@@ -228,15 +199,18 @@ static void pbFlipper(int side, bool up) {
   gfx->fillCircle((int)px, PB_FLIP_Y, 5, sc565(0xE8503A));  // the pivot's cap
   gfx->fillCircle((int)px - 1, PB_FLIP_Y - 1, 2, sc565(0xFF9C7A));
 }
+static void pbFlipper(int side, bool up) { pbFlipperAt(side, up ? PB_FLIP_UP : PB_FLIP_REST); }
 // the slingshots: a red triangle each side over the flippers, a lit corner, its long side a white rubber that kicks
 static void pbSlings() {
-  for (int s = -1; s <= 1; s += 2) {
-    int ax = s < 0 ? 82 : V2_W - 1 - 82, bx = s < 0 ? 122 : V2_W - 1 - 122;
-    gfx->fillTriangle(ax - s * 4 + 2, 290, ax - s * 4 + 2, 348, bx + s * 4 + 2, 372, sc565(pbFloorDark()));
-    gfx->fillTriangle(ax - s * 4, 286, ax - s * 4, 344, bx + s * 4, 368, sc565(0x1B1B25));
-    gfx->fillTriangle(ax, 294, ax, 340, bx, 362, sc565(0xE8503A));
-    gfx->fillTriangle(ax, 294, ax, 312, ax + (bx - ax) / 3, 316, sc565(0xFF8A6A));  // its lit corner
-    pbCapsule(ax, 294, bx, 362, 3, 3, 0xF4F4F8);
+  for (int m = -1; m <= 1; m += 2) {
+    int ax = (int)PB_SLING[0][0], ay = (int)PB_SLING[0][1], by = (int)PB_SLING[1][1], cx = (int)PB_SLING[2][0], cy = (int)PB_SLING[2][1];
+    if (m > 0) ax = 465 - ax, cx = 465 - cx;
+    int o = m < 0 ? -4 : 4;  // its dark edge, out from the triangle
+    gfx->fillTriangle(ax + o + 2, ay - 4, ax + o + 2, by + 4, cx - o + 2, cy + 6, sc565(pbFloorDark()));
+    gfx->fillTriangle(ax + o, ay - 8, ax + o, by + 4, cx - o, cy + 6, sc565(0x1B1B25));
+    gfx->fillTriangle(ax, ay, ax, by, cx, cy, sc565(0xE8503A));
+    gfx->fillTriangle(ax, ay, ax, ay + 18, ax + (cx - ax) / 3, ay + 22, sc565(0xFF8A6A));  // its lit corner
+    pbCapsule(ax, ay, cx, cy, 3, 3, 0xF4F4F8);
   }
 }
 // a bumper, its cap painted as a ball: 0 a Poke Ball, 1 a Great Ball, 2 an Ultra Ball; lit: bright, glowing, a ring of
@@ -276,6 +250,14 @@ static void pbBerry(int k, bool lit) {
   drawMap(SPR[k], HOME_ICON_N, x - 9, y - 9, 1, false);
   if (!lit) fsBlend(x - 12, y - 12, x + 12, y + 12, pbDay ? 0x4E9A3E : 0x1E2056, 150);
 }
+// under your Pokemon: how many hits toward its bonus (of 3)
+static void pbPetPips(int hits) {
+  for (int i = 0; i < 3; i++) {
+    int x = CX - 16 + i * 16;
+    gfx->fillCircle(x, PB_PET_FEET + 22, 6, sc565(0x1B1B25));
+    gfx->fillCircle(x, PB_PET_FEET + 22, 4, sc565(i < hits ? 0xFFE27A : 0x4A4A6A));
+  }
+}
 // your Pokemon on its pad, and under it how many hits toward its bonus (of 3)
 static void pbPet(int hits, bool hit) {
   int16_t d = pet.speciesId > 0 ? pet.speciesId : 25;
@@ -286,11 +268,7 @@ static void pbPet(int hits, bool hit) {
   pbEllipse(CX, PB_PET_FEET, 37, 11, hit ? 0xFFE27A : (pbDay ? 0xE8D8A0 : 0x8A8AE0));
   pbEllipse(CX, PB_PET_FEET - 2, 28, 6, hit ? 0xFFF3B0 : (pbDay ? 0xF4ECC8 : 0xAAAAF0));
   fsThumb(t, CX, PB_PET_FEET + 2, 2);
-  for (int i = 0; i < 3; i++) {
-    int x = CX - 16 + i * 16;
-    gfx->fillCircle(x, PB_PET_FEET + 22, 6, sc565(0x1B1B25));
-    gfx->fillCircle(x, PB_PET_FEET + 22, 4, sc565(i < hits ? 0xFFE27A : 0x4A4A6A));
-  }
+  pbPetPips(hits);
 }
 // Diglett's hole between the bumpers: a ring of dirt; up: Diglett out of it, the time to hit it a gold ring round it
 // (hit: knocked dizzy, stars round its head)
@@ -421,12 +399,7 @@ static void pbGrass(bool lit) {
 }
 // the patch's front, over a ball that has gone into it (from row y down): only its lower half shows over the blades
 static void pbGrassFront(int y, bool lit) { pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, SNAP2(y), true); }
-// the ramp's middle line at t (0 its mouth, 1 its top)
-static void pbRampAt(float t, float &x, float &y) {
-  float u = 1 - t;
-  x = u * u * PB_RAMP[0][0] + 2 * u * t * PB_RAMP[1][0] + t * t * PB_RAMP[2][0];
-  y = u * u * PB_RAMP[0][1] + 2 * u * t * PB_RAMP[1][1] + t * t * PB_RAMP[2][1];
-}
+static void pbRampAt(float t, float &x, float &y) { pinRampAt(t, x, y); }  // the ramp's middle line (0 its mouth, 1 its top)
 // the wire rail's middle at angle a (degrees)
 static void pbWireAt(float a, float r, float &x, float &y) { x = CX + r * cosf(pbRad(a)), y = CY + r * sinf(pbRad(a)); }
 // what's raised over the floor: the ramp (a see-through plastic lane between two walls, rising, so its shadow falls
@@ -561,10 +534,9 @@ static void pbStill(const PbState &s) {
   pbTable();
   pbOrbit();
   for (int k = 0; k < 6; k++) pbBerry(k, k < s.berries);
-  const float wa = 2.583f;  // the inlane guides: from the wall (148 degrees round) in to just above each flipper
-  float wx = CX + PB_R * cosf(wa), wy = CY + PB_R * sinf(wa);
-  pbRail(wx, wy, PB_FLIP_LX - 8, PB_FLIP_Y - 6);
-  pbRail(V2_W - 1 - wx, wy, V2_W - 1 - PB_FLIP_LX + 8, PB_FLIP_Y - 6);
+  float wx = CX + PB_R * cosf(PB_GUIDE_A), wy = CY + PB_R * sinf(PB_GUIDE_A);  // the inlane guides, down to the flippers
+  pbRail(wx, wy, PB_GUIDE_END[0], PB_GUIDE_END[1]);
+  pbRail(465 - wx, wy, 465 - PB_GUIDE_END[0], PB_GUIDE_END[1]);
   pbSlings();
   pbDiglett(s.digUp, s.digHit, s.digTime);
   for (int k = 0; k < 3; k++) pbBumper(k, s.bumpLit == k || s.bumpLit == 3);
@@ -591,7 +563,6 @@ void drawBattlePanel(int x, int y, const BtlFighter &f, float shown, bool number
 void battleMoveRect(uint8_t i, int &x0, int &x1);
 BtlFighter petFighter(uint8_t lvl);
 int pmdTopY(const PmdMon &m, int groundY, uint8_t maxS);
-static bool pbWildLoaded = false;
 // a line over the scene in a text box, as the battle says things
 static void pbBtlLine(const char *s, int y) {
   gfx->setTextColor(UI_INK);
@@ -600,41 +571,39 @@ static void pbBtlLine(const char *s, int y) {
   setCur(centerX(s, 2), y);
   printT(s);
 }
-// phase: 0 it appears, 1 pick a move, 2 your move landing, 3 won
-static void pbBattle(int phase, float timeLeft) {
-  if (!pbWildLoaded) pbWildLoaded = wildPmd.load(PB_WILD, false);
-  uint8_t lvl = btlCapLevel(pet.level());
-  BtlFighter me = petFighter(lvl), foe = btlMakeWild(PB_WILD, lvl, 0);
-  bMeMoves = btlMovesFor(me.dex, lvl, PB_WILD);
-  uint8_t used = bMeMoves.count > 1 ? 1 : 0;  // the move landing: its own type's (the right one)
+// The battle, drawn. phase: 0 it appears, 1 picking moves, 2 won, 3 it got away (out of time). k: a move landing,
+// 1 just used to 0 done (0: none), used the one landing. foe shown at hpShown, wildPmd its sprite (loaded by whoever
+// set it up); bMeMoves your two moves
+static void pbBattleDraw(int phase, float timeLeft, const BtlFighter &foe, float hpShown, const BtlFighter &me, uint8_t used, float k) {
   v2BattleScene(-1, true, PB_BTL_FOE_X, PB_BTL_FOE_GROUND, PB_BTL_ME_X, PB_BTL_ME_GROUND);
   uint32_t now = millis();
+  bool hit = k > 0 && phase == 1;
   // tall grass on the wild one's base, tufts round its back edge, then it, then the grass in front of its feet
   const int gy = PB_BTL_FOE_GROUND - 4 + v2BtlBobFoe;
   pbGrassOval(PB_BTL_FOE_X, gy, 74, 15, phase == 0);
   pbGrassTufts(PB_BTL_FOE_X, gy, 74, 15, 192, 348, phase == 0);
-  if (phase != 3 && wildPmd.loaded)
-    drawPmdActM(wildPmd, phase == 2 && wildPmd.has(PMD_HURT) ? PMD_HURT : PMD_IDLE, PB_BTL_FOE_X, PB_BTL_FOE_GROUND + v2BtlBobFoe, now, true, false, 3);
+  if (phase < 2 && wildPmd.loaded && !(hit && k > 0.6f && (int)(k * 20) % 2))  // (blinking as it's hit)
+    drawPmdActM(wildPmd, hit && wildPmd.has(PMD_HURT) ? PMD_HURT : PMD_IDLE, PB_BTL_FOE_X, PB_BTL_FOE_GROUND + v2BtlBobFoe, now, true, false, 3);
   pbGrassOval(PB_BTL_FOE_X, gy, 74, 15, phase == 0, gy + 2);
   pbGrassTufts(PB_BTL_FOE_X, gy + 6, 60, 8, 200, 340, phase == 0);
   // yours, from behind, lunging as its move goes
-  uint8_t act = phase == 2 ? PMD_ATTACKUR : PMD_IDLEUR;
-  if (!pmd.has(act)) act = phase == 2 && pmd.has(PMD_ATTACK) ? PMD_ATTACK : PMD_IDLE;
-  drawPmdActM(pmd, act, PB_BTL_ME_X + (phase == 2 ? 34 : 0), PB_BTL_ME_GROUND + (phase == 2 ? -14 : 0) + v2BtlBobMe, now, true, false, 4);
-  if (phase == 2 && wildPmd.loaded)
-    fxBurst(MOVE_TBL[bMeMoves.ids[used]].type, PB_BTL_FOE_X, (PB_BTL_FOE_GROUND + pmdTopY(wildPmd, PB_BTL_FOE_GROUND, 3)) / 2, 0.5f);
-  drawBattlePanel(72, 64, foe, phase == 3 ? 0 : phase == 2 ? foe.hp * 0.45f : foe.hp, false);
+  float lunge = hit ? sinf(k * 3.14159f) : 0;
+  uint8_t act = hit ? PMD_ATTACKUR : PMD_IDLEUR;
+  if (!pmd.has(act)) act = hit && pmd.has(PMD_ATTACK) ? PMD_ATTACK : PMD_IDLE;
+  drawPmdActM(pmd, act, PB_BTL_ME_X + (int)(34 * lunge), PB_BTL_ME_GROUND - (int)(14 * lunge) + v2BtlBobMe, now, true, false, 4);
+  if (hit && wildPmd.loaded && used < bMeMoves.count)
+    fxBurst(MOVE_TBL[bMeMoves.ids[used]].type, PB_BTL_FOE_X, (PB_BTL_FOE_GROUND + pmdTopY(wildPmd, PB_BTL_FOE_GROUND, 3)) / 2, 1 - k);
+  drawBattlePanel(72, 64, foe, hpShown, false);
   drawBattlePanel(226, 256, me, me.hp, true);
-  // the time left: a gold ring round the rim, emptying the way a clock goes
-  for (int k = 0; k < 360; k += 2) {
-    if (k > timeLeft * 360) break;
-    float a = pbRad(k - 90);
-    fsSq(CX + (int)(226 * cosf(a)), CY + (int)(226 * sinf(a)), 6, 0xF2C230);
+  for (int a = 0; a < 360; a += 2) {  // the time left: a gold ring round the rim, emptying the way a clock goes
+    if (a > timeLeft * 360) break;
+    float r = pbRad(a - 90);
+    fsSq(CX + (int)(226 * cosf(r)), CY + (int)(226 * sinf(r)), 6, 0xF2C230);
   }
   char line[48], nm[24];
   switch (phase) {
     case 0:
-      snprintf(line, sizeof(line), T(S_BTL_WILD), dexName(PB_WILD));
+      snprintf(line, sizeof(line), T(S_BTL_WILD), dexName(foe.dex));
       pbBtlLine(line, 380);
       break;
     case 1:
@@ -648,21 +617,170 @@ static void pbBattle(int phase, float timeLeft) {
         setCur((x0 + x1) / 2 - (int)strlen(m.name) * 6, 359);
         printT(m.name);
       }
-      pbBtlLine("TAP A MOVE!", 410);
+      if (hit && used < bMeMoves.count) {
+        v2Caps(dexName(me.dex), nm, sizeof(nm));
+        snprintf(line, sizeof(line), "%s: %s!", nm, MOVE_TBL[bMeMoves.ids[used]].name);
+        pbBtlLine(line, 404);
+      } else {
+        pbBtlLine(T(S_PIN_MOVE), 404);
+      }
       break;
     case 2:
-      v2Caps(dexName(me.dex), nm, sizeof(nm));
-      snprintf(line, sizeof(line), "%s: %s!", nm, MOVE_TBL[bMeMoves.ids[used]].name);
+      snprintf(line, sizeof(line), T(S_BTL_LOST), dexName(foe.dex));
       pbBtlLine(line, 380);
+      snprintf(line, sizeof(line), T(S_PIN_WIN_FMT), (unsigned)PB_PTS_BATTLE);
+      fsSay(line, CX, 196, 0xFFE27A, 4);
       break;
     case 3:
-      snprintf(line, sizeof(line), T(S_BTL_LOST), dexName(PB_WILD));
+      snprintf(line, sizeof(line), T(S_FLED_FMT), dexName(foe.dex));
       pbBtlLine(line, 380);
-      fsSay("WIN! +500", CX, 196, 0xFFE27A, 4);
       break;
   }
 }
 
+// ===================================================================== the game, drawn from pinball.h's state
+// What never changes (the floor, the orbit and its lights unlit, the guides, slingshots, Diglett's hole, the bumpers
+// unlit, your Pokemon on its pad, the grass) is painted once a look into a picture of the floor, and the ramp and the
+// wire over that into a second. Each frame starts from the second and draws what changes over it (lit things,
+// Diglett, the flippers, the ball, the score); a ball on the floor under the ramp or the wire gets them put back over
+// it, wherever the two pictures differ. Two pictures of the screen (434 KB each); without the room, it's all painted
+// every frame
+static uint16_t *pbPicFloor = nullptr, *pbPic = nullptr;
+static int32_t pbPicKey = -1;  // the look and your Pokemon they were painted with
+static void pbPaintStatic() {
+  pbTable();
+  pbOrbit();
+  for (int k = 0; k < 6; k++) pbBerry(k, false);
+  float wx = CX + PB_R * cosf(PB_GUIDE_A), wy = CY + PB_R * sinf(PB_GUIDE_A);
+  pbRail(wx, wy, PB_GUIDE_END[0], PB_GUIDE_END[1]);
+  pbRail(465 - wx, wy, 465 - PB_GUIDE_END[0], PB_GUIDE_END[1]);
+  pbSlings();
+  pbDiglett(false);
+  for (int k = 0; k < 3; k++) pbBumper(k, false);
+  pbPet(0, false);
+  pbGrass(false);
+}
+// the raised parts put back over (x0, y0)..(x1, y1): wherever the picture with them differs from the floor's
+static void pbRaisedOver(int x0, int y0, int x1, int y1) {
+  if (!pbPic || !pbPicFloor || pbPicKey < 0) return;
+  x0 = x0 < 0 ? 0 : x0, y0 = y0 < 0 ? 0 : y0, x1 = x1 > V2_W - 1 ? V2_W - 1 : x1, y1 = y1 > V2_W - 1 ? V2_W - 1 : y1;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  for (int y = y0; y <= y1; y++) {
+    const int r = y * V2_W;
+    for (int x = x0; x <= x1; x++)
+      if (pbPic[r + x] != pbPicFloor[r + x]) fb[r + x] = pbPic[r + x];
+  }
+}
+// a score as the game shows it
+static void pinScoreText(uint32_t v, char *b, int n) { snprintf(b, n, "%lu", (unsigned long)v); }
+// the keys over the flippers on a computer (Left and Right flip, Space both), in place of the touch hint
+static void pbKeysHint(int y) {
+  setSize(2);
+  const char *flip = T(S_PIN_FLIP), *both = T(S_PIN_BOTH), *space = T(S_PIN_SPACE);
+  int w = 30 + 6 + 30 + 10 + textW(flip, 2), x = CX - w / 2;
+  x += pbKey(x, y, -1) + 6;
+  x += pbKey(x, y, 1) + 10;
+  fsSay(flip, x + textW(flip, 2) / 2, y + 6, 0xFFFFFF);
+  int w2 = textW(space, 2) + 16 + 10 + textW(both, 2), x2 = CX - w2 / 2;
+  x2 += pbKey(x2, y + 38, 0, space) + 10;
+  fsSay(both, x2 + textW(both, 2) / 2, y + 44, 0xFFFFFF);
+}
+// the table, s at this moment (keys: a computer's, the hint shows its keys)
+static void pinDraw(const PinState &s, bool keys) {
+  pbDay = s.day;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  scScreen();
+  int32_t key = (s.day ? 1 : 0) + 2 * (pet.speciesId + (pet.shiny ? 1000 : 0));
+  if (!pbPic) pbPic = (uint16_t *)ps_malloc(V2_W * V2_W * sizeof(uint16_t));
+  if (!pbPicFloor) pbPicFloor = (uint16_t *)ps_malloc(V2_W * V2_W * sizeof(uint16_t));
+  if (pbPic && pbPicFloor) {
+    if (pbPicKey != key) {
+      pbPaintStatic();
+      memcpy(pbPicFloor, fb, V2_W * V2_W * sizeof(uint16_t));
+      pbRaised(false);
+      memcpy(pbPic, fb, V2_W * V2_W * sizeof(uint16_t));
+      pbPicKey = key;
+    } else {
+      memcpy(fb, pbPic, V2_W * V2_W * sizeof(uint16_t));
+    }
+  } else {
+    pbPaintStatic();
+    pbRaised(false);
+  }
+  // what changes, on the floor: berries lit (blinking just after all six), bumpers, Diglett, your Pokemon, the grass
+  for (int k = 0; k < 6; k++)
+    if (((s.berryLit >> k) & 1) || (s.berryFlash > 0 && (int)(s.berryFlash * 6) % 2)) {
+      float a = pbRad(PB_BERRY_A[k]);
+      int x = (int)(CX + PB_WIRE_R * cosf(a)), y = (int)(CY + PB_WIRE_R * sinf(a));
+      pbBerry(k, true);
+      pbRaisedOver(x - 26, y - 26, x + 26, y + 26);
+    }
+  for (int k = 0; k < 3; k++)
+    if (s.bumpFlash[k] > 0 || ((s.bumpLit >> k) & 1)) pbBumper(k, true);
+  if (s.digUp || s.digHitT > 0) pbDiglett(true, !s.digUp, s.digUp ? s.digT / PB_DIG_S : 0);
+  if (s.petFlash > 0) pbPet(s.petHits % 3, true);
+  else pbPetPips(s.petHits % 3);
+  if (s.grassT > 0 || s.phase == PIN_CATCH) pbGrass(true);
+  pbFlipperAt(-1, s.flipA[0]);
+  pbFlipperAt(1, s.flipA[1]);
+  // the ball: rolled as it goes; up the ramp nearer (bigger) and its shadow further off; on the floor under the ramp or
+  // the wire, them back over it; in the grass, the blades in front of it
+  bool showBall = s.phase == PIN_PLAY || s.phase == PIN_CATCH || (s.phase == PIN_LOST && s.t < 0.3f);
+  if (showBall) {
+    int x = (int)s.x, y = (int)s.y;
+    if (s.onTrack) {
+      const PinTrack &tr = pinTrack();
+      float up = s.s < tr.rampLen ? s.s / tr.rampLen : 1;
+      pbBall(x, y, s.vx, s.vy, s.roll, PB_BALL_R + (int)(2 * up), 4 + (int)(10 * up));
+    } else {
+      pbBall(x, y, s.vx, s.vy, s.roll);
+      if (s.phase == PIN_CATCH) pbGrassFront(y - 2, true);
+      else pbRaisedOver(x - 16, y - 16, x + 22, y + 24);
+    }
+  }
+  // what it says
+  char b[40];
+  if (s.phase == PIN_LOST) {  // the bottom glowing red; the next ball's number
+    for (int yy = 300; yy < V2_W; yy += 4)
+      for (int xx = 0; xx < V2_W; xx += 4) {
+        float d = 233 - hypotf(xx + 2 - CX, yy + 2 - CY);
+        if (d < 0 || d > 30) continue;
+        fsBlend(xx, yy, xx + 3, yy + 3, 0xE8503A, (int)(170 * (1 - d / 30)));
+      }
+    if (s.ballsLeft && s.t > 0.4f) {
+      snprintf(b, sizeof(b), T(S_PIN_BALL_FMT), (unsigned)(s.ball + 1));
+      fsBoard(b, 214);
+    }
+  }
+  if (s.phase == PIN_CATCH) fsBang(392, 182);
+  if (s.onTrack && s.rampTop) fsSay(T(S_PIN_RAMP), 184, 216, 0xFFE27A, 3);
+  if (s.digUp && s.digT > PB_DIG_S - 1.6f) {
+    snprintf(b, sizeof(b), T(S_PIN_DIG_FMT), dexName(50));
+    char c[40];
+    fsBoard(v2Caps(b, c, sizeof(c)), 206);
+  }
+  if (s.berryFlash > 0) {
+    snprintf(b, sizeof(b), T(S_PIN_BERRIES_FMT), (unsigned)s.mult);
+    fsSay(b, CX, 214, 0xFFE27A, 4);
+  }
+  if (s.popT > 0 && s.popPts) {  // the latest points, rising where they were made
+    snprintf(b, sizeof(b), "+%u", (unsigned)s.popPts);
+    int px = (int)s.popX, py = (int)(s.popY - (1 - s.popT) * 24);
+    px = px < 60 ? 60 : px > 406 ? 406 : px;
+    py = py < 110 ? 110 : py;  // (under the score and the balls)
+    fsSay(b, px, py, 0xFFE27A, 3);
+  }
+  if (s.phase == PIN_PLAY && s.ball == 1 && s.playT < PB_HINT_S) {
+    if (keys) pbKeysHint(318);
+    else fsSay(T(S_PIN_HINT), CX, 344, 0xFFFFFF);
+  }
+  char sc[16], mult[8];
+  pinScoreText(s.score, sc, sizeof(sc));
+  snprintf(mult, sizeof(mult), "x%u", (unsigned)s.mult);
+  pbHud(sc, s.phase == PIN_END ? 0 : s.ballsLeft + (s.phase == PIN_LOST ? 0 : 1), s.mult > 1 ? mult : nullptr);
+}
+
+#ifdef BOARD_HOST
 // ===================================================================== the mock screens
 // 1, 2: the start in each look (one of the two at random each game, each with its own song): the ball rolling in along
 // the orbit at the top, nothing lit yet, the hint over the flippers
@@ -761,7 +879,16 @@ static void pbMockSpotIn() {
   fsBang(392, 182);
   pbHud("2,290", 3);
 }
-// 11 to 14: the battle: a wild Oddish appears in the grass; pick a move; your move landing; won
+// 11 to 14: the battle (pbBattleDraw()): a wild Oddish appears in the grass; pick a move; your move landing; won
+static bool pbWildLoaded = false;
+static void pbBattle(int phase, float timeLeft) {
+  if (!pbWildLoaded) pbWildLoaded = wildPmd.load(PB_WILD, false);
+  uint8_t lvl = btlCapLevel(pet.level());
+  BtlFighter me = petFighter(lvl), foe = btlMakeWild(PB_WILD, lvl, 0);
+  bMeMoves = btlMovesFor(me.dex, lvl, PB_WILD);
+  uint8_t used = bMeMoves.count > 1 ? 1 : 0;  // the move landing: its own type's (the right one)
+  pbBattleDraw(phase == 3 ? 2 : phase == 0 ? 0 : 1, timeLeft, foe, phase == 3 ? 0 : phase == 2 ? foe.hp * 0.45f : foe.hp, me, used, phase == 2 ? 0.5f : 0);
+}
 static void pbMockBtlIntro() { pbBattle(0, 1.0f); }
 static void pbMockBattle() { pbBattle(1, 0.7f); }
 static void pbMockBtlHit() { pbBattle(2, 0.55f); }

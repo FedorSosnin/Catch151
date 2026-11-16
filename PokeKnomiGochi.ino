@@ -42,6 +42,7 @@
 #include "src/pokerun.h"
 #include "src/surf.h"
 #include "src/fishing.h"
+#include "src/pinball.h"   // Pinball: its rules and physics (drawn by pinball_v2.h)
 #include "src/dungeon.h"
 #include "src/zones.h"
 #include "src/zones_art.h"
@@ -280,6 +281,16 @@ uint32_t fishLast = 0, fishOverT = 0;
 uint32_t fishTapT = 0, fishBiteT = 0, fishSoonT = 0, fishStrainT = 0;  // when each last happened (the screen's flashes)
 int16_t fishTapX = -1, fishTapY = -1;  // where the finger last went down (its ring)
 bool fishBot = false;                  // FISHBOT on the console: it plays by itself, by eye (testing, screenshots)
+// Pinball (pinball.h, drawn by pinball_v2.h)
+PinState pin;
+bool pinOpen = false, pinNewHi = false;
+uint32_t pinLast = 0, pinOverT = 0;
+bool pinBot = false;                   // PINBOT on the console: it plays by itself (testing, screenshots)
+float pinBotHeld[2] = { 0, 0 };
+bool pinBtnHeld = false;               // the Knomi's button (Space on a computer) held: both flippers up
+bool pinKeyWas[2] = { false, false };  // a computer's Left and Right, last frame (in a battle each press is a move)
+BtlFighter pinMe, pinFoe;              // the battle in the grass: yours, the wild one,
+float pinFoeShown = 0;                 // and its HP as shown (chasing the real one)
 uint32_t fishBotT = 0;
 uint32_t gBacklightFlashUntil = 0;     // the Knomi's backlight to full until then (the bite; too tight)
 // a PikaSurf duel with a buddy (BK_SURF): both on the same course (the session id is the seed), each
@@ -735,7 +746,7 @@ void loop() {
   static uint32_t autoTriedT = 0;
   // V2: from any screen a restart loses nothing on (Fedor: "the knomi finds the update but never auto install it":
   // menus stay open when left alone, and only the light wakes the pet), and asleep in the middle of the day (otaAutoNow())
-  bool otaBusy = pet.ceremony || choiceKind || confirmUntil || bsState != BS_IDLE || gameOpen || runOpen || surfOpen || fishOpen ||
+  bool otaBusy = pet.ceremony || choiceKind || confirmUntil || bsState != BS_IDLE || gameOpen || runOpen || surfOpen || fishOpen || pinOpen ||
                  dungeonOpen || battleOpen || quizOpen || vbOpen || sdOpen || tradeOpen || kbOpen ||
                  wifiSetupState() != WS_OFF || towerClimbing();
 #define OTA_AUTO_WHEN otaAutoNow(screenOff || dimStage >= 1, otaBusy, pet.sleeping, sceneHour())
@@ -816,8 +827,8 @@ PowerCtx powerCtx(uint32_t now) {
   // drawn at the slower rates like any other screen
   bool battleIdle = battleOpen && c.idleMs > POWER_DIM1_MS;
   c.gameOpen = gameOpen || (battleOpen && !battleIdle) || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen ||
-               fishOpen;
-  c.arcadeOpen = runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen;  // (Reel Fishing: 25 fps, its beat smooth)
+               fishOpen || pinOpen;
+  c.arcadeOpen = runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen || pinOpen;  // (Pinball: the ball smooth)  // (Reel Fishing: 25 fps, its beat smooth)
   c.usb = usbPresent();
   c.charging = batCharging();
   c.batPct = batPercent();
@@ -1063,6 +1074,14 @@ void handleSerial() {
   } else if (line == "DNBOT" && pet.noSave) {  // descends by itself, to see deep floors
     startDungeon();
     dnBot = true;
+    Serial.println("DONE");
+  } else if (line == "PINBALL") {  // Pinball, under its card (testing)
+    gamesMenuOpen = false;
+    startPinball();
+    if (pinOpen) introOpen(6);  // (GAME_PINBALL, further on)
+    Serial.println("DONE");
+  } else if (line == "PINBOT" && pet.noSave) {  // Pinball plays by itself (testing)
+    pinBot = !pinBot;
     Serial.println("DONE");
   } else if (line == "FISHBOT" && pet.noSave) {  // Reel Fishing plays by itself, as a careful player (testing)
     fishBot = !fishBot;
@@ -1356,7 +1375,7 @@ void handleTouch() {
   // games: the touch is resolved on finger lift, so that swiping up exits
   // without pressing anything on the way. Only the Rock Hopper jump fires on touch-down: there every ms counts.
   if (battleOpen || quizOpen || gamesMenuOpen || gameOpen || runOpen || surfOpen || dungeonOpen || zoneScreen || sdOpen || vbOpen ||
-      fishOpen) {
+      fishOpen || pinOpen) {
     if (pressed) { tXl = x; tYl = y; }  // tXl: aim with the finger where there is no accelerometer
     // in the dungeon, keeping the finger down keeps walking
     if (dungeonOpen && !introUp() && pressed && wasPressed && !swallowGesture && !dnOverT && millis() - tStart > 350 &&
@@ -1378,6 +1397,7 @@ void handleTouch() {
       wakeUI();
       if (runOpen && !introUp() && !swallowGesture) runJump = true;
       if (fishOpen && !introUp() && !swallowGesture) fishTouchDown(x, y);  // a cast, a strike, a reel: on the touch
+      if (pinOpen && !introUp() && !swallowGesture) pinTouchDown(x, y);    // a move in Pinball's battle: on the touch
     }
     if (pressed) {
       pressUpdate(x, y);
@@ -2153,7 +2173,7 @@ void printT(const char *s) {
 static bool staticScreen() {
   if (pet.awaitingStarter()) return false;  // V2: the starters walk
   if (pet.awaitingStarter()) return true;
-  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen || fishOpen) return false;  // the gallery manages its own repainting
+  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen || fishOpen || pinOpen) return false;  // the gallery manages its own repainting
   if (clockOpen && clockPage == V2_ABOUT_PAGE) return false;  // V2: About's coin spins and gleams
   if (kbOpen || clockOpen) return true;
   if (cardOpen && !cardAch && cardPage >= 4) return false;  // V2: an item's page: the item hovers (Fedor)
@@ -2286,6 +2306,10 @@ bool render() {
   }
   if (fishOpen) {
     renderFish();
+    return true;
+  }
+  if (pinOpen) {
+    renderPinball();
     return true;
   }
   if (battleOpen) {
@@ -2522,6 +2546,7 @@ void quitGame() {
   }
   if (dungeonOpen) closeDungeon();
   if (fishOpen) closeFish();
+  if (pinOpen) closePinball();
   gameOpen = gamesMenuOpen = false;
 }
 
@@ -2533,7 +2558,7 @@ void autoRotateTick(uint32_t now) {
   static RotFilter filter;
   if (now - last < 100) return;
   last = now;
-  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || fishOpen || (battleOpen && bPhase >= BP_AIM)) {
+  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || fishOpen || pinOpen || (battleOpen && bPhase >= BP_AIM)) {
     filter.reset();
     return;
   }
@@ -2621,7 +2646,7 @@ void stepGame() {
 // ---------- games menu ----------
 // As the zones: a round window onto each game, its own scene with your Pokemon in it, the name under.
 #define GAMES_COUNT 7    // battles have their own icon on the home screen
-#define GAME_PINBALL 6   // (its cartridge is in the menu; the game itself is still being made)
+#define GAME_PINBALL 6
 #define GAME_ICON_R 50
 
 const char *gameLabel(int row) {
@@ -2732,7 +2757,7 @@ int drawWrapped(const char *s, uint8_t size, int maxW, int y, int lineH, bool dr
 }
 
 // a card is up over a game that is open (a card left over from a closed game counts for nothing)
-bool introUp() { return introCard >= 0 && (gameOpen || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen || fishOpen); }
+bool introUp() { return introCard >= 0 && (gameOpen || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen || fishOpen || pinOpen); }
 
 // Play together's games have cards too (after the Games menu's 0..4): the same card on both boards, and
 // the game begins once both players have pressed Ready, GO! (buddyGameReady)
@@ -2891,10 +2916,6 @@ void gamesMenuTap(int16_t x, int16_t y) {
   int adx = pageArrowDx(V2_PAGE_ARROW_Y);  // where an arrow isn't (the first page's left, the last's right): nothing
   if (pageArrowHit(x, y, CX - adx, V2_PAGE_ARROW_Y) || pageArrowHit(x, y, CX + adx, V2_PAGE_ARROW_Y)) return;
   int g = gameAt(x, y);
-  if (g == GAME_PINBALL) {  // not made yet: the menu stays
-    sfxPlay(SFX_DENY);
-    return;
-  }
   // a tap on the screen between the cartridges does nothing (four a page leave room round them, where a page
   // arrow may not be): the X, or a tap off the screen, closes it
   if (g < 0 && x >= V2_GB_X0 && x < V2_GB_X1 && y >= V2_GB_Y0 && y < V2_GB_Y1) return;
@@ -2907,8 +2928,9 @@ void gamesMenuTap(int16_t x, int16_t y) {
   else if (g == 2) startRun();
   else if (g == 3) startDungeon();
   else if (g == 4) startSurf();
-  else startFish();
-  if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen) introOpen(g);  // it opens under its card
+  else if (g == 5) startFish();
+  else startPinball();
+  if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen || pinOpen) introOpen(g);  // it opens under its card
 }
 
 // the art in a rounded square r from its centre, its corners rad round
@@ -3087,7 +3109,7 @@ void endVisit() {
 
 // checks the time and advances the visit, even with another screen open on top
 bool onMainScreen() {
-  return !gameOpen && !runOpen && !surfOpen && !dungeonOpen && !fishOpen && !battleOpen && !quizOpen && !gamesMenuOpen && !zoneScreen && !galleryOpen && !cardOpen &&
+  return !gameOpen && !runOpen && !surfOpen && !dungeonOpen && !fishOpen && !pinOpen && !battleOpen && !quizOpen && !gamesMenuOpen && !zoneScreen && !galleryOpen && !cardOpen &&
                       !kbOpen && !clockOpen && !choiceKind && !confirmUntil && !buddyMenuOpen && !partyOpen && !tradeOpen &&
                       !playMenuOpen && !sdOpen && !vbOpen;
 }
@@ -3187,7 +3209,7 @@ void knomiButtonTap() {
   screenOff = false;
   wakeUI();
   if (wasAsleep) return;  // in the dark it only wakes, like the touchscreen
-  if (fishOpen) return;  // (Reel Fishing has the button as it goes down: handleKnomiButton())
+  if (fishOpen || pinOpen) return;  // (Reel Fishing and Pinball have the button as it goes down: handleKnomiButton())
 #if defined(BOARD_HOST)
   if (v2KeyThrow()) return;  // V2 on a computer: Space throws on the catch (master_v2.h)
 #endif
@@ -3206,6 +3228,7 @@ void knomiAskReset() {
   if (surfOpen) closeSurf();
   if (dungeonOpen) closeDungeon();
   if (fishOpen) closeFish();
+  if (pinOpen) closePinball();
   gamesMenuOpen = playMenuOpen = false;
   zoneDetailClose();
   zoneScreen = ZS_NONE;
@@ -3231,17 +3254,19 @@ void handleKnomiButton(uint32_t now) {
     resetAsked = false;
     downAt = now;
     if (fishOpen && !screenOff && dimStage == 0) fishButton();  // Reel Fishing: the button casts, strikes, reels
-  } else if (pressed && !resetAsked && now - downAt >= KNOMI_BTN_RESET_MS) {
+    if (pinOpen && !screenOff && dimStage == 0) pinButton(true);  // Pinball: both flippers, while it's held
+  } else if (pressed && !resetAsked && !pinOpen && now - downAt >= KNOMI_BTN_RESET_MS) {  // (Pinball: held is flippers up)
     resetAsked = true;
     knomiAskReset();
   } else if (!pressed && down) {
     down = false;
+    if (pinOpen) pinButton(false);
     uint32_t held = now - downAt;
     if (held < 30 || resetAsked) return;  // 30 ms: debounce
     if (held < KNOMI_BTN_HOLD_MS) {
       knomiButtonTap();
-    } else if (fishOpen) {
-      // Reel Fishing has the button: a long press is just a press there, never the screen off
+    } else if (fishOpen || pinOpen) {
+      // Reel Fishing and Pinball have the button: a long press is just a press there, never the screen off
     } else if (held < KNOMI_BTN_HOLD_MAX_MS) {
       screenOff = !screenOff;
       if (!screenOff) wakeUI();
@@ -4776,6 +4801,175 @@ void renderFish() {
   musicTempo(fish.phase == FP_REEL && fish.target >= 0 ? FISH_CLASS[fish.b[fish.target].cls].pace * 60 / 150.0f : 1.0f);
 #endif
   fsGame(now);
+  drawIntroCard();
+  gfx->flush();
+}
+
+// ---------- Pinball ----------
+// The round screen is the table (pinball.h has its rules and physics, pinball_v2.h draws it; the plan is
+// docs/PINBALL.md). Hold the left or right half of the screen to raise that flipper (on a computer the Left and Right
+// arrows; the Knomi's button, or Space, raises both). Into the tall grass and it's a battle in the game's own battle
+// scene: tap a half (or press Left or Right) to use that move. Three balls; the score is the record.
+void pinEvents(uint32_t ev);
+void startPinball() {
+  if (pet.isEgg() || pet.sleeping || pet.ceremony || !pmd.loaded) { sfxPlay(SFX_DENY); return; }
+  pinStart(pin, esp_random());
+  pinOpen = true;
+  pinNewHi = false;
+  pinOverT = 0;
+  pinLast = millis();
+  pinBotHeld[0] = pinBotHeld[1] = 0;
+  pinBtnHeld = false;
+  pinKeyWas[0] = pinKeyWas[1] = false;
+}
+
+void closePinball() {
+  pinOpen = false;
+  introCard = -1;
+  gBacklightFlashUntil = 0;
+  wildPmd.unload();
+}
+
+// into the grass: a wild one of your level or near it, as a wild battle picks it, its sprite, and your two moves
+void pinBattleSetup() {
+  uint8_t lvl = btlCapLevel(pet.level()), foeLvl = btlWildLevel(lvl, random(4));
+  int16_t dex = pet.pickWildSpecies(foeLvl);
+  wildPmd.load(dex, false);  // (without it, the battle goes on with no sprite)
+  pinMe = petFighter(lvl);
+  pinFoe = btlMakeWild(dex, foeLvl, btlWildGene(random(16)));
+  bMeMoves = btlMovesFor(pinMe.dex, lvl, dex);
+  pinFoeShown = pinFoe.hp;
+  pinBattleStart(pin, dex, pinFoe.hp);
+}
+
+// a move used in the battle (0 the left one, 1 the right): its damage as a battle works it out, type and all
+void pinMove(uint8_t i) {
+  if (!pinOpen || pin.phase != PIN_BATTLE || !pin.wildMax || i >= bMeMoves.count) return;
+  v2PlayInputAt = millis();
+  const BtlMove &m = MOVE_TBL[bMeMoves.ids[i]];
+  uint16_t dmg = btlDamage(pinMe.level, m, pinMe.atk, pinFoe.def, DEX_TBL[pinMe.dex].type, DEX_TBL[pinFoe.dex].type, 85 + random(16));
+  pinEvents(pinBattleHit(pin, i, dmg));
+}
+
+// what happened: its sound (and through it its buzz), the backlight's flash
+void pinEvents(uint32_t ev) {
+  if (!ev) return;
+  uint32_t now = millis();
+  if (ev & PE_FLIP) sfxPlay(SFX_TAP);
+  if (ev & (PE_BUMP | PE_BTL_HIT)) sfxPlay(SFX_PLAY);
+  if (ev & PE_SLING) sfxPlay(SFX_FISH_NIBBLE);
+  if (ev & (PE_RAMP_IN | PE_BTL_OUT)) sfxPlay(SFX_FISH_CAST);
+  if (ev & (PE_RAMP | PE_ORBIT)) sfxPlay(SFX_LEVEL);
+  if (ev & PE_DROP) sfxPlay(SFX_FISH_PLIP);
+  if (ev & PE_BERRY) sfxPlay(SFX_EAT);
+  if (ev & PE_PET) sfxPlay(SFX_HEART);
+  if (ev & (PE_BERRIES | PE_PET3 | PE_BTL_WON)) sfxPlay(SFX_MEDAL);
+  if (ev & PE_DIG_UP) sfxPlay(SFX_FISH_BITE);
+  if (ev & PE_DIG_HIT) sfxPlay(SFX_FISH_LANDED);
+  if (ev & (PE_DIG_GONE | PE_LOST)) sfxPlay(SFX_DENY);
+  if (ev & PE_GRASS) {
+    sfxPlay(SFX_FISH_BITE);
+    gBacklightFlashUntil = now + 160;  // the Knomi's backlight flashes, as at a bite
+  }
+  if (ev & PE_BATTLE) pinBattleSetup();
+  if (ev & PE_BTL_OUT) wildPmd.unload();
+  if (ev & PE_BALL) sfxPlay(SFX_TAP);
+  if (ev & PE_END) {
+    pinNewHi = pin.score > pet.pinHi;
+    pet.pinResult(pin.score);  // the reward and record only at the end
+    sfxPlay(pinNewHi ? SFX_MEDAL : SFX_PLAY);
+    pinOverT = now | 1;
+    Serial.printf("pinball: %lu\n", (unsigned long)pin.score);
+  }
+}
+
+// a finger down: in the battle, that half's move (on the touch, as fast as you can tap); on the table the flippers
+// follow the finger held (pinInput())
+void pinTouchDown(int16_t x, int16_t y) {
+  if (pinOverT) return;
+  v2PlayInputAt = millis();
+  if (pin.phase == PIN_BATTLE) pinMove(x < CX ? 0 : (bMeMoves.count > 1 ? 1 : 0));
+}
+
+// the Knomi's button (Space on a computer), down or up: the card's READY, GO!, both flippers, the move of its own type
+void pinButton(bool down) {
+  pinBtnHeld = down;
+  if (!pinOpen || pinOverT || !down) return;
+  v2PlayInputAt = millis();
+  if (introUp()) {
+    introDismiss(0, -1);
+    return;
+  }
+  if (pin.phase == PIN_BATTLE) pinMove(bMeMoves.count > 1 ? 1 : 0);
+}
+
+// PINBOT: flicks a flipper (up for a quarter second) when the ball is out on it, misses now and then as a person
+// would, and in a battle uses the move of its own type: test/test_pinball.cpp's bot
+void pinBotStep(bool held[2]) {
+  for (int k = 0; k < 2; k++) {
+    float px = k ? 465 - PB_FLIP_LX : PB_FLIP_LX, out = k ? px - pin.x : pin.x - px;
+    bool near = pin.phase == PIN_PLAY && !pin.onTrack && out > 22 && out < 80 && pin.y > 340 && pin.y < PB_FLIP_Y + 30;
+    const float dt = 0.04f;
+    float &h = pinBotHeld[k];
+    if (h > 0) h += dt;
+    if (h > 0.25f) h = -0.2f;
+    else if (h < 0) h = h + dt >= 0 ? 0 : h + dt;
+    else if (near) h = random(100) < 30 ? -0.4f : dt;
+    held[k] = held[k] || h > 0;
+  }
+  static uint32_t lastMove = 0;
+  if (pin.phase == PIN_BATTLE && pin.wildMax && millis() - lastMove > 400) {
+    lastMove = millis();
+    pinMove(bMeMoves.count > 1 ? 1 : 0);
+  }
+}
+
+// the flippers, from what's held: a finger on either half, the arrow keys, the button (and, in a battle, the keys'
+// presses are moves)
+void pinInput(uint32_t now) {
+  bool held[2] = { false, false };
+  if (wasPressed && !introUp() && !swallowGesture) held[tXl < CX ? 0 : 1] = true;
+#ifdef BOARD_HOST
+  bool keys[2] = { hostArrowLeft(), hostArrowRight() };
+  for (int k = 0; k < 2; k++) {
+    if (pin.phase == PIN_BATTLE && keys[k] && !pinKeyWas[k]) pinMove(k ? (bMeMoves.count > 1 ? 1 : 0) : 0);
+    pinKeyWas[k] = keys[k];
+    held[k] = held[k] || keys[k];
+  }
+#endif
+  held[0] = held[0] || pinBtnHeld, held[1] = held[1] || pinBtnHeld;
+  if (pinBot) pinBotStep(held);
+  if (held[0] || held[1]) v2PlayInputAt = now;
+  pinEvents(pinHold(pin, 0, held[0]) | pinHold(pin, 1, held[1]));
+}
+
+void renderPinball() {
+  if (pet.ceremony) {
+    closePinball();
+    return;
+  }
+  uint32_t now = millis();
+  float dt = (now - pinLast) / 1000.0f;
+  pinLast = now;
+  if (dt > 0.1f) dt = 0.1f;  // a stall (a flash save) mustn't make the ball leap ahead
+  if (!introPaused() && !pinOverT) {
+    pinInput(now);
+    pinEvents(pinStep(pin, dt));
+    if (pin.phase == PIN_BATTLE && pin.wildMax) pinFoeShown += (pin.wildHp - pinFoeShown) * 0.3f;
+    if (pin.phase != PIN_END) lastInteract = now;  // a ball in play keeps the screen awake
+  }
+  if (pin.phase == PIN_BATTLE && pin.wildMax && !pinOverT) {
+    int ph = pin.won ? 2 : pin.btlLeft <= 0 ? 3 : pin.t < 0.9f ? 0 : 1;
+    pbBattleDraw(ph, pin.btlLeft / PB_BTL_S, pinFoe, pinFoeShown, pinMe, pin.lastMove, pin.hitT / PB_BTL_HIT_S);
+  } else {
+    pinDraw(pin, playKeysUi);
+    if (pinOverT) {  // the end: the score, the record, the joy, as every game shows it
+      char big[16], rec[32];
+      snprintf(big, sizeof(big), "%lu", (unsigned long)pin.score);
+      snprintf(rec, sizeof(rec), T(S_RECORD_FMT), (unsigned)pet.pinHi);
+      v2GameResult(gameLabel(GAME_PINBALL), nullptr, big, pinNewHi && pin.score > 0, rec, pin.score >= 4000 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
+    }
+  }
   drawIntroCard();
   gfx->flush();
 }
@@ -8520,7 +8714,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     if (v2PressNav(x, y, t, 0, 0, 0, true, ZONE_CLOSE_Y)) return true;  // V2: its X
     return false;  // Pokedex grids (here and below) swipe between pages: a slow swipe must not pick a square
   }
-  if (gameOpen || runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen) return false;  // aiming, jumping, surfing, walking, volleying, fishing: no buttons
+  if (gameOpen || runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen || pinOpen) return false;  // aiming, jumping, surfing, walking, volleying, fishing, flipping: no buttons
 
   // --- everything else (same order as onTap) ---
   if (pet.awaitingStarter()) {

@@ -22,6 +22,7 @@
 #include "host_hal.h"
 #include "host_internal.h"
 #include "rtcbat.h"
+#include "pinball.h"  // Pinball's state, to check the game played (the sketch's pin)
 #include "i18n.h"
 #include "pet.h"
 #include "press.h"
@@ -696,15 +697,42 @@ static void testGame() {
   tapAt(233, 422);  // the X
   CHECK(!runOpen && gamesMenuOpen);
   {  // the Games menu's two pages, four cartridges a page (Fedor): the right arrow turns to the second, where
-     // Dungeon Crawler, Reel Fishing and Pinball are; Pinball isn't made yet and leaves the menu open; a swipe right
-     // goes back to the first
+     // Dungeon Crawler, Reel Fishing and Pinball are; Pinball opens under its card, plays (a finger held on the left
+     // half raises the left flipper; the button both), and a swipe up quits it (home, as every game's does); the menu
+     // opened again is still on its second page; a swipe right goes back to the first
     extern int gameAt(int16_t x, int16_t y);
-    extern bool fishOpen;
+    extern bool fishOpen, pinOpen;
+    extern PinState pin;
     CHECK(gameAt(150, 128) == 0 && gameAt(300, 300) == 4);  // Berry Drop; PikaSurf
     tapAt(432, 228);  // the right arrow, where every paged screen has it
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == -1);
     tapAt(170, 300);  // Pinball
-    CHECK(gamesMenuOpen && !gameOpen && !fishOpen);
+    CHECK(pinOpen && !gamesMenuOpen && introCard == 6);
+    runTicks(500);
+    tapAt(233, 335);  // Ready, GO!
+    runTicks(400);
+    CHECK(pinOpen && introCard == -1 && pin.phase == PIN_PLAY);
+    hostPointer(120, 300, true);  // a finger held on the left half
+    runTicks(200);
+    CHECK(pin.hold[0] && !pin.hold[1] && pin.flipA[0] == PB_FLIP_UP);
+    hostPointer(120, 300, false);
+    runTicks(300);
+    CHECK(!pin.hold[0] && pin.flipA[0] == PB_FLIP_REST);
+    hostButton(true);  // the button (Space): both
+    runTicks(200);
+    CHECK(pin.hold[0] && pin.hold[1]);
+    hostButton(false);
+    runTicks(100);
+    hostPointer(233, 400, true);  // a swipe up quits
+    for (int k = 1; k <= 8; k++) {
+      hostPointer(233, 400 - k * 30, true);
+      runTicks(16);
+    }
+    hostPointer(233, 160, false);
+    runTicks(400);
+    CHECK(!pinOpen && !gamesMenuOpen);  // home, as every game's swipe goes
+    hostSerialPush("GAMES");  // the menu again, still on its second page
+    runTicks(300);
     tapAt(432, 228);  // no third page: nothing (and the menu stays)
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
     hostPointer(130, 300, true);

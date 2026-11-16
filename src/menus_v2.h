@@ -2789,6 +2789,7 @@ static int v2GameEnd(uint32_t *since = nullptr) {
   else if (dungeonOpen && dnOverT) t = dnOverT;
   else if (surfOpen && !surfDuel && surfOverT) t = surfOverT;
   else if (fishOpen && fishOverT) t = fishOverT;
+  else if (pinOpen && pinOverT) t = pinOverT;
   else {
     y = V2_AGAIN_YB;
     if (sdOpen && sdPhase == SD_DONE) t = sdT;
@@ -2841,6 +2842,7 @@ static void v2GameEndDo(int k) {
       if (dungeonOpen) closeDungeon();
       if (surfOpen) closeSurf();
       if (fishOpen) closeFish();
+      if (pinOpen) closePinball();
     }
     cardOpen = true;
     cardAch = false;
@@ -2856,22 +2858,24 @@ static void v2GameEndDo(int k) {
     else if (!pet.isEgg() && !pet.sleeping && !pet.ceremony) buddyInvite(kind);
     return;
   }
-  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : surfOpen ? 4 : 5;
+  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : surfOpen ? 4 : fishOpen ? 5 : 6;
   gameOpen = false;
   if (quizOpen) closeQuiz();
   if (runOpen) closeRun();
   if (dungeonOpen) closeDungeon();
   if (surfOpen) closeSurf();
   if (fishOpen) closeFish();
+  if (pinOpen) closePinball();
   if (again) {
     if (g == 0) startGame();
     else if (g == 1) startQuiz();
     else if (g == 2) startRun();
     else if (g == 3) startDungeon();
     else if (g == 4) startSurf();
-    else startFish();
+    else if (g == 5) startFish();
+    else startPinball();
   }
-  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen) gameEndToMenu();  // (it may not start: asleep)
+  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen && !pinOpen) gameEndToMenu();  // (it may not start: asleep)
 }
 
 // ----- the home's dialogs and moments (rooms2_px.py release_dialog(), batch3.py medal_banner(), bath(), evolving()) -----

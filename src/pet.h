@@ -159,6 +159,7 @@ public:
   uint16_t fishBig = 0;    // ...and the heaviest single fish, in tenths of a kg,
   int16_t fishBigDex = 0;  // what it was (0: none yet)
   bool fishBigShiny = false;
+  uint32_t pinHi = 0;      // Pinball's record: the best score
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;
   uint8_t candyToday = 0;  // treats given on day candyDay
@@ -188,6 +189,7 @@ public:
   void surfResult(uint16_t secs);  // PikaSurf: the same as Rock Hopper
   void fishResult(uint16_t kg10);  // Reel Fishing's end: the record and the exercise
   bool fishBiggest(uint16_t kg10, int16_t dex, bool shiny);  // a fish landed: kept if it's the heaviest yet (true)
+  void pinResult(uint32_t score);  // Pinball's end: the record and the exercise
   void dungeonResult(uint8_t floor);
   int candiesLeft() const {  // today's candies still to have (the visitor's included)
     int limit = CANDY_PER_DAY + (today() != 0 && candyGiftDay == today() ? 1 : 0);

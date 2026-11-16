@@ -142,6 +142,8 @@ enum StrId : STRID_BASE {
   S_FISH_SMALL_FMT, S_FISH_FINE_FMT, S_FISH_LARGE_FMT,  // ...the weigh-in: how big it is for its kind (%s its name)
   S_FISH_BRONZE, S_FISH_SILVER, S_FISH_GOLD, S_FISH_LB_FMT, S_FISH_REC_FMT, S_FISH_BIGGEST,  // ...its goals and weights
   S_GAME_PINBALL, S_HOW_PINBALL, S_HOW_PINBALL_KEYS,  // Pinball: its name and how-to cards
+  S_PIN_HINT, S_PIN_FLIP, S_PIN_BOTH, S_PIN_SPACE, S_PIN_BALL_FMT, S_PIN_BERRIES_FMT, S_PIN_DIG_FMT,  // ...in play
+  S_PIN_MOVE, S_PIN_RAMP, S_PIN_WIN_FMT,
   STR_COUNT
 };
 

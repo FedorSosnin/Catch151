@@ -1,0 +1,286 @@
+// Pinball's rules and physics (pinball.h): the serve, gravity and the rim, the flippers, the drain and the three
+// balls, the bumpers and Diglett, the berries' multiplier, the ramp and the wire rail, the grass and its battle, your
+// Pokemon as a target, and whole games played by a simple bot, the ball never leaving the table.
+#include "framework.h"
+#include "shim/Arduino.h"
+#include "../src/pinball.h"
+
+static const float DT = 1.0f / 60;
+
+// a ball put down at (x, y) with speed (vx, vy), in play
+static void putBall(PinState &s, float x, float y, float vx, float vy) {
+  s.phase = PIN_PLAY;
+  s.t = 0;
+  s.onTrack = false;
+  s.x = x, s.y = y, s.vx = vx, s.vy = vy;
+}
+// steps for secs, every event seen
+static uint32_t run(PinState &s, float secs) {
+  uint32_t ev = 0;
+  for (float t = 0; t < secs; t += DT) ev |= pinStep(s, DT);
+  return ev;
+}
+
+TEST(pinball, a_game_starts_with_three_balls_one_rolling_in_along_the_orbit) {
+  PinState s;
+  pinStart(s, 7);
+  CHECK(s.phase == PIN_PLAY);
+  CHECK_EQ(s.ballsLeft, (uint8_t)2);
+  CHECK_EQ(s.ball, (uint8_t)1);
+  CHECK_EQ(s.mult, (uint8_t)1);
+  CHECK_EQ(s.score, (uint32_t)0);
+  float d = hypotf(s.x - PB_CX, s.y - PB_CY);
+  CHECK(d > PB_ORBIT_R0 && d < PB_R);  // in the orbit lane
+  CHECK(s.flipA[0] == PB_FLIP_REST && s.flipA[1] == PB_FLIP_REST);
+  bool day = false, night = false;  // both looks come up, at random
+  for (uint32_t seed = 1; seed < 40; seed++) {
+    pinStart(s, seed);
+    (s.day ? day : night) = true;
+  }
+  CHECK(day && night);
+}
+
+TEST(pinball, gravity_pulls_it_down_and_the_rim_keeps_it_in) {
+  PinState s;
+  pinStart(s, 3);
+  putBall(s, 233, 140, 0, 0);
+  s.bumpLit = 0;
+  for (int i = 0; i < 6; i++) pinStep(s, DT);
+  CHECK(s.vy > 20 && s.y > 140);
+  putBall(s, 233, 233, 520, -300);  // thrown hard at the wall, again and again: it stays on the table
+  for (int i = 0; i < 600 && s.phase == PIN_PLAY; i++) {
+    pinStep(s, DT);
+    CHECK(hypotf(s.x - PB_CX, s.y - PB_CY) <= PB_R + 0.5f || s.y > PB_FLIP_Y);
+  }
+}
+
+TEST(pinball, a_flipper_swung_up_throws_the_ball_up_the_table) {
+  PinState s;
+  pinStart(s, 5);
+  // the ball resting on the left flipper, near its tip
+  float a = PB_FLIP_REST, tx = PB_FLIP_LX + 52 * cosf(a), ty = PB_FLIP_Y + 52 * sinf(a);
+  putBall(s, tx, ty - 18, 0, 0);
+  run(s, 0.4f);  // it settles on the flipper
+  CHECK(s.phase == PIN_PLAY);
+  CHECK_EQ(pinHold(s, 0, true), (uint32_t)PE_FLIP);
+  CHECK_EQ(pinHold(s, 0, true), (uint32_t)0);  // held: only once
+  float best = 0;
+  for (int i = 0; i < 20; i++) {
+    pinStep(s, DT);
+    best = s.vy < best ? s.vy : best;
+  }
+  CHECK_MSG(best < -300, "thrown up fast");
+  CHECK(s.flipA[0] == PB_FLIP_UP);
+  pinHold(s, 0, false);
+  run(s, 0.3f);
+  CHECK(s.flipA[0] == PB_FLIP_REST);
+}
+
+TEST(pinball, the_flipper_never_jumps_past_the_ball_even_at_ten_frames_a_second) {
+  PinState s;
+  pinStart(s, 5);
+  float a = PB_FLIP_REST, tx = PB_FLIP_LX + 40 * cosf(a), ty = PB_FLIP_Y + 40 * sinf(a);
+  putBall(s, tx, ty - 17, 0, 0);
+  pinHold(s, 0, true);
+  pinStep(s, 0.1f);  // one Knomi frame: the flipper all the way up
+  pinStep(s, 0.1f);
+  CHECK(s.y < ty - 17);  // the ball went up with it, not through it
+}
+
+TEST(pinball, a_ball_down_the_drain_is_lost_and_the_next_comes_in) {
+  PinState s;
+  pinStart(s, 9);
+  putBall(s, 233, 400, 0, 120);
+  uint32_t ev = run(s, 1.0f);
+  CHECK(ev & PE_LOST);
+  CHECK(s.phase == PIN_LOST);
+  ev = run(s, PB_LOST_S + 0.1f);
+  CHECK(ev & PE_BALL);
+  CHECK(s.phase == PIN_PLAY);
+  CHECK_EQ(s.ball, (uint8_t)2);
+  CHECK_EQ(s.ballsLeft, (uint8_t)1);
+  for (int b = 0; b < 2; b++) {  // the last two lost: the end
+    putBall(s, 233, 400, 0, 120);
+    ev = run(s, 1.0f + PB_LOST_S + 0.1f);
+  }
+  CHECK(ev & PE_END);
+  CHECK(s.phase == PIN_END);
+}
+
+TEST(pinball, bumpers_kick_and_score_and_all_three_bring_up_diglett) {
+  PinState s;
+  pinStart(s, 11);
+  uint32_t ev = 0;
+  for (int k = 0; k < 3; k++) {
+    putBall(s, PB_BUMP[k][0] - 40, PB_BUMP[k][1], 250, 0);
+    uint32_t score = s.score, e = 0;
+    for (int i = 0; i < 30 && !(e & PE_BUMP); i++) e |= pinStep(s, DT);
+    ev |= e;
+    CHECK(e & PE_BUMP);
+    CHECK(s.score >= score + PB_PTS_BUMP);
+    CHECK(s.vx < 0);  // kicked back
+  }
+  CHECK(ev & PE_DIG_UP);
+  CHECK(s.digUp);
+  CHECK_EQ(s.bumpLit, (uint8_t)0);
+  uint32_t score = s.score;  // hit it with the ball
+  putBall(s, PB_DIG_X - 40, PB_DIG_Y - 18, 260, 0);
+  ev = run(s, 0.3f);
+  CHECK(ev & PE_DIG_HIT);
+  CHECK(!s.digUp);
+  CHECK(s.score >= score + PB_PTS_DIG);
+  // too slow: it ducks back down by itself
+  s.digUp = true, s.digT = 0.2f;
+  putBall(s, 60, 300, 0, 0);
+  ev = run(s, 0.5f);
+  CHECK(ev & PE_DIG_GONE);
+  CHECK(!s.digUp);
+}
+
+TEST(pinball, all_six_berries_lit_double_the_points) {
+  PinState s;
+  pinStart(s, 13);
+  for (int k = 0; k < 6; k++) {
+    float a = PB_BERRY_A[k] * 0.01745329f;
+    putBall(s, PB_CX + PB_WIRE_R * cosf(a), PB_CY + PB_WIRE_R * sinf(a), 0, 0);
+    pinStep(s, DT);
+  }
+  CHECK_EQ(s.mult, (uint8_t)2);
+  CHECK_EQ(s.berryLit, (uint8_t)0);
+  uint32_t score = s.score;
+  pinAdd(s, PB_PTS_BUMP, 0, 0);
+  CHECK_EQ(s.score, score + 2 * PB_PTS_BUMP);
+}
+
+TEST(pinball, a_shot_up_the_ramp_goes_over_and_down_the_wire_to_the_left_flipper) {
+  PinState s;
+  pinStart(s, 15);
+  float ux = PB_RAMP[1][0] - PB_RAMP[0][0], uy = PB_RAMP[1][1] - PB_RAMP[0][1], L = hypotf(ux, uy);
+  putBall(s, PB_RAMP[0][0] - ux / L * 10, PB_RAMP[0][1] - uy / L * 10, ux / L * 480, uy / L * 480);
+  uint32_t ev = 0;
+  bool onTrack = false;
+  for (int i = 0; i < 240 && !(ev & PE_DROP); i++) {
+    ev |= pinStep(s, DT);
+    onTrack |= s.onTrack;
+  }
+  CHECK(onTrack);
+  CHECK(ev & PE_RAMP_IN);
+  CHECK(ev & PE_RAMP);
+  CHECK(ev & PE_DROP);
+  CHECK(s.score >= PB_PTS_RAMP);
+  CHECK(s.x < 120 && s.y > 250);  // let down by the left rim
+  ev = run(s, 2.5f);  // ...and it rolls down to the left flipper
+  CHECK(s.phase == PIN_LOST || (s.x < 240 && s.y > 330));
+  // too slow: it rolls back down and out, no points
+  pinStart(s, 16);
+  putBall(s, PB_RAMP[0][0] - ux / L * 10, PB_RAMP[0][1] - uy / L * 10, ux / L * 200, uy / L * 200);
+  ev = run(s, 2.5f);
+  CHECK(ev & PE_RAMP_IN);
+  CHECK(!(ev & PE_RAMP));
+  CHECK(!s.onTrack);
+  CHECK_EQ(s.score, (uint32_t)0);
+}
+
+TEST(pinball, into_the_grass_a_battle_then_the_ball_comes_out) {
+  PinState s;
+  pinStart(s, 17);
+  putBall(s, PB_NOTCH[0][0] - 20, PB_NOTCH[0][1] + 18, 200, -160);
+  uint32_t ev = run(s, 0.3f);
+  CHECK(ev & PE_GRASS);
+  CHECK(s.phase == PIN_CATCH);
+  ev = run(s, PB_CATCH_S + 0.1f);
+  CHECK(ev & PE_BATTLE);
+  CHECK(s.phase == PIN_BATTLE);
+  run(s, 1.0f);
+  CHECK(s.phase == PIN_BATTLE);  // it waits for the wild one to be set up
+  pinBattleStart(s, 43, 30);
+  pinHold(s, 0, true);  // the flippers rest meanwhile
+  CHECK(pinBattleHit(s, 1, 12) & PE_BTL_HIT);
+  CHECK_EQ(s.wildHp, (uint16_t)18);
+  CHECK_EQ(pinBattleHit(s, 1, 12), (uint32_t)0);  // the move still landing: not yet
+  run(s, PB_BTL_HIT_S + 0.05f);
+  CHECK(s.flipA[0] == PB_FLIP_REST);
+  pinBattleHit(s, 0, 12);
+  run(s, PB_BTL_HIT_S + 0.05f);
+  uint32_t score = s.score;
+  ev = pinBattleHit(s, 1, 12);
+  CHECK(ev & PE_BTL_WON);
+  CHECK(s.won);
+  CHECK_EQ(s.score, score + PB_PTS_BATTLE);
+  ev = run(s, PB_BTL_OUT_S + 0.1f);
+  CHECK(ev & PE_BTL_OUT);
+  CHECK(s.phase == PIN_PLAY);
+  CHECK(s.vx < 0 && s.vy > 0);  // shot out toward the left flipper
+  // out of time: no points, out it comes all the same
+  putBall(s, PB_NOTCH[0][0] - 20, PB_NOTCH[0][1] + 18, 200, -160);
+  run(s, 0.3f + PB_CATCH_S + 0.1f);
+  pinBattleStart(s, 43, 500);
+  pinBattleHit(s, 0, 5);
+  score = s.score;
+  ev = run(s, PB_BTL_S + PB_BTL_OUT_S + 0.2f);
+  CHECK(ev & PE_BTL_OUT);
+  CHECK(!s.won);
+  CHECK_EQ(s.score, score);
+}
+
+TEST(pinball, your_pokemon_is_a_target_every_third_hit_a_bonus) {
+  PinState s;
+  pinStart(s, 19);
+  uint32_t ev = 0;
+  for (int k = 0; k < 3; k++) {
+    putBall(s, PB_CX - 50, PB_PET_FEET - 28, 300, 0);
+    ev |= run(s, 0.25f);
+  }
+  CHECK_EQ(s.petHits, (uint8_t)3);
+  CHECK(ev & PE_PET3);
+  CHECK(s.score >= 3 * PB_PTS_PET + PB_PTS_PET3);
+}
+
+TEST(pinball, a_stuck_ball_is_nudged_free) {
+  PinState s;
+  pinStart(s, 21);
+  // balanced on the very top of the Ultra Ball bumper, still: after a while a nudge frees it
+  putBall(s, PB_BUMP[2][0], PB_BUMP[2][1] - PB_BUMP_R - PB_BALL_R - 0.5f, 0, 0);
+  uint32_t ev = run(s, 3.0f);
+  CHECK(ev & PE_NUDGE);
+}
+
+// a simple player: flicks a flipper (up for a quarter second) when the ball is coming down near it
+static void botFlip(PinState &s, float *held) {
+  for (int k = 0; k < 2; k++) {
+    float px = k ? 465 - PB_FLIP_LX : PB_FLIP_LX, mid = px + (k ? -35 : 35);
+    float out = k ? px - s.x : s.x - px;  // how far out along the flipper the ball is (not in the crook at its pivot)
+    bool near = s.phase == PIN_PLAY && !s.onTrack && out > 22 && out < 80 && s.y > 340 && s.y < PB_FLIP_Y + 30;
+    (void)mid;
+    if (held[k] > 0) held[k] += DT;
+    if (held[k] > 0.25f) held[k] = -0.2f;  // let go, and a moment before the next flick
+    else if (held[k] < 0) held[k] = held[k] + DT >= 0 ? 0 : held[k] + DT;
+    else if (near) held[k] = pinRand(s) < 0.3f ? -0.4f : DT;  // (a third of the time it misses, as a person would)
+    pinHold(s, k, held[k] > 0);
+  }
+}
+
+TEST(pinball, whole_games_end_and_the_ball_never_leaves_the_table) {
+  int ramps = 0, orbits = 0, bumps = 0, grass = 0;
+  float longest = 0;
+  for (uint32_t seed = 1; seed <= 30; seed++) {
+    PinState s;
+    pinStart(s, seed * 7919);
+    float t = 0, held[2] = { 0, 0 };
+    for (; t < 900 && s.phase != PIN_END; t += DT) {
+      botFlip(s, held);
+      uint32_t ev = pinStep(s, DT);
+      if (s.phase == PIN_BATTLE && !s.wildMax) pinBattleStart(s, 43, 40);
+      if (s.phase == PIN_BATTLE && s.wildMax) pinBattleHit(s, 1, 9);
+      ramps += (ev & PE_RAMP) != 0, orbits += (ev & PE_ORBIT) != 0, bumps += (ev & PE_BUMP) != 0, grass += (ev & PE_GRASS) != 0;
+      if (s.phase == PIN_PLAY) {
+        CHECK(s.x == s.x && s.y == s.y);  // no NaN
+        CHECK(hypotf(s.x - PB_CX, s.y - PB_CY) <= PB_R + 1 || s.y > PB_FLIP_Y);
+      }
+    }
+    CHECK_MSG(s.phase == PIN_END, "a game ends");
+    longest = t > longest ? t : longest;
+  }
+  printf("    30 bot games: %d ramps, %d orbits, %d bumper hits, %d into the grass, longest %.0f s\n", ramps, orbits, bumps, grass, longest);
+  CHECK(bumps > 0);
+}
