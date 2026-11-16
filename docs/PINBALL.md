@@ -57,5 +57,6 @@ Drawn in the real game by `src/pinball_v2.h`, on a computer's console: `PINMOCK 
 
 1. Is the table as above (round, bumpers, your Pokemon as the target), or something else?
 2. Are the controls right (tap a half, hold to keep that flipper up)?
-3. Do you want mockups of the table first (as Reel Fishing had), or a playable first version to try on the Knomi and
-   a computer?
+3. Which look: the night-blue table on a chrome rim (1 to 8), or the meadow on a wooden rim (9)?
+
+(Decided: mockups first, then a playable version.)
