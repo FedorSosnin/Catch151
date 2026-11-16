@@ -154,6 +154,8 @@ bool screenOff = false;       // short press of the PWR button
 bool cardOpen = false;        // pet card (vertical swipe)
 bool kbOpen = false;          // keyboard for renaming the pet
 int8_t v2TagMock = -1;        // V2: the tag picker's mockup on screen (TAGMOCK n, tag_v2.h), or -1
+int16_t v2KbZoomX = -1;       // V2: a keyboard zoomed in round this x of the whole one, or -1 (menus_v2.h)
+void openKeyboard();          // (the console's KEYBOARD opens it)
 char nameBuf[12] = "";
 uint8_t nameLen = 0;
 int cardNameBottom = 84;      // where the card's name (and the species under a nickname) ends: tapping above renames
@@ -1072,6 +1074,9 @@ void handleSerial() {
   } else if (line == "DNBOT" && pet.noSave) {  // descends by itself, to see deep floors
     startDungeon();
     dnBot = true;
+    Serial.println("DONE");
+  } else if (line == "KEYBOARD") {  // V2: the name's keyboard, as a tap on the card's name opens it (testing)
+    openKeyboard();
     Serial.println("DONE");
   } else if (line.startsWith("TAGMOCK ")) {  // V2: the tag picker's mockups (tag_v2.h); -1 off
     v2TagMock = (int8_t)line.substring(8).toInt();
@@ -2193,6 +2198,7 @@ static uint32_t screenKey() {
   h = mixKey(h, cardAch ? achGroup + 1 : 0);  // V2: the trophy room's shelves
   h = mixKey(h, sdEpoch);
   h = mixKey(h, partyBoostOn());  // the stats page shows the boost
+  h = mixKey(h, (uint32_t)(v2KbZoomX + 1));  // V2: a keyboard zoomed in or out
   if (kbOpen) {
     h = mixKey(h, nameLen);
     for (int i = 0; i < nameLen; i++) h = mixKey(h, (uint8_t)nameBuf[i]);
@@ -5462,7 +5468,7 @@ static const char *const LANG_CODES[LANG_COUNT] = { "ES", "EN", "FR", "DE", "IT"
 
 // password keyboard key at those coordinates, -1 if none
 int wifiKeyAt(int16_t x, int16_t y) {
-  return v2KbAt(wifiKbLayer, x, y);  // V2: the key's character, or one of its own codes
+  return v2KbAtZ(wifiKbLayer, x, y);  // V2: the key's character, or one of its own codes (as zoomed, if it is)
 }
 
 #define WIFI_ROWS 5
@@ -5497,6 +5503,7 @@ void settingsTap(int16_t x, int16_t y) {
       if (y >= WIFI_ROW_Y && y < WIFI_ROW_Y + WIFI_ROWS * WIFI_ROW_H) {
         sfxPlay(SFX_TAP);
         wifiKbLayer = 0;
+        v2KbZoomX = -1;  // V2: the whole keyboard first
         wifiSetupPick(wifiListPage * WIFI_ROWS + (y - WIFI_ROW_Y) / WIFI_ROW_H);
       } else if (y >= 334 && y <= 376) {
         if (x < 170) { if (wifiListPage > 0) wifiListPage--; }
@@ -8769,9 +8776,9 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return false;
   }
   if (kbOpen) {
-    V2Key k;  // V2: round the key under the finger
-    int c = v2KbAt(v2NameLayer, x, y, &k);
-    if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, "X");
+    V2Key k;  // V2: round the key under the finger, where it's drawn (zoomed in, if it is)
+    int c = v2KbAtZ(v2NameLayer, x, y, &k);
+    if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, v2KbZoomX < 0 ? "X" : "<");
     return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2NameLayer, buf));
   }
   if (clockOpen) {

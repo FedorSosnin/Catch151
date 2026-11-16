@@ -1265,6 +1265,37 @@ static void testGame() {
   rmdir(save.c_str());
 }
 
+// the keyboard zooms (Fedor: "Just the zoom one"): a tap on a letter zooms in round it and types nothing; the next
+// types the letter under it and zooms back out; zoomed in, a tap off the keys backs out typing nothing; the X closes
+static void testKeyboard() {
+  extern bool kbOpen;
+  extern char nameBuf[12];
+  extern uint8_t nameLen;
+  extern int16_t v2KbZoomX;
+  auto tapAt = [](int16_t x, int16_t y) {
+    hostPointer(x, y, true);
+    runTicks(150);
+    hostPointer(x, y, false);
+    runTicks(300);
+  };
+  hostSerialPush("KEYBOARD");
+  runTicks(300);
+  CHECK(kbOpen && v2KbZoomX < 0);
+  int n0 = nameLen;
+  tapAt(133, 146);  // E, on the whole keyboard: zooms in
+  CHECK(kbOpen && v2KbZoomX >= 0 && nameLen == n0);
+  tapAt(233, 150);  // the zoomed E, in the middle: typed, and out again
+  CHECK(v2KbZoomX < 0 && nameLen == n0 + 1 && (nameBuf[n0] == 'E' || nameBuf[n0] == 'e'));
+  tapAt(413, 146);  // P, at the right end: zooms in (no further than the keyboard's end)
+  CHECK(v2KbZoomX > 0 && nameLen == n0 + 1);
+  tapAt(233, 60);  // off the keys: back out, nothing typed
+  CHECK(v2KbZoomX < 0 && nameLen == n0 + 1);
+  tapAt(397, 262);  // backspace acts at once, unzoomed
+  CHECK(v2KbZoomX < 0 && nameLen == n0);
+  tapAt(233, 422);  // the X: out without renaming
+  CHECK(!kbOpen);
+}
+
 // the Catch 151 Dex page says what the game says: tools/dex.json is the game's Pokedex, moves and type chart as they
 // are now (make -C host dex), and it reads them right
 static void testDexPage() {
@@ -1337,6 +1368,7 @@ int main() {
   testAudio();
   testClock();
   testGame();
+  testKeyboard();
   testDexPage();
   printf("host layer: %d checks, %d failures\n", gChecks, gFails);
   return gFails ? 1 : 0;

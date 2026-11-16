@@ -2297,6 +2297,56 @@ static int v2KbNext(int L, int code) {
   if (code == V2K_SHIFT) return L < 2 ? 1 - L : 5 - L;
   return L < 2 ? 2 : 0;
 }
+
+// ----- the zoom (Fedor: "The current keyboard makes it pretty hard to type on the Knomi Screen. Like for wifi", then
+// of three ideas "Just the zoom one"). Ten keys a row are 2.5 mm wide on the Knomi, where a fingertip is 8 or more. A
+// tap on a character zooms the three rows of characters in round it, 3 times as wide and 5/3 as tall, so about four
+// keys a row show, each about as big as a fingertip; the next tap types one and zooms back out. The keys already wide
+// (shift, backspace, the layer key, SPACE and OK) act at once, as before; zoomed, shift stays zoomed (for a capital
+// next). A tap off the keys, or on the back button where the X was, goes back to the whole keyboard without typing.
+// One zoom for every keyboard (only one is open at a time): v2KbZoomX, with the open screens' flags in the sketch
+#define V2_KZ_X 3     // how much wider
+#define V2_KZ_YN 5    // and taller: 5/3
+#define V2_KZ_YD 3
+#define V2_KZ_Y0 112  // the zoomed rows' top
+#define V2_KZ_HALF 200  // half the zoom's width on the screen
+#define V2_KCHAR_Y1 (V2_KY0 + 3 * V2_KSTEP)  // the character rows end here (the bottom row is under them)
+// a point on the whole keyboard to the zoomed one, and back
+static int v2KzX(int x) { return CX + (x - v2KbZoomX) * V2_KZ_X; }
+static int v2KzY(int y) { return V2_KZ_Y0 + (y - V2_KY0) * V2_KZ_YN / V2_KZ_YD; }
+static int v2KzBackX(int x) { return v2KbZoomX + (int)lroundf((x - CX) / (float)V2_KZ_X); }
+static int v2KzBackY(int y) { return V2_KY0 + (int)lroundf((y - V2_KZ_Y0) * (float)V2_KZ_YD / V2_KZ_YN); }
+// the key under (x, y) as the keyboard of layer L shows now (zoomed: only the character rows), or -1; box: where
+// it's drawn
+static int v2KbAtZ(int L, int x, int y, V2Key *box = nullptr) {
+  if (v2KbZoomX < 0) return v2KbAt(L, x, y, box);
+  if (y < V2_KZ_Y0 - 6) return -1;
+  V2Key b;
+  int c = v2KbAt(L, v2KzBackX(x), v2KzBackY(y), &b);
+  if (c < 0 || b.y0 >= V2_KCHAR_Y1) return -1;
+  if (box) *box = { (int16_t)SNAP2(v2KzX(b.x0)), (int16_t)SNAP2(v2KzY(b.y0)), (int16_t)SNAP2(v2KzX(b.x1)), (int16_t)SNAP2(v2KzY(b.y1)), b.code };
+  return c;
+}
+// a tap on the keyboard of layer L: the key to act on, or -1 (it zoomed in or out instead, or there was none)
+static int v2KbTapZ(int L, int x, int y) {
+  if (v2KbZoomX < 0) {
+    V2Key b;
+    int c = v2KbAt(L, x, y, &b);
+    if (c >= 32 && b.y0 < V2_KCHAR_Y1) {  // a character (SPACE is on the bottom row): zoom in round it
+      int lo = v2KbRowX(10, 0) + V2_KZ_HALF / V2_KZ_X, hi = 466 - lo, zx = (b.x0 + b.x1) / 2;  // (no further than its ends)
+      v2KbZoomX = zx < lo ? lo : zx > hi ? hi : zx;
+      sfxPlay(SFX_TAP);
+      return -1;
+    }
+    return c;
+  }
+  int c = v2KbAtZ(L, x, y);
+  if (c != V2K_SHIFT) {
+    if (c < 0) sfxPlay(SFX_TAP);  // off the keys: back out
+    v2KbZoomX = -1;
+  }
+  return c;
+}
 // a key in the V2 button style (key()): a dark rim, a lit stripe along its top; held: a bar under its label
 static void v2Key(const V2Key &k, const char *lab, uint16_t col, uint16_t ink, int size, bool held) {
   int w = k.x1 - k.x0, h = k.y1 - k.y0;  // (even, from even pixels: its edges whole Knomi pixels)
@@ -2336,19 +2386,27 @@ static void v2Keyboard(int L, const char *title, const char *typed, int hot, boo
   V2Key k[40];
   int n = v2KbKeys(L, k);
   const uint16_t grey = C565(0xaa, 0xb0, 0xbc), blue = C565(0x4f, 0x93, 0xc4);
+  bool zoom = v2KbZoomX >= 0;
+  int z = zoom ? 2 : 1;  // zoomed, the labels twice the size (8 for a character: 40 x 56 on a key 108 x 86)
   for (int i = 0; i < n; i++) {
     char lab[8] = { (char)k[i].code, 0 };
     bool lit = k[i].code == hot;
-    switch (k[i].code) {
+    V2Key b = k[i];
+    if (zoom) {  // the character rows, zoomed round v2KbZoomX; the bottom row waits under them
+      if (b.y0 >= V2_KCHAR_Y1) continue;
+      b = { (int16_t)SNAP2(v2KzX(b.x0)), (int16_t)SNAP2(v2KzY(b.y0)), (int16_t)SNAP2(v2KzX(b.x1)), (int16_t)SNAP2(v2KzY(b.y1)), b.code };
+      if (b.x1 < 0 || b.x0 > 466) continue;
+    }
+    switch (b.code) {
       case V2K_SHIFT:
-        if (L < 2) v2Key(k[i], "\x18", lit || L == 1 ? blue : grey, UI_WHITE, 4, L == 1);  // the font's up arrow
-        else v2Key(k[i], L == 2 ? "#+=" : "123", lit ? blue : grey, UI_WHITE, 2, false);
+        if (L < 2) v2Key(b, "\x18", lit || L == 1 ? blue : grey, UI_WHITE, 4 * z, L == 1);  // the font's up arrow
+        else v2Key(b, L == 2 ? "#+=" : "123", lit ? blue : grey, UI_WHITE, 2 * z, false);
         break;
-      case V2K_BKSP: v2Key(k[i], "\x1b", lit ? blue : grey, UI_WHITE, 4, false); break;  // its left arrow
-      case V2K_LAYER: v2Key(k[i], L < 2 ? "123" : "ABC", lit ? blue : grey, UI_WHITE, 2, false); break;
-      case V2K_OK: v2Key(k[i], "OK", lit ? blue : ready ? C565(0x58, 0xb8, 0x68) : grey, UI_WHITE, 2, false); break;
-      case ' ': v2Key(k[i], "SPACE", lit ? blue : UI_WHITE, lit ? UI_WHITE : C565(0x8e, 0x8c, 0x96), 2, false); break;
-      default: v2Key(k[i], lab, lit ? blue : UI_WHITE, lit ? UI_WHITE : UI_INK, 4, false);  // (size 4: 3 spread each font pixel over a Knomi pixel and a half, Fedor: "very pixelated")
+      case V2K_BKSP: v2Key(b, "\x1b", lit ? blue : grey, UI_WHITE, 4 * z, false); break;  // its left arrow
+      case V2K_LAYER: v2Key(b, L < 2 ? "123" : "ABC", lit ? blue : grey, UI_WHITE, 2, false); break;
+      case V2K_OK: v2Key(b, "OK", lit ? blue : ready ? C565(0x58, 0xb8, 0x68) : grey, UI_WHITE, 2, false); break;
+      case ' ': v2Key(b, "SPACE", lit ? blue : UI_WHITE, lit ? UI_WHITE : C565(0x8e, 0x8c, 0x96), 2, false); break;
+      default: v2Key(b, lab, lit ? blue : UI_WHITE, lit ? UI_WHITE : UI_INK, 4 * z, false);  // (size 4: 3 spread each font pixel over a Knomi pixel and a half, Fedor: "very pixelated")
     }
   }
   if (hot > 0) {  // what the finger is on, big, where the text was
@@ -2368,23 +2426,27 @@ static void v2Keyboard(int L, const char *title, const char *typed, int hot, boo
     printT(big);
     classicFontEnd(c2);
   }
-  v2CloseX();
+  if (zoom) v2RoundBtn(CX, V2_CLOSE_Y, -1, 0x4F93C4, 0x8CC0E4, 0x2E6A98);  // back to the whole keyboard (a blue back arrow)
+  else v2CloseX();
 }
 
 // the nickname's keyboard: it starts in capitals for an empty name, and turns small after the first letter
 static uint8_t v2NameLayer = 0;
-static void v2NameKbOpen() { v2NameLayer = nameLen ? 0 : 1; }
+static void v2NameKbOpen() {
+  v2NameLayer = nameLen ? 0 : 1;
+  v2KbZoomX = -1;
+}
 static void v2NameKb() {
   char title[24];
-  v2Keyboard(v2NameLayer, v2Caps(T(S_NAME), title, sizeof(title)), nameBuf, -1, true);
+  v2Keyboard(v2NameLayer, v2Caps(T(S_NAME), title, sizeof(title)), nameBuf, -1, true);  // (the key under the finger: press.h)
 }
 static void v2NameKbTap(int16_t x, int16_t y) {
-  if (closeHit(x, y)) {  // the X: out without renaming (V1 had only OK)
+  if (v2KbZoomX < 0 && closeHit(x, y)) {  // the X: out without renaming (V1 had only OK)
     sfxPlay(SFX_TAP);
     kbOpen = false;
     return;
   }
-  int c = v2KbAt(v2NameLayer, x, y);
+  int c = v2KbTapZ(v2NameLayer, x, y);
   if (c < 0) return;
   sfxPlay(SFX_TAP);
   if (c == V2K_SHIFT || c == V2K_LAYER) {
@@ -2446,12 +2508,12 @@ static void v2WifiList(int page, int n, const char *(*net)(int), const char *cur
 }
 // the password's keyboard: "< network" over it goes back to the list, as the X does
 static void v2WifiKbTap(int16_t x, int16_t y) {
-  if (y < 56 || closeHit(x, y)) {
+  if (v2KbZoomX < 0 && (y < 56 || closeHit(x, y))) {
     sfxPlay(SFX_TAP);
     wifiSetupBackToList();
     return;
   }
-  int c = v2KbAt(wifiKbLayer, x, y);
+  int c = v2KbTapZ(wifiKbLayer, x, y);
   if (c < 0) return;
   if (c == V2K_SHIFT || c == V2K_LAYER) wifiKbLayer = v2KbNext(wifiKbLayer, c);
   else if (c == V2K_BKSP) wifiSetupDelete();
