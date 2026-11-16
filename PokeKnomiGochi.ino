@@ -2883,6 +2883,8 @@ void gamesMenuTap(int16_t x, int16_t y) {
     if (v2GamesTurn(d)) sfxPlay(SFX_TAP);
     return;
   }
+  int adx = pageArrowDx(V2_PAGE_ARROW_Y);  // where an arrow isn't (the first page's left, the last's right): nothing
+  if (pageArrowHit(x, y, CX - adx, V2_PAGE_ARROW_Y) || pageArrowHit(x, y, CX + adx, V2_PAGE_ARROW_Y)) return;
   int g = gameAt(x, y);
   if (g == GAME_PINBALL) {  // not made yet: the menu stays
     sfxPlay(SFX_DENY);
@@ -8482,10 +8484,8 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return pressSet(t, 83 + inset, QUIZ_OPT_Y + i * (QUIZ_OPT_H + QUIZ_OPT_GAP), 300 - 2 * inset, QUIZ_OPT_H, dexName(quizOpts[i]));
   }
   if (gamesMenuOpen) {
-    if (int d = v2GamesArrowAt(x, y))  // V2: its page arrows
-      return v2PressSet(t, CX + d * V2_GAMES_ARROW_DX - CLOSE_R, V2_GAMES_ARROW_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, d < 0 ? "<" : ">");
     int g = gameAt(x, y);
-    if (g < 0) return v2PressNav(x, y, t, 0, 0, 0, true);  // V2: its X
+    if (g < 0) return v2PressNav(x, y, t, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, true);  // V2: its page arrows and X
     if (g < 0) return false;
     int k = v2CartOfGame(g);  // V2: round the cartridge
     return pressSet(t, V2_CART_XY[k][0] - 5, V2_CART_XY[k][1] - 5, 115, 140, gameLabel(g));

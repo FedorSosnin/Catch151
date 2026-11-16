@@ -1887,19 +1887,19 @@ static void v2PaintPlayLabels() {
 
 // ----- the two Game Boys -----
 // The games: four a page, 2 x 2, and a second page (Fedor, 2026-11-15: "4 carts on the screen max instead of the
-// current 6 and add another page"; it was 3 x 2, "a 3x2, 6 total carts"). The rows are the 3 x 2's, the columns its
-// middle one's either side of the middle; the page arrows sit inside the screen either side of them (clear of the
-// power light on the bezel), and "Page 1 of 2" under them, as the other paged screens say it
+// current 6 and add another page"; it was 3 x 2, "a 3x2, 6 total carts"). The rows are the 3 x 2's, the two columns
+// 43 px apart (Fedor: "a bit more room inbetween them horizontally"); the page arrows where every paged screen has
+// them (Fedor: "the same spots as they are on other screens"), and "Page 1 of 2" under the cartridges. A page turning
+// slides only the cartridges, inside the Game Boy's screen (Fedor: "just the carts should slide and not the
+// background"): slide_v2.h, its moving box
 #define V2_CARTS 7
 #define V2_CARTS_PAGE 4
 #define V2_CART_PAGES ((V2_CARTS + V2_CARTS_PAGE - 1) / V2_CARTS_PAGE)
-static const int16_t V2_CART_XY[V2_CARTS_PAGE][2] = { { 118, 96 }, { 242, 96 }, { 118, 238 }, { 242, 238 } };
+static const int16_t V2_CART_XY[V2_CARTS_PAGE][2] = { { 106, 96 }, { 254, 96 }, { 106, 238 }, { 254, 238 } };
 static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5, 6 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball)
 static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8, 9 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
 // the colours the games came in: Green, Silver, Red, Yellow, Blue; Play together's Gold, Crystal, Yellow
 static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A, 0x7A52C8 };  // (Reel Fishing: Magikarp's orange; Pinball: purple)
-#define V2_GAMES_ARROW_Y 234   // the page arrows: between the rows, inside the screen
-#define V2_GAMES_ARROW_DX 155  // ...CX less and more this (x 78 and 388)
 static int v2GamesPage = 0;    // the page the Games menu is on (kept, so a game ends back on its own page)
 static int v2CartsOn(int page) { int n = V2_CARTS - page * V2_CARTS_PAGE; return n < V2_CARTS_PAGE ? n : V2_CARTS_PAGE; }
 static const int16_t V2_PLAY_XY[3][2] = { { 56, 150 }, { 180, 150 }, { 304, 150 } };
@@ -1939,20 +1939,12 @@ static void v2GamesTv() {
   if (v2GamesPage >= V2_CART_PAGES) v2GamesPage = V2_CART_PAGES - 1;
   for (int k = 0, c = v2GamesPage * V2_CARTS_PAGE; k < v2CartsOn(v2GamesPage); k++, c++)
     v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[c]), gameLabel(V2_CART_GAME[c]), V2_CART_COL[c]);
-  if (v2GamesPage > 0) v2PageArrow(CX - V2_GAMES_ARROW_DX, V2_GAMES_ARROW_Y, -1);
-  if (v2GamesPage < V2_CART_PAGES - 1) v2PageArrow(CX + V2_GAMES_ARROW_DX, V2_GAMES_ARROW_Y, 1);
+  drawPageArrows(v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
   v2PageOf(V2_CART_PAGES, v2GamesPage, 400);
   v2CloseX();
 }
 // the Games menu's page arrow under a tap: -1 back, 1 on, 0 neither (or one not shown)
-static int v2GamesArrowAt(int16_t x, int16_t y) {
-  for (int d = -1; d <= 1; d += 2) {
-    int dx = x - (CX + d * V2_GAMES_ARROW_DX), dy = y - V2_GAMES_ARROW_Y;
-    bool shown = d < 0 ? v2GamesPage > 0 : v2GamesPage < V2_CART_PAGES - 1;
-    if (shown && dx * dx + dy * dy <= (V2_CLOSE_R + 12) * (V2_CLOSE_R + 12)) return d;
-  }
-  return 0;
-}
+static int v2GamesArrowAt(int16_t x, int16_t y) { return pageArrowAt(x, y, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y); }
 // turns the Games menu's page (a swipe or an arrow): false if there's no page that way
 static bool v2GamesTurn(int d) {
   int p = v2GamesPage + d;

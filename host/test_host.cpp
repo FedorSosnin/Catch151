@@ -701,11 +701,11 @@ static void testGame() {
     extern int gameAt(int16_t x, int16_t y);
     extern bool fishOpen;
     CHECK(gameAt(150, 128) == 0 && gameAt(300, 300) == 4);  // Berry Drop; PikaSurf
-    tapAt(388, 234);
+    tapAt(432, 228);  // the right arrow, where every paged screen has it
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == -1);
     tapAt(170, 300);  // Pinball
     CHECK(gamesMenuOpen && !gameOpen && !fishOpen);
-    tapAt(388, 234);  // no third page: nothing (and the menu stays)
+    tapAt(432, 228);  // no third page: nothing (and the menu stays)
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
     hostPointer(130, 300, true);
     runTicks(50);

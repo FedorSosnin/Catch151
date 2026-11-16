@@ -35,6 +35,8 @@ struct V2PageKey {
   uint8_t menu;
   int16_t page, pages, arrowY, still = V2_SLIDE_CHROME_Y;  // still: the rows from here down don't move
   int16_t stillR = 0;  // and, if not 0, the X (at CX, V2_CLOSE_Y) in a circle this big doesn't, as a side button
+  int16_t mx0 = 0, my0 = 0, mx1 = V2_W;  // on a room, only what's in this box moves (from my0 down to still); what's
+                                         // outside it is the new page's, still (the Games menu: its Game Boy's screen)
 };
 static V2PageKey v2PageKeyNow() {
   V2PageKey k = { 0, 0, 0, V2_PAGE_ARROW_Y };
@@ -57,7 +59,9 @@ static V2PageKey v2PageKeyNow() {
     }
     return { 5, (int16_t)galleryPage, DEX_PAGES, PAGE_ARROW_Y, V2_SLIDE_DEX_Y };
   }
-  if (gameOpen || dungeonOpen || runOpen || surfOpen || battleOpen || quizOpen || gamesMenuOpen) return k;
+  if (gamesMenuOpen)  // the cartridges, inside the Game Boy's screen: its sign, power light and page line stay
+    return { 52, (int16_t)v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, V2_SLIDE_CHROME_Y, 0, V2_GB_X0, V2_GB_Y0, V2_GB_X1 };
+  if (gameOpen || dungeonOpen || runOpen || surfOpen || battleOpen || quizOpen) return k;
   if (zoneScreen == ZS_PICK) return { 50, (int16_t)v2IslePage, 2, V2_PAGE_ARROW_Y, V2_SLIDE_TRAVEL_Y, V2_SLIDE_ARROW_R };  // Knomi Island, then Knomi Tower's islet
   if (zoneScreen == ZS_TOWER) {  // Knomi Tower (tower_v2.h): picking two friends, the Pokedex's grid
     if (twView == TW_PICK) k = { 51, (int16_t)twPickPage, (int16_t)twPickPages(), V2_PAGE_ARROW_Y, V2_SLIDE_DEX_Y };
@@ -164,6 +168,7 @@ static void v2SlidePrepare(const V2PageKey &from, const V2PageKey &to) {
       else
         for (int x = 0; x < V2_W; x++) {
           int i = y * V2_W + x;
+          if (x < to.mx0 || x >= to.mx1 || y < to.my0) continue;  // outside the moving box: kept as drawn, not moving
           if (p[i] == room[i] || v2SlideOnArrow(from, x, y) || v2SlideOnArrow(to, x, y)) {
             p[i] = V2_SLIDE_SENT;
             continue;
@@ -205,6 +210,14 @@ static void v2SlideCompose(float p) {
     v2SlideRow(row, v2SlideNew + y * V2_W, nOff, v2SlideSpan[1][y]);
   }
   memcpy(fb + still * V2_W, v2SlideNew + still * V2_W, (size_t)(V2_W - still) * V2_W * sizeof(uint16_t));
+  const V2PageKey &k = v2SlideTo;
+  if (v2SlideRoom && (k.mx0 > 0 || k.my0 > 0 || k.mx1 < V2_W))  // outside the moving box: the new page, still
+    for (int y = 0; y < still; y++) {
+      uint16_t *row = fb + y * V2_W;
+      const uint16_t *n = v2SlideNew + y * V2_W;
+      for (int x = 0; x < V2_W; x++)
+        if (y < k.my0 || x < k.mx0 || x >= k.mx1) row[x] = n[x];
+    }
   if (v2SlideTo.stillR) v2CloseX();  // the X, still (both pages slide without theirs), as the side buttons
   drawPageArrows(v2SlideTo.page, v2SlideTo.pages, v2SlideTo.arrowY);  // the new page's side buttons, still
 }
