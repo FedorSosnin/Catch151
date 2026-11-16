@@ -194,8 +194,9 @@ def screen(n):
     return disc, inner
 
 
-def island(p, n, inner):
-    """the Travel page's island, small: the sea, a sandy coast, five places round the Wild middle"""
+def island(p, n, inner, rot=0):
+    """the Travel page's island, small: the sea, a sandy coast, five places round the Wild middle; rot: turned that many
+    degrees clockwise (the README's logo spins it)"""
     di = even(math.sqrt(len(inner) * 4 / math.pi) * (.8 if n < 24 else .68))
     o = (n - di) // 2
     land = circle(di, o, o)
@@ -208,7 +209,7 @@ def island(p, n, inner):
         if (x, y) in wild:
             place[(x, y)] = 5
         else:
-            a = (math.degrees(math.atan2(y + .5 - c, x + .5 - c)) + 90 + 36) % 360
+            a = (math.degrees(math.atan2(y + .5 - c, x + .5 - c)) + 90 + 36 - rot) % 360
             place[(x, y)] = int(a // 72)
     for q in inner:
         x, y = q
@@ -216,7 +217,7 @@ def island(p, n, inner):
             near = n >= 32 and any((x + dx, y + dy) in land for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             p.p[q] = SEA_L if near and (x + y) % 2 else SEA
         elif q in coast:
-            a = (math.degrees(math.atan2(y + .5 - c, x + .5 - c)) + 90 + 36) % 360
+            a = (math.degrees(math.atan2(y + .5 - c, x + .5 - c)) + 90 + 36 - rot) % 360
             p.p[q] = SAND_L if int(a // 72) == 2 else SAND  # (the Beach's coast paler)
         else:
             k = place[q]
@@ -255,13 +256,13 @@ def sparkle(p, n, inner):
             p.p[(x, y)] = CREAM_L if dx + dy <= (1 if n < 48 else 2) else GOLD_S
 
 
-def icon(n, what, shape='round'):
-    """n x n: the frame, the screen's ring, and the island ('game') or the sparkle ('dex')"""
+def icon(n, what, shape='round', rot=0):
+    """n x n: the frame, the screen's ring, and the island ('game', turned rot degrees) or the sparkle ('dex')"""
     p = frame(n, shape)
     disc, inner = screen(n)
     p.put(disc, INK)
     if what == 'game':
-        island(p, n, inner)
+        island(p, n, inner, rot)
     else:
         sparkle(p, n, inner)
     return p
@@ -399,10 +400,10 @@ def save_app_icons():
     icon(64, 'game').image().save(os.path.join(WEB_ASSETS, 'favicon.png'), optimize=True)
 
 
-def badge(n, what):
+def badge(n, what, rot=0):
     """the icon as the logo shows it: a dark outline round it and a shadow under, as the name has (Fedor: "we need to
     add a black border like the catch and 151 have")"""
-    p = icon(n, what)
+    p = icon(n, what, rot=rot)
     px = set(p.p)
     ring = around(px)
     q = Pic()
@@ -417,9 +418,36 @@ def logo():
     return row(badge(20, 'game'), name())
 
 
-def logo_large():
+def logo_large(rot=0):
     """the logo drawn larger, not scaled (the About page): the icon at 28, the name's 12 px letters"""
-    return row(badge(28, 'game'), name(font=LARGE), gap=5)
+    return row(badge(28, 'game', rot), name(font=LARGE), gap=5)
+
+
+SPIN_FRAMES, SPIN_MS, SPIN_SCALE = 40, 100, 6  # a turn every 4 s; drawn 6 times over, shown at half that (sharp on a
+                                               # Retina screen)
+
+
+def save_spin(base='catch151-large-spin'):
+    """the README's logo, moving: the large logo with the island in its screen turning clockwise, round and round
+    (Fedor: "have the island inside the logo spin in an infinite loop"). Each frame is drawn a pixel at a time, as
+    the still one is, so it stays pixel art; a GIF, which every place GitHub shows the README plays. The colours are a
+    palette of their own with see-through as index 0"""
+    from PIL import Image
+    pics = [logo_large(360 * i / SPIN_FRAMES).norm() for i in range(SPIN_FRAMES)]
+    cols = sorted({c for q in pics for c in q.p.values()})
+    pal = [0, 0, 0]
+    for c in cols:
+        pal += [int(c[i:i + 2], 16) for i in (1, 3, 5)]
+    w, h = pics[0].size()
+    frames = []
+    for q in pics:
+        im = Image.new('P', (w, h), 0)
+        im.putpalette(pal + [0] * (768 - len(pal)))
+        for (x, y), c in q.p.items():
+            im.putpixel((x, y), cols.index(c) + 1)
+        frames.append(im.resize((w * SPIN_SCALE, h * SPIN_SCALE), Image.NEAREST))
+    frames[0].save(os.path.join(OUT, base + '.gif'), save_all=True, append_images=frames[1:], duration=SPIN_MS,
+                   loop=0, transparency=0, disposal=2, optimize=False)
 
 
 def header(p):
@@ -460,6 +488,7 @@ def main():
     with open(WEB_LOGO, 'w') as f:
         f.write(logo().svg())
     save(logo_large(), 'catch151-large')
+    save_spin()
     with open(HEADER, 'w') as f:
         f.write(header(logo_large()))
     save(name(), 'catch151-name')
