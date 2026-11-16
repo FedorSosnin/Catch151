@@ -1952,6 +1952,11 @@ static bool v2GamesTurn(int d) {
   v2GamesPage = p;
   return true;
 }
+// the Games menu turned to the page with game g on it (its number, as V2_CART_GAME has them), for a game's end
+void v2GamesShow(int g) {
+  for (int c = 0; c < V2_CARTS; c++)
+    if (V2_CART_GAME[c] == g) v2GamesPage = c / V2_CARTS_PAGE;
+}
 static void v2PlayTv() {
   v2GbBack(T(S_PLAY_TOGETHER));
   char w[48];
@@ -2875,7 +2880,7 @@ static void v2GameEndDo(int k) {
     else if (g == 5) startFish();
     else startPinball();
   }
-  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen && !pinOpen) gameEndToMenu();  // (it may not start: asleep)
+  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen && !pinOpen) gameEndToMenu(g);  // (it may not start: asleep)
 }
 
 // ----- the home's dialogs and moments (rooms2_px.py release_dialog(), batch3.py medal_banner(), bath(), evolving()) -----

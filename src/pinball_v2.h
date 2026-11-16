@@ -3,8 +3,9 @@
 // Poke Ball, a Great Ball and an Ultra Ball) with Diglett's hole between them, a ring in the middle, a patch of tall
 // grass by the right wall where wild Pokemon wait (in goes the ball, and one jumps out into the ring, to battle with
 // the ball: Fedor, "The battles need to happen inside the pinball game"), slingshots, and two flippers over the drain.
-// Raised over the floor (Fedor: "ramps and areas the ball can go under and over"): a ramp up the left that turns over
-// the top in a smooth hairpin, crossing over the orbit, and runs down the rim as a wire rail to the left inlane. Two
+// Raised over the floor (Fedor: "ramps and areas the ball can go under and over"): a ramp straight up the left, arrows
+// chasing up it, that turns over into the wall in the top-left corner, crossing over the orbit, and runs down the rim
+// as a wire rail to the left inlane. Two
 // looks, one each game at random: a night-blue table on a chrome rim, or a meadow on a wooden one. The ball is a Poke
 // Ball that rolls (Fedor: "make sure the ball spins as it moves").
 // scene_v2.h includes this after fishing_v2.h, whose painters it borrows (fsSay, fsBoard, fsThumb, fsCircle, fsSq,
@@ -372,8 +373,26 @@ static void pbGrass(bool lit) {
 }
 // the patch's front, over a ball that has gone into it (from row y down): only its lower half shows over the blades
 static void pbGrassFront(int y, bool lit) { pbGrassOval(PB_GRASS_X, PB_GRASS_Y, PB_GRASS_RX, PB_GRASS_RY, lit, SNAP2(y), true); }
+// the arrows up the ramp (Fedor: "maybe have some arrows or something going upward up the ramp"), on its climb: arrow k
+// (0 the lowest) unlit, or lit, as they chase up it one after another (pinDraw())
+#define PB_RAMP_ARROWS 5
+static void pbRampArrow(int k, bool lit) {
+  const PinTrack &tr = pinTrack();
+  const int climb = PB_RAMP_SEGS - PB_RAMP_TURN_SEGS;
+  float x, y, dx, dy, s = tr.s[climb] * (0.14f + 0.17f * k);
+  pinTrackAt(s, x, y, dx, dy);
+  float nx = -dy, ny = dx, tx = x + dx * 5, ty = y + dy * 5;
+  float lx = x - dx * 4 + nx * 8, ly = y - dy * 4 + ny * 8, rx = x - dx * 4 - nx * 8, ry = y - dy * 4 - ny * 8;
+  if (lit) {
+    pbCapsule(lx, ly, tx, ty, 3, 3, 0x1B1B25);
+    pbCapsule(rx, ry, tx, ty, 3, 3, 0x1B1B25);
+  }
+  Rgb c = lit ? 0xFFE27A : (pbDay ? 0xD89A5A : 0x6A7AC8);
+  pbCapsule(lx, ly, tx, ty, 2, 2, c);
+  pbCapsule(rx, ry, tx, ty, 2, 2, c);
+}
 // what's raised over the floor: the ramp (a see-through plastic lane between two walls, rising, so its shadow falls
-// further off toward its top, and over the top in its hairpin) and the wire rail it becomes, two wires on ties down
+// further off toward its top, and round over into the wall) and the wire rail it becomes, two wires on ties down
 // the rim over the orbit, to a cup where it lets the ball down into the left inlane. Both along pinball.h's track
 static void pbRaised(bool rampLit = false) {
   const PinTrack &tr = pinTrack();
@@ -385,12 +404,9 @@ static void pbRaised(bool rampLit = false) {
   }
   for (int i = N; i < W; i++)  // the wire's shadow
     pbCapsule(px[i] + 10, py[i] + 14, px[i + 1] + 10, py[i + 1] + 14, 9, 9, pbFloorDark(), 70);
-  for (int i = 0; i < N; i++)  // the ramp's see-through floor, with lit stripes across it
+  for (int i = 0; i < N; i++)  // the ramp's see-through floor, with arrows up it (unlit: pbRampArrow())
     pbCapsule(px[i], py[i], px[i + 1], py[i + 1], 14, 14, rampLit ? 0xFFF3B0 : (pbDay ? 0xF8ECC0 : 0xA8C4F8), 105);
-  for (int i = 2; i < N; i += 3) {
-    float dx = px[i + 1] - px[i], dy = py[i + 1] - py[i], L = hypotf(dx, dy), nx = -dy / L * 11, ny = dx / L * 11;
-    pbCapsule(px[i] + nx, py[i] + ny, px[i] - nx, py[i] - ny, 1, 1, rampLit ? 0xFFFFFF : (pbDay ? 0xFFF8E0 : 0xD8E4FF), 140);
-  }
+  for (int k = 0; k < PB_RAMP_ARROWS; k++) pbRampArrow(k, false);
   for (int side = -1; side <= 1; side += 2)  // its two walls: a dark edge, then the wall (the outer lit, the inner shaded)
     for (int pass = 0; pass < 2; pass++)
       for (int i = 0; i < N; i++) {
@@ -614,6 +630,11 @@ static void pinDraw(const PinState &s, bool keys) {
   // the ball: rolled as it goes; up the ramp nearer (bigger) and its shadow further off; on the floor under the ramp or
   // the wire, them back over it; in the grass, the blades in front of it
   bool showBall = s.phase == PIN_PLAY || s.phase == PIN_CATCH || (s.phase == PIN_LOST && s.t < 0.3f);
+  // the arrows up the ramp, lit one after another up it (two beats dark between runs): under a ball on the ramp, over
+  // one on the floor
+  int arrow = (int)(s.playT * 5) % (PB_RAMP_ARROWS + 2);
+  bool arrowUnder = showBall && s.onTrack;
+  if (arrowUnder && arrow < PB_RAMP_ARROWS) pbRampArrow(arrow, true);
   if (showBall) {
     int x = (int)s.x, y = (int)s.y;
     if (s.onTrack) {
@@ -626,6 +647,7 @@ static void pinDraw(const PinState &s, bool keys) {
       else pbRaisedOver(x - 16, y - 16, x + 22, y + 24);
     }
   }
+  if (!arrowUnder && arrow < PB_RAMP_ARROWS) pbRampArrow(arrow, true);
   // what it says
   char b[40];
   if (s.phase == PIN_LOST) {  // the bottom glowing red; the next ball's number

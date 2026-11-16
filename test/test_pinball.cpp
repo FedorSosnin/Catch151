@@ -1,5 +1,5 @@
 // Pinball's rules and physics (pinball.h): the serve, gravity and the rim, the flippers, the drain and the three
-// balls, the bumpers and Diglett, the berries' multiplier, the ramp's hairpin and the wire rail, the grass and the
+// balls, the bumpers and Diglett, the berries' multiplier, the ramp's turn and the wire rail, the grass and the
 // battle in the ring, and whole games played by a simple bot, the ball never leaving the table.
 #include "framework.h"
 #include "shim/Arduino.h"

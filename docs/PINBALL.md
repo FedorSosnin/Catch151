@@ -26,9 +26,14 @@ moved onto the table, a smooth ramp, no trail behind the ball, a song of its own
   so the inlanes under them are wide enough for the ball to roll down to the flippers (it got stuck between them), and
   the orbit's inner rail is shorter (200 to 340 degrees round, r 180), so its mouths open down each side.
 - **A stuck ball** (nearly still for 2.5 s anywhere but held up on a flipper) gets a nudge.
-- **The ramp** (Fedor: "The ramp's sharp angle makes it feel like there is a physics issue"): straight up from its
-  mouth, then a smooth hairpin over the top into the wire rail, one track from mouth to cup; no bend between two of its
-  steps is sharper than 35 degrees, so the ball follows it without a jolt.
+- **The ramp** (Fedor: "The ramp's sharp angle makes it feel like there is a physics issue"; then, of four shapes
+  drawn in the game, he chose the one up into the top corner, "but maybe have some arrows or something going upward up
+  the ramp. And slightly away from that one pin"): straight up from its mouth into the top-left corner, clear of the
+  Poke Ball bumper, then round over the top (a 20 px turn, not a corner) into the wall, where the wire rail takes
+  over, one track from mouth to cup; no bend between two of its steps is sharper than 35 degrees. Five arrows on its
+  floor light one after another up it. Its mouth catches a ball a little wider than before (22 px), so about as many
+  shots go up it as before it climbed higher; a few more roll back down. (The hairpin it had for a while looked like a
+  paperclip.)
 - **No trail behind the ball** (Fedor: "I dont like the trail the ball leaves").
 - **The battle, on the table** (Fedor: "The battles need to happen inside the pinball game"): see The battle below.
   Nothing outside Pinball changes (the Pokedex, the battle record): only points.
@@ -91,8 +96,8 @@ moved onto the table, a smooth ramp, no trail behind the ball, a song of its own
 
 ### Raised: over and under (Fedor: "ramps and areas the ball can go under and over")
 
-- **The ramp** rises from its mouth left of the middle (a lit arrow shows the shot, from the right flipper), up the
-  left, and **over the orbit lane**. There it becomes a **wire rail** running down the left rim, over the lane, and
+- **The ramp** rises from its mouth left of the middle (a lit arrow shows the shot, from the right flipper, and arrows
+  chase up the ramp itself), up the left into the top corner, and **over the orbit lane**. There it becomes a **wire rail** running down the left rim, over the lane, and
   lets the ball down into the left inlane, onto the left flipper: a ramp shot comes back to you (+250).
 - **Under it:** a ball going round the orbit passes **under the wire rail** along the left (in its shade, the wires
   across it). On the ramp the ball is drawn bigger and its shadow falls further off, so it's plain which level it's on.
@@ -150,4 +155,5 @@ gone from the code now, and in the history at commit 9eacb87.
 (Decided: mockups first; both looks, one at random each game; Left and Right arrows flip on computers; the ball rolls;
 Diglett for all three bumpers; the tall grass for the battles, its way in a gap where the grass parts. After the first
 play: the battle on the table, in a ring where your Pokemon stood, each hit of the ball your Pokemon's move; a smooth
-ramp; no trail; Pinball's own song; a smaller patch of grass; Diglett up longer.)
+ramp; no trail; Pinball's own song; a smaller patch of grass; Diglett up longer. Then: the ramp up into the top corner,
+clear of the bumper, with arrows; a game's end back on its own page of the Games menu.)

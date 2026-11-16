@@ -2686,7 +2686,11 @@ void gameGlimpsesPaint() {
 
 // a game that has ended goes back to the games menu, where it was chosen; home instead when the main
 // screen has something to say first (an evolution to decide, a farewell)
-void gameEndToMenu() {
+// a game over: back to the Games menu, on the page with that game on it (g: its number, 0 Berry Drop .. 6 Pinball;
+// Fedor: "it should go back to the same page with games that contains that game. Not just to page 1")
+void v2GamesShow(int g);  // (menus_v2.h)
+void gameEndToMenu(int g) {
+  v2GamesShow(g);
   if (pet.isEgg() || pet.sleeping || pet.ceremony || choiceKind) return;
   openGamesMenu();
 }
@@ -3005,7 +3009,7 @@ void quizTap(int16_t x, int16_t y) {
   if (quizPhase == QP_END) {
     if (millis() - quizT > 800) {
       closeQuiz();
-      gameEndToMenu();
+      gameEndToMenu(1);
     }
     return;
   }
@@ -4386,7 +4390,7 @@ void dungeonTap(int16_t x, int16_t y) {
   if (dnOverT) {
     if (millis() - dnOverT > 800) {
       closeDungeon();
-      gameEndToMenu();
+      gameEndToMenu(3);
     }
     return;
   }
@@ -4525,7 +4529,7 @@ void closeRun() { runOpen = false; runBot = false; introCard = -1; }
 void runTap() {
   if (runOverT && millis() - runOverT > 800) {  // time to read the result
     closeRun();
-    gameEndToMenu();
+    gameEndToMenu(2);
   }
 }
 
@@ -4974,7 +4978,7 @@ void surfTap() {
   }
   if (surfOverT && millis() - surfOverT > 800) {  // time to read the result
     closeSurf();
-    gameEndToMenu();
+    gameEndToMenu(4);
   }
 }
 

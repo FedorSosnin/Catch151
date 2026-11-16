@@ -6,9 +6,9 @@
 // over the drain between them. On the floor: an orbit lane round the top with six berry lights in it, three bumpers
 // with Diglett's hole between them, slingshots over the flippers, a ring painted in the middle, and a patch of tall
 // grass by the right wall: the ball in its gap brings a wild Pokemon out into the ring, to battle there with the ball
-// (Fedor: "The battles need to happen inside the pinball game"). Raised over the floor: a ramp up the left that turns
-// over the top in a hairpin and becomes a wire rail down the rim, over the orbit lane, to the left inlane. A gentle table: the Knomi draws about 10 frames a
-// second, so the ball's top speed is one the eye can follow there, and the physics runs in many small steps between
+// (Fedor: "The battles need to happen inside the pinball game"). Raised over the floor: a ramp straight up the left into
+// the top-left corner that turns over into the wall and becomes a wire rail down the rim, over the orbit lane, to the
+// left inlane. A gentle table: the Knomi draws about 10 frames a second, so the ball's top speed is one the eye can follow there, and the physics runs in many small steps between
 // frames so the ball never passes through a flipper.
 #include <math.h>
 #include <stdint.h>
@@ -43,12 +43,14 @@
 static const float PB_NOTCH[2][2] = { { 366, 264 }, { 388, 244 } };
 static const int16_t PB_BUMP[3][2] = { { 178, 180 }, { 288, 180 }, { 233, 104 } };  // a Poke, a Great, an Ultra Ball
 static const int16_t PB_BERRY_A[6] = { 212, 234, 246, 294, 306, 328 };  // the berry lights, in the orbit lane
-// the ramp: from its mouth left of the middle straight up, then over the top in a hairpin (a half circle, from its
-// right to its left: Fedor, "The ramp's sharp angle makes it feel like there is a physics issue") and down to where
-// the wire rail takes over, over the orbit lane
-static const float PB_RAMP_MOUTH[2] = { 150, 272 };
-static const float PB_RAMP_TOP[2] = { 126, 152 };      // where the hairpin starts
-static const float PB_RAMP_ARC[3] = { 86, 152, 40 };   // the hairpin: its middle, and how far round
+// the ramp (Fedor chose it from four, "C", then "slightly away from that one pin"): from its mouth left of the middle
+// straight up into the top-left corner, clear of the Poke Ball bumper, then round over the top (a turn, not a corner:
+// "The ramp's sharp angle makes it feel like there is a physics issue") into the wall, where the wire rail takes over,
+// over the orbit lane. The turn is a circle touching the wall from inside at PB_RAMP_JOIN degrees round
+static const float PB_RAMP_MOUTH[2] = { 142, 272 };
+static const float PB_RAMP_TOP[2] = { 114.0f, 113.2f };          // where the climb ends and the turn starts
+static const float PB_RAMP_ARC[3] = { 94.35f, 116.65f, 20.0f };  // the turn: its middle, and its radius
+#define PB_RAMP_JOIN 220.0f
 // the guides down to the flippers, from the wall (148 degrees round) to just over the pivot: the guide's top runs on
 // smoothly over the flipper's round end (no dip between them for the ball to sit in)
 #define PB_GUIDE_A 2.583f
@@ -77,6 +79,7 @@ static const float PB_SLING[3][2] = { { 82, 272 }, { 82, 318 }, { 122, 340 } }; 
 #define PB_BTL_HIT_S 0.4f    // a hit on it: its flash, and your move's
 #define PB_BTL_OUT_S 1.4f    // its outcome on show (knocked out, or off back into the grass)
 #define PB_RAMP_IN 120.0f    // the speed up the ramp's way it needs to go in
+#define PB_RAMP_CATCH 22.0f  // ...and how near its mouth (as many shots go in as before it climbed higher)
 #define PB_HINT_S 4.0f       // the first ball: the hint over the flippers this long
 // the points (times the multiplier the berries give)
 #define PB_PTS_BUMP 10
@@ -146,6 +149,7 @@ inline float pinRand(PinState &s) {
 
 // ---- the ramp and the wire rail, as one track ----
 #define PB_RAMP_SEGS 24
+#define PB_RAMP_TURN_SEGS 6  // ...of them its turn over the top
 #define PB_WIRE_SEGS 31
 #define PB_TRACK_N (PB_RAMP_SEGS + PB_WIRE_SEGS + 1)
 struct PinTrack {
@@ -156,23 +160,27 @@ inline const PinTrack &pinTrack() {
   static PinTrack t;
   static bool built = false;
   if (built) return t;
-  const int straight = 6;  // the ramp: straight up from its mouth, then the hairpin over the top
-  for (int i = 0; i <= straight; i++) {
-    float k = i / (float)straight;
+  // the ramp: the climb (most of its steps, it being most of its length), then the turn, from where the climb meets it
+  // round to the wall (y down: the angle going down), each step about as long
+  const int climb = PB_RAMP_SEGS - PB_RAMP_TURN_SEGS;
+  for (int i = 0; i <= climb; i++) {
+    float k = i / (float)climb;
     t.x[i] = PB_RAMP_MOUTH[0] + (PB_RAMP_TOP[0] - PB_RAMP_MOUTH[0]) * k;
     t.y[i] = PB_RAMP_MOUTH[1] + (PB_RAMP_TOP[1] - PB_RAMP_MOUTH[1]) * k;
   }
-  for (int i = 1; i <= PB_RAMP_SEGS - straight; i++) {  // over the top, from its right to its left (y down: 0 to -pi)
-    float a = -3.14159265f * i / (PB_RAMP_SEGS - straight);
-    t.x[straight + i] = PB_RAMP_ARC[0] + PB_RAMP_ARC[2] * cosf(a);
-    t.y[straight + i] = PB_RAMP_ARC[1] + PB_RAMP_ARC[2] * sinf(a);
+  float a0 = atan2f(PB_RAMP_TOP[1] - PB_RAMP_ARC[1], PB_RAMP_TOP[0] - PB_RAMP_ARC[0]), a1 = PB_RAMP_JOIN * 0.01745329f;
+  while (a1 > a0) a1 -= 6.2831853f;
+  for (int i = 1; i <= PB_RAMP_TURN_SEGS; i++) {
+    float a = a0 + (a1 - a0) * i / PB_RAMP_TURN_SEGS;
+    t.x[climb + i] = PB_RAMP_ARC[0] + PB_RAMP_ARC[2] * cosf(a);
+    t.y[climb + i] = PB_RAMP_ARC[1] + PB_RAMP_ARC[2] * sinf(a);
   }
-  // the wire: round the rim and down, from where the hairpin ends (its angle and how far out) to its own end
+  // the wire: round the rim and down, from where the ramp meets the wall (its angle and how far out) to its own end
   float ex = t.x[PB_RAMP_SEGS] - PB_CX, ey = t.y[PB_RAMP_SEGS] - PB_CY;
-  float a0 = atan2f(ey, ex) * 57.29578f, r0 = sqrtf(ex * ex + ey * ey);
-  if (a0 < 0) a0 += 360;
+  float w0 = atan2f(ey, ex) * 57.29578f, r0 = sqrtf(ex * ex + ey * ey);
+  if (w0 < 0) w0 += 360;
   for (int i = 1; i <= PB_WIRE_SEGS; i++) {
-    float k = i / (float)PB_WIRE_SEGS, a = (a0 + (PB_WIRE_A1 - a0) * k) * 0.01745329f, r = r0 + (PB_WIRE_R - r0) * k;
+    float k = i / (float)PB_WIRE_SEGS, a = (w0 + (PB_WIRE_A1 - w0) * k) * 0.01745329f, r = r0 + (PB_WIRE_R - r0) * k;
     t.x[PB_RAMP_SEGS + i] = PB_CX + r * cosf(a);
     t.y[PB_RAMP_SEGS + i] = PB_CY + r * sinf(a);
   }
@@ -361,7 +369,7 @@ inline uint32_t pinBallStep(PinState &s, float h) {
     const PinTrack &tr = pinTrack();
     if (!s.rampTop && s.s >= tr.rampLen) {
       s.rampTop = true;
-      pinAdd(s, PB_PTS_RAMP, 150, 120);
+      pinAdd(s, PB_PTS_RAMP, 170, 112);  // (right of the ramp's top)
       ev |= PE_RAMP;
     }
     if (s.s <= 0) {  // not fast enough: back down and out of its mouth
@@ -395,7 +403,7 @@ inline uint32_t pinBallStep(PinState &s, float h) {
     float ux = PB_RAMP_TOP[0] - PB_RAMP_MOUTH[0], uy = PB_RAMP_TOP[1] - PB_RAMP_MOUTH[1], L = hypotf(ux, uy);
     ux /= L, uy /= L;
     float along = s.vx * ux + s.vy * uy;
-    if (hypotf(s.x - PB_RAMP_MOUTH[0], s.y - PB_RAMP_MOUTH[1]) < 18 && along > PB_RAMP_IN) {
+    if (hypotf(s.x - PB_RAMP_MOUTH[0], s.y - PB_RAMP_MOUTH[1]) < PB_RAMP_CATCH && along > PB_RAMP_IN) {
       s.onTrack = true;
       s.s = 1, s.sv = along;
       s.rampTop = false;
