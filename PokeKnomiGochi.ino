@@ -2416,6 +2416,7 @@ bool render() {
       v2DrawBand();
       v2DrawIcons();
       drawBuddyTop();  // under the dialogs, and dimmed with the rest behind a medal or the evolve button
+      v2SleepClockDraw();  // asleep: the clock, big, between it and the icons (scene_v2.h)
     }
     if (homeModal()) dimFrame();  // what's behind a medal, the evolve button or the goodbye
     // V2: a medal's banner is drawn last, in front of everything (at the end of the frame)
