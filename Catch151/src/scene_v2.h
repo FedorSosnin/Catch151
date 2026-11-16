@@ -674,30 +674,57 @@ static uint32_t v2ClockEpoch() {
   return e;
 }
 
-// While your Pokemon sleeps the clock glides down from the top to between it and the icons, big, and back up when it
-// wakes (Fedor: "When the pokemon is asleep and the music drifts away, lets have the clock move from the top to the
-// spot above where the icons sit but below your pokemon and larger. That way, when a device is on your desk and in
-// rest mode, it becomes a clock"). 0 on top, 1 down; already down if it was asleep when the game started
-#define V2_SLEEP_CLOCK_Y 280    // the big clock's top, asleep: between its feet (and shadow) and the icons
-#define V2_SLEEP_CLOCK_MS 1200  // the glide down or up
-static float v2SleepClockP() {
+// While your Pokemon sleeps the clock glides down from the top to between it and the icons, big (Fedor: "When the
+// pokemon is asleep and the music drifts away, lets have the clock move from the top to the spot above where the icons
+// sit but below your pokemon and larger. That way, when a device is on your desk and in rest mode, it becomes a
+// clock"). When it wakes, the big clock fades out where it is and the clock is back on top as soon as it's gone
+// (Fedor: the glide back up "is just too jarring to move across over your Pokemon ... let's just do that fade
+// effect"; the way down "lets you know what happened. Not very jarring ... Maybe just increase that speed a little").
+// Already down if it was asleep when the game started
+#define V2_SLEEP_CLOCK_Y 280      // the big clock's top, asleep: between its feet (and shadow) and the icons
+#define V2_SLEEP_CLOCK_MS 900     // the glide down (it was 1200)
+#define V2_SLEEP_CLOCK_FADE_MS 400  // the fade on waking
+// where the clock is (0 on top, 1 down) and how solid the big one is (256: solid; less: fading out on waking)
+static float v2SleepClockP(int *alpha = nullptr) {
   static int8_t down = -1;  // -1: not seen yet
   static uint32_t at = 0;
+  static float from = 1;    // where the big clock was when it woke: it fades out there
   bool want = pet.sleeping && !pet.ceremony && !pet.isEgg();
   uint32_t now = millis();
+  float t = (now - at) / (float)(down > 0 ? V2_SLEEP_CLOCK_MS : V2_SLEEP_CLOCK_FADE_MS);
+  if (t > 1) t = 1;
   if (down < 0) {
     down = want;
-    at = now - V2_SLEEP_CLOCK_MS;
-  } else if (want != (down > 0)) {  // turned round, mid-glide too: back from where it is
-    uint32_t el = now - at;
-    if (el > V2_SLEEP_CLOCK_MS) el = V2_SLEEP_CLOCK_MS;
-    at = now - (V2_SLEEP_CLOCK_MS - el);
+    at = now - V2_SLEEP_CLOCK_MS - V2_SLEEP_CLOCK_FADE_MS;
+    t = 1;
+  } else if (want != (down > 0)) {
+    if (!want) from = t * t * (3 - 2 * t);  // woken, mid-glide too: it fades out from where it got to
     down = want;
+    at = now;
+    t = 0;
   }
-  float t = (now - at) / (float)V2_SLEEP_CLOCK_MS;
-  if (t > 1) t = 1;
-  float e = t * t * (3 - 2 * t);  // eased in and out
-  return down ? e : 1 - e;
+  if (alpha) *alpha = 256;
+  if (down) return t * t * (3 - 2 * t);  // eased in and out
+  if (t >= 1) return 0;  // faded out: on top again
+  if (alpha) *alpha = (int)((1 - t) * 256);
+  return from;
+}
+
+// the clock's characters straight from the font, each font pixel a d x d block blended over what's under it (a, of
+// 256): the fade on waking, which the text routines can't draw see-through
+static void v2FadeText(int x, int y, const char *s, int d, uint16_t col, int a) {
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  for (int i = 0; s[i]; i++)
+    for (int cx = 0; cx < 5; cx++) {
+      uint8_t bits = GLCD_FONT[(uint8_t)s[i] * 5 + cx];
+      for (int cy = 0; cy < 8; cy++) {
+        if (!(bits >> cy & 1)) continue;
+        int px = x + (i * 6 + cx) * d, py = y + cy * d;
+        for (int yy = py; yy < py + d; yy++)
+          for (int xx = px; xx < px + d; xx++)
+            if (xx >= 0 && yy >= 0 && xx < 466 && yy < 466) fb[yy * 466 + xx] = v2Blend(fb[yy * 466 + xx], col, a);
+      }
+    }
 }
 
 // The big clock, asleep: h:mm big and AM/PM small beside it, their bottoms level, as the clock screen's
@@ -705,9 +732,10 @@ static float v2SleepClockP() {
 // poop under it never covers the time. Each minute it moves a pixel or two round a small loop, so an AMOLED panel
 // isn't holding the same bright pixels all night
 static void v2SleepClockDraw() {
-  float p = v2SleepClockP();
+  int alpha;
+  float p = v2SleepClockP(&alpha);
   uint32_t e = v2ClockEpoch();
-  if (p <= 0 || !e) return;
+  if (p <= 0 || !e || alpha <= 0) return;
   int h = (e / 3600) % 24;
   char t[8];
   snprintf(t, sizeof(t), "%d:%02d", clock12Hour(h), (int)((e / 60) % 60));
@@ -726,9 +754,17 @@ static void v2SleepClockDraw() {
   x0 = SNAP2(x0);
   y0 = SNAP2(y0);
   int ax = SNAP2(x0 + tw + gap), ay = y0 + 7 * d - 14;  // the bottoms of their ink level
+  const uint16_t shade = C565(0x0a, 0x0e, 0x1e);
+  if (alpha < 256) {  // waking: fading out where it is
+    for (int s = 1; s >= 0; s--) {
+      v2FadeText(x0 + 2 * s, y0 + 2 * s, t, d, s ? shade : UI_WHITE, alpha);
+      v2FadeText(ax + 2 * s, ay + 2 * s, ap, 2, s ? shade : UI_WHITE, alpha);
+    }
+    return;
+  }
   bool cjk = classicFontBegin();
   for (int s = 1; s >= 0; s--) {  // the shadow, then the time
-    gfx->setTextColor(s ? C565(0x0a, 0x0e, 0x1e) : UI_WHITE);
+    gfx->setTextColor(s ? shade : UI_WHITE);
     setSize(d);
     setCur(x0 + 2 * s, y0 + 2 * s);
     printT(t);
