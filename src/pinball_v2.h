@@ -322,17 +322,18 @@ static void pbDiglett(bool up, bool hit = false, float timeLeft = 0) {
     }
 }
 // Tall grass in the spirit of the Game Boy games (Fedor: "grass that resembles grass from Pokemon Blue"): an original
-// 16 px tile, 8 x 8 Knomi pixels of staggered tufts, each a dark edge round light blades, on a mid green. Tiled to a
-// fixed grid so neighbouring patches line up; rustling, every other row of tiles shifts a Knomi pixel
+// 16 px tile, 8 x 8 Knomi pixels: two staggered tufts, each a dark edge round light blades, on a mid green (half as
+// many as the first tile had: Fedor, "Maybe its the density of the grass thats a bit much"). Tiled to a fixed grid so
+// neighbouring patches line up; rustling, every other row of tiles shifts a Knomi pixel
 static const char PB_TUFT[8][9] = {
   "........",
-  ".D...D..",
-  "DLD.DLD.",
-  "DLLDLLD.",
-  "....D...",
-  "..D...D.",
-  ".DLD.DLD",
-  ".DLLDLLD",
+  ".D.D....",
+  "DLDLD...",
+  "DLLLD...",
+  "........",
+  ".....D.D",
+  "....DLDL",
+  "D...DLLL",
 };
 static void pbGrassCols(Rgb &base, Rgb &lite, Rgb &dark) {
   base = pbDay ? 0x4E9A3E : 0x2A6A4E;
@@ -579,7 +580,7 @@ static void pbStill(const PbState &s) {
 // yours from behind, both HP boxes, and your Pokemon's two real moves as the buttons (Fedor: "Tapping to attack should
 // do your attack skill"). Tap the left or right half (or press Left or Right) to use that move, as often as you can;
 // the gold ring round the rim is the time left, a few seconds. Knocked out in time: +500; then the ball flies back
-// out of the grass. Tall grass frames the bottom of the scene too
+// out of the grass. (No grass along the bottom: Fedor, "I would remove the gras frome the bottomof the battle screen")
 #define PB_BTL_FOE_X 330     // where the battle puts them (BTL_FOE_X and the rest, further on in the sketch)
 #define PB_BTL_FOE_GROUND 186
 #define PB_BTL_ME_X 128
@@ -624,18 +625,6 @@ static void pbBattle(int phase, float timeLeft) {
     fxBurst(MOVE_TBL[bMeMoves.ids[used]].type, PB_BTL_FOE_X, (PB_BTL_FOE_GROUND + pmdTopY(wildPmd, PB_BTL_FOE_GROUND, 3)) / 2, 0.5f);
   drawBattlePanel(72, 64, foe, phase == 3 ? 0 : phase == 2 ? foe.hp * 0.45f : foe.hp, false);
   drawBattlePanel(226, 256, me, me.hp, true);
-  // the tall grass along the bottom, framing the clearing
-  Rgb b, l, d;
-  pbGrassCols(b, l, d);
-  for (int y = 394; y < V2_W; y += 2)
-    for (int x = 0; x < V2_W; x += 2)
-      if (hypotf(x + 1 - CX, y + 1 - CY) < 234) pbPx2(x, y, pbTuftAt(x, y, false, sc565(b), sc565(l), sc565(d)));
-  for (int x = 50; x < V2_W - 50; x += 12) {  // its top edge, in tufts
-    int y = 394;
-    scRect(x, y - 8, x + 1, y - 7, d);
-    scRect(x - 2, y - 6, x + 3, y - 1, d);
-    scRect(x, y - 6, x + 1, y - 1, l);
-  }
   // the time left: a gold ring round the rim, emptying the way a clock goes
   for (int k = 0; k < 360; k += 2) {
     if (k > timeLeft * 360) break;

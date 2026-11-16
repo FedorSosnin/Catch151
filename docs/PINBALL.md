@@ -34,8 +34,9 @@ This is a proposal to decide on before building. Nothing below is settled yet.
 - **Your own Pokemon** on a pad in the middle: hit it 3 times for a bonus (+100 a hit).
 - **The tall grass**, on the right, where wild Pokemon wait (it took the rock cave's place: Fedor, "minus the cave",
   then "If we use the grass"). It's drawn in the Game Boy games' spirit (Fedor: "grass that resembles grass from
-  Pokemon Blue"): an original 16 px tile, 8 x 8 Knomi pixels of staggered tufts, each a dark edge round light blades
-  on a mid green, in a night and a meadow colouring. The patch has a dark edge, and tufts poke up along its top for
+  Pokemon Blue"): an original 16 px tile, 8 x 8 Knomi pixels with two staggered tufts, each a dark edge round light
+  blades on a mid green, in a night and a meadow colouring (two tufts a tile, not four: Fedor, "Maybe its the density
+  of the grass thats a bit much"). The patch has a dark edge, and tufts poke up along its top for
   height.
 - **The way into the grass** (Fedor, of the stone hole: "That entrance there still doesnt look good"): a gap where the
   grass parts on its lower-left side, turned to the left flipper. The floor shows through it, darkening deeper in, the
@@ -56,8 +57,9 @@ This is a proposal to decide on before building. Nothing below is settled yet.
 
 - In goes the ball, and **the game's own battle** takes the whole screen: the wild battle's scene with its two bases,
   a wild Pokemon of the zone you're in **standing in tall grass** on its base (the grass in front of its feet), yours
-  from behind on its base, and both HP boxes, all as in a real battle. The same tall grass frames the bottom of the
-  scene. First it says **Wild ODDISH!**
+  from behind on its base, and both HP boxes, all as in a real battle (Fedor: "I like the island your opponent floats
+  on"). No grass along the bottom (Fedor: "I would remove the gras frome the bottomof the battle screen"). First it
+  says **Wild ODDISH!**
 - **Tapping does your attack** (Fedor: "Tapping to attack should do your attack skill"). The buttons are your
   Pokemon's own two moves, as in a battle (Squirtle's BITE and WATER GUN, say), in their types' colours, with
   **TAP A MOVE!** under them. Tap the left or right half (or press Left or Right on a computer) to use that move, as
