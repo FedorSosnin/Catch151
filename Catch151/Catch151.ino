@@ -153,6 +153,7 @@ uint8_t dexArtCount = 0;
 bool screenOff = false;       // short press of the PWR button
 bool cardOpen = false;        // pet card (vertical swipe)
 bool kbOpen = false;          // keyboard for renaming the pet
+int8_t v2TagMock = -1;        // V2: the tag picker's mockup on screen (TAGMOCK n, tag_v2.h), or -1
 char nameBuf[12] = "";
 uint8_t nameLen = 0;
 int cardNameBottom = 84;      // where the card's name (and the species under a nickname) ends: tapping above renames
@@ -1071,6 +1072,9 @@ void handleSerial() {
   } else if (line == "DNBOT" && pet.noSave) {  // descends by itself, to see deep floors
     startDungeon();
     dnBot = true;
+    Serial.println("DONE");
+  } else if (line.startsWith("TAGMOCK ")) {  // V2: the tag picker's mockups (tag_v2.h); -1 off
+    v2TagMock = (int8_t)line.substring(8).toInt();
     Serial.println("DONE");
   } else if (line == "PINBALL") {  // Pinball, under its card (testing)
     gamesMenuOpen = false;
@@ -2241,6 +2245,11 @@ bool render() {
   gKnomiLiftOn = false;  // V2: nothing over the Knomi's rim until this frame's need bars mark their labels (knomi_rim.h)
 #endif
   if (v2Sliding()) {  // V2: a page sliding: its frames are made from the two pages, nothing drawn (slide_v2.h)
+    gfx->flush();
+    return true;
+  }
+  if (v2TagMock >= 0) {  // V2: the tag picker's mockups (tag_v2.h)
+    v2TagMockDraw(v2TagMock);
     gfx->flush();
     return true;
   }
