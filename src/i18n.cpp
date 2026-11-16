@@ -118,8 +118,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORD: %u.%u lb",
     "TU MAYOR CAPTURA!",
     "PINBALL",
-    "Toca el lado izquierdo o derecho para mover su flipper! Apunta a la rampa y a la cueva, donde espera un Pokemon salvaje. No dejes caer la bola!",
-    "Izquierda y Derecha mueven los flippers, Espacio los dos! Apunta a la rampa y a la cueva, donde espera un Pokemon salvaje. No dejes caer la bola!",
+    "Toca el lado izquierdo o derecho para mover su flipper! Apunta a la rampa y a la hierba alta, donde espera un Pokemon salvaje. No dejes caer la bola!",
+    "Izquierda y Derecha mueven los flippers, Espacio los dos! Apunta a la rampa y a la hierba alta, donde espera un Pokemon salvaje. No dejes caer la bola!",
   },
   // ---------------- EN ----------------
   {
@@ -232,8 +232,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BEST: %u.%u lb",
     "YOUR BIGGEST EVER!",
     "PINBALL",
-    "Tap the left or right side to flip that flipper! Shoot the ramp, and the cave where a wild Pokemon waits. Keep the ball in play!",
-    "Left and Right flip the flippers, Space both! Shoot the ramp, and the cave where a wild Pokemon waits. Keep the ball in play!",
+    "Tap the left or right side to flip that flipper! Shoot the ramp, and the tall grass where a wild Pokemon waits. Keep the ball in play!",
+    "Left and Right flip the flippers, Space both! Shoot the ramp, and the tall grass where a wild Pokemon waits. Keep the ball in play!",
   },
   // ---------------- FR ----------------
   {
@@ -346,8 +346,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORD: %u.%u lb",
     "TA PLUS GROSSE PRISE!",
     "FLIPPER",
-    "Touche a gauche ou a droite pour lever ce flipper ! Vise la rampe et la grotte, ou attend un Pokemon sauvage. Garde la bille en jeu !",
-    "Gauche et Droite levent les flippers, Espace les deux ! Vise la rampe et la grotte, ou attend un Pokemon sauvage. Garde la bille en jeu !",
+    "Touche a gauche ou a droite pour lever ce flipper ! Vise la rampe et les hautes herbes, ou attend un Pokemon sauvage. Garde la bille en jeu !",
+    "Gauche et Droite levent les flippers, Espace les deux ! Vise la rampe et les hautes herbes, ou attend un Pokemon sauvage. Garde la bille en jeu !",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -465,8 +465,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "REKORD: %u.%u lb",
     "DEIN GROESSTER FANG!",
     "FLIPPER",
-    "Tippe links oder rechts, um diesen Flipper zu heben! Ziele auf die Rampe und die Hoehle, wo ein wildes Pokemon wartet. Halte die Kugel im Spiel!",
-    "Links und Rechts heben die Flipper, Leertaste beide! Ziele auf die Rampe und die Hoehle, wo ein wildes Pokemon wartet. Halte die Kugel im Spiel!",
+    "Tippe links oder rechts, um diesen Flipper zu heben! Ziele auf die Rampe und das hohe Gras, wo ein wildes Pokemon wartet. Halte die Kugel im Spiel!",
+    "Links und Rechts heben die Flipper, Leertaste beide! Ziele auf die Rampe und das hohe Gras, wo ein wildes Pokemon wartet. Halte die Kugel im Spiel!",
   },
   // ---------------- IT ----------------
   {
@@ -579,8 +579,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORD: %u.%u lb",
     "LA PRESA PIU GROSSA!",
     "FLIPPER",
-    "Tocca a sinistra o a destra per alzare quel flipper! Mira alla rampa e alla grotta, dove aspetta un Pokemon selvatico. Tieni la palla in gioco!",
-    "Sinistra e Destra alzano i flipper, Spazio entrambi! Mira alla rampa e alla grotta, dove aspetta un Pokemon selvatico. Tieni la palla in gioco!",
+    "Tocca a sinistra o a destra per alzare quel flipper! Mira alla rampa e all'erba alta, dove aspetta un Pokemon selvatico. Tieni la palla in gioco!",
+    "Sinistra e Destra alzano i flipper, Spazio entrambi! Mira alla rampa e all'erba alta, dove aspetta un Pokemon selvatico. Tieni la palla in gioco!",
   },
   // ---------------- PT ----------------
   {
@@ -693,8 +693,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORDE: %u.%u lb",
     "SUA MAIOR PESCA!",
     "PINBALL",
-    "Toque na esquerda ou na direita para bater com aquele flipper! Mire na rampa e na caverna, onde um Pokemon selvagem espera. Nao deixe a bola cair!",
-    "Esquerda e Direita batem com os flippers, Espaco os dois! Mire na rampa e na caverna, onde um Pokemon selvagem espera. Nao deixe a bola cair!",
+    "Toque na esquerda ou na direita para bater com aquele flipper! Mire na rampa e no mato alto, onde um Pokemon selvagem espera. Nao deixe a bola cair!",
+    "Esquerda e Direita batem com os flippers, Espaco os dois! Mire na rampa e no mato alto, onde um Pokemon selvagem espera. Nao deixe a bola cair!",
   },
   // ---------------- JA ----------------
   {
@@ -830,8 +830,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "きろく: %u.%u lb",
     "いちばん おおきい！",
     "ピンボール",
-    "ひだりか みぎを タッチで フリッパーを うごかそう！ スロープと どうくつを ねらおう。どうくつでは やせいの ポケモンが まってるよ！",
-    "ひだり・みぎキーで フリッパー、スペースで りょうほう！ スロープと どうくつを ねらおう。どうくつでは やせいの ポケモンが まってるよ！",
+    "ひだりか みぎを タッチで フリッパーを うごかそう！ スロープと くさむらを ねらおう。くさむらでは やせいの ポケモンが まってるよ！",
+    "ひだり・みぎキーで フリッパー、スペースで りょうほう！ スロープと くさむらを ねらおう。くさむらでは やせいの ポケモンが まってるよ！",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -949,8 +949,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "최고: %u.%u lb",
     "가장 큰 물고기!",
     "핀볼",
-    "왼쪽이나 오른쪽을 눌러 플리퍼를 움직이세요! 경사로와 동굴을 노리세요. 동굴에는 야생 포켓몬이 기다려요!",
-    "왼쪽/오른쪽 키로 플리퍼를, 스페이스로 둘 다 움직이세요! 경사로와 동굴을 노리세요. 동굴에는 야생 포켓몬이 기다려요!",
+    "왼쪽이나 오른쪽을 눌러 플리퍼를 움직이세요! 경사로와 풀숲을 노리세요. 풀숲에는 야생 포켓몬이 기다려요!",
+    "왼쪽/오른쪽 키로 플리퍼를, 스페이스로 둘 다 움직이세요! 경사로와 풀숲을 노리세요. 풀숲에는 야생 포켓몬이 기다려요!",
   },
 };
 

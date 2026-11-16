@@ -1095,7 +1095,7 @@ void handleSerial() {
   } else if (line == "ZONES") {
     openZones();
     Serial.println("DONE");
-  } else if (line.startsWith("PINMOCK ")) {  // V2: Pinball's mockups, 1..9 (0: off)
+  } else if (line.startsWith("PINMOCK ")) {  // V2: Pinball's mockups, 1..25 (0: off)
     openZones();
     pinMockSet((uint8_t)atoi(line.c_str() + 8));
     Serial.println("DONE");
