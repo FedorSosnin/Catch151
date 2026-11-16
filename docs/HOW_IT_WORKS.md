@@ -39,7 +39,7 @@ Games don't raise anything if you quit by swiping up.
 | 🏃 **Rock Hopper** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
 | 🏄 **PikaSurf** | +5, plus 2 per 4 seconds | −10, more for long runs | −5 | Yes | +2 | Yes |
 | 🕳️ **Dungeon Crawler** | +5, plus 4 per floor | −10, more for deep dives | −5 | Yes | +2 | Yes |
-| 🎣 **Reel Fishing** | +5, plus 2 per 20 kg | −10, more for heavy catches | −5 | Yes | +2 | Yes |
+| 🎣 **Reel Fishing** | +5, plus 2 per 44 lb | −10, more for heavy catches | −5 | Yes | +2 | Yes |
 | ❓ **Who's That?** | +3, plus 3 per right answer | | | | +1 | |
 
 Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler and Reel Fishing each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
@@ -52,11 +52,11 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 
 | Size | Weight | Where | Fish | Taps a second | Green | Good taps | Strike within |
 |---|---|---|---|---:|---:|---:|---:|
-| **Small** | 3–15 kg | The shallows | Shellder, Krabby, Horsea, Magikarp, Poliwag | 3.2 | 62–80% | 22 | 0.9 s |
-| **Middling** | 16–55 kg | The shallows and open water | Psyduck, Slowpoke, Goldeen, Poliwhirl, Seadra, Staryu, Seaking, Tentacool | 2.5 | 65–82% | 26 | 0.75 s |
-| **Big** | 44–108 kg | Open water and the deep | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2.0 | 68–84% | 30 | 0.65 s |
-| **Heavy** | 96–159 kg | The deep | Dewgong, Cloyster | 1.6 | 71–86% | 31 | 0.6 s |
-| **Giant** | 176–282 kg | The deep | Lapras, Gyarados | 1.25 | 74–88% | 33 | 0.6 s |
+| **Small** | 7–33 lb | The shallows | Shellder, Krabby, Horsea, Magikarp, Poliwag | 3.2 | 62–80% | 22 | 0.9 s |
+| **Middling** | 35–121 lb | The shallows and open water | Psyduck, Slowpoke, Goldeen, Poliwhirl, Seadra, Staryu, Seaking, Tentacool | 2.5 | 65–82% | 26 | 0.75 s |
+| **Big** | 97–238 lb | Open water and the deep | Tentacruel, Kingler, Golduck, Slowbro, Starmie, Seel | 2.0 | 68–84% | 30 | 0.65 s |
+| **Heavy** | 212–351 lb | The deep | Dewgong, Cloyster | 1.6 | 71–86% | 31 | 0.6 s |
+| **Giant** | 388–622 lb | The deep | Lapras, Gyarados | 1.25 | 74–88% | 33 | 0.6 s |
 
 - **The water:** there are always 3 small, 2 middling and 1 big fish in sight (now and then a heavy one in the big one's place), and a fish that's gone comes back as another of its size 2.5 seconds later. One giant swims in for cast 3, 4 or 5 of every game and stays until it's hooked or the game ends. About 1 fish in 100 is shiny.
 - **Casting:** tap the water (or aim with the tilt or the arrow keys and press the button or Space). The float lands out past the middle of the screen, within a little of where you tapped. The fish nearest the float comes round to the hook, sooner the closer it is; bubbles over a fish mean it's eager and bites quicker.
@@ -64,7 +64,7 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 - **The bite:** the float goes under, with a **!**, a splash and the screen's edge glowing, and the Knomi's backlight flashes. Tap within the strike time in the table, or **TOO SLOW!** and it's gone with that cast. A strike in the first third of that time is clean and starts the fight with the needle in the middle of the green; a late one starts it near the slack end.
 - **Reeling:** each tap tightens the line by a step, and the fish pulls it back between taps, a little harder or softer on each beat. The **LINE** bar on the right shows it, its white needle rising and sinking: a tap with the needle in the green counts toward landing it (the good taps in the table), and the fish comes in toward the pier as they add up. Over the green, the bar turns red (**SLOWER!**), and the needle reaching the top snaps the line. Under it, the line goes slack (**FASTER!**), and 1.5 seconds slack and it slips off. Now and then the fish thrashes and pulls the line tighter for a moment: the blob flashes just before, so tap slower through it. The hooked fish swells on every beat, and on a computer and the web the fight song plays at its pace, one tap a beat.
 - **The weigh-in:** a fish landed leaps out with its name, then a gold gauge on the left fills to its weight and says how big it is for one of its kind (**A SMALL ONE**, **A GOOD ONE** or **A BIG ONE**), and back in it goes. A giant landed is **THE BIG ONE!**
-- **The score:** the five casts' weights add up against three lines, **bronze at 50 kg, silver at 150 and gold at 300**, and your best total is kept. Joy and speed training come from the total, a point for every 20 kg: 2 joy a point (up to +35 in all) and 1 speed training for every 5 points, so every 100 kg.
+- **The score:** the five casts' weights add up against three lines, **bronze at 110 lb, silver at 331 and gold at 661** (50, 150 and 300 kg), and your best total is kept. Weights show in pounds, to a tenth. Joy and speed training come from the total, a point for every 44 lb (20 kg): 2 joy a point (up to +35 in all) and 1 speed training for every 5 points, so every 220 lb.
 
 ## Battles
 

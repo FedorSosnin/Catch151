@@ -32,6 +32,12 @@
 #define FISH_GOAL_GOLD 3000
 #define FISH_SHINY_PCT 1     // as in the wild
 
+// The screens show pounds (Fedor, 2026-11-15: "change the weight in Reel Fishing to Pounds"). The game itself still
+// weighs in tenths of a kg (the Pokedex's own unit), and so does the record in the save, so nothing saved changes:
+// a weight becomes tenths of a pound only to be shown, rounded to the nearest
+#define FISH_LB_PER_KG 2.20462f
+inline uint32_t fishLb10(uint32_t kg10) { return (kg10 * 22046u + 5000u) / 10000u; }
+
 enum FishClass : uint8_t { FC_SMALL, FC_MID, FC_BIG, FC_HEAVY, FC_GIANT, FC_N };
 
 // How each weight fights (the plan's pace table): its pace (taps a second, one a beat of the fight song, which plays

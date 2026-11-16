@@ -113,7 +113,7 @@ static const ExpectedFmt EXPECTED[] = {
   { S_TRG_BUDDIES_FMT, "%d,%d" },  // V2: the trophy room's shelves' boards (menus_v2.h v2TrophyShelf())
   { S_TRG_CARE_FMT,    "%d,%d" },
   { S_EVO_TRYING_FMT,  "%s" },  // V2: the hold's EVOLVE box, "Your CATERPIE is trying to evolve!" (menus_v2.h)
-  { S_FISH_KG_FMT, "%u,%u" },   // Reel Fishing: a weight, kg and tenths
+  { S_FISH_LB_FMT, "%u,%u" },   // Reel Fishing: a weight, pounds and tenths
   { S_FISH_REC_FMT, "%u,%u" },
   { S_FISH_SMALL_FMT, "%s" },   // the weigh-in: how big it is for its kind, its name
   { S_FISH_FINE_FMT, "%s" },

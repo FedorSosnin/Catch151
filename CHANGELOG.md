@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Reel Fishing weighs in pounds:** every weight in the game now shows in pounds (lb), to a tenth: the weigh-in and its gauge (marked every 100 lb), the total along the top while you fish, and the end with each fish, the total and your record. The goal lines are where they were, about 110, 331 and 661 lb. Records already set carry on and show in pounds too.
+
 ## [2.2.6] - 2026-11-14 (Windows)
 
 - **Windows handhelds and tablets no longer freeze (Windows):** with **Tilt with the Device** on, a PC with a motion sensor (a ROG Ally, say) barely moved, its screen as good as frozen and its fans at full speed: the game asked the sensor for a reading 60 times a second and waited for each one. The sensor now sends its readings to a thread of its own as they come, and the game never waits on it. A PC too slow for a moment also keeps answering taps, the menu and dragging, where before it stopped until it caught up.

@@ -299,7 +299,10 @@ static void fsLineArc(int pct, int lo = FS_SLACK, int hi = FS_SNAP) { fsArcDraw(
 // what each one in the mockups weighed, in tenths of a kg (the game would weigh each fish: its kind's Pokedex weight,
 // bigger or smaller by its blob's size)
 static int fsKg10(int16_t dex) { return dex == 129 ? 112 : dex == 118 ? 146 : dex == 120 ? 361 : dex == 130 ? 2418 : 0; }
-static void fsKgText(char *b, int n, int kg10) { snprintf(b, n, "%d.%d kg", kg10 / 10, kg10 % 10); }
+static void fsKgText(char *b, int n, int kg10) {  // shown in pounds, as the game shows it (fishLb10())
+  const int lb10 = (int)fishLb10(kg10);
+  snprintf(b, n, "%d.%d lb", lb10 / 10, lb10 % 10);
+}
 
 #ifdef BOARD_HOST
 // how much of a pixel a shape covers, from how far inside its edge the pixel's middle is (px; < 0 outside)
@@ -820,7 +823,7 @@ static void fsMockResult() {
       fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + 38, fsClip[3] = y + 38;
       fsThumb(t, x + 20, y + 20 + (h < 36 ? h / 2 : 17), 1);
       fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
-      snprintf(w, sizeof(w), "%d", (fsKg10(d) + 5) / 10);
+      snprintf(w, sizeof(w), "%d", (int)(fishLb10(fsKg10(d)) + 5) / 10);
     }
     setSize(2);
     gfx->setTextColor(V2_INK_MUTED);
@@ -996,9 +999,9 @@ static void fsArcDraw(float pct, int lo, int hi, bool beat) {
 
 // The weigh-in's gauge (Fedor chose it, the mockups' B: "a cool animation of it getting to the weight of the pokemon",
 // on the left rim, since the LINE bar is on the right): the LINE bar mirrored, its round ends and dark edge, filling
-// gold from the bottom, and the same needle as its notch where the weight lands: 0 kg at the bottom, the heaviest fish
+// gold from the bottom, and the same needle as its notch where the weight lands: 0 at the bottom, the heaviest fish
 // there can be at the top (Fedor), spaced out at the light end (by the square root) so a 5 kg fish still lifts it, with
-// a faint mark every 50 kg; lit for a moment when it gets there. Its pixels are the LINE bar's, across the middle
+// a faint mark every 100 lb (it reads in pounds, LB past its top); lit for a moment when it gets there. Its pixels are the LINE bar's, across the middle
 // (x to 465 - x; a Knomi cell, 464 - x)
 static float fsGaugeAt(float kg10) { return sqrtf(kg10 / (float)fishHeaviestKg10()); }  // 0..1 up the gauge
 static void fsGaugeDraw(float pos, bool lit) {
@@ -1006,8 +1009,8 @@ static void fsGaugeDraw(float pos, bool lit) {
   const uint16_t ink = sc565(0x1B1B25), white = UI_WHITE, gold = sc565(lit ? 0xFFE27A : 0xF2C230),
                  goldT = sc565(scMix(lit ? 0xFFE27A : 0xF2C230, 0xFFFFFF, .4)), dim = sc565(0x6A5A2A);
   const float p2 = pos * 200;
-  float mark[5];  // the 50 kg marks, as f
-  for (int k = 0; k < 5; k++) mark[k] = fsGaugeAt((k + 1) * 500.0f) * 200;
+  float mark[6];  // the 100 lb marks, as f (the heaviest fish is a little over 600 lb)
+  for (int k = 0; k < 6; k++) mark[k] = fsGaugeAt((k + 1) * 1000.0f / FISH_LB_PER_KG) * 200;
 #ifdef BOARD_HOST
   fsArcPxBuild();
   if (!fsArcPx) return;
@@ -1048,7 +1051,7 @@ static void fsGaugeDraw(float pos, bool lit) {
   }
 #endif
   setSize(2);
-  v2BarLabel(fb, "KG", 225, UI_WHITE);  // past its top end, as LINE's is
+  v2BarLabel(fb, "LB", 225, UI_WHITE);  // past its top end, as LINE's is
 }
 // The weigh-in, t s in: the fish in the air in its glow; the gauge filling (FS_FILL_S, easing in) to its weight, the
 // needle and the number counting up together; then a line saying how big it is for one of its kind (kindKg10 its
@@ -1066,8 +1069,8 @@ static void fsWeighDraw(int16_t dex, bool shiny, uint16_t kg10, uint16_t kindKg1
   fsGaugeDraw(fsGaugeAt(kg10 * e), p >= 1 && t - FS_FILL_S < 0.3f);
   fsBoard(T(S_FISH_WEIGH), 44);
   char w[24];
-  uint32_t shown = (uint32_t)(kg10 * e + 0.5f);
-  snprintf(w, sizeof(w), T(S_FISH_KG_FMT), (unsigned)(shown / 10), (unsigned)(shown % 10));
+  uint32_t shown = fishLb10((uint32_t)(kg10 * e + 0.5f));
+  snprintf(w, sizeof(w), T(S_FISH_LB_FMT), (unsigned)(shown / 10), (unsigned)(shown % 10));
   fsSay(w, cx, 244, 0xFFFFFF, 4);
   if (p >= 1) {
     char nm[40], line[80];
@@ -1135,7 +1138,8 @@ static void fsSlotsLive() {
   for (int i = 0; i < FISH_CASTS; i++) fsSlot(x0 + i * (FS_SLOT + 6) + FS_SLOT / 2, y + FS_SLOT / 2, st[i], fish.slotShiny[i]);
   if (!fish.total) return;
   char b[20];
-  snprintf(b, sizeof(b), T(S_FISH_KG_FMT), (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
+  const uint32_t lb10 = fishLb10(fish.total);
+  snprintf(b, sizeof(b), T(S_FISH_LB_FMT), (unsigned)(lb10 / 10), (unsigned)(lb10 % 10));
   setSize(2);
   int w = textW(b, 2) + 20;
   gfx->fillRoundRect(CX - w / 2 - 3, y + FS_SLOT + 6, w + 6, 26, 8, sc565(0x1B1B25));
@@ -1240,7 +1244,8 @@ static void fsResultLive() {
   char b[48];
   fsBoard(T(S_GAME_FISH), 70);
   v2Panel(96, 112, 370, V2_AGAIN_Y + V2_AGAIN_H + 16, 12);
-  snprintf(b, sizeof(b), T(S_FISH_KG_FMT), (unsigned)(fish.total / 10), (unsigned)(fish.total % 10));
+  const uint32_t lb10 = fishLb10(fish.total);
+  snprintf(b, sizeof(b), T(S_FISH_LB_FMT), (unsigned)(lb10 / 10), (unsigned)(lb10 % 10));
   setSize(4);
   gfx->setTextColor(UI_INK);
   setCur(centerX(b, 4), 118);
@@ -1262,7 +1267,7 @@ static void fsResultLive() {
       fsClip[0] = x + 2, fsClip[1] = y + 2, fsClip[2] = x + 38, fsClip[3] = y + 38;
       fsThumb(t, x + 20, y + 20 + (h < 36 ? h / 2 : 17), 1);
       fsClip[0] = fsClip[1] = 0, fsClip[2] = fsClip[3] = V2_W;
-      snprintf(w, sizeof(w), "%u", (unsigned)((fish.slotKg10[i] + 5) / 10));
+      snprintf(w, sizeof(w), "%u", (unsigned)((fishLb10(fish.slotKg10[i]) + 5) / 10));
     }
     setSize(2);
     gfx->setTextColor(V2_INK_MUTED);
@@ -1289,7 +1294,10 @@ static void fsResultLive() {
   static const StrId GOAL[4] = { STR_COUNT, S_FISH_BRONZE, S_FISH_SILVER, S_FISH_GOLD };
   char rec[40];
   if (fishNewHi) snprintf(rec, sizeof(rec), "%s", T(S_NEW_RECORD));
-  else snprintf(rec, sizeof(rec), T(S_FISH_REC_FMT), (unsigned)(pet.fishHi / 10), (unsigned)(pet.fishHi % 10));
+  else {
+    const uint32_t hi = fishLb10(pet.fishHi);
+    snprintf(rec, sizeof(rec), T(S_FISH_REC_FMT), (unsigned)(hi / 10), (unsigned)(hi % 10));
+  }
   const char *gw = g ? T(GOAL[g]) : "";
   setSize(2);
   int wg = g ? textW(gw, 2) : 0, wr = textW(rec, 2), gap = g ? 16 : 0;

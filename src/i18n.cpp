@@ -114,8 +114,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BRONCE!",
     "PLATA!",
     "ORO!",
-    "%u.%u kg",
-    "RECORD: %u.%u kg",
+    "%u.%u lb",
+    "RECORD: %u.%u lb",
   },
   // ---------------- EN ----------------
   {
@@ -224,8 +224,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BRONZE!",
     "SILVER!",
     "GOLD!",
-    "%u.%u kg",
-    "BEST: %u.%u kg",
+    "%u.%u lb",
+    "BEST: %u.%u lb",
   },
   // ---------------- FR ----------------
   {
@@ -334,8 +334,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BRONZE!",
     "ARGENT!",
     "OR!",
-    "%u.%u kg",
-    "RECORD: %u.%u kg",
+    "%u.%u lb",
+    "RECORD: %u.%u lb",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -449,8 +449,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BRONZE!",
     "SILBER!",
     "GOLD!",
-    "%u.%u kg",
-    "REKORD: %u.%u kg",
+    "%u.%u lb",
+    "REKORD: %u.%u lb",
   },
   // ---------------- IT ----------------
   {
@@ -559,8 +559,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BRONZO!",
     "ARGENTO!",
     "ORO!",
-    "%u.%u kg",
-    "RECORD: %u.%u kg",
+    "%u.%u lb",
+    "RECORD: %u.%u lb",
   },
   // ---------------- PT ----------------
   {
@@ -669,8 +669,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BRONZE!",
     "PRATA!",
     "OURO!",
-    "%u.%u kg",
-    "RECORDE: %u.%u kg",
+    "%u.%u lb",
+    "RECORDE: %u.%u lb",
   },
   // ---------------- JA ----------------
   {
@@ -802,8 +802,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ブロンズ！",
     "シルバー！",
     "ゴールド！",
-    "%u.%u kg",
-    "きろく: %u.%u kg",
+    "%u.%u lb",
+    "きろく: %u.%u lb",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -917,8 +917,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "동메달!",
     "은메달!",
     "금메달!",
-    "%u.%u kg",
-    "최고: %u.%u kg",
+    "%u.%u lb",
+    "최고: %u.%u lb",
   },
 };
 

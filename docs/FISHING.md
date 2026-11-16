@@ -227,6 +227,9 @@ Magikarp.
 
 - **The score is the total weight** of what you landed in 5 casts, to a tenth of a kg (decided, Fedor: "Yes, weight",
   over points by rarity).
+- **Shown in pounds** (Fedor, 2026-11-15: "change the weight in Reel Fishing to Pounds"): the game still weighs in
+  tenths of a kg, and so does the record in the save; every screen shows it as tenths of a pound (`fishLb10()`), and
+  the weigh-in's gauge reads LB with a mark every 100 lb. The goal lines below stay in kg (110, 331 and 661 lb).
 - **Goal lines** (Fedor: "get over a set amount of weight"; these numbers kept): bronze 50 kg, silver 150 kg, gold
   300 kg, shown as a bar with three markers on the result (mockup 14). As a rough guide: five small ones make bronze,
   a few middling and big ones make silver, and gold takes the giant or several heavy ones.
