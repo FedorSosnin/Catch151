@@ -181,6 +181,32 @@ static void pbRail(float ax, float ay, float bx, float by) {  // a guide on the 
   pbCapsule(ax, ay, bx, by, 4, 4, pbSteel());
   pbCapsule(ax, ay - 2, bx, by - 2, 1, 1, pbSteelLit());
 }
+// the corners where the wall meets the guides, rounded (pinball.h's PinFillet): the rim carried round the curve, its
+// dark inner edge and lit band following it, over the guide's top as far as the curve touches it (the guide comes out
+// of the rim there)
+static void pbFillets() {
+  for (int m = 0; m < 2; m++) {
+    const PinFillet &f = pinFillet(m);
+    int x0 = (int)(f.fx - PB_FILLET_R - 20) & ~1, y0 = (int)(f.fy - 10) & ~1;
+    for (int y = y0; y < f.fy + PB_FILLET_R + 10; y += 2)
+      for (int x = x0; x < f.fx + PB_FILLET_R + 20; x += 2) {
+        float px = x + 1, py = y + 1, dd = hypotf(px - f.fx, py - f.fy) - PB_FILLET_R;
+        if (dd < -2 || hypotf(px - CX, py - CY) >= 233 || !pinInFillet(f, px, py, 2)) continue;
+        Rgb c;
+        if (dd < 2) {
+          c = 0x1B1B25;
+        } else {  // (as pbTable() colours the rim, by how far into it)
+          float t = fminf(1, (dd - 2) / (233 - PB_R - 2));
+          c = pbDay ? scMix(0xB07A45, 0x6E4426, t) : scMix(0xC8CCD8, 0x6A7084, t);
+          if (t < 0.25f) c = pbDay ? 0xD8A060 : 0xF0F2F8;
+          float a = atan2f(py - CY, px - CX) * 57.29578f;
+          if (a < 0) a += 360;
+          if (pbDay && ((int)(a * 3) % 7 == 0)) c = scMix(c, 0x5A3820, .4);
+        }
+        pbPx2(x, y, sc565(c));
+      }
+  }
+}
 // a flipper: side -1 left, 1 right, at angle a (PB_FLIP_REST down, PB_FLIP_UP raised)
 static void pbFlipperAt(int side, float a) {
   float px = side < 0 ? PB_FLIP_LX : V2_W - 1 - PB_FLIP_LX;
@@ -245,26 +271,38 @@ static void pbBerry(int k, bool lit) {
   drawMap(SPR[k], HOME_ICON_N, x - 9, y - 9, 1, false);
   if (!lit) fsBlend(x - 12, y - 12, x + 12, y + 12, pbDay ? 0x4E9A3E : 0x1E2056, 150);
 }
-// Diglett's hole between the bumpers: a ring of dirt; up: Diglett out of it, the time to hit it a gold ring round it
-// (hit: knocked dizzy, stars round its head)
-static void pbDiglett(bool up, bool hit = false, float timeLeft = 0) {
+// a hole in the dirt: Diglett's between the bumpers (rx 20), or one a beaten Diglett dug beside it
+static void pbDigHole(int x, int y, int rx, int ry, bool up) {
   const Rgb dirt = pbDay ? 0x8A6A44 : 0x6A5A6E, dirtLit = pbDay ? 0xB08A5A : 0x8A7A90;
+  pbEllipse(x, y, rx, ry, 0x1B1B25);
+  pbEllipse(x, y, rx - 2, ry - 2, dirtLit);
+  pbEllipse(x, y + 1, rx * 3 / 5, ry / 2, up ? dirt : 0x1B1B25);
+}
+// Diglett's hole between the bumpers; up: Diglett (dex 50) out of it, or Dugtrio (51) out of it and the two dug beside
+// it, the time to hit it a gold ring round it (hit: knocked dizzy, stars round its head); heads: Dugtrio's still up,
+// a gold dot each under it
+static void pbDiglett(bool up, bool hit = false, float timeLeft = 0, int dex = 50, int heads = 0) {
+  const Rgb dirtLit = pbDay ? 0xB08A5A : 0x8A7A90;
+  int ring = dex == 50 ? 30 : 34;  // (Dugtrio wider, still clear of the bumpers)
   if (up && !hit)
     for (int k = 0; k < 360; k += 3) {
       if (k > timeLeft * 360) break;
       float a = pbRad(k - 90);
-      fsSq(PB_DIG_X + (int)(30 * cosf(a)), PB_DIG_Y - 18 + (int)(30 * sinf(a)), 4, 0xF2C230);
+      fsSq(PB_DIG_X + (int)(ring * cosf(a)), PB_DIG_Y - 18 + (int)(ring * sinf(a)), 4, 0xF2C230);
     }
-  pbEllipse(PB_DIG_X, PB_DIG_Y, 20, 8, 0x1B1B25);
-  pbEllipse(PB_DIG_X, PB_DIG_Y, 18, 6, dirtLit);
-  pbEllipse(PB_DIG_X, PB_DIG_Y + 1, 12, 4, up ? dirt : 0x1B1B25);
+  pbDigHole(PB_DIG_X, PB_DIG_Y, 20, 8, up);
   if (!up) return;
-  const uint8_t *t = thumbs.getForm(50, false);
+  const uint8_t *t = thumbs.getForm(dex, false);
   fsThumb(t, PB_DIG_X, PB_DIG_Y + 2, 2);  // always solid: no white wash over it when hit (Fedor: it looked see-through)
-  pbEllipse(PB_DIG_X, PB_DIG_Y + 3, 18, 5, dirtLit);  // the dirt round its foot
+  pbEllipse(PB_DIG_X, PB_DIG_Y + 3, dex == 50 ? 18 : 26, 5, dirtLit);  // the dirt round its foot
   if (!hit)
     for (int k = 0; k < 6; k++)  // clods thrown up as it pops out
       pbEllipse(PB_DIG_X - 26 + k * 10 + (k % 2) * 3, PB_DIG_Y - 6 - (k % 3) * 7, 3, 3, dirtLit);
+  for (int k = 0; k < heads; k++) {  // Dugtrio's heads still to hit
+    int x = PB_DIG_X - 14 + k * 14, y = PB_DIG_Y + 30;
+    pbEllipse(x, y, 5, 5, 0x1B1B25);
+    pbEllipse(x, y, 3, 3, 0xF2C230);
+  }
   if (hit)
     for (int k = 0; k < 5; k++) {  // dizzy stars
       float a = k * 1.2566f;
@@ -272,6 +310,28 @@ static void pbDiglett(bool up, bool hit = false, float timeLeft = 0) {
       scGridRect(x, y - 4, x + 4, y + 8, 0xFFE27A);
       scGridRect(x - 4, y, x + 8, y + 4, 0xFFE27A);
     }
+}
+// Diglett evolving into Dugtrio, k of the way through (0 to 1): as a Pokemon evolves at home, a gold glow round it and
+// it blinks white between the old form and the new, faster and faster, white sparkles twinkling round it
+static void pbDigEvolve(float k) {
+  const Rgb dirtLit = pbDay ? 0xB08A5A : 0x8A7A90;
+  int g = (int)(3 * sinf(k * 40)) * 2;  // the glow breathes
+  twGlow(PB_DIG_X, PB_DIG_Y - 20, 46 + g, 0xFFD95E, 190);
+  pbDigHole(PB_DIG_X, PB_DIG_Y, 20, 8, true);
+  bool old = k < 0.92f && (int)(k * k * 16) % 2 == 0;  // (the blinks come faster as it goes)
+  const uint8_t *t = thumbs.getForm(old ? 50 : 51, false);
+  static const int8_t RIM[4][2] = { { -2, 0 }, { 2, 0 }, { 0, -2 }, { 0, 2 } };
+  for (int i = 0; i < 4; i++)  // a dark rim round the white, so its shape reads
+    fsThumb(t, PB_DIG_X + RIM[i][0], PB_DIG_Y + 2 + RIM[i][1], 2, false, 0x1B1B25, 256);
+  fsThumb(t, PB_DIG_X, PB_DIG_Y + 2, 2, false, 0xFFFFFF, 256);
+  pbEllipse(PB_DIG_X, PB_DIG_Y + 3, old ? 18 : 26, 5, dirtLit);
+  static const int8_t SP[4][2] = { { -40, -50 }, { 38, -44 }, { -30, -6 }, { 44, -10 } };
+  for (int i = 0; i < 4; i++) {
+    if ((int)(k * 12 + i * 2) % 3 == 0) continue;
+    int x = PB_DIG_X + SP[i][0], y = PB_DIG_Y + SP[i][1];
+    scGridRect(x, y - 6, x + 2, y + 8, 0xFFFFFF);
+    scGridRect(x - 6, y, x + 8, y + 2, 0xFFFFFF);
+  }
 }
 // Tall grass in the spirit of the Game Boy games (Fedor: "grass that resembles grass from Pokemon Blue"): an original
 // 16 px tile, 8 x 8 Knomi pixels: two staggered tufts, each a dark edge round light blades, on a mid green (half as
@@ -560,6 +620,7 @@ static void pbPaintStatic() {
   float wx = CX + PB_R * cosf(PB_GUIDE_A), wy = CY + PB_R * sinf(PB_GUIDE_A);
   pbRail(wx, wy, PB_GUIDE_END[0], PB_GUIDE_END[1]);
   pbRail(465 - wx, wy, 465 - PB_GUIDE_END[0], PB_GUIDE_END[1]);
+  pbFillets();
   pbSlings();
   pbDiglett(false);
   for (int k = 0; k < 3; k++) pbBumper(k, false);
@@ -622,7 +683,14 @@ static void pinDraw(const PinState &s, bool keys) {
     }
   for (int k = 0; k < 3; k++)
     if (s.bumpFlash[k] > 0 || ((s.bumpLit >> k) & 1)) pbBumper(k, true);
-  if (s.digUp || s.digHitT > 0) pbDiglett(true, !s.digUp, s.digUp ? s.digT / PB_DIG_S : 0);
+  // Diglett's dug holes (both while Dugtrio's up or due, or just knocked dizzy), then it, or Dugtrio, or it evolving
+  bool dugOn = s.dug || (s.lastDug && s.digHitT > 0);
+  for (int k = 0; k < (dugOn ? 2 : s.digBeat); k++) {
+    pbDigHole(PB_DUG_HOLE[k][0], PB_DUG_HOLE[k][1], 13, 7, dugOn && (s.digUp || s.digHitT > 0));
+  }
+  if (s.digUp && s.evoT > 0) pbDigEvolve(1 - s.evoT / PB_EVO_S);
+  else if (s.digUp || s.digHitT > 0)
+    pbDiglett(true, !s.digUp, s.digUp ? s.digT / (s.dug ? PB_DUG_S : PB_DIG_S) : 0, dugOn ? 51 : 50, s.digUp ? s.dugHeads : 0);
   if (s.grassT > 0 || s.phase == PIN_CATCH) pbGrass(true);
   pbWild(s, MOVE_TBL[s.move].type);
   pbFlipperAt(-1, s.flipA[0]);
@@ -675,8 +743,11 @@ static void pinDraw(const PinState &s, bool keys) {
     }
   }
   if (s.onTrack && s.rampTop) fsSay(T(S_PIN_RAMP), 184, 216, 0xFFE27A, 3);
-  if (s.digUp && s.digT > PB_DIG_S - 1.6f) {
-    snprintf(b, sizeof(b), T(S_PIN_DIG_FMT), dexName(50));
+  if (s.digUp && s.evoT > 0) {  // Diglett evolving, then Dugtrio: hit it
+    char c[40];
+    fsBoard(v2Caps(T(S_EVOLVING), c, sizeof(c)), 206);
+  } else if (s.digUp && s.digT > (s.dug ? PB_DUG_S : PB_DIG_S) - 1.6f) {
+    snprintf(b, sizeof(b), T(S_PIN_DIG_FMT), dexName(s.dug ? 51 : 50));
     char c[40];
     fsBoard(v2Caps(b, c, sizeof(c)), 206);
   }

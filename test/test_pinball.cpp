@@ -1,6 +1,6 @@
 // Pinball's rules and physics (pinball.h): the serve, gravity and the rim, the flippers, the drain and the three
-// balls, the bumpers and Diglett, the berries' multiplier, the ramp's turn and the wire rail, the grass and the
-// battle in the ring, and whole games played by a simple bot, the ball never leaving the table.
+// balls, the bumpers, Diglett and Dugtrio, the rounded corners, the berries' multiplier, the ramp's turn and the wire
+// rail, the grass and the battle in the ring, and whole games played by a simple bot, the ball never leaving the table.
 #include "framework.h"
 #include "shim/Arduino.h"
 #include "../src/pinball.h"
@@ -135,6 +135,88 @@ TEST(pinball, bumpers_kick_and_score_and_all_three_bring_up_diglett) {
   ev = run(s, 0.5f);
   CHECK(ev & PE_DIG_GONE);
   CHECK(!s.digUp);
+}
+
+// each Diglett beaten digs a hole beside its own; with both dug, the next one up evolves into Dugtrio: no hit counts
+// while it evolves, then three heads to hit; knocked out, the holes fill in and it's Diglett again
+static uint32_t hitDig(PinState &s) {
+  putBall(s, PB_DIG_X - 50, PB_DIG_Y - 18, 300, 0);
+  s.digCool = 0;
+  return run(s, 0.3f);
+}
+TEST(pinball, two_digletts_beaten_and_the_next_evolves_into_dugtrio) {
+  PinState s;
+  pinStart(s, 21);
+  for (int k = 0; k < PB_DIG_EVOLVE; k++) {
+    uint32_t ev = pinDigUp(s);
+    CHECK(ev & PE_DIG_UP);
+    CHECK(!(ev & PE_DIG_EVOLVE));
+    CHECK(!s.dug);
+    CHECK(hitDig(s) & PE_DIG_HIT);
+    CHECK_EQ(s.digBeat, (uint8_t)(k + 1));  // a hole dug beside its own
+  }
+  uint32_t ev = pinDigUp(s);  // the third: it evolves
+  CHECK(ev & PE_DIG_EVOLVE);
+  CHECK(s.dug && s.digUp && s.evoT > 0);
+  CHECK_EQ(s.dugHeads, (uint8_t)3);
+  uint32_t score = s.score;
+  ev = hitDig(s);  // evolving: the ball bounces off it, no hit
+  CHECK(!(ev & (PE_DUG_HEAD | PE_DIG_HIT)));
+  CHECK_EQ(s.dugHeads, (uint8_t)3);
+  CHECK(s.digT == PB_DUG_S);  // (its time not running yet)
+  ev = run(s, PB_EVO_S);  // evolved
+  CHECK(ev & PE_DIG_EVOLVED);
+  CHECK(s.evoT <= 0);
+  score = s.score;
+  CHECK(hitDig(s) & PE_DUG_HEAD);
+  CHECK(hitDig(s) & PE_DUG_HEAD);
+  CHECK_EQ(s.dugHeads, (uint8_t)1);
+  CHECK(s.digUp);
+  ev = hitDig(s);  // the third head: knocked out
+  CHECK(ev & PE_DIG_HIT);
+  CHECK(!s.digUp && !s.dug);
+  CHECK_EQ(s.digBeat, (uint8_t)0);  // the holes fill in
+  CHECK(s.score >= score + 3 * PB_PTS_DIG + PB_PTS_DUG);
+  CHECK(!(pinDigUp(s) & PE_DIG_EVOLVE));  // Diglett again
+  CHECK(!s.dug);
+}
+TEST(pinball, dugtrio_that_got_away_comes_back_without_evolving_again) {
+  PinState s;
+  pinStart(s, 22);
+  s.digBeat = PB_DIG_EVOLVE;
+  CHECK(pinDigUp(s) & PE_DIG_EVOLVE);
+  uint32_t ev = 0;
+  for (float t = 0; t < PB_EVO_S + PB_DUG_S + 0.5f; t += 0.25f) {  // (the ball kept up, out of its way)
+    putBall(s, 60, 300, 0, 0);
+    ev |= run(s, 0.25f);
+  }
+  CHECK(ev & PE_DIG_GONE);
+  CHECK(!s.digUp && s.dug);
+  ev = pinDigUp(s);
+  CHECK(!(ev & PE_DIG_EVOLVE));
+  CHECK(s.dug && s.evoT <= 0);
+  CHECK_EQ(s.dugHeads, (uint8_t)3);
+}
+
+// the corners where the wall meets the guides are rounded: a ball rolling down the wall onto a guide keeps its speed
+// (with a sharp corner it lost a quarter to three quarters of it)
+TEST(pinball, a_ball_rolling_down_the_wall_keeps_its_speed_onto_the_guide) {
+  for (int side = 0; side < 2; side++) {
+    PinState s;
+    pinStart(s, 5);
+    float a = (side ? 5 : 175) * 0.01745329f, r = PB_R - PB_BALL_R, v0 = 200;
+    putBall(s, PB_CX + r * cosf(a), PB_CY + r * sinf(a), 0, 0);
+    float tx = -sinf(a), ty = cosf(a);  // along the wall, down
+    if (ty < 0) tx = -tx, ty = -ty;
+    s.vx = tx * v0, s.vy = ty * v0;
+    float y0 = s.y;
+    const PinFillet &f = pinFillet(side);
+    float past = f.fx + f.a2x + (side ? -15 : 15);
+    for (int i = 0; i < 240 && (side ? s.x > past : s.x < past); i++) pinStep(s, DT);
+    float v = hypotf(s.vx, s.vy), free = sqrtf(v0 * v0 + 2 * PB_G * (s.y - y0));
+    CHECK_MSG(v > 0.9f * free, "it keeps its speed round the corner");
+    CHECK(side ? s.vx < 0 : s.vx > 0);  // on along the guide toward the flipper
+  }
 }
 
 TEST(pinball, all_six_berries_lit_double_the_points) {

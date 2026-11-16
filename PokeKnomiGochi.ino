@@ -1083,6 +1083,12 @@ void handleSerial() {
   } else if (line == "PINGRASS" && pet.noSave) {  // Pinball: the ball into the grass, for a battle (testing)
     if (pinOpen && pin.phase == PIN_PLAY && !pin.btlOn) pinEvents(pinIntoGrass(pin));
     Serial.println("DONE");
+  } else if ((line == "PINDIG" || line == "PINDUG") && pet.noSave) {  // Pinball: Diglett up now; DUG: two beaten
+    if (pinOpen && pin.phase == PIN_PLAY && !pin.digUp) {             // already, so it evolves into Dugtrio (testing)
+      if (line == "PINDUG") pin.digBeat = PB_DIG_EVOLVE, pin.dug = false;
+      pinEvents(pinDigUp(pin));
+    }
+    Serial.println("DONE");
   } else if (line == "FISHBOT" && pet.noSave) {  // Reel Fishing plays by itself, as a careful player (testing)
     fishBot = !fishBot;
     Serial.println("DONE");
@@ -4861,6 +4867,9 @@ void pinEvents(uint32_t ev) {
   if (ev & (PE_BERRIES | PE_BTL_WON)) sfxPlay(SFX_MEDAL);
   if (ev & PE_DIG_UP) sfxPlay(SFX_FISH_BITE);
   if (ev & PE_DIG_HIT) sfxPlay(SFX_FISH_LANDED);
+  if (ev & PE_DUG_HEAD) sfxPlay(SFX_PLAY);
+  if (ev & PE_DIG_EVOLVE) sfxPlay(SFX_EVOLVE);    // Diglett evolving
+  if (ev & PE_DIG_EVOLVED) sfxPlay(SFX_MEDAL);   // ...into Dugtrio
   if (ev & (PE_DIG_GONE | PE_BTL_GONE | PE_LOST)) sfxPlay(SFX_DENY);
   if (ev & PE_GRASS) {
     sfxPlay(SFX_FISH_BITE);

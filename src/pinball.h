@@ -18,7 +18,7 @@
 #define PB_CX 233.0f
 #define PB_CY 233.0f
 #define PB_R 218            // the table's inside; the rim from here out
-#define PB_BALL_R 10
+#define PB_BALL_R 13       // (it was 10: Fedor, of 10, 11 and 12 drawn, "Lets do with 13px. That looks the best")
 #define PB_FLIP_LX 148      // the left flipper's pivot (the right one's mirrored about the middle)
 #define PB_FLIP_Y 390
 #define PB_FLIP_LEN 70
@@ -38,6 +38,8 @@
 #define PB_GRASS_RY 30
 #define PB_DIG_X 233        // Diglett's hole, between the three bumpers
 #define PB_DIG_Y 178
+// the holes a beaten Diglett digs beside its own, the left one first: with both dug, Dugtrio comes up out of all three
+static const int16_t PB_DUG_HOLE[2][2] = { { 198, 208 }, { 268, 208 } };
 #define PB_BUMP_R 23
 // the way into the grass: a gap in its lower-left side, from its mouth (on the floor) to its end (in the grass)
 static const float PB_NOTCH[2][2] = { { 366, 264 }, { 388, 244 } };
@@ -55,9 +57,13 @@ static const float PB_RAMP_ARC[3] = { 94.35f, 116.65f, 20.0f };  // the turn: it
 // smoothly over the flipper's round end (no dip between them for the ball to sit in)
 #define PB_GUIDE_A 2.583f
 static const float PB_GUIDE_END[2] = { 150.5f, 383.5f };  // the left one's; the right one's mirrored
+// where the wall meets each guide, the corner rounded off (Fedor: "round off the edges ... So the ball can get some
+// speed if its rolling around the parimeter"): a curve this round from the wall onto the guide, no corner to stop in
+#define PB_FILLET_R 100.0f
 // the slingshots: a triangle each side over the flippers, its long side (the first to the third corner) the rubber
 // (high enough over the guide below it for the inlane: the ball rolls down between them to the flipper)
-static const float PB_SLING[3][2] = { { 82, 272 }, { 82, 318 }, { 122, 340 } };  // the left one; the right mirrored
+// (6 px higher again for the 13 px ball: the inlane as roomy for it as it was for the 10 px one)
+static const float PB_SLING[3][2] = { { 82, 266 }, { 82, 312 }, { 122, 334 } };  // the left one; the right mirrored
 
 // ---- how it plays ----
 #define PB_G 300.0f          // gravity, px/s^2
@@ -73,6 +79,9 @@ static const float PB_SLING[3][2] = { { 82, 272 }, { 82, 318 }, { 122, 340 } }; 
 #define PB_BALLS 3
 #define PB_LOST_S 1.6f       // a lost ball: this long before the next
 #define PB_DIG_S 12.0f       // Diglett stays up this long (it was 7: Fedor, "too quick to leave")
+#define PB_DIG_EVOLVE 2      // Digletts beaten (each digs a hole beside its own) before the next comes up as Dugtrio
+#define PB_EVO_S 2.0f        // its evolution, on show (it can't be hit meanwhile, and its time doesn't run)
+#define PB_DUG_S 20.0f       // Dugtrio stays up this long: three heads to hit
 #define PB_CATCH_S 0.9f      // into the grass: the "!", then the wild one comes out and the ball with it
 #define PB_BTL_S 20.0f       // the battle's time, to knock it out with the ball
 #define PB_BTL_IN_S 0.7f     // its jump from the grass to the ring
@@ -88,7 +97,8 @@ static const float PB_SLING[3][2] = { { 82, 272 }, { 82, 318 }, { 122, 340 } }; 
 #define PB_PTS_BTL_HIT 50    // a hit on the wild one
 #define PB_PTS_RAMP 250
 #define PB_PTS_BATTLE 500
-#define PB_PTS_DIG 1000
+#define PB_PTS_DIG 1000      // Diglett, and each of Dugtrio's heads
+#define PB_PTS_DUG 2000      // ...and all three of Dugtrio's down, on top
 
 enum PinPhase : uint8_t {
   PIN_PLAY,    // the ball on the table (a battle may be on in the ring meanwhile)
@@ -99,10 +109,11 @@ enum PinPhase : uint8_t {
 // what happened in a step, for the sounds, buzzes and flashes (a bit each)
 enum : uint32_t {
   PE_FLIP = 1u << 0, PE_BUMP = 1u << 1, PE_SLING = 1u << 2, PE_RAMP_IN = 1u << 3, PE_RAMP = 1u << 4,
-  PE_DROP = 1u << 5, PE_ORBIT = 1u << 6, PE_BERRY = 1u << 7, PE_BERRIES = 1u << 8, PE_DIG_UP = 1u << 11,
+  PE_DROP = 1u << 5, PE_ORBIT = 1u << 6, PE_BERRY = 1u << 7, PE_BERRIES = 1u << 8, PE_DIG_EVOLVE = 1u << 9,
+  PE_DUG_HEAD = 1u << 10, PE_DIG_UP = 1u << 11,
   PE_DIG_HIT = 1u << 12, PE_DIG_GONE = 1u << 13, PE_GRASS = 1u << 14, PE_BATTLE = 1u << 15, PE_BTL_HIT = 1u << 16,
   PE_BTL_WON = 1u << 17, PE_BTL_GONE = 1u << 18, PE_LOST = 1u << 19, PE_BALL = 1u << 20, PE_END = 1u << 21,
-  PE_NUDGE = 1u << 22,
+  PE_NUDGE = 1u << 22, PE_DIG_EVOLVED = 1u << 23,
 };
 
 struct PinState {
@@ -126,6 +137,13 @@ struct PinState {
   float berryFlash;             // all six just lit: BERRIES x2!
   bool digUp;                   // Diglett up out of its hole,
   float digT, digHitT;          // for this long; knocked dizzy, this long ago
+  // Dugtrio (Fedor: "lets find a reason to evolve diglet to digtrio"): each Diglett beaten digs a hole beside its own;
+  // with both dug, the next one up evolves, and comes up out of all three holes as Dugtrio, three heads to hit
+  uint8_t digBeat;              // Digletts beaten since the last Dugtrio (its holes dug)
+  bool dug;                     // Dugtrio: up, or the next to come up (it got away: it comes back evolved)
+  uint8_t dugHeads;             // its heads still up
+  float evoT, digCool;          // its evolution on show; a head just hit (the next can't be, so soon)
+  bool lastDug;                 // the one last knocked dizzy was Dugtrio (it's drawn so)
   float grassT;                 // the grass rustling
   float stillT;                 // the ball nearly still this long (a nudge frees it)
   float orbitCool, lastAng;     // the orbit's top: its points once a pass; the ball's angle round the middle
@@ -237,6 +255,22 @@ inline void pinStart(PinState &s, uint32_t seed) {
   pinServe(s);
 }
 
+// all three bumpers lit: Diglett pops up out of its hole; with both its holes dug beside it, it evolves first, and
+// comes up as Dugtrio (got away once evolved: it comes back as Dugtrio, no evolving again)
+inline uint32_t pinDigUp(PinState &s) {
+  s.bumpLit = 0;
+  s.digUp = true;
+  uint32_t ev = PE_DIG_UP;
+  if (s.digBeat >= PB_DIG_EVOLVE && !s.dug) {
+    s.dug = true;
+    s.evoT = PB_EVO_S;
+    ev |= PE_DIG_EVOLVE;
+  }
+  s.dugHeads = s.dug ? 3 : 0;
+  s.digT = s.dug ? PB_DUG_S : PB_DIG_S;
+  return ev;
+}
+
 // a flipper held up or let go (side 0 left, 1 right): PE_FLIP as it goes up
 inline uint32_t pinHold(PinState &s, int side, bool down) {
   bool was = s.hold[side];
@@ -302,6 +336,55 @@ inline void pinRim(PinState &s) {
   s.x = PB_CX + nx * lim, s.y = PB_CY + ny * lim;
   float vn = s.vx * nx + s.vy * ny;
   float e = pinBounce(-vn, PB_E_WALL);
+  if (vn > 0) s.vx -= (1 + e) * vn * nx, s.vy -= (1 + e) * vn * ny;
+}
+// the rounded corner where the wall meets a guide (side 0 left, 1 right): a circle touching the wall from inside and
+// the guide's top from above, the ball kept inside it between the two places it touches them
+struct PinFillet {
+  float fx, fy;          // its middle
+  float a1x, a1y, a2x, a2y;  // from there to where it touches the wall, and the guide
+  float wx, wy, nx, ny;  // the guide: where it leaves the wall, and its up side (out of it toward the ball)
+};
+inline const PinFillet &pinFillet(int side) {
+  static PinFillet f[2];
+  static bool built = false;
+  if (!built) {
+    for (int m = 0; m < 2; m++) {
+      PinFillet &q = f[m];
+      float wx = PB_CX + PB_R * cosf(PB_GUIDE_A), wy = PB_CY + PB_R * sinf(PB_GUIDE_A), ex = PB_GUIDE_END[0], ey = PB_GUIDE_END[1];
+      if (m) wx = 465 - wx, ex = 465 - ex;
+      float L = hypotf(ex - wx, ey - wy), ux = (ex - wx) / L, uy = (ey - wy) / L, nx = uy, ny = -ux;
+      if (ny > 0) nx = -nx, ny = -ny;
+      // its middle: PB_FILLET_R over the guide's top (4 over its line), and PB_FILLET_R in from the wall
+      const float r = PB_FILLET_R;
+      float px = wx + nx * (4 + r) - PB_CX, py = wy + ny * (4 + r) - PB_CY, pu = px * ux + py * uy;
+      float t = -pu - sqrtf(fmaxf(0, pu * pu - (px * px + py * py) + (PB_R - r) * (PB_R - r)));  // (the end by the wall)
+      q.fx = PB_CX + px + ux * t, q.fy = PB_CY + py + uy * t;
+      float dx = q.fx - PB_CX, dy = q.fy - PB_CY, d = sqrtf(dx * dx + dy * dy);
+      q.a1x = dx / d * r, q.a1y = dy / d * r;
+      q.a2x = -nx * r, q.a2y = -ny * r;
+      q.wx = wx, q.wy = wy, q.nx = nx, q.ny = ny;
+    }
+    built = true;
+  }
+  return f[side];
+}
+// is (x, y) in the corner a rounded corner fills: between where it touches the wall and the guide, seen from its
+// middle, and over the guide (how far over its line: up)
+inline bool pinInFillet(const PinFillet &f, float x, float y, float up = 0) {
+  if ((x - f.wx) * f.nx + (y - f.wy) * f.ny < up) return false;
+  float qx = x - f.fx, qy = y - f.fy, c12 = f.a1x * f.a2y - f.a1y * f.a2x;
+  return (f.a1x * qy - f.a1y * qx) * c12 >= 0 && (qx * f.a2y - qy * f.a2x) * c12 >= 0;
+}
+inline void pinFilletWall(PinState &s, int side) {
+  const PinFillet &f = pinFillet(side);
+  if (!pinInFillet(f, s.x, s.y)) return;
+  float qx = s.x - f.fx, qy = s.y - f.fy, d = sqrtf(qx * qx + qy * qy), lim = PB_FILLET_R - PB_BALL_R;
+  if (d <= lim) return;
+  float nx = qx / d, ny = qy / d;
+  s.x = f.fx + nx * lim, s.y = f.fy + ny * lim;
+  float vn = s.vx * nx + s.vy * ny;
+  float e = pinBounce(-vn, PB_E_WALL);  // (rolling round it: no speed lost)
   if (vn > 0) s.vx -= (1 + e) * vn * nx, s.vy -= (1 + e) * vn * ny;
 }
 // the orbit's inner rail: an arc, the ball kept off it on either side (its ends are round; the posts drawn on them
@@ -416,6 +499,7 @@ inline uint32_t pinBallStep(PinState &s, float h) {
     float wx = PB_CX + PB_R * cosf(PB_GUIDE_A), wy = PB_CY + PB_R * sinf(PB_GUIDE_A), fx = PB_GUIDE_END[0];
     if (m) wx = 465 - wx, fx = 465 - fx;
     pinBar(s, wx, wy, fx, PB_GUIDE_END[1], 4, PB_E_WALL);
+    pinFilletWall(s, m);  // (and the corner it makes with the wall, rounded)
   }
   for (int m = 0; m < 2; m++) {  // the slingshots: their two plain sides, then the rubber that kicks
     float ax = PB_SLING[0][0], bx = PB_SLING[1][0], cx = PB_SLING[2][0];
@@ -434,19 +518,32 @@ inline uint32_t pinBallStep(PinState &s, float h) {
       ev |= PE_BUMP;
       if (!s.digUp) {
         s.bumpLit |= 1 << k;
-        if (s.bumpLit == 7) {  // all three: Diglett pops up between them
-          s.bumpLit = 0;
-          s.digUp = true;
-          s.digT = PB_DIG_S;
-          ev |= PE_DIG_UP;
-        }
+        if (s.bumpLit == 7) ev |= pinDigUp(s);  // all three: Diglett pops up between them (or Dugtrio)
       }
     }
-  if (s.digUp && pinBar(s, PB_DIG_X, PB_DIG_Y - 18, PB_DIG_X, PB_DIG_Y - 18, 14, 0.6f, 200) > 0.5f) {
-    s.digUp = false;
-    s.digHitT = 1.2f;
-    pinAdd(s, PB_PTS_DIG, PB_DIG_X, PB_DIG_Y - 60);
-    ev |= PE_DIG_HIT;
+  // Diglett (Dugtrio wider): solid while it's up; a hit counts once it has evolved, and not twice in one bounce
+  float dw = s.dug ? 16 : 0;
+  if (s.digUp && pinBar(s, PB_DIG_X - dw, PB_DIG_Y - 18, PB_DIG_X + dw, PB_DIG_Y - 18, 14, 0.6f, 200) > 0.5f &&
+      s.evoT <= 0 && s.digCool <= 0) {
+    if (!s.dug) {
+      s.digUp = false;
+      s.digHitT = 1.2f;
+      s.lastDug = false;
+      if (s.digBeat < PB_DIG_EVOLVE) s.digBeat++;  // it digs a hole beside its own as it goes
+      pinAdd(s, PB_PTS_DIG, PB_DIG_X, PB_DIG_Y - 60);
+      ev |= PE_DIG_HIT;
+    } else if (--s.dugHeads) {  // one of Dugtrio's heads
+      s.digCool = 0.4f;
+      pinAdd(s, PB_PTS_DIG, PB_DIG_X, PB_DIG_Y - 60);
+      ev |= PE_DUG_HEAD;
+    } else {  // all three: back down, and the holes fill in (Diglett next, and it starts over)
+      s.digUp = false, s.dug = false;
+      s.digBeat = 0;
+      s.digHitT = 1.2f;
+      s.lastDug = true;
+      pinAdd(s, PB_PTS_DIG + PB_PTS_DUG, PB_DIG_X, PB_DIG_Y - 60);
+      ev |= PE_DIG_HIT;
+    }
   }
   // the wild one in the ring: each hit is your Pokemon's move on it
   if (pinWildThere(s) && pinBar(s, PB_RING_X, PB_RING_Y - 22, PB_RING_X, PB_RING_Y - 22, 22, 0.5f, PB_KICK_WILD) > 30) {
@@ -503,6 +600,7 @@ inline uint32_t pinBallStep(PinState &s, float h) {
     s.phase = PIN_LOST;
     s.t = 0;
     s.digUp = false;
+    s.evoT = 0;
     s.btlOn = false;
     ev |= PE_LOST;
   }
@@ -528,6 +626,8 @@ inline uint32_t pinStep(PinState &s, float dt) {
   auto down = [&](float &v) { v = v > dt ? v - dt : 0; };
   for (int k = 0; k < 3; k++) down(s.bumpFlash[k]);
   down(s.berryFlash), down(s.digHitT), down(s.grassT), down(s.popT), down(s.orbitCool), down(s.hitT), down(s.inT);
+  if (s.evoT > 0 && s.evoT <= dt) ev |= PE_DIG_EVOLVED;  // evolved: Dugtrio, to hit
+  down(s.evoT), down(s.digCool);
   switch (s.phase) {
     case PIN_END:
       return 0;
@@ -571,7 +671,7 @@ inline uint32_t pinStep(PinState &s, float dt) {
     }
   }
   s.playT += dt;
-  if (s.digUp) {
+  if (s.digUp && s.evoT <= 0) {  // (not while it's evolving)
     s.digT -= dt;
     if (s.digT <= 0) {
       s.digUp = false;
