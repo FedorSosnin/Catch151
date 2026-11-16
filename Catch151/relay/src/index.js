@@ -100,7 +100,8 @@ export default {
       let res = await cache.match(key);
       if (!res) {
         const lobby = env.LOBBY.get(env.LOBBY.idFromName('lobby'));
-        const { online, fish, board } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
+        // (board: none from a lobby still on the code from before the leaderboard, for a moment after a deploy)
+        const { online, fish, board = { games: [], fish: [] } } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
         const big = fish ? { lb: lb(fish.kg10), kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
         res = new Response(svg ? boardSvg(online, board) : JSON.stringify({ online, fish: big, biggest: fishText(fish), board }), {
           headers: {

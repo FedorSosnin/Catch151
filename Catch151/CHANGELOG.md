@@ -6,7 +6,9 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.9] - 2026-11-16
+
+2.2.8 went out in this release too: its Pinball changes and the bedside clock are under 2.2.8 below.
 
 - **The Leaderboard:** each minigame's best ten from every copy of the game, with the gamer tag that set each one and the day, on a [page of its own](https://fedorsosnin.github.io/Catch151/leaderboard/), with each game's best on the README: Berry Drop, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball. Each copy sends the buddy relay its bests and its tag, nothing else about you.
 - **A golden cartridge for the best score:** hold the best score of any game on the leaderboard and a new medal, **High Score**, is yours for good: a golden Game Boy cartridge on the trophies' shelf beside the level 100 cups (the shelf is called Trophies now). The buddy relay tells your game when one of your bests is the first.
@@ -14,7 +16,7 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 - **A keyboard you can type on with a finger:** tap near the letter you want and the keys around it zoom in about three times wider; tap the big ones to type as many as you like, and the blue down arrow takes you back to the whole keyboard. For your Pokémon's name, your gamer tag and the Knomi's Wi-Fi password.
 - **The repository's front page:** everything is in one `Catch151` folder now, so the README, its art and its moving pictures come straight after a short list of files instead of a long one. To build it yourself, clone it and work in `Catch151/Catch151`, the Arduino sketch (`Catch151.ino`, which was `PokeKnomiGochi.ino`). Knomis keep updating over Wi-Fi as before, and the Mac and Windows apps too.
 
-## [2.2.8] - 2026-11-16
+## [2.2.8] - 2026-11-16 (released with 2.2.9)
 
 - **Pinball, Dugtrio:** beat Diglett twice and the next time the bumpers bring it up, it evolves into Dugtrio, blinking white between the two the way your own Pokémon does when it evolves. Then you have 20 seconds to hit its three heads, three gold dots under it counting them down: 1000 a head, and 2000 more for all three. If it gets away it comes back as Dugtrio, without evolving again.
 - **Pinball, a cave at night:** on the night table the tall grass is a cave, a moonlit pile of boulders with eyes glinting in its mouth, and cave Pokémon come out of it (Zubat, Geodude, Clefairy, Onix, Cubone...). Out of the meadow's grass come forest and field ones (Pidgey, Weedle, Oddish, Pikachu...). Something unseen rustles round the grass now, shaking the blades and throwing up bits of leaf, and the cave's eyes blink; both go quiet while the wild one is out in the ring.
