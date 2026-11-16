@@ -1,4 +1,4 @@
-// The high scores' rules (src/board.js): run with  node --test relay/test/*.test.mjs
+// The leaderboard's rules (src/board.js): run with  node --test relay/test/*.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

@@ -39,7 +39,7 @@ enum BuddyType : uint8_t {
                                    // shiny, hp = its weight in tenths of a kg, nick = the gamer tag); the relay keeps
                                    // the heaviest of all
   BM_SCORE,                        // to the relay alone, never to a buddy: a game's best (kind = the game as the Games
-                                   // menu numbers them, session = the score, nick = the gamer tag); the high scores.
+                                   // menu numbers them, session = the score, nick = the gamer tag); the leaderboard.
                                    // From the relay (from = BUDDY_RELAY_ID), to the one that sent it: it's the first
                                    // of its game's ten (the high score's medal)
   BM_END

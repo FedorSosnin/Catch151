@@ -291,7 +291,7 @@ TEST(buddy, surf_messages_are_checked) {
   CHECK(!parseCopy(m, out));
 }
 
-// the high scores (relay/src/board.js): a BM_SCORE goes to the relay alone, and only the relay's answer comes back in
+// the leaderboard (relay/src/board.js): a BM_SCORE goes to the relay alone, and only the relay's answer comes back in
 TEST(buddy, a_score_is_taken_only_from_the_relay) {
   BuddyMsg m;
   buddyInit(m, BM_SCORE, 0x1234, 0x99, 48250);

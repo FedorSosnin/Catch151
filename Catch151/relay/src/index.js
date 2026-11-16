@@ -22,7 +22,7 @@
 // "621.7 lb Gyarados"}. Each device tells the relay its own heaviest (a BM_FISH message, only to the
 // relay) when it connects and when it lands a heavier one; the relay keeps the heaviest of all.
 //
-// And the high scores (board.js): each game's best ten, with the gamer tag each came with and the day
+// And the leaderboard (board.js): each game's best ten, with the gamer tag each came with and the day
 // ({"board": {"games": [...], "fish": [...]}} in /stats), from BM_SCORE messages (and BM_FISH for the
 // fish), and as a picture for the README:
 //
@@ -161,7 +161,7 @@ export class Lobby {
     return this.fish;
   }
 
-  // the high scores: each game's top ten ({ game: [entry] }) and the fish's, from storage once. The heaviest fish
+  // the leaderboard: each game's top ten ({ game: [entry] }) and the fish's, from storage once. The heaviest fish
   // kept before there was a board starts the fish's (with no tag)
   async board() {
     if (this.scores === undefined) {
@@ -247,7 +247,7 @@ export class Lobby {
   }
 
   // tells a device its best is the first of its game's ten (its high score medal: the game gives it once). A copy
-  // older than the high scores drops it (BM_SCORE is past its BM_END)
+  // older than the leaderboard drops it (BM_SCORE is past its BM_END)
   tellTop(ws, from, game, score) {
     if (from === 0) return;
     try { ws.send(topReply(from, game, score)); } catch (e) {}

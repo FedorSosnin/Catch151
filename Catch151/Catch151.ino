@@ -157,7 +157,7 @@ int16_t v2KbZoomX = -1;       // V2: a keyboard zoomed in round this x of the wh
 void openKeyboard();          // (the console's KEYBOARD opens it)
 uint32_t v2KbScreenKey();     // what the open keyboard shows (menus_v2.h)
 void openTagKeyboard(bool fromGames);  // the gamer tag's keyboard (menus_v2.h)
-void scoreReport(uint8_t g);  // a game's best to the relay, for the high scores
+void scoreReport(uint8_t g);  // a game's best to the relay, for the leaderboard
 char nameBuf[12] = "";
 uint8_t nameLen = 0;
 int cardNameBottom = 84;      // where the card's name (and the species under a nickname) ends: tapping above renames
@@ -2651,7 +2651,7 @@ void stepGame() {
     if (++gameMisses >= 3) {
       gameNewHi = (gameScore > pet.gameHi);
       pet.playResult(gameScore);  // updates the record and gives happiness
-      scoreReport(0);  // V2: the high scores
+      scoreReport(0);  // V2: the leaderboard
       sfxPlay(gameNewHi && gameScore > 0 ? SFX_MEDAL : SFX_LEVEL);
       gameOverUntil = now + 3500;
       return;
@@ -2717,7 +2717,7 @@ void gameEndToMenu(int g) {
   v2GamesShow(g);
   if (pet.isEgg() || pet.sleeping || pet.ceremony || choiceKind) return;
   openGamesMenu();
-  // V2: after a first scored game (one with a place on the high scores: not Who's That?), the gamer tag, once
+  // V2: after a first scored game (one with a place on the leaderboard: not Who's That?), the gamer tag, once
   if (g != 1 && gamesMenuOpen && !pet.gamerTag[0] && !pet.tagAsked && pet.hasScore()) openTagKeyboard(true);
 }
 
@@ -4410,7 +4410,7 @@ void dungeonAfterStep() {
   if (dn.dead) {
     dnNewHi = dn.floor > pet.dungeonHi;
     pet.dungeonResult(dn.floor);  // the reward and record only on a real fall
-    scoreReport(3);  // V2: the high scores
+    scoreReport(3);  // V2: the leaderboard
     sfxPlay(dnNewHi ? SFX_MEDAL : SFX_DENY);
     dnOverT = now;
     Serial.printf("dungeon: B%uF, %u KO\n", dn.floor, dn.kos);
@@ -4610,7 +4610,7 @@ void renderRun() {
       uint16_t secs = (uint16_t)run.t;
       runNewHi = secs > pet.runHi;
       pet.runResult(secs);  // the reward and record only when it really ends
-      scoreReport(2);  // V2: the high scores
+      scoreReport(2);  // V2: the leaderboard
       sfxPlay(runNewHi ? SFX_MEDAL : SFX_DENY);
       runOverT = millis();
       Serial.printf("pokerun: %u s, %lu frames\n", secs, (unsigned long)runFrames);
@@ -4688,11 +4688,11 @@ void fishReport() {
   m.dex = pet.fishBigDex;
   m.shiny = pet.fishBigShiny ? 1 : 0;
   m.hp = pet.fishBig;
-  strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);  // V2: the gamer tag, for the high scores
+  strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);  // V2: the gamer tag, for the leaderboard
   buddyNetReport(m);
 }
 
-// V2: a game's best to the relay with the gamer tag, for the high scores (relay/src/index.js), as fishReport() sends the
+// V2: a game's best to the relay with the gamer tag, for the leaderboard (relay/src/index.js), as fishReport() sends the
 // biggest fish: Berry Drop's score (game 0), Rock Hopper's seconds (2), Dungeon Crawler's floor (3), PikaSurf's
 // seconds (4), Pinball's score (6), as the Games menu numbers them. Nothing before there's one. Sent at each game's
 // end (the relay keeps the best), all of them when the relay is reached anew or the tag changes
@@ -4933,7 +4933,7 @@ void pinEvents(uint32_t ev) {
   if (ev & PE_END) {
     pinNewHi = pin.score > pet.pinHi;
     pet.pinResult(pin.score);  // the reward and record only at the end
-    scoreReport(6);  // V2: the high scores
+    scoreReport(6);  // V2: the leaderboard
     sfxPlay(pinNewHi ? SFX_MEDAL : SFX_PLAY);
     pinOverT = now | 1;
     Serial.printf("pinball: %lu\n", (unsigned long)pin.score);
@@ -5252,7 +5252,7 @@ void renderSurf() {
       uint16_t secs = (uint16_t)surf.t;
       surfNewHi = secs > pet.surfHi;
       pet.surfResult(secs);  // the reward and record only when it really ends
-      scoreReport(4);  // V2: the high scores
+      scoreReport(4);  // V2: the leaderboard
       sfxPlay(surfNewHi ? SFX_MEDAL : SFX_DENY);
       surfOverT = millis();
       Serial.printf("pikasurf: %u s\n", secs);
@@ -6566,9 +6566,9 @@ void tradeClose(bool notify) {
 
 void buddyHandle(const BuddyMsg &m, uint32_t now) {
   if (m.type == BM_SCORE) {  // V2: the relay's answer (buddyParse lets only its own through): one of your bests is the
-    if (pet.topScore()) {    // first on the high scores, so the golden cartridge, once (celebrated as any medal)
+    if (pet.topScore()) {    // first on the leaderboard, so the golden cartridge, once (celebrated as any medal)
       wakeUI();
-      Serial.printf("high scores: first in game %u\n", m.kind);
+      Serial.printf("leaderboard: first in game %u\n", m.kind);
     }
     return;
   }
@@ -6737,7 +6737,7 @@ void buddyTick(uint32_t now) {
     }
     BuddyMsg m;
     for (int i = 0; i < 8 && buddyNetPoll(m); i++) buddyHandle(m, now);
-    if (buddyNetRelayFresh()) scoreReportAll();  // the relay keeps the high scores: each game's best, and the heaviest fish
+    if (buddyNetRelayFresh()) scoreReportAll();  // the relay keeps the leaderboard: each game's best, and the heaviest fish
     buddyReadyTick(now);
   }
   // touches and messages have already stamped bsT and trT with millis(): with the old now the subtraction would wrap around

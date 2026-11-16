@@ -26,9 +26,9 @@
 
 **[Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/)**: all 151, regular and shiny, in every view the game has (standing, turning, walking, from behind, asleep, attacking and more), sorted by number or type, each credited to its artists. Each one's page says what the game's Pokédex says about it, with its stats and every move it learns; pick a few to see their match-ups, and tick the ones you have. Its **Catching** tab gives the chances of each star, 1★ to 3★, regular and shiny: of a catch, and of a Search in its zone or a Wild Encounter turning it up that way.
 
-**[High Scores](https://fedorsosnin.github.io/Catch151/scores/)**: each minigame's best, live from copies of the game everywhere, with the gamer tag that set it and the day. You make your gamer tag after your first game, and change it from its label in the Games menu.
+**[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**: each minigame's best, live from copies of the game everywhere, with the gamer tag that set it and the day. You make your gamer tag after your first game, and change it from its label in the Games menu.
 
-<p align="center"><a href="https://fedorsosnin.github.io/Catch151/scores/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The high scores, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
+<p align="center"><a href="https://fedorsosnin.github.io/Catch151/leaderboard/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The leaderboard, live: each minigame's best score with the gamer tag that set it and the day, and how many are playing now"></a></p>
 
 ## What's in it
 

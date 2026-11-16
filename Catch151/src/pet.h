@@ -95,7 +95,7 @@ enum : uint32_t {
   MED_LV100_3 = 1UL << 22, MED_LV100_5 = 1UL << 23, MED_LV100_10 = 1UL << 24,
   // V2: Knomi Tower beaten, its Legend won (tower_v2.h); its badge goes in the case with the zones' badges
   MED_TOWER = 1UL << 25,
-  // V2: a game's best score on the high scores, the first of its ten (the relay says so: Fedor, "a badge/achievement
+  // V2: a game's best score on the leaderboard, the first of its ten (the relay says so: Fedor, "a badge/achievement
   // for holding a global high score. Make it a golden game cart trophy"); on the shelf with the cups
   MED_HISCORE = 1UL << 26,
 };
@@ -170,7 +170,7 @@ public:
   bool tagAsked = false;
   bool setGamerTag(const char *tag);  // false for one that's empty or rude (gamertag.h): then it's not changed
   void askedForTag();                 // the keyboard for it was offered: not again by itself
-  bool topScore();                   // the relay says one of your bests is the first on the high scores: its medal (once)
+  bool topScore();                   // the relay says one of your bests is the first on the leaderboard: its medal (once)
   bool hasScore() const { return gameHi || runHi || surfHi || dungeonHi || pinHi || fishBig; }  // a record on the board
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;

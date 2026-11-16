@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Remakes relay/src/board_art.js (the high scores' font and cartridges): pictures of the Games menu's two pages from a
+# Remakes relay/src/board_art.js (the leaderboard's font and cartridges): pictures of the Games menu's two pages from a
 # headless test copy (its own save and buddy port, no relay), cropped by tools/relay_board_art.py. Run it when a
 # cartridge's art changes, then deploy the relay.
 #   tools/relay_board_art.sh

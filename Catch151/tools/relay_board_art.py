@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes relay/src/board_art.js: what the relay's high scores picture (/board.svg) is drawn with. The game's 5x7 font (its
+"""Writes relay/src/board_art.js: what the relay's leaderboard picture (/board.svg) is drawn with. The game's 5x7 font (its
 printable characters, from host/glcdfont.h) and each game's cartridge as the Games menu draws it, a small PNG cropped
 from the menu's two pages (host_shot pictures of them: tools/relay_board_art.sh takes them and runs this).
 

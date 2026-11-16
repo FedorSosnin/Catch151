@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Catch 151 High Scores</title>
+<title>Catch 151 Leaderboard</title>
 <link rel="icon" type="image/png" sizes="16x16" href="../music/brand/catch151-icon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="../music/brand/catch151-icon-32.png">
 <link rel="apple-touch-icon" href="../music/brand/catch151-icon-180.png">
-<meta name="description" content="Catch 151's high scores: each minigame's best ten, live from copies of the game everywhere, with the gamer tag that set each one and the day.">
-<!-- The high scores, live: the buddy relay keeps each game's best ten (relay/src/board.js) and this page reads them from
+<meta name="description" content="Catch 151's leaderboard: each minigame's best ten, live from copies of the game everywhere, with the gamer tag that set each one and the day.">
+<!-- The leaderboard, live: the buddy relay keeps each game's best ten (relay/src/board.js) and this page reads them from
      its /stats. The picture at the top is the relay's /board.svg, the one the README shows. -->
 <style>
   /* dark, as the soundtrack and the Catch 151 Dex are */
@@ -42,14 +42,14 @@
 </head>
 <body>
 <header>
-  <h1>High Scores</h1>
+  <h1>Leaderboard</h1>
   <p class="lede">Each Catch 151 minigame's best ten, live from copies of the game everywhere: the score, the gamer tag that
     set it, and the day. Make your gamer tag in the game, on the label under GAMES in the Games menu.</p>
   <p class="live" id="live" hidden><i></i><span></span></p>
 </header>
 <main>
   <img class="board" src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" height="686"
-    alt="The high scores: each game's best, with its gamer tag and day, and how many are playing now">
+    alt="The leaderboard: each game's best, with its gamer tag and day, and how many are playing now">
   <div class="games" id="games"><p class="none">Loading the board...</p></div>
 </main>
 <footer>

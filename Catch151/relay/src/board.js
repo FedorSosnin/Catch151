@@ -1,4 +1,4 @@
-// The high scores (Fedor, 2026-11-16, first called the world board, then "High Scores": "a section in the Repo showing live players, biggest fish, longest run, highest
+// The leaderboard (Fedor, 2026-11-16, first called the world board, then High Scores, then "Use Leaderboard": "a section in the Repo showing live players, biggest fish, longest run, highest
 // pinball score, etc." with each best's "score, date, and tag"). The relay keeps each game's top ten: the score, the
 // gamer tag it came with and the day, one entry a device (by a hash of its id: nothing about who or where). The README
 // shows it as a picture (/board.svg) and the website's scores page reads it from /stats.
@@ -158,9 +158,9 @@ export function boardSvg(online, board) {
   out.push(`<rect width="${W}" height="${H}" rx="22" fill="${RIM}"/><rect x="5" y="5" width="${W - 10}" height="${H - 10}" rx="18" fill="${BG}"/>`);
   out.push(`<rect x="12" y="12" width="${W - 24}" height="${H - 24}" rx="14" fill="none" stroke="${LINE}" stroke-width="2"/>`);
   // the title on a wooden board, as the game's screens have theirs
-  const tw = textW('HIGH SCORES', 4) + 44;
+  const tw = textW('LEADERBOARD', 4) + 44;
   out.push(`<rect x="32" y="30" width="${tw + 8}" height="52" fill="#3a2414"/><rect x="36" y="34" width="${tw}" height="44" fill="#8a5a30"/><rect x="40" y="36" width="${tw - 8}" height="3" fill="#b07a45"/>`);
-  text(58, 42, 'HIGH SCORES', 4, CREAM);
+  text(58, 42, 'LEADERBOARD', 4, CREAM);
   const live = `${online} PLAYING NOW`, lx = W - 40 - textW(live, 2);
   out.push(`<circle cx="${lx - 19}" cy="54" r="7" fill="#58b868"/>`);
   text(lx, 47, live, 2, '#a0dcaa');
@@ -184,9 +184,9 @@ export function boardSvg(online, board) {
     text(640, y + 24, `${MONTH[+mm - 1]} ${+dd}`, 2, WHITE);
     text(640, y + 44, yy, 2, MUTED);
   });
-  const foot = 'LIVE FROM THE GAMES / TOP 10 OF EACH: FEDORSOSNIN.GITHUB.IO/CATCH151/SCORES';
+  const foot = 'LIVE FROM THE GAMES / TOP 10 OF EACH: FEDORSOSNIN.GITHUB.IO/CATCH151/LEADERBOARD';
   text((W - textW(foot, 1)) / 2, H - 32, foot, 1, MUTED);
   const defs = [...used].map((c) => `<path id="c${c}" d="${glyph(c)}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">` +
-    `<title>${esc(`Catch 151 high scores: ${online} playing now`)}</title><defs>${defs}</defs>${out.join('')}</svg>`;
+    `<title>${esc(`Catch 151 leaderboard: ${online} playing now`)}</title><defs>${defs}</defs>${out.join('')}</svg>`;
 }
