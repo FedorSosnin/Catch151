@@ -107,6 +107,16 @@ jobs:
           name: PokeWinGochi
           path: Catch151/build/win/PokeWinGochi.exe
 
+  relay:
+    name: Relay's world board (node --test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test relay/test/*.test.mjs
+
   i18n:
     name: i18n format-specifier consistency
     runs-on: ubuntu-latest

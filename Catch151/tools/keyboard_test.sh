@@ -1,13 +1,16 @@
 #!/bin/zsh
 # The zoom keyboard's test copy of Catch 151 for Mac, apart from the real app: its own save folder, its own buddy port
-# (it never visits the real pets), no relay, and another bundle id. It opens on the name's keyboard with a Squirtle.
+# (it never visits the real pets), no relay, and another bundle id. It opens on the gamer tag's keyboard with a
+# Squirtle.
 # The test state isn't saved (NOSAVE): each launch starts the same.
 #   tools/keyboard_test.sh
 # Click a letter and the keyboard zooms in round it; click the big keys to type (it stays zoomed). The blue down arrow
 # where the X was zooms back out. Shift, backspace, 123, SPACE and OK work at once.
 # Hold the mouse down to see the key under it big; slide off before letting go to change your mind. The Terminal
 # window takes console commands too:
-#   KEYBOARD   the keyboard again (after OK or the X)
+#   GAMERTAG   the gamer tag's keyboard again (four at most; a rude one gets PICK ANOTHER)
+#   KEYBOARD   the name's keyboard
+#   GAMES      the Games menu, with the gamer tag's label on the Game Boy (a click there opens its keyboard)
 # Close it with its menu (the Poke Ball) or Cmd-Q.
 set -e
 cd "${0:A:h}/.."
@@ -28,7 +31,7 @@ seed() {
   echo NOSAVE
   echo "TOWERPET 7 12 30 10 30"  # a Squirtle, level 13
   echo "NEEDS 90 90 90 90"
-  echo KEYBOARD
+  echo GAMERTAG
 }
 { sleep 2; seed; cat; } |
   POKEMACGOCHI_SAVE_DIR="$SAVE" POKEMACGOCHI_BUDDY_PORT=47391 POKEMACGOCHI_RELAY=0 $APP/Contents/MacOS/PokeMacGochi --console

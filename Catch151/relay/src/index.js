@@ -20,14 +20,25 @@
 //
 // And the heaviest fish anyone has landed in Reel Fishing: {"online": 12, "fish": {...}, "biggest":
 // "621.7 lb Gyarados"}. Each device tells the relay its own heaviest (a BM_FISH message, only to the
-// relay) when it connects and when it lands a heavier one; the relay keeps the heaviest of all. That's
-// the one thing it stores: the weight, the kind and the day, nothing about who.
+// relay) when it connects and when it lands a heavier one; the relay keeps the heaviest of all.
+//
+// And the world board (board.js): each game's best ten, with the gamer tag each came with and the day
+// ({"board": {"games": [...], "fish": [...]}} in /stats), from BM_SCORE messages (and BM_FISH for the
+// fish), and as a picture for the README:
+//
+//   https://<relay>/board.svg
+//
+// It keeps the scores, the tags, the days and a hash of each device's id (one entry a device), nothing
+// about who or where.
+
+import { BM_SCORE, GAMES, scoreReport, boardAdd, boardSvg, tagOf, idHash, tagShown } from './board.js';
 
 const MSG_SIZE = 65;
 const MAX_PER_GROUP = 16;  // a home has a few devices: more is someone filling a group on purpose
 const RATE_PER_S = 8;      // the game sends a few messages a second at most, during a battle
 const BURST = 16;
 const STATS_CACHE_S = 60;  // the count is kept a minute: looking often doesn't wake the lobby each time
+const BOARD_CACHE_S = 300; // the board's picture: five minutes (GitHub keeps its own copy a while too)
 
 // Reel Fishing (src/fishing.h): the Beach's water Pokemon and their Pokedex weights in tenths of a kg. A fish
 // weighs 0.8 to 1.2 times its kind's, so a report over 1.2 times can't be real and is ignored
@@ -52,10 +63,22 @@ export function fishReport(data) {
 }
 
 // as the game shows it: tenths of a pound, rounded (fishLb10() in src/fishing.h)
+const lb = (kg10) => Math.floor((kg10 * 22046 + 5000) / 10000) / 10;
 export function fishText(f) {
   if (!f || !FISH[f.dex]) return 'none yet';
   const lb10 = Math.floor((f.kg10 * 22046 + 5000) / 10000);
   return `${Math.floor(lb10 / 10)}.${lb10 % 10} lb ${f.shiny ? 'shiny ' : ''}${FISH[f.dex][0]}`;
+}
+
+// the board as /stats shows it: each game's best ten and the fish's, the tags as they show (---- or ****), no ids
+export function boardPublic(scores, fishTop) {
+  return {
+    games: Object.keys(GAMES).map((g) => ({
+      game: +g, name: GAMES[g].name,
+      top: (scores[g] || []).map((e) => ({ tag: tagShown(e.tag), score: e.score, shown: GAMES[g].show(e.score), day: e.day })),
+    })),
+    fish: fishTop.map((e) => ({ tag: tagShown(e.tag), lb: lb(e.score), kind: FISH[e.dex][0], shiny: e.shiny, day: e.day })),
+  };
 }
 
 export default {
@@ -70,19 +93,20 @@ export default {
       fwd.headers.set('X-Groups', keys.join(','));
       return lobby.fetch(fwd);
     }
-    if (url.pathname === '/stats') {
+    if (url.pathname === '/stats' || url.pathname === '/board.svg') {
+      const svg = url.pathname === '/board.svg';
       const cache = caches.default;
-      const key = new Request(url.origin + '/stats');
+      const key = new Request(url.origin + url.pathname);
       let res = await cache.match(key);
       if (!res) {
         const lobby = env.LOBBY.get(env.LOBBY.idFromName('lobby'));
-        const { online, fish } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
-        const big = fish ? { lb: Math.floor((fish.kg10 * 22046 + 5000) / 10000) / 10, kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
-        res = new Response(JSON.stringify({ online, fish: big, biggest: fishText(fish) }), {
+        const { online, fish, board } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
+        const big = fish ? { lb: lb(fish.kg10), kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
+        res = new Response(svg ? boardSvg(online, board) : JSON.stringify({ online, fish: big, biggest: fishText(fish), board }), {
           headers: {
-            'content-type': 'application/json',
-            'cache-control': `public, max-age=${STATS_CACHE_S}`,
-            'access-control-allow-origin': '*',  // a dashboard on another site can read it
+            'content-type': svg ? 'image/svg+xml' : 'application/json',
+            'cache-control': `public, max-age=${svg ? BOARD_CACHE_S : STATS_CACHE_S}`,
+            'access-control-allow-origin': '*',  // a dashboard on another site can read it (the scores page does)
           },
         });
         await cache.put(key, res.clone());
@@ -137,9 +161,23 @@ export class Lobby {
     return this.fish;
   }
 
+  // the world board: each game's top ten ({ game: [entry] }) and the fish's, from storage once. The heaviest fish
+  // kept before there was a board starts the fish's (with no tag)
+  async board() {
+    if (this.scores === undefined) {
+      this.scores = (await this.ctx.storage.get('scores')) || {};
+      this.fishTop = (await this.ctx.storage.get('fishTop')) || [];
+      const f = await this.biggest();
+      if (!this.fishTop.length && f) this.fishTop.push({ id: '', tag: '', score: f.kg10, dex: f.dex, shiny: f.shiny, day: f.day });
+    }
+    return { scores: this.scores, fishTop: this.fishTop };
+  }
+
   async fetch(request) {
-    if (new URL(request.url).pathname === '/stats')  // each socket once, whatever its groups
-      return Response.json({ online: this.ctx.getWebSockets().length, fish: await this.biggest() });
+    if (new URL(request.url).pathname === '/stats') {  // each socket once, whatever its groups
+      const { scores, fishTop } = await this.board();
+      return Response.json({ online: this.ctx.getWebSockets().length, fish: await this.biggest(), board: boardPublic(scores, fishTop) });
+    }
     const groups = (request.headers.get('X-Groups') || '').split(',').filter(Boolean);
     for (const g of groups)
       if (this.ctx.getWebSockets(g).length >= MAX_PER_GROUP) return new Response('group full', { status: 429 });
@@ -177,13 +215,28 @@ export class Lobby {
     if (a.tokens < 1) return;  // too fast: dropped, like a lost Wi-Fi packet
     a.tokens -= 1;
     ws.serializeAttachment(a);
-    if (new Uint8Array(data)[5] === BM_FISH) {  // a device's heaviest fish: kept if it's the heaviest yet, never passed on
+    const type = new Uint8Array(data)[5];
+    if (type === BM_FISH) {  // a device's heaviest fish: the board's, and kept if it's the heaviest yet; never passed on
       const f = fishReport(data);
+      if (!f) return;
+      const day = new Date().toISOString().slice(0, 10);
+      const { fishTop } = await this.board();
+      const id = idHash(new DataView(data).getUint32(6, true)), tag = tagOf(new Uint8Array(data, 34, 12));
+      if (boardAdd(fishTop, { id, tag, score: f.kg10, dex: f.dex, shiny: f.shiny, day })) await this.ctx.storage.put('fishTop', fishTop);
       const best = await this.biggest();
-      if (f && (!best || f.kg10 > best.kg10)) {
-        this.fish = { ...f, day: new Date().toISOString().slice(0, 10) };
+      if (!best || f.kg10 > best.kg10) {
+        this.fish = { ...f, day };
         await this.ctx.storage.put('fish', this.fish);
       }
+      return;
+    }
+    if (type === BM_SCORE) {  // a game's best, with the gamer tag: the board's; never passed on
+      const s = scoreReport(data, MSG_SIZE);
+      if (!s) return;
+      const { scores } = await this.board();
+      const list = scores[s.game] || (scores[s.game] = []);
+      if (boardAdd(list, { id: s.id, tag: s.tag, score: s.score, day: new Date().toISOString().slice(0, 10) }))
+        await this.ctx.storage.put('scores', scores);
       return;
     }
     for (const o of this.others(ws, a.groups)) {

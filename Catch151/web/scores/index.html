@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catch 151 World Board</title>
+<link rel="icon" type="image/png" sizes="16x16" href="../music/brand/catch151-icon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="../music/brand/catch151-icon-32.png">
+<link rel="apple-touch-icon" href="../music/brand/catch151-icon-180.png">
+<meta name="description" content="Catch 151's world board: each minigame's best ten, live from copies of the game everywhere, with the gamer tag that set each one and the day.">
+<!-- The world board, live: the buddy relay keeps each game's best ten (relay/src/board.js) and this page reads them from
+     its /stats. The picture at the top is the relay's /board.svg, the one the README shows. -->
+<style>
+  /* dark, as the soundtrack and the Catch 151 Dex are */
+  :root { color-scheme:dark; --bg:#1b1b25; --ink:#eeeadb; --muted:#a9a7a0; --accent:#ff7a63; --line:#3a3a48; --card:#262633;
+    --gold:#f0c04a; --green:#79bd4f; --tag:#f4ecd8; --tagink:#222230; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; padding-bottom:60px; }
+  a { color:var(--accent); }
+  header, main { max-width:1060px; margin:0 auto; padding:0 16px; }
+  header { padding-top:20px; }
+  h1 { margin:0 0 6px; font-size:1.6rem; }
+  .lede { margin:0; color:var(--muted); max-width:720px; }
+  .live { margin:12px 0 0; font-weight:600; color:#a0dcaa; display:flex; align-items:center; gap:8px; }
+  .live i { width:10px; height:10px; border-radius:50%; background:var(--green); }
+  .board { display:block; width:100%; max-width:760px; height:auto; margin:22px 0 6px; }
+  .games { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px; margin-top:22px; }
+  .game { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px 10px; }
+  .game h2 { margin:0 0 8px; font-size:1.05rem; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  td { padding:5px 4px; border-top:1px solid var(--line); vertical-align:middle; }
+  td.n { color:var(--muted); width:2em; }
+  td.s { color:var(--gold); font-weight:700; text-align:right; white-space:nowrap; }
+  td.s small { display:block; color:var(--muted); font-weight:400; font-size:.75rem; }
+  td.d { color:var(--muted); text-align:right; white-space:nowrap; width:6.5em; font-size:.85rem; }
+  .tag { display:inline-block; min-width:3.4em; text-align:center; font-family:ui-monospace, Menlo, monospace; font-weight:700;
+    background:var(--tag); color:var(--tagink); border-radius:5px; padding:1px 6px; box-shadow:0 0 0 2px #3a4a5a; }
+  .none { color:var(--muted); margin:4px 0; }
+  .err { color:var(--accent); }
+  footer { max-width:1060px; margin:28px auto 0; padding:0 16px; color:var(--muted); font-size:.9rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>World Board</h1>
+  <p class="lede">Each Catch 151 minigame's best ten, live from copies of the game everywhere: the score, the gamer tag that
+    set it, and the day. Make your gamer tag in the game, on the label under GAMES in the Games menu.</p>
+  <p class="live" id="live" hidden><i></i><span></span></p>
+</header>
+<main>
+  <img class="board" src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" height="686"
+    alt="The world board: each game's best, with its gamer tag and day, and how many are playing now">
+  <div class="games" id="games"><p class="none">Loading the board...</p></div>
+</main>
+<footer>
+  <a href="../">Install Catch 151 on a Knomi</a> · <a href="../music/">The soundtrack</a> ·
+  <a href="https://github.com/FedorSosnin/Catch151">Catch 151 on GitHub</a>
+</footer>
+<script>
+// (?relay=http://localhost:8799 reads a relay running on this computer instead: wrangler dev, for trying it out)
+const RELAY = new URLSearchParams(location.search).get('relay') || 'https://catch151-relay.fedor-dd0.workers.dev';
+document.querySelector('.board').src = RELAY + '/board.svg';
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const day = (d) => { const [y, m, dd] = d.split('-'); return `${MONTHS[+m - 1]} ${+dd}, ${y}`; };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+function card(title, rows) {
+  if (!rows.length) return `<section class="game"><h2>${esc(title)}</h2><p class="none">None yet</p></section>`;
+  return `<section class="game"><h2>${esc(title)}</h2><table>${rows.map((r, i) =>
+    `<tr><td class="n">${i + 1}</td><td><span class="tag">${esc(r.tag)}</span></td><td class="s">${r.best}</td><td class="d">${esc(day(r.day))}</td></tr>`
+  ).join('')}</table></section>`;
+}
+async function load() {
+  try {
+    const s = await (await fetch(RELAY + '/stats', { cache: 'no-store' })).json();
+    const live = document.getElementById('live');
+    live.hidden = false;
+    live.querySelector('span').textContent = `${+s.online || 0} playing now`;
+    const b = s.board || { games: [], fish: [] };
+    const by = Object.fromEntries(b.games.map((g) => [g.game, g]));
+    const cards = [0, 2, 3, 4].map((g) => by[g] && card(by[g].name, by[g].top.map((e) => ({ tag: e.tag, best: esc(e.shown), day: e.day }))));
+    cards.push(card('Reel Fishing: biggest fish', b.fish.map((f) => ({
+      tag: f.tag, best: `${(+f.lb).toFixed(1)} lb<small>${f.shiny ? 'shiny ' : ''}${esc(f.kind)}</small>`, day: f.day }))));
+    if (by[6]) cards.push(card(by[6].name, by[6].top.map((e) => ({ tag: e.tag, best: esc(e.shown), day: e.day }))));
+    document.getElementById('games').innerHTML = cards.filter(Boolean).join('');
+  } catch (e) {
+    document.getElementById('games').innerHTML = '<p class="err">The board can\'t be reached right now. Try again in a minute.</p>';
+  }
+}
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

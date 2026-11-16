@@ -66,7 +66,18 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 - **Reeling:** each tap tightens the line by a step, and the fish pulls it back between taps, a little harder or softer on each beat. The **LINE** bar on the right shows it, its white needle rising and sinking: a tap with the needle in the green counts toward landing it (the good taps in the table), and the fish comes in toward the pier as they add up. Over the green, the bar turns red (**SLOWER!**), and the needle reaching the top snaps the line. Under it, the line goes slack (**FASTER!**), and 1.5 seconds slack and it slips off. Now and then the fish thrashes and pulls the line tighter for a moment: the blob flashes just before, so tap slower through it. The hooked fish swells on every beat, and on a computer and the web the fight song plays at its pace, one tap a beat.
 - **The weigh-in:** a fish landed leaps out with its name, then a gold gauge on the left fills to its weight and says how big it is for one of its kind (**A SMALL ONE**, **A GOOD ONE** or **A BIG ONE**), and back in it goes. A giant landed is **THE BIG ONE!**
 - **The score:** the five casts' weights add up against three lines, **bronze at 110 lb, silver at 331 and gold at 661** (50, 150 and 300 kg), and your best total is kept. Weights show in pounds, to a tenth. Joy and speed training come from the total, a point for every 44 lb (20 kg): 2 joy a point (up to +35 in all) and 1 speed training for every 5 points, so every 220 lb.
-- **Your biggest fish:** the heaviest single fish you've landed is kept too, and the weigh-in of one that beats it says **YOUR BIGGEST EVER!** The heaviest anyone has landed shows on the README's **biggest fish** badge (the game tells the buddy relay only the weight and the kind).
+- **Your biggest fish:** the heaviest single fish you've landed is kept too, and the weigh-in of one that beats it says **YOUR BIGGEST EVER!** The heaviest anyone has landed shows on the README's **biggest fish** badge and the World Board (the game tells the buddy relay only the weight, the kind and your gamer tag).
+
+### The World Board and your gamer tag
+
+Each minigame's best ten, from every copy of the game, are on the **[World Board](https://fedorsosnin.github.io/Catch151/scores/)**, with the gamer tag that set each one and the day: Berry Drop's score, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball's score. The README shows each game's best.
+
+- **Your gamer tag:** up to four characters, typed on the keyboard. The game asks for it once, after your first game with a score; after that, the label on the Game Boy under **GAMES** in the Games menu changes it (four bars until you have one). A rude one gets **PICK ANOTHER**, and one that gets through anyway shows as `****` on the board.
+- **What's sent:** your best in each game, your tag, and nothing else about you, when the game reaches the buddy relay, at each game's end, and when your tag changes. Only your best counts, once a game: a better one replaces it.
+
+### The keyboard
+
+Ten keys a row are small on the Knomi, so the keyboard zooms: tap near the letter you want and the keys around it grow about three times wider; tap the big ones to type, as many as you like. The blue down arrow where the X was goes back to the whole keyboard. Shift, ⌫, 123, SPACE and OK work at once on the whole one. Hold a key to see it big over your finger; slide off before you let go to change your mind. The same keyboard types your Pokémon's name, your gamer tag and the Knomi's Wi-Fi password.
 
 ### Pinball
 

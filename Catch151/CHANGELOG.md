@@ -8,6 +8,9 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 
 ## [Unreleased]
 
+- **The World Board:** each minigame's best ten from every copy of the game, with the gamer tag that set each one and the day, on a [page of its own](https://fedorsosnin.github.io/Catch151/scores/), with each game's best on the README: Berry Drop, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball. Each copy sends the buddy relay its bests and its tag, nothing else about you.
+- **Your gamer tag:** up to four characters, asked for once after your first game with a score, and changed from its label on the Game Boy under GAMES in the Games menu. A rude one gets PICK ANOTHER, and one that slips through shows as `****` on the board.
+- **A keyboard you can type on with a finger:** tap near the letter you want and the keys around it zoom in about three times wider; tap the big ones to type as many as you like, and the blue down arrow takes you back to the whole keyboard. For your Pokémon's name, your gamer tag and the Knomi's Wi-Fi password.
 - **The repository's front page:** everything is in one `Catch151` folder now, so the README, its art and its moving pictures come straight after a short list of files instead of a long one. To build it yourself, clone it and work in `Catch151/Catch151`, the Arduino sketch (`Catch151.ino`, which was `PokeKnomiGochi.ino`). Knomis keep updating over Wi-Fi as before, and the Mac and Windows apps too.
 
 ## [2.2.8] - 2026-11-16
