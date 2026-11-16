@@ -259,8 +259,7 @@ static void pbDiglett(bool up, bool hit = false, float timeLeft = 0) {
   pbEllipse(PB_DIG_X, PB_DIG_Y + 1, 12, 4, up ? dirt : 0x1B1B25);
   if (!up) return;
   const uint8_t *t = thumbs.getForm(50, false);
-  fsThumb(t, PB_DIG_X, PB_DIG_Y + 2, 2);
-  if (hit) fsThumb(t, PB_DIG_X, PB_DIG_Y + 2, 2, false, 0xFFFFFF, 110);  // a white flash over it
+  fsThumb(t, PB_DIG_X, PB_DIG_Y + 2, 2);  // always solid: no white wash over it when hit (Fedor: it looked see-through)
   pbEllipse(PB_DIG_X, PB_DIG_Y + 3, 18, 5, dirtLit);  // the dirt round its foot
   if (!hit)
     for (int k = 0; k < 6; k++)  // clods thrown up as it pops out
