@@ -1386,6 +1386,44 @@ static void testKeyboard() {
 // each kind of fish's heaviest since the board started over (Fedor: "a record weight for each type of fish caught"):
 // a new kind takes the next place, a lighter one of a kind is ignored, a heavier one replaces it; each is marked to
 // go to the relay, and every one is when the relay connects (scoreReportAll())
+// a finger acts on the touch, a mouse on the release (Fedor, 2026-11-18: "this instant click feels way better"),
+// here on the name keyboard: a finger's E zooms in, and the zoomed E is typed, while it's still down; a mouse's E is
+// typed (a mouse has no zoom) only when the button comes up
+static void testTapOnTouch() {
+  extern bool kbOpen;
+  extern uint8_t nameLen;
+  extern int16_t v2KbZoomX;
+  auto press = [](int16_t x, int16_t y, bool down) {
+    hostPointer(x, y, down);
+    runTicks(down ? 150 : 300);
+  };
+  hostPointerFinger(true);
+  hostSerialPush("KEYBOARD");
+  runTicks(300);
+  CHECK(kbOpen && v2KbZoomX < 0);
+  int n0 = nameLen;
+  press(133, 146, true);  // a finger on E: zoomed in already
+  CHECK(v2KbZoomX >= 0 && nameLen == n0);
+  press(133, 146, false);  // the lift: nothing more
+  CHECK(v2KbZoomX >= 0 && nameLen == n0);
+  press(233, 150, true);  // the zoomed E: typed on the touch
+  CHECK(nameLen == n0 + 1);
+  press(233, 150, false);
+  CHECK(nameLen == n0 + 1);
+  press(233, 422, true);  // the down arrow: the whole keyboard
+  press(233, 422, false);
+  CHECK(v2KbZoomX < 0 && kbOpen);
+  hostPointerFinger(false);  // a mouse
+  press(133, 146, true);
+  CHECK(nameLen == n0 + 1 && v2KbZoomX < 0);  // held: nothing yet
+  press(133, 146, false);
+  CHECK(nameLen == n0 + 2 && v2KbZoomX < 0);  // released: E, no zoom
+  press(233, 422, true);  // the X
+  CHECK(kbOpen);
+  press(233, 422, false);
+  CHECK(!kbOpen);
+}
+
 static void testFishKinds() {
   extern Pet pet;
   extern void scoreReportAll();
@@ -1479,6 +1517,7 @@ int main() {
   testClock();
   testGame();
   testKeyboard();
+  testTapOnTouch();
   testFishKinds();
   testDexPage();
   printf("host layer: %d checks, %d failures\n", gChecks, gFails);

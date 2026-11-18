@@ -29,6 +29,10 @@ uint8_t clockWifiLastReason();    // the access point's last reason for dropping
 void clockWifiTxApply();          // the saved transmit power, after the radio starts
 void clockWifiSetTxPower(int q);  // quarter dBm (34 = 8.5 dBm), 0 = the default; saved
 int clockWifiTxPower();           // what the radio uses now (quarter dBm)
+void clockWifiRemember(const char *ssid, const char *pass);  // a network it joined: remembered, the most recent first
+bool clockWifiKnown(const char *ssid);                       // one it remembers (the Wi-Fi list marks them)
+bool clockWifiKnownPass(const char *ssid, char *pass, size_t n);  // its saved password
+int clockWifiKnownCount();
 // time zones (timezones.h). Mac, Windows and the web follow the computer's: clockTzIndex() is -1 there
 int clockTzIndex();
 void clockSetTz(int i);          // saved; the local time moves to it at once

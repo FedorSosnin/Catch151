@@ -488,6 +488,7 @@ uint32_t lastInteract = 0;
 uint32_t v2PlayInputAt = 0;  // V2: the last touch, tilt or key held (only time played earns a Repel: repel_v2.h)
 uint8_t dimStage = 0;        // 0 awake, 1 dimmed (90s), 2 nearly off (5min)
 bool swallowGesture = false; // the touch that wakes it does nothing
+extern bool gTapOnDown;       // controls act on a finger's touch, not its lift (handleTouch())
 uint32_t confirmUntil = 0;  // "release?" dialog active until this millis
 #ifdef BOARD_KNOMI_V2
 uint32_t gBtnSimUntil = 0;  // simulated press of the physical button (serial console)
@@ -964,6 +965,11 @@ void handleSerial() {
     clockWifiScanLog();
     Serial.println("DONE");
     return;
+  } else if (line.startsWith("TAPDOWN ")) {  // controls act on the touch (1, the default) or on the lift (0)
+    gTapOnDown = line.substring(8).toInt() != 0;
+    Serial.printf("tap on down: %d\n", gTapOnDown);
+    Serial.println("DONE");
+    return;
   } else if (line.startsWith("TXPOWER ")) {  // the radio's transmit power in quarter dBm (34 = 8.5 dBm), 0 = default; saved
     clockWifiSetTxPower(line.substring(8).toInt());
     Serial.printf("wifi: tx power %d\n", clockWifiTxPower());
@@ -1341,6 +1347,29 @@ bool pressRelease() {
   return picked;
 }
 
+// On a touch screen a control acts the moment the finger touches it, with no press preview (Fedor, 2026-11-18,
+// after trying it on the Knomi: "this instant click feels way better"): the Knomi, the Waveshare, and the web
+// game under a finger. A mouse (the Mac, Windows, the web with a mouse) keeps the preview and acts on the
+// release. Swipes, holds, the pet and buddies act on the lift either way. The console's TAPDOWN 0/1 turns it off.
+bool gTapOnDown = true;
+#ifdef BOARD_HOST
+extern volatile bool gHostFinger;  // (host_runtime.cpp: the web sets it for each press, from its pointer's type)
+static bool tapDownNow() { return gTapOnDown && gHostFinger; }
+#else
+static bool tapDownNow() { return gTapOnDown; }
+#endif
+static bool tapDownDone = false;  // this touch already acted on its way down: the rest of it does nothing
+static void tapDownTry(int16_t x, int16_t y, bool game) {
+  if (!tapDownNow() || swallowGesture) return;
+  PressTarget t;
+  if (!pressTargetAt(x, y, t) || t.soft) return;
+  tapDownDone = true;
+  swallowGesture = true;  // the rest of this touch: no preview, nothing on the lift, whichever screen it lands on
+  if (!game) onTap(x, y);
+  else if (introUp()) introTouch(x, y, x, y, true);
+  else gameTap(x, y);
+}
+
 // the touch is resolved on finger LIFT to tell a tap from a swipe
 void handleTouch() {
   static uint32_t lastPoll = 0;
@@ -1368,19 +1397,25 @@ void handleTouch() {
   int16_t x, y;
   bool pressed = touch.getPoint(&x, &y, 1) > 0;
   if (pressed) v2PlayInputAt = millis();  // V2: a finger on it
+  if (pressed && !wasPressed) tapDownDone = false;
 
 #ifdef BOARD_KNOMI_V2
-  // wifi password: the key lights up under the finger and is pressed on release, so you can
-  // slide to the right one on such a small keyboard
+  // wifi password: a finger presses the key it touches (tapDownNow()); otherwise the key lights up under it and is
+  // pressed on release, so you can slide to the right one
   if (clockOpen && clockPage == 1 && wifiSetupState() == WS_PASS) {
     if (pressed) {
       wakeUI();
-      wifiKbX = x;
-      wifiKbY = y;
-      wifiKbHover = wifiKeyAt(x, y);
+      if (!wasPressed && tapDownNow()) {
+        tapDownDone = true;
+        settingsTap(x, y);
+      } else if (!tapDownDone) {
+        wifiKbX = x;
+        wifiKbY = y;
+        wifiKbHover = wifiKeyAt(x, y);
+      }
     } else if (wasPressed) {
       wifiKbHover = -1;
-      settingsTap(wifiKbX, wifiKbY);
+      if (!tapDownDone) settingsTap(wifiKbX, wifiKbY);  // (not a touch that opened the keyboard on its way down)
     }
     wasPressed = pressed;
     return;
@@ -1412,6 +1447,7 @@ void handleTouch() {
       wakeUI();
       if (runOpen && !introUp() && !swallowGesture) runJump = true;
       if (fishOpen && !introUp() && !swallowGesture) fishTouchDown(x, y);  // a cast, a strike, a reel: on the touch
+      tapDownTry(x, y, true);
     }
     if (pressed) {
       pressUpdate(x, y);
@@ -1447,6 +1483,7 @@ void handleTouch() {
     swallowGesture = (dimStage > 0) || screenOff;  // if it was dark, it only wakes
     screenOff = false;
     wakeUI();
+    tapDownTry(x, y, false);
   } else if (pressed) {  // still held down
     tXl = x;
     tYl = y;

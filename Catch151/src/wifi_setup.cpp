@@ -22,6 +22,7 @@ static int netCount = 0;
 static char trySsid[33], tryPass[64];
 static uint8_t passLen = 0;
 static bool picked = false;
+static bool fromSaved = false;  // the password it tried is the one it remembered, not one just typed
 static wifi_config_t oldCfg;
 
 WifiSetupState wifiSetupState() { return state; }
@@ -103,8 +104,13 @@ void wifiSetupPick(int i) {
   memset(tryPass, 0, sizeof(tryPass));
   passLen = 0;
   picked = true;
+  fromSaved = false;
   if (netOpen[i]) beginTry();
-  else setState(WS_PASS);
+  else if (clockWifiKnownPass(trySsid, tryPass, sizeof(tryPass)) && tryPass[0]) {  // one it remembers: no typing
+    passLen = strlen(tryPass);
+    fromSaved = true;
+    beginTry();
+  } else setState(WS_PASS);
 }
 
 void wifiSetupBackToList() {
@@ -202,7 +208,10 @@ void wifiSetupPoll() {
         Serial.printf("wifi setup: connected, ip=%s\n", WiFi.localIP().toString().c_str());
         bool saved = applyStaConfig(nullptr) && savedSsidIs(trySsid);
         Serial.println(saved ? "wifi setup: saved and verified" : "wifi setup: could not save");
-        if (saved) clockSetWifiSsid(trySsid);
+        if (saved) {
+          clockSetWifiSsid(trySsid);
+          clockWifiRemember(trySsid, tryPass);
+        }
         setState(saved ? WS_OK : WS_FAIL);
       } else if (now - stateT > TRY_TIMEOUT_MS) {
         Serial.printf("[%lu] wifi setup: failed (last reason %u), restoring the previous network\n", (unsigned long)millis(),
@@ -216,8 +225,17 @@ void wifiSetupPoll() {
       if (now - stateT > OK_SHOW_MS) wifiSetupStop();
       break;
     case WS_FAIL:
-      // back to the keyboard with what was typed: the usual case is fixing a typo
-      if (now - stateT > FAIL_SHOW_MS) setState(picked && passLen ? WS_PASS : WS_LIST);
+      // back to the keyboard with what was typed: the usual case is fixing a typo. A remembered password that
+      // failed (it changed?) isn't shown: the keyboard starts empty
+      if (now - stateT > FAIL_SHOW_MS) {
+        bool retype = fromSaved;
+        if (fromSaved) {
+          memset(tryPass, 0, sizeof(tryPass));
+          passLen = 0;
+          fromSaved = false;
+        }
+        setState(picked && (passLen || retype) ? WS_PASS : WS_LIST);
+      }
       break;
     default: break;
   }

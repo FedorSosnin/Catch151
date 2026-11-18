@@ -2633,10 +2633,11 @@ static const char *v2KeyLabel(int c, int L, char *buf) {
 
 #ifdef BOARD_KNOMI_V2  // the Knomi's own Wi-Fi setup
 // the Wi-Fi list (wifi_list()): the networks found, strongest first, in rows in a panel (V1's rows, where its taps
-// are: 5 of 48 from y 88); the one in use is blue. SCAN under them, the page buttons at the sides, the X cancels
+// are: 5 of 48 from y 88); the one in use is blue, and a green tick marks the ones it remembers (picked, they join
+// without the password). SCAN under them, the page buttons at the sides, the X cancels
 #define V2_WIFI_ROW_Y 88  // V1's WIFI_ROW_Y, _H and WIFI_ROWS, defined further down
 #define V2_WIFI_ROW_H 48
-static void v2WifiList(int page, int n, const char *(*net)(int), const char *cur) {
+static void v2WifiList(int page, int n, const char *(*net)(int), const char *cur, bool (*known)(const char *)) {
   v2MenuBackdrop();
   v2Sign("WI-FI");
   int pages = (n + 4) / 5;
@@ -2649,13 +2650,21 @@ static void v2WifiList(int page, int n, const char *(*net)(int), const char *cur
     int y = V2_WIFI_ROW_Y + r * V2_WIFI_ROW_H;
     bool inUse = cur[0] && !strcmp(cur, net(idx));
     gfx->fillRoundRect(98, y, 270, V2_WIFI_ROW_H - 6, 8, inUse ? C565(0x4f, 0x93, 0xc4) : C565(0xee, 0xf2, 0xf8));
+    bool tick = known(net(idx));
     char line[21];
-    strlcpy(line, net(idx), sizeof(line));  // 20 letters fill the row
+    strlcpy(line, net(idx), tick ? 18 : sizeof(line));  // 20 letters fill the row (17 beside a tick)
     bool cjk = classicFontBegin();  // network names are bytes, not the language's
     gfx->setTextColor(inUse ? UI_WHITE : UI_INK);
     setCur(112, y + 13);
     printT(line);
     classicFontEnd(cjk);
+    if (tick) {  // a tick, 3 px thick
+      uint16_t tc = inUse ? UI_WHITE : C565(0x3c, 0x8a, 0x4c);
+      for (int d = 0; d < 3; d++) {
+        gfx->drawLine(337, y + 19 + d, 343, y + 25 + d, tc);
+        gfx->drawLine(343, y + 25 + d, 355, y + 11 + d, tc);
+      }
+    }
   }
   v2LabelButton(179, 333, 287, 367, "SCAN", C565(0x8e, 0x8c, 0x96));  // V1's middle box (its sides turn pages too)
   drawPageArrows(page, pages, V2_PAGE_ARROW_Y);
@@ -2684,7 +2693,7 @@ static void v2WifiKbTap(int16_t x, int16_t y) {
 // what the settings page shows while the Wi-Fi is being set: the list, the keyboard, or how it's going
 static void v2WifiScreen(uint8_t ws) {
   if (ws == WS_LIST) {
-    v2WifiList(wifiListPage, wifiSetupNetCount(), wifiSetupNet, clockWifiSsid());
+    v2WifiList(wifiListPage, wifiSetupNetCount(), wifiSetupNet, clockWifiSsid(), clockWifiKnown);
     return;
   }
   if (ws == WS_PASS) {
@@ -2710,7 +2719,7 @@ static const char *v2HostNet(int i) {
   return i >= 0 && i < 7 ? N[i] : "";
 }
 void v2HostWifiShot(int which) {
-  if (which == 0) v2WifiList(0, 7, v2HostNet, "Home-5G");
+  if (which == 0) v2WifiList(0, 7, v2HostNet, "Home-5G", [](const char *s) { return !strcmp(s, "Home-5G") || !strcmp(s, "Coffee Shop"); });
   else v2Keyboard(which - 1, "< Home-5G", "pika#25", which == 3 ? '#' : -1, which != 4);
 }
 #endif

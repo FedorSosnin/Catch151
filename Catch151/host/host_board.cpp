@@ -158,6 +158,10 @@ uint8_t clockWifiLastReason() { return 0; }
 void clockWifiTxApply() {}
 void clockWifiSetTxPower(int) {}
 int clockWifiTxPower() { return 0; }
+void clockWifiRemember(const char *, const char *) {}
+bool clockWifiKnown(const char *) { return false; }
+bool clockWifiKnownPass(const char *, char *, size_t) { return false; }
+int clockWifiKnownCount() { return 0; }
 bool clockWasSeed() { return false; }
 
 // ---- power: always plugged in ----

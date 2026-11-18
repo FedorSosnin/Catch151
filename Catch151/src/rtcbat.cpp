@@ -12,6 +12,7 @@
 #include <esp_wifi.h>
 #include <time.h>
 #include "timezones.h"
+#include "wifi_known.h"
 #define WIFI_TIMEOUT_MS 30000UL
 #define NTP_RESYNC_MS (24UL * 3600UL * 1000UL)
 #define NTP_RETRY_MS (10UL * 60UL * 1000UL)
@@ -124,7 +125,7 @@ static uint32_t civilEpoch(const struct tm &t) {
   return days * 86400UL + t.tm_hour * 3600UL + t.tm_min * 60UL + t.tm_sec;
 }
 
-enum { CLK_IDLE, CLK_CONNECTING, CLK_WAIT_NTP };
+enum { CLK_IDLE, CLK_CONNECTING, CLK_WAIT_NTP, CLK_SCANNING };
 static uint8_t st = CLK_IDLE;
 static uint32_t t0 = 0, lastTry = 0, wait = 0;
 static bool first = true, paused = false;
@@ -136,6 +137,62 @@ static uint8_t failed = 0;               // failed tries in a row (WIFI_FAILED_R
 
 const char *clockWifiSsid() { return savedSsid; }
 uint8_t clockWifiLastReason() { return lastReason; }
+
+// The networks it remembers (wifi_known.h), the most recent first, in their own namespace: START OVER keeps them,
+// as it keeps the Wi-Fi. An older firmware's one saved network joins the list at the first try.
+static WifiKnown known[WIFI_KNOWN_MAX];
+static int knownN = -1;              // -1: not loaded yet
+static char lastFailed[33] = "";     // the network the last try failed on: the next one tries another it hears
+static void knownLoad() {
+  if (knownN >= 0) return;
+  knownN = 0;
+  memset(known, 0, sizeof(known));
+  Preferences p;
+  if (!p.begin("wifinets", true)) return;  // (no namespace yet)
+  if (p.getBytesLength("list") == sizeof(known)) p.getBytes("list", known, sizeof(known));
+  p.end();
+  while (knownN < WIFI_KNOWN_MAX && known[knownN].ssid[0]) knownN++;
+}
+static void knownSave() {
+  Preferences p;
+  p.begin("wifinets", false);
+  p.putBytes("list", known, sizeof(known));
+  p.end();
+}
+void clockWifiRemember(const char *ssid, const char *pass) {
+  knownLoad();
+  knownN = wifiKnownAdd(known, knownN, ssid, pass);
+  knownSave();
+  lastFailed[0] = 0;
+  Serial.printf("wifi: remembers %d network%s\n", knownN, knownN == 1 ? "" : "s");
+}
+bool clockWifiKnown(const char *ssid) {
+  knownLoad();
+  return wifiKnownFind(known, knownN, ssid) >= 0;
+}
+bool clockWifiKnownPass(const char *ssid, char *pass, size_t n) {
+  knownLoad();
+  int k = wifiKnownFind(known, knownN, ssid);
+  if (k < 0) return false;
+  strlcpy(pass, known[k].pass, n);
+  return true;
+}
+int clockWifiKnownCount() {
+  knownLoad();
+  return knownN;
+}
+// starts a try on the k-th known network (-1: whatever the driver has saved)
+static void joinKnown(int k) {
+  if (k >= 0) {
+    strlcpy(savedSsid, known[k].ssid, sizeof(savedSsid));
+    Serial.printf("[%lu] wifi: trying '%s' (tx %d)\n", (unsigned long)millis(), savedSsid, clockWifiTxPower());
+    WiFi.begin(known[k].ssid, known[k].pass);
+  } else {
+    Serial.printf("[%lu] wifi: no network saved\n", (unsigned long)millis());
+    WiFi.begin();
+  }
+  clockWifiTxApply();
+}
 
 void clockWifiTxApply() {
   if (txPow && WiFi.getMode() != WIFI_OFF) WiFi.setTxPower((wifi_power_t)txPow);
@@ -219,22 +276,56 @@ static bool clockStep() {
       WiFi.mode(WIFI_STA);
       clockWifiHook();
       clockWifiTxApply();
-      {
-        // what the previous firmware saved, passed through again to clear old channel/BSSID
+      knownLoad();
+      if (!knownN) {  // what an older firmware saved: the first network it remembers
         wifi_config_t cfg = {};
         esp_wifi_get_config(WIFI_IF_STA, &cfg);
-        strlcpy(savedSsid, (const char *)cfg.sta.ssid, sizeof(savedSsid));
-        Serial.printf("[%lu] wifi: trying '%s' (tx %d)\n", (unsigned long)millis(), savedSsid, clockWifiTxPower());
-        if (cfg.sta.ssid[0]) WiFi.begin((const char *)cfg.sta.ssid, (const char *)cfg.sta.password);
-        else WiFi.begin();
-        clockWifiTxApply();
+        char s[33] = "", pw[65] = "";
+        memcpy(s, cfg.sta.ssid, 32);
+        memcpy(pw, cfg.sta.password, 64);
+        if (s[0]) clockWifiRemember(s, pw);
+        memset(pw, 0, sizeof(pw));
+        memset(&cfg, 0, sizeof(cfg));
       }
+      if (knownN > 1) {  // more than one: first hear which are around (the scan runs on its own, a second or two)
+        Serial.printf("[%lu] wifi: listening for the %d networks it knows\n", (unsigned long)millis(), knownN);
+        WiFi.scanNetworks(true);
+        st = CLK_SCANNING;
+        return false;
+      }
+      joinKnown(knownN ? 0 : -1);
       st = CONNECTING;
       return false;
+    case CLK_SCANNING: {
+      int n = WiFi.scanComplete();
+      if (n == WIFI_SCAN_RUNNING && now - t0 < 10000) return false;
+      static char names[32][33];
+      static const char *heard[32];
+      static int rssi[32];
+      int h = 0;
+      for (int i = 0; i < n && h < 32; i++) {
+        strlcpy(names[h], WiFi.SSID(i).c_str(), sizeof(names[h]));
+        heard[h] = names[h];
+        rssi[h++] = WiFi.RSSI(i);
+      }
+      WiFi.scanDelete();
+      int k = wifiKnownPick(known, knownN, heard, rssi, h, lastFailed[0] ? lastFailed : nullptr);
+      Serial.printf("[%lu] wifi: heard %d networks\n", (unsigned long)millis(), n < 0 ? 0 : n);
+      joinKnown(k);
+      t0 = now;  // (the try's 30 s start now)
+      st = CONNECTING;
+      return false;
+    }
     case CONNECTING:
       if (WiFi.status() == WL_CONNECTED) {
         failed = 0;
+        lastFailed[0] = 0;
         Serial.printf("wifi ok, ip=%s\n", WiFi.localIP().toString().c_str());
+        int k = wifiKnownFind(known, knownN, savedSsid);
+        if (k > 0) {  // another place's network: the most recent now (saved only when it changes)
+          knownN = wifiKnownAdd(known, knownN, known[k].ssid, known[k].pass);
+          knownSave();
+        }
         configTzTime(TIME_ZONES[tzIdx].posix, "pool.ntp.org", "time.google.com");
         t0 = now;
         st = WAIT_NTP;
@@ -244,6 +335,7 @@ static bool clockStep() {
         Serial.printf("wifi: no connection (reason %u, state %d, saved ssid '%s', password of %u characters), continuing with the internal clock\n",
                       lastReason, (int)WiFi.status(), (const char *)cfg.sta.ssid, (unsigned)strlen((const char *)cfg.sta.password));
         WiFi.mode(WIFI_OFF);
+        strlcpy(lastFailed, savedSsid, sizeof(lastFailed));
         if (failed < 255) failed++;
         wait = failed <= WIFI_FAILED_QUICK ? WIFI_FAILED_RETRY_MS * failed : NTP_RETRY_MS;
         Serial.printf("wifi: trying again in %lu s\n", (unsigned long)(wait / 1000));

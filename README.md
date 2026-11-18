@@ -272,7 +272,7 @@ See [How it works](Catch151/docs/HOW_IT_WORKS.md) for charts of what every actio
 | **Settings** in the ring | The clock and your time zone (or set the time, without Wi-Fi), sound and language; the next page for Wi-Fi and updates; then **About**: the version, and the GitHub and YouTube links as QR codes |
 | **The arrows at the sides**, or a swipe | Turn the pages. "Page 2 of 7" shows where you are |
 | **Tap the round ✕ at the bottom** | Close a menu, the card, the Pokédex or the clock |
-| **Press and slide** | The button under your finger shows large above it. Slide to another one if you missed, and lift to choose |
+| **Tap a button** | It acts the moment you touch it. With a mouse (the Mac, Windows), the button under the pointer shows large above it while you hold: slide to another if you missed, and let go to choose |
 | **Press the button** | Start a wild battle |
 | **Hold the button for 1–3 seconds** | Turn the screen on or off |
 | **Hold the button for 10 seconds** | Asks whether to erase the game and start over |
@@ -418,6 +418,8 @@ Once a day, a wild Pokémon drops by with a candy, a third one for that day, and
 The Knomi has no clock battery, so it gets the time over Wi-Fi. If it was already on your network, it usually reconnects by itself.
 
 To change networks, open **Settings** in the ring, turn to the next page, tap **Change Wi-Fi**, pick your network, and type the password on the screen. A new network is only saved once it connects.
+
+The Knomi remembers the last five networks it joined, so you can carry it between home and work: each time it connects it joins the one it hears best. In the **Change Wi-Fi** list a green tick marks the ones it remembers, and picking one joins it without asking for the password again.
 
 On Wi-Fi the clock sets itself, and swiping down just shows it (**Set by Wi-Fi**). To choose your time zone, tap the city under **Time zone** and use the arrows: each city shows its own time, so pick the one that matches your clock, then tap **OK**. Summer time changes by itself. A new Knomi starts on New York.
 
