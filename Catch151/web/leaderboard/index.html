@@ -9,7 +9,8 @@
 <link rel="apple-touch-icon" href="../music/brand/catch151-icon-180.png">
 <meta name="description" content="Catch 151's leaderboard: each minigame's best ten, live from copies of the game everywhere, with the gamer tag that set each one and the day, and the record for each kind of fish.">
 <!-- The leaderboard, live: the buddy relay keeps each game's best ten (relay/src/board.js) and this page reads them from
-     its /stats. The picture at the top is the relay's /board.svg, the one the README shows. -->
+     its /stats. The picture at the top is the relay's /board.svg, the one the README shows; it has no count of players,
+     so the page's one count is the line above it, from /stats (Fedor: "We dont need two, we need one correct one"). -->
 <style>
   /* dark, as the soundtrack and the Catch 151 Dex are */
   :root { color-scheme:dark; --bg:#1b1b25; --ink:#eeeadb; --muted:#a9a7a0; --accent:#ff7a63; --line:#3a3a48; --card:#262633;
@@ -65,7 +66,7 @@
 </header>
 <main>
   <img class="board" src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" height="686"
-    alt="The leaderboard: each game's best, with its gamer tag and day, and how many are playing now">
+    alt="The leaderboard: each game's best, with its gamer tag and day">
   <div class="games" id="games"><p class="none">Loading the board...</p></div>
   <section class="kinds" id="kinds" hidden>
     <h2>Reel Fishing: the record for each fish</h2>

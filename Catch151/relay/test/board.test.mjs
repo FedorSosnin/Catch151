@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf } from '../src/board.js';
-import { boardPublic, fishReport, FISH } from '../src/index.js';
+import { boardPublic, fishReport, FISH, liveSince } from '../src/index.js';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
@@ -87,9 +87,10 @@ test('the board as /stats shows it hides ids and rude tags, and the picture is d
   assert.equal(b.games.find((g) => g.game === 2).top[0].shown, '3:42');
   assert.deepEqual(b.fish, [{ tag: 'ZOE', lb: 551.2, kind: 'Gyarados', shiny: false, day: '2026-11-16' }]);
   assert.ok(!JSON.stringify(b).includes('"id"'));
-  const svg = boardSvg(7, b);
+  const svg = boardSvg(b);
   assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'));
-  assert.ok(svg.includes('7 playing now') && svg.includes('<image') && svg.includes('id="c87"'));  // a W, drawn
+  assert.ok(svg.includes('<image') && svg.includes('id="c87"'));  // a W, drawn
+  assert.ok(!/playing/i.test(svg) && !svg.includes('<circle'));  // no count of players: the page has the one
 });
 
 test('the first of a game is told so: a BM_SCORE from the relay to it, as src/buddy.h reads one', () => {
@@ -137,4 +138,12 @@ test('each kind of fish\'s record: the heavier takes it, a tie stays with the fi
   assert.deepEqual(b.kinds.find((k) => k.dex === 90), { dex: 90, kind: 'Shellder', lb: null });  // none landed yet
   assert.equal(b.kinds.find((k) => k.dex === 130).shiny, true);
   assert.ok(!JSON.stringify(b).includes('"id"'));
+});
+
+test('the count of players: only connections heard from in the last two minutes (a ping is every 45 s)', () => {
+  const now = 1_800_000_000_000;
+  assert.ok(liveSince(now - 45_000, 0, now));            // pinged a moment ago
+  assert.ok(liveSince(0, now - 5_000, now));             // just connected, or just sent something
+  assert.ok(!liveSince(now - 180_000, now - 300_000, now));  // Wi-Fi gone, the connection not closed yet
+  assert.ok(!liveSince(0, 0, now));
 });

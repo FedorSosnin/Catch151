@@ -148,8 +148,10 @@ function glyph(code) {
 }
 export const textW = (s, k) => s.length * 6 * k - k;
 
-// the board as SVG: stats is /stats's { online, board } (board: { games: [{ game, top }], fish: [...] })
-export function boardSvg(online, board) {
+// the board as SVG, from /stats's board ({ games: [{ game, top }], fish: [...] }). No count of players: kept five
+// minutes, it disagreed with the leaderboard page's own, kept one (Fedor, 2026-11-18: "We dont need two, we need
+// one correct one"); the page and the README's badge show /stats's
+export function boardSvg(board) {
   const used = new Set();
   const out = [];
   const text = (x, y, s, k, fill) => {
@@ -180,9 +182,6 @@ export function boardSvg(online, board) {
   const tw = textW('LEADERBOARD', 4) + 44;
   out.push(`<rect x="32" y="30" width="${tw + 8}" height="52" fill="#3a2414"/><rect x="36" y="34" width="${tw}" height="44" fill="#8a5a30"/><rect x="40" y="36" width="${tw - 8}" height="3" fill="#b07a45"/>`);
   text(58, 42, 'LEADERBOARD', 4, CREAM);
-  const live = `${online} PLAYING NOW`, lx = W - 40 - textW(live, 2);
-  out.push(`<circle cx="${lx - 19}" cy="54" r="7" fill="#58b868"/>`);
-  text(lx, 47, live, 2, '#a0dcaa');
   for (const [x, s] of [[116, 'GAME'], [380, 'BEST'], [566, 'TAG'], [640, 'DATE']]) text(x, 104, s, 2, MUTED);
   out.push(`<rect x="28" y="124" width="${W - 56}" height="2" fill="${LINE}"/>`);
   rows.forEach((r, i) => {
@@ -207,5 +206,5 @@ export function boardSvg(online, board) {
   text((W - textW(foot, 1)) / 2, H - 32, foot, 1, MUTED);
   const defs = [...used].map((c) => `<path id="c${c}" d="${glyph(c)}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">` +
-    `<title>${esc(`Catch 151 leaderboard: ${online} playing now`)}</title><defs>${defs}</defs>${out.join('')}</svg>`;
+    `<title>Catch 151 leaderboard</title><defs>${defs}</defs>${out.join('')}</svg>`;
 }

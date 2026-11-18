@@ -40,6 +40,9 @@ const RATE_PER_S = 8;      // the game sends a few messages a second at most, du
 const BURST = 16;
 const STATS_CACHE_S = 60;  // the count is kept a minute: looking often doesn't wake the lobby each time
 const BOARD_CACHE_S = 300; // the board's picture: five minutes (GitHub keeps its own copy a while too)
+const LIVE_MS = 120000;     // a connection counts as a player on now when heard from within this (pings: 45 s)
+// heard from lately: its last ping answered (pong) or its last message (at), within LIVE_MS of now
+export const liveSince = (pong, at, now) => Math.max(pong, at) > now - LIVE_MS;
 
 // Reel Fishing (src/fishing.h): the Beach's water Pokemon and their Pokedex weights in tenths of a kg. A fish
 // weighs 0.8 to 1.2 times its kind's, so a report over 1.2 times can't be real and is ignored
@@ -109,7 +112,7 @@ export default {
         // (board: none from a lobby still on the code from before the leaderboard, for a moment after a deploy)
         const { online, fish, board = { games: [], fish: [], kinds: [] } } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
         const big = fish && FISH[fish.dex] ? { lb: lb(fish.kg10), kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
-        res = new Response(svg ? boardSvg(online, board) : JSON.stringify({ online, fish: big, biggest: fishText(fish), board }), {
+        res = new Response(svg ? boardSvg(board) : JSON.stringify({ online, fish: big, biggest: fishText(fish), board }), {
           headers: {
             'content-type': svg ? 'image/svg+xml' : 'application/json',
             'cache-control': `public, max-age=${svg ? BOARD_CACHE_S : STATS_CACHE_S}`,
@@ -184,7 +187,7 @@ export class Lobby {
       const { scores, fishTop, fishKinds } = await this.board();
       const f = fishTop[0];  // the biggest fish (the README's badge): the board's first
       const fish = f ? { kg10: f.score, dex: f.dex, shiny: f.shiny, day: f.day } : null;
-      return Response.json({ online: this.ctx.getWebSockets().length, fish, board: boardPublic(scores, fishTop, fishKinds) });
+      return Response.json({ online: this.liveCount(Date.now()), fish, board: boardPublic(scores, fishTop, fishKinds) });
     }
     const groups = (request.headers.get('X-Groups') || '').split(',').filter(Boolean);
     for (const g of groups)
@@ -195,6 +198,18 @@ export class Lobby {
     server.serializeAttachment({ groups, tokens: BURST, at: Date.now() });
     this.announce(groups);
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  // the players on now: connections heard from in the last LIVE_MS (a device pings every 45 s), so one whose
+  // Wi-Fi dropped without saying goodbye, still open here for a while, isn't counted
+  liveCount(now) {
+    let n = 0;
+    for (const ws of this.ctx.getWebSockets()) {
+      const pong = this.ctx.getWebSocketAutoResponseTimestamp(ws);
+      const a = ws.deserializeAttachment() || {};
+      if (liveSince(pong ? pong.getTime() : 0, a.at || 0, now)) n++;
+    }
+    return n;
   }
 
   // everyone sharing a group with ws (itself and one that is leaving excluded), each once
