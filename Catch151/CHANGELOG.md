@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.11] - 2026-11-18
 
 - **A record for each fish:** the [leaderboard page](https://fedorsosnin.github.io/Catch151/leaderboard/) lists all 23 kinds of fish in Reel Fishing, each with the heaviest anyone has landed, the gamer tag and the day; the ones nobody has caught yet wait there too. Your game sends the heaviest of each kind you land (your biggest fish since the board started over counts for its kind).
 - **Shiny music:** a shiny wild Pokémon gets the legendary battle music.
