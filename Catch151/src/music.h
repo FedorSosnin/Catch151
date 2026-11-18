@@ -7,7 +7,7 @@
 
 enum MusicTrack : uint8_t {
   MUS_NONE,
-  MUS_HELLO,   // choosing a starter, picking an egg
+  MUS_HELLO,   // choosing a starter or the next Pokemon
   MUS_HOME,    // the home by day
   MUS_NIGHT,   // ...in the evening and at night, the pet awake
   MUS_MENU,    // the card, the Pokedex, the trophies, settings, buddies, the games menu

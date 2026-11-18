@@ -23,7 +23,7 @@ python3 test/test_tools.py    # only the tools/ scripts
 
 | File | What it checks |
 |---|---|
-| `test_pet.cpp` | egg and starter choice, feeding, stat tick, sleep, neglect, levels, evolution (including Eevee's branch), battle stats, training and minigame, streak and bond, badges, ceremonies, offline progression and saving to NVS |
+| `test_pet.cpp` | the starter and next-Pokémon choice, feeding, stat tick, sleep, neglect, levels, evolution (including Eevee's branch), battle stats, training and minigame, streak and bond, badges, ceremonies, offline progression and saving to NVS |
 | `test_dex.cpp` | Pokedex integrity: ASCII names, evolution chains without loops, every species reachable, no line impossible to complete, UI buffer limits |
 | `test_i18n.cpp` | every language complete, and with the same `%u`/`%s` that the sketch passes in each call (the GFX font is ASCII, so the Latin-script languages carry no accents) |
 | `test_tools.py` | the `tools/` scripts compile, the Pokedex data is consistent, and `dex.h` still matches what `tools/gen_dex.py` generates |

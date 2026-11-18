@@ -388,7 +388,7 @@ class TestDexPage(unittest.TestCase):
             self.assertTrue(unit and per > 0 and gain > 0, name)
 
     def test_where_they_are_caught(self):
-        # no eggs: a Search finds each in its zone (zones.h's ZONE_OF), each zone's legend apart (ZONE_LEGEND), and
+        # a Search finds each in its zone (zones.h's ZONE_OF), each zone's legend apart (ZONE_LEGEND), and
         # the four starters (starter_v2.h) are the game's own
         def src(name):
             with open(os.path.join(ROOT, 'src', name), encoding='utf-8') as f:

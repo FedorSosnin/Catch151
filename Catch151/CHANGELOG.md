@@ -162,7 +162,7 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 A new look for every screen, on the Knomi, Mac, Windows and the web. Your Pokémon, Pokédex and medals carry over.
 
 - **A world that walks with you:** your Pokémon walks toward you while its home slides by, in five hand-drawn zones (Field, Forest, Beach, Cave and Mansion), the ones outdoors at day, dusk and night.
-- **Choose your starter:** Bulbasaur, Charmander, Squirtle and Pikachu walk up to meet you. No more eggs: once a Pokémon has been offered its goodbye, you choose your next from any first form in your Pokédex, shinies included, and the old one walks off over the hill.
+- **Choose your starter:** Bulbasaur, Charmander, Squirtle and Pikachu walk up to meet you. Once a Pokémon has been offered its goodbye, you choose your next from any first form in your Pokédex, shinies included, and the old one walks off over the hill.
 - **Items:** an **Ultra Ball** every 25 battles fought to the end (it triples your catch chance), a **Master Ball** every 100 (it always catches) and a **Repel** every 20 minutes of mini games (weaker wild Pokémon stay away for 3 minutes). Each has its own page on the card.
 - **Catching:** the balls you hold sit in a row; tap one to throw it. With a Master and an Ultra Ball, the Poké Ball sits in the middle. A ball that hits drops to the ground before the count.
 - **The backpack:** berries, candy and Repels on a curved band that slides up out of the bag, its tail pointing into it, spaced out so each is easy to tap; a berry drops onto your Pokémon and it hops. It stays open until you close it.
@@ -265,7 +265,7 @@ A new look for every screen, on the Knomi, Mac, Windows and the web. Your Pokém
 
 ## [1.41] - 2026-11-05
 
-- **Pokédex stars:** every form in the Pokédex has 1–3 ★, its genes kept simple (regular and shiny apart). Every wild win can now be caught, even a Pokémon you have, and after the ball holds, a screen of its own shows the Pokémon and its stars until you tap its ✕: a new form joins, a better one replaces your weaker one ("New best!"), and one that isn't better goes back to the wild. Stars show on each Pokédex page (where the sprites are now bigger), in trades and when you choose your next Pokémon, and a 3★ form hatches a 3★ Pokémon. Your Pokédex is kept as it is: each form you already have gets its stars once, the one you're raising from its own genes.
+- **Pokédex stars:** every form in the Pokédex has 1–3 ★, its genes kept simple (regular and shiny apart). Every wild win can now be caught, even a Pokémon you have, and after the ball holds, a screen of its own shows the Pokémon and its stars until you tap its ✕: a new form joins, a better one replaces your weaker one ("New best!"), and one that isn't better goes back to the wild. Stars show on each Pokédex page (where the sprites are now bigger), in trades and when you choose your next Pokémon, and a 3★ form gives you a 3★ Pokémon. Your Pokédex is kept as it is: each form you already have gets its stars once, the one you're raising from its own genes.
 - **Five icons on the home screen:** berries, a new handheld for the mini games, the Poké Ball for battles, the moon and the bath, evenly spaced along the bottom. The Poké Ball goes straight to the zones on every device, and Back from the zones goes home. The Games menu is just the four mini games, in the same order everywhere: Tilt Catch, Who's That?, PokeRun, PokeDungeon. The bars and the food picker sit a little higher to make room.
 - **Medal banners show up again:** a medal or streak earned away from the home screen (in a battle, a mini game, the Pokédex) used to time out unseen. The banner now waits and slides down when you're back home.
 - **Mansion:** the little ghost at the right of its picture is gone.
@@ -280,8 +280,8 @@ A new look for every screen, on the Knomi, Mac, Windows and the web. Your Pokém
 
 ## [1.39] - 2026-11-04
 
-- **Your next Pokémon is a first form:** after a goodbye or letting one go, the Pokédex grid you choose from shows only first forms, since the new one hatches from an egg: Pikachu, not Raichu.
-- **Pick a shiny:** a shiny in your Pokédex is its own square with sparkles there, and picking it hatches a shiny for sure. A regular one still has its 1 in 4 chance.
+- **Your next Pokémon is a first form:** after a goodbye or letting one go, the Pokédex grid you choose from shows only first forms, since the new one starts from the beginning: Pikachu, not Raichu.
+- **Pick a shiny:** a shiny in your Pokédex is its own square with sparkles there, and picking it gives you a shiny for sure. A regular one still has its 1 in 4 chance.
 - **Levels stop at 100:** past that a Pokémon would be too strong to battle, so it stays at 100; one that is already older comes back to 100 and stays. The progress page shows a full bar and MAX.
 - **Level 100 medals:** a new page of achievements for raising 3, 5 and 10 Pokémon to level 100. Each Pokémon counts once, the one you have now too when it's already there.
 - **Poké Ball Volley:** your Pokémon runs left and right as you move it and faces you when it stands still, on the ground instead of just above it.
@@ -365,7 +365,7 @@ A new look for every screen, on the Knomi, Mac, Windows and the web. Your Pokém
 
 ## [1.26] - 2026-11-03
 
-- **A close button everywhere:** a round gray ✕ at the bottom of every menu and screen closes it: the games menu, the card, the Pokédex, the zones, the clock and settings, the buddy menu, Play together, the egg choice and trades. It replaces "tap: back", "swipe up to go back" and the Back buttons. Swipes still work, and games in play still quit with a swipe up.
+- **A close button everywhere:** a round gray ✕ at the bottom of every menu and screen closes it: the games menu, the card, the Pokédex, the zones, the clock and settings, the buddy menu, Play together, the choice of your next Pokémon and trades. It replaces "tap: back", "swipe up to go back" and the Back buttons. Swipes still work, and games in play still quit with a swipe up.
 - **Achievements get their own screen:** swipe from right to left on the home screen. Every medal, at most 6 to a page in a 2×3 grid so none is cut off, earned ones green with a white check mark.
 - **Swipes:** from left to right opens the Pokédex, from right to left the achievements, up the card (now profile, stats and progress) and down the clock.
 - **Battle Wins:** the stats page says "Battle Wins", higher up and with a trophy.
@@ -444,7 +444,7 @@ A new look for every screen, on the Knomi, Mac, Windows and the web. Your Pokém
 - **PokeDungeon:** explore floor after floor with your own Pokémon. Tap to step or fight, find the stairs, and see how deep you get.
 - **Shiny odds:** the next Pokémon has a 25% shiny chance after a goodbye or release.
 - **Run-away:** the button now asks first, and offers to take care of the Pokémon instead of letting it go.
-- **Next Pokémon:** after a goodbye or release, choose your next Pokémon from your Pokédex. A run-away still gives a random common egg.
+- **Next Pokémon:** after a goodbye or release, choose your next Pokémon from your Pokédex. A run-away still gives a random common Pokémon.
 - **Moves:** every Pokémon fights with its own level-up moves from Red and Blue, instead of one move per type.
 - **Catch results:** each throw ends in a large banner, and a missed ball visibly bounces away.
 - **Catching:** winning no longer registers a species; lean to steer a thrown Poké Ball at it.
@@ -728,9 +728,9 @@ Diagnosed by @djyf1.
 
 ### Fixed
 
-- **The egg hatched by itself during starter selection.** Game time kept running
-  while the starter screen was open, so taking more than 3 minutes to choose
-  meant the egg hatched into the species already rolled — no egg animation, and
+- **The new Pokémon arrived by itself during starter selection.** Game time kept
+  running while the starter screen was open, so taking more than 3 minutes to
+  choose meant it arrived as the species already rolled, with no animation, and
   the player's choice ignored. Three community reports matched (Pikachu twice,
   Eevee once). Time now freezes until a starter is chosen.
 

@@ -22,8 +22,6 @@ enum StrId : STRID_BASE {
   S_EXHAUSTED, S_SAD, S_CHUBBY, S_IS_SHINY, S_HAPPY,
   // goodbye ceremonies
   S_FAREWELL, S_RUNAWAY, S_GOODBYE,
-  // egg
-  S_EGG_HDR, S_EGG_LEGEND, S_EGG_RARE, S_EGG_TOUCH, S_EGG_MOVES, S_EGG_ALMOST,
   // shared formats
   S_POKEDEX_FMT,   // "POKEDEX %u/151"
   S_NAME_FMT,      // "%s%s Nv.%u"

@@ -372,16 +372,6 @@ def blastoise():
 
 # ------------------------------------------------------------------ generic
 
-def egg():
-    g = G()
-    g.disk(16, 17, 8.6, 11.0, 'y', 'Y')
-    g.outline()
-    g.rect(12, 11, 13, 12, 'g'); g.px(12, 13, 'g')
-    g.rect(19, 16, 20, 17, 'g'); g.px(20, 18, 'g')
-    g.rect(13, 22, 14, 23, 'g')
-    return g.rows()
-
-
 def poop():
     g = G()
     g.disk(16, 24, 7.0, 4.4, 'c', 'C')
@@ -808,7 +798,6 @@ SPRITES = {
     "BLASTOISE": blastoise(),
     "ICON_PLAY": icon_play(),
     **HAND_ICONS,
-    "EGG": egg(),
     "POOP": poop(),
     "HEART": heart(),
     "RUN_ROCK": run_rock(),

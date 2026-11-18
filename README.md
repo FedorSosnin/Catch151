@@ -229,10 +229,10 @@ You need a BTT Knomi V2, a USB-C data cable, and Chrome or Edge on a computer.
 Don't have a Knomi yet? **[Get the BIGTREETECH Knomi V2](https://www.awin1.com/pclick.php?p=43148197656&a=2034499&m=95665)**. This is an affiliate link from [deals.3dprintsos.com](https://deals.3dprintsos.com): buying through it supports this project at no extra cost to you.
 
 1. Plug in the Knomi.
-2. Open the **[web installer](https://fedorsosnin.github.io/Catch151/)** and click **Install**.
+2. Open the **[web installer](https://fedorsosnin.github.io/Catch151/)** and click **Install or update**.
 3. Pick the USB serial port and wait a few minutes.
 
-**Updating later:** run the installer again and leave **Erase device** unticked. That keeps your Pokémon and your Wi-Fi.
+**Updating later:** a Knomi on Wi-Fi updates itself. To update one by USB, use the same page and button, and leave **Erase device** unticked. That keeps your Pokémon and your Wi-Fi.
 
 This replaces the printer-status firmware on the Knomi. To return to it, see [Going back to the stock firmware](#going-back-to-the-stock-firmware).
 
@@ -250,6 +250,7 @@ esptool --port YOUR_PORT write-flash 0x0 bootloader.bin 0x8000 partitions.bin 0x
 |---|---|
 | No port appears | Use a different USB-C cable, because many only charge. On macOS or Windows you may also need the driver from the [CH340 page](https://www.wch-ic.com/products/CH340.html). |
 | The port is busy | Close anything else using it, such as a serial monitor or Klipper. |
+| It won't connect, or the install doesn't start | Hold down the Knomi's button (its BOOT button) while you click **Install or update** and pick the port, and keep holding it until the install starts. |
 | It fails partway | Run it again. A failed install won't damage the Knomi. |
 | The clock is wrong | Put it on Wi-Fi and pick your time zone. See [Wi-Fi and the clock](#wi-fi-and-the-clock). |
 

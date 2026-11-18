@@ -20,7 +20,7 @@ static const char *const TRACK_IDS[MUS_COUNT] = {
 
 // where each plays (music.h)
 static const char *const TRACK_WHERE[MUS_COUNT] = {
-  "", "Choosing a starter, picking an egg", "Home, by day (fades out after 2 minutes untouched)",
+  "", "Choosing a starter or your next Pokemon", "Home, by day (fades out after 2 minutes untouched)",
   "Home, dusk to dawn, the pet awake: the same tune, slower", "The card, the Pokedex, trophies, settings, buddies, the games menu",
   "Knomi Island", "Knomi Tower, outside and between floors", "A battle in the Forest",
   "A battle at the Beach", "A battle in the Cave", "A battle in the Mansion", "A battle in the Field",

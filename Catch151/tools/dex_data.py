@@ -185,7 +185,7 @@ DEX = [
     (151, 'mew', 'MEW', 'psychic', 0, 0),
 ]
 
-# the first egg of a game is always a classic starter
+# the first Pokémon of a game is always a classic starter
 CLASSIC = [1, 4, 7, 25, 133]
 
 # rarities of the base forms (any base form not listed here = common)

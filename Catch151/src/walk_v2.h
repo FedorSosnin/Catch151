@@ -332,7 +332,7 @@ uint32_t v2HostWalkMs() { return v2WalkMs; }
 bool v2HostWalking() { return v2Walking; }
 #endif
 #ifdef BOARD_HOST
-// for the screenshot tool: a zone's still scene (the one an egg has, and what the walk's layers come from)
+// for the screenshot tool: a zone's still scene (the one with no Pokemon yet, and what the walk's layers come from)
 void v2HostStillScene(int zone, int tod) {
   v2SceneKey = -1;
   scPaint(zone, tod);

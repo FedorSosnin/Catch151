@@ -126,7 +126,7 @@ def main():
         "  const char *name;\n"
         "  uint8_t evolvesTo;    // dex number, 0 = final form\n"
         "  uint8_t evolveLevel;\n"
-        "  uint8_t rarity;       // hatches from an egg if > 0\n"
+        "  uint8_t rarity;       // 0 common, then rare and legendary\n"
         "  uint16_t accent;      // RGB565 type color for the UI\n"
         "  uint8_t bHp, bAtk, bDef, bSpe;  // real gen 1 base stats\n"
         "  uint8_t biome;        // 0 meadow 1 beach 2 forest 3 volcano 4 mountain 5 snow\n"
@@ -188,7 +188,7 @@ def main():
         "  return n ? n : DEX_TBL[dex].name;\n"
         "}\n\n")
 
-    out.append("// the first egg of a game: classic starters\n")
+    out.append("// the first Pokemon of a game: classic starters\n")
     out.append("static const int16_t CLASSIC_DEX[] = { %s };\n" % ", ".join(map(str, CLASSIC)))
     out.append(f"#define NUM_CLASSIC_DEX {len(CLASSIC)}\n")
     from collections import Counter

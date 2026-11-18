@@ -16,7 +16,7 @@
 //             empty for Ditto, which copies its foe's)
 //   zones    where they're caught (zones.h): names, the five zones in Z_* order; legends, ZONE_LEGEND (each zone's
 //           legend, turning up on legendPermil Searches in 1000 there, from the first); starters, the four you can
-//           start with (starter_v2.h's V2_STARTERS). There are no eggs: everyone else is caught
+//           start with (starter_v2.h's V2_STARTERS). Everyone else is caught
 //   catch    the chances of each catch (Pet::rollStars(), WILD_SHINY_PCT): shiny, its % of the wild ones; stars, the %
 //           of catches with 1, 2 and 3 stars; searchLevel (each zone's) and wildLevel, the level from which every one
 //           turns up on a Search there or in a Wild Encounter (dexOddsLevel()); legend, [the level, the Pokemon you

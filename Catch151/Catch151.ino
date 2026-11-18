@@ -124,7 +124,7 @@ PmdMon galleryShinyPmd;  // the entry's shiny, next to the regular one when both
 bool galleryOpen = false;
 bool galleryDirty = false;
 int galleryPage = 0;        // 17 pages of 9
-int eggPickPage = 0;        // egg choice: grid with only what is registered
+int eggPickPage = 0;        // choosing the next Pokemon: grid with only what is registered
 int16_t eggPickDetail = 0;
 bool eggPickShiny = false;  // the chosen form is the shiny one
 bool eggPickDirty = true;
@@ -457,9 +457,6 @@ int buttonAt(int16_t x, int16_t y) {
   return best;
 }
 
-// egg cracks ('k' pixels over the sprite)
-static const uint8_t CRACK1[][2] = { {15,8},{16,9},{15,10} };
-static const uint8_t CRACK2[][2] = { {11,13},{12,14},{11,15},{20,12},{19,13},{20,14} };
 // night mode stars
 static const uint16_t STARS[][2] = { {120,140},{330,120},{370,210},{95,230},{280,90},{160,95} };
 
@@ -1216,14 +1213,6 @@ void handleSerial() {
     galleryDirty = true;
     if (!galleryOpen) galleryUnload();
     Serial.println("DONE");
-  } else if (line == "EGGS") {
-    // simulates 20 egg rolls (doesn't change the game state)
-    for (int i = 0; i < 20; i++) {
-      int16_t d = pet.pickEggSpecies();
-      Serial.printf("%d:%s(r%u) ", d, DEX_TBL[d].name, DEX_TBL[d].rarity);
-    }
-    Serial.println();
-    Serial.println("DONE");
   } else if (line == "SHINY") {  // toggles shiny on the current one (testing)
     pet.shiny = !pet.shiny;
     Serial.printf("shiny=%d\n", pet.shiny);
@@ -1819,11 +1808,7 @@ void onTap(int16_t x, int16_t y) {
     }
     return;
   }
-  if (pet.isEgg()) {
-    pet.eggTap();
-    sfxPlay(SFX_TAP);
-    return;
-  }
+  if (pet.isEgg()) return;  // (no Pokemon yet: nothing to tap)
   if (homeModalTap(x, y)) return;  // a medal, evolving or the goodbye is up: it answers, nothing behind
   if (partyPillAt(x, y)) {  // the Party Boost button
     sfxPlay(SFX_TAP);
@@ -2386,21 +2371,8 @@ bool render() {
     return true;
   }
 
-  if (pet.isEgg()) {
-    drawHeader(T(S_EGG_HDR), inkColor(), eggMsg(), nullptr);
-    int s = 5, x = CX - 16 * s, y = PET_CY - 16 * s;
-    drawMap(SPR_EGG, SPRITE_H, x, y, s, false);
-    if (pet.eggCracks() >= 1)
-      for (auto &c : CRACK1) gfx->fillRect(x + c[0] * s, y + c[1] * s, s, s, INK_K);
-    if (pet.eggCracks() >= 2)
-      for (auto &c : CRACK2) gfx->fillRect(x + c[0] * s, y + c[1] * s, s, s, INK_K);
-    if (pet.eggRarity() >= R_RARE) {
-      const char *rar = (pet.eggRarity() == R_LEGENDARY) ? T(S_EGG_LEGEND) : T(S_EGG_RARE);
-      gfx->setTextColor(pet.eggRarity() == R_LEGENDARY ? UI_BAR_WARN : 0x4C98);
-      setSize(2);
-      setCur(centerX(rar, 2), HOME_PANEL_Y + 4);
-      printT(rar);
-    }
+  if (pet.isEgg()) {  // (never shown: a pick screen comes first, and an older save's waiting one arrives at once)
+    drawHeader("", inkColor(), "", nullptr);
     char reg[24];
     snprintf(reg, sizeof(reg), T(S_POKEDEX_FMT), pet.registeredCount());
     gfx->fillRect(0, HOME_PANEL_Y, 466, 466 - HOME_PANEL_Y, gNight ? UI_BG_NIGHT : UI_BG_DAY);
@@ -3381,7 +3353,7 @@ void closeBattle() {
   if (bZone >= 0) zoneBattleEnded();
   if (bFromIsland) {
     bFromIsland = false;
-    zoneScreen = ZS_PICK;  // (asleep, a farewell or an egg shuts it again: zone render)
+    zoneScreen = ZS_PICK;  // (asleep, a farewell or no Pokemon yet shuts it again: zone render)
   }
 }
 
@@ -6374,8 +6346,8 @@ void galleryTap(int16_t x, int16_t y) {
   dexDetailLoad(dex);
 }
 
-// ---------- egg choice ----------
-// same grid as the Pokedex, but without gaps: only base forms already registered (an egg hatches at level 1)
+// ---------- choosing the next Pokemon ----------
+// same grid as the Pokedex, but without gaps: only base forms already registered (the new one starts at level 1)
 
 #define PICK_BTN_Y 316
 #define PICK_BTN_H 56
@@ -6862,7 +6834,7 @@ void buddySelect(int i) {
 
 void drawBuddyPet(uint32_t now) {
   int n = partyOthers(), k = 0;
-  if (!partyBuddies()) return;  // not standing on the main screen right now (an egg, a farewell)
+  if (!partyBuddies()) return;  // not standing on the main screen right now (no Pokemon yet, a farewell)
   for (int i = 0; i < BUDDY_MAX; i++) {
     if (!bPeers[i].on) continue;
     k++;  // party slot: in arrival-slot order, after yours
@@ -8583,14 +8555,6 @@ void overlayMouth(const Species &sp, int x, int y, int s, bool open) {
 
 void drawPoops() {
   v2DrawPoops(pet.poops, partyOthers() > 0);  // V2: its own, on the grass round your Pokemon (scene_v2.h)
-}
-
-const char *eggMsg() {
-  switch (pet.eggCracks()) {
-    case 0: return T(S_EGG_TOUCH);
-    case 1: return T(S_EGG_MOVES);
-    default: return T(S_EGG_ALMOST);
-  }
 }
 
 const char *statusMsg() {

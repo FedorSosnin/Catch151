@@ -1059,7 +1059,7 @@ static void v2DrawFoodPicker(int) {
 
 typedef uint32_t Rgb;
 #define V2_W 466
-#define Z_MEADOW 5  // after the five zones: the egg's
+#define Z_MEADOW 5  // after the five zones: while there's no Pokemon yet
 static inline uint16_t sc565(Rgb c) { return ((c >> 8) & 0xF800) | ((c >> 5) & 0x07E0) | ((c >> 3) & 0x1F); }
 static inline Rgb scRgb(int r, int g, int b) {
   r = r < 0 ? 0 : r > 255 ? 255 : r;
@@ -1593,7 +1593,7 @@ static uint8_t v2HourTod() {
   if (h < 6 || h >= 20) return 2;
   return (h < 8 || h >= 18) ? 1 : 0;
 }
-// the home's zone (an egg's is the meadow) and its time of day: night too while it sleeps
+// the home's zone (with no Pokemon yet, the meadow) and its time of day: night too while it sleeps
 static uint8_t v2HomeZone() { return pet.isEgg() ? Z_MEADOW : zoneOf(pet.speciesId); }
 // the species shown by name while it evolves: the form it's leaving (evoPmd), until it has evolved (Fedor: "during
 // the evolution it said Venusaur is evolving")

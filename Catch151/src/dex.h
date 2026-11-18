@@ -14,7 +14,7 @@ struct DexEntry {
   const char *name;
   uint8_t evolvesTo;    // dex number, 0 = final form
   uint8_t evolveLevel;
-  uint8_t rarity;       // hatches from an egg if > 0
+  uint8_t rarity;       // 0 common, then rare and legendary
   uint16_t accent;      // RGB565 type color for the UI
   uint8_t bHp, bAtk, bDef, bSpe;  // real gen 1 base stats
   uint8_t biome;        // 0 meadow 1 beach 2 forest 3 volcano 4 mountain 5 snow
@@ -359,6 +359,6 @@ static inline const char *dexName(int16_t dex) {
   return n ? n : DEX_TBL[dex].name;
 }
 
-// the first egg of a game: classic starters
+// the first Pokemon of a game: classic starters
 static const int16_t CLASSIC_DEX[] = { 1, 4, 7, 25, 133 };
 #define NUM_CLASSIC_DEX 5

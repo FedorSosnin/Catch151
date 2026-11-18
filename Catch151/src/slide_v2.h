@@ -1,7 +1,7 @@
 // V2: a page turning slides (Fedor: "Can we make the left and right arrows through the menus 'slide' the menu screens
 // over in that direction instead of instantly appear?"). Every menu with pages: the card, Settings, the Pokedex's grid
 // and its entries, a zone's grid and its entries, the trophy shelves and a medal's cards, a buddy's two pages, the
-// trade grid, the Wi-Fi list, the time zones and the egg grid; Travel's two islands and Knomi Tower's friends. A side
+// trade grid, the Wi-Fi list, the time zones and the next-Pokemon grid; Travel's two islands and Knomi Tower's friends. A side
 // button or a swipe turns the page as before; then what was on screen slides out and the new page slides in after it, from the side the side button points to,
 // V2_SLIDE_MS, easing in and out. Where the menu sits on a room that is the screen's cached backdrop (v2SceneBuf),
 // the room stays put and only what's on it moves (the board, the panel, the grid, a shelf's things); on a backdrop

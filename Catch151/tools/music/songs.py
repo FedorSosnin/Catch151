@@ -92,7 +92,7 @@ STAB8 = '8: . x . x . x . x'       # the chord on the off-beats
 ARP16 = '16: 1 2 3 4 3 2 1 2 1 2 3 4 3 2 1 2'
 ARP_UP = '16: 1 2 3 4 1 2 3 4 1 2 3 4 1 2 3 4'
 
-# ------------------------------------------------------------------ Hello: choosing a starter, picking an egg
+# ------------------------------------------------------------------ Hello: choosing a starter or your next Pokémon
 s = add(song('HELLO', 'Hello', 96, key=('C', 'major'), insts=('flute', 'pluck12', 'bass'), vols=(12, 7, 14, 8)))
 HELLO_DR = '16: k . S . r . S . k . S k r . S .'
 s.section('I', 2, 'C | G7', None, ARP_UP, '8: R - - 5 - - O -', [HELLO_DR, HELLO_DR])

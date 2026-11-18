@@ -15,7 +15,7 @@ it's left for later.
 
 | Screen | Track |
 |---|---|
-| Choosing a starter, picking an egg | Hello |
+| Choosing a starter or your next Pokémon | Hello |
 | Home by day | Home, in the manner of the old handhelds' hometowns: fades out after 2 minutes untouched, back on the next tap |
 | Home from dusk to dawn, the pet awake | Night: Home's tune, slower, on a bell |
 | The pet asleep | nothing |
