@@ -72,12 +72,14 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 
 Each minigame's best ten, from every copy of the game, are on the **[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**, with the gamer tag that set each one and the day: Berry Drop's score, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball's score. The README shows each game's best.
 
+- **A record for each fish:** the leaderboard page also lists every kind of fish Reel Fishing has, 23 of them, each with the heaviest anyone has landed, who landed it and the day. The ones nobody has caught yet wait there too. Your game sends the heaviest of each kind you've landed, from 2.2.11 on (your biggest fish before then counts for its kind).
+
 - **Your gamer tag:** up to four characters, typed on the keyboard. The game asks for it once, after your first game with a score; after that, the label on the Game Boy under **GAMES** in the Games menu changes it (four bars until you have one). A rude one gets **PICK ANOTHER**, and one that gets through anyway shows as `****` on the leaderboard.
 - **What's sent:** your best in each game since the board started over (2.2.10: each game keeps a best for the board from zero, beside its all-time record), your tag, and nothing else about you, when the game reaches the buddy relay, at each game's end, and when your tag changes. Only your best counts, once a game: a better one replaces it.
 
 ### The keyboard
 
-Ten keys a row are small on the Knomi, so the keyboard zooms: tap near the letter you want and the keys around it grow about three times wider; tap the big ones to type, as many as you like. The blue down arrow where the X was goes back to the whole keyboard. Shift, ⌫, 123, SPACE and OK work at once on the whole one. Hold a key to see it big over your finger; slide off before you let go to change your mind. The same keyboard types your Pokémon's name, your gamer tag and the Knomi's Wi-Fi password.
+Ten keys a row are small on the Knomi, so the keyboard zooms: tap near the letter you want and the keys around it grow about three times wider; tap the big ones to type, as many as you like. The blue down arrow where the X was goes back to the whole keyboard. Shift, ⌫, 123, SPACE and OK work at once on the whole one. Hold a key to see it big over your finger; slide off before you let go to change your mind. The same keyboard types your Pokémon's name, your gamer tag and the Knomi's Wi-Fi password. The zoom is for fingers: on the Mac and Windows apps, and with a mouse in the browser, the keyboard stays whole and a click types the letter under it; the web game on a phone or a tablet zooms like the Knomi.
 
 ### Pinball
 

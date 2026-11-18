@@ -36,8 +36,8 @@ enum BuddyType : uint8_t {
   BM_SURF,                         // PikaSurf: where you are on the water, your time, and if you've crashed
   BM_READY,                        // any Play together game: pressed Ready, GO! on its card
   BM_FISH,                         // to the relay alone, never to a buddy: the heaviest fish this one has landed (dex,
-                                   // shiny, hp = its weight in tenths of a kg, nick = the gamer tag); the relay keeps
-                                   // the heaviest of all
+                                   // shiny, hp = its weight in tenths of a kg, nick = the gamer tag), and since 2.2.11
+                                   // the heaviest of each kind; the relay keeps the heaviest of all, and of each kind
   BM_SCORE,                        // to the relay alone, never to a buddy: a game's best (kind = the game as the Games
                                    // menu numbers them, session = the score, nick = the gamer tag); the leaderboard.
                                    // From the relay (from = BUDDY_RELAY_ID), to the one that sent it: it's the first

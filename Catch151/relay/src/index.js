@@ -23,15 +23,16 @@
 // relay) when it connects and when it lands a heavier one; the relay keeps the heaviest of all.
 //
 // And the leaderboard (board.js): each game's best ten, with the gamer tag each came with and the day
-// ({"board": {"games": [...], "fish": [...]}} in /stats), from BM_SCORE messages (and BM_FISH for the
-// fish), and as a picture for the README:
+// ({"board": {"games": [...], "fish": [...], "kinds": [...]}} in /stats), from BM_SCORE messages (and
+// BM_FISH for the fish: each device's heaviest, and since 2.2.11 its heaviest of each kind, for each
+// kind's record), and as a picture for the README:
 //
 //   https://<relay>/board.svg
 //
 // It keeps the scores, the tags, the days and a hash of each device's id (one entry a device), nothing
 // about who or where.
 
-import { BM_SCORE, GAMES, SEASON, seasonOf, scoreReport, boardAdd, boardSvg, tagOf, idHash, tagShown, topReply } from './board.js';
+import { BM_SCORE, GAMES, SEASON, seasonOf, scoreReport, boardAdd, recordAdd, boardSvg, tagOf, idHash, tagShown, topReply } from './board.js';
 
 const MSG_SIZE = 65;
 const MAX_PER_GROUP = 16;  // a home has a few devices: more is someone filling a group on purpose
@@ -43,7 +44,7 @@ const BOARD_CACHE_S = 300; // the board's picture: five minutes (GitHub keeps it
 // Reel Fishing (src/fishing.h): the Beach's water Pokemon and their Pokedex weights in tenths of a kg. A fish
 // weighs 0.8 to 1.2 times its kind's, so a report over 1.2 times can't be real and is ignored
 const BM_FISH = 17;  // src/buddy.h
-const FISH = {
+export const FISH = {
   90: ['Shellder', 40], 98: ['Krabby', 65], 116: ['Horsea', 80], 129: ['Magikarp', 100], 60: ['Poliwag', 124],
   54: ['Psyduck', 196], 79: ['Slowpoke', 360], 118: ['Goldeen', 150], 61: ['Poliwhirl', 200], 117: ['Seadra', 250],
   120: ['Staryu', 345], 119: ['Seaking', 390], 72: ['Tentacool', 455], 73: ['Tentacruel', 550], 99: ['Kingler', 600],
@@ -70,14 +71,19 @@ export function fishText(f) {
   return `${Math.floor(lb10 / 10)}.${lb10 % 10} lb ${f.shiny ? 'shiny ' : ''}${FISH[f.dex][0]}`;
 }
 
-// the board as /stats shows it: each game's best ten and the fish's, the tags as they show (---- or ****), no ids
-export function boardPublic(scores, fishTop) {
+// the board as /stats shows it: each game's best ten and the fish's, the tags as they show (---- or ****), no ids;
+// and each kind of fish's record, every kind in Pokedex order (lb null: none landed yet)
+export function boardPublic(scores, fishTop, fishKinds = {}) {
   return {
     games: Object.keys(GAMES).map((g) => ({
       game: +g, name: GAMES[g].name,
       top: (scores[g] || []).map((e) => ({ tag: tagShown(e.tag), score: e.score, shown: GAMES[g].show(e.score), day: e.day })),
     })),
     fish: fishTop.map((e) => ({ tag: tagShown(e.tag), lb: lb(e.score), kind: FISH[e.dex][0], shiny: e.shiny, day: e.day })),
+    kinds: Object.keys(FISH).map((d) => {
+      const e = fishKinds[d];
+      return e ? { dex: +d, kind: FISH[d][0], lb: lb(e.score), shiny: e.shiny, tag: tagShown(e.tag), day: e.day } : { dex: +d, kind: FISH[d][0], lb: null };
+    }),
   };
 }
 
@@ -101,7 +107,7 @@ export default {
       if (!res) {
         const lobby = env.LOBBY.get(env.LOBBY.idFromName('lobby'));
         // (board: none from a lobby still on the code from before the leaderboard, for a moment after a deploy)
-        const { online, fish, board = { games: [], fish: [] } } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
+        const { online, fish, board = { games: [], fish: [], kinds: [] } } = await (await lobby.fetch(new Request(url.origin + '/stats'))).json();
         const big = fish && FISH[fish.dex] ? { lb: lb(fish.kg10), kind: FISH[fish.dex][0], shiny: fish.shiny, day: fish.day } : null;
         res = new Response(svg ? boardSvg(online, board) : JSON.stringify({ online, fish: big, biggest: fishText(fish), board }), {
           headers: {
@@ -156,23 +162,29 @@ export class Lobby {
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
   }
 
-  // the leaderboard: each game's top ten ({ game: [entry] }) and the fish's, from storage once. Kept under the
-  // season's keys (board.js SEASON): the board before it started over is still in storage, as scores, fishTop and
-  // fish, and nothing reads it
+  // the leaderboard: each game's top ten ({ game: [entry] }), the fish's, and each kind of fish's record ({ dex:
+  // entry }), from storage once. Kept under the season's keys (board.js SEASON): the board before it started over is
+  // still in storage, as scores, fishTop and fish, and nothing reads it. The kinds' records came after the top ten
+  // (2.2.11): they start from its fish
   async board() {
     if (this.scores === undefined) {
       this.scores = (await this.ctx.storage.get('scores' + SEASON)) || {};
       this.fishTop = (await this.ctx.storage.get('fishTop' + SEASON)) || [];
+      this.fishKinds = await this.ctx.storage.get('fishKinds' + SEASON);
+      if (!this.fishKinds) {
+        this.fishKinds = {};
+        for (const e of this.fishTop) recordAdd(this.fishKinds, e.dex, { ...e });
+      }
     }
-    return { scores: this.scores, fishTop: this.fishTop };
+    return { scores: this.scores, fishTop: this.fishTop, fishKinds: this.fishKinds };
   }
 
   async fetch(request) {
     if (new URL(request.url).pathname === '/stats') {  // each socket once, whatever its groups
-      const { scores, fishTop } = await this.board();
+      const { scores, fishTop, fishKinds } = await this.board();
       const f = fishTop[0];  // the biggest fish (the README's badge): the board's first
       const fish = f ? { kg10: f.score, dex: f.dex, shiny: f.shiny, day: f.day } : null;
-      return Response.json({ online: this.ctx.getWebSockets().length, fish, board: boardPublic(scores, fishTop) });
+      return Response.json({ online: this.ctx.getWebSockets().length, fish, board: boardPublic(scores, fishTop, fishKinds) });
     }
     const groups = (request.headers.get('X-Groups') || '').split(',').filter(Boolean);
     for (const g of groups)
@@ -212,14 +224,16 @@ export class Lobby {
     a.tokens -= 1;
     ws.serializeAttachment(a);
     const type = new Uint8Array(data)[5];
-    if (type === BM_FISH) {  // a device's heaviest fish since the board started over: the board's; never passed on
+    if (type === BM_FISH) {  // a device's heaviest fish since the board started over, or of a kind: the board's; never passed on
       const f = fishReport(data);
       if (!f || seasonOf(data) !== SEASON) return;  // (unmarked: an all-time one from 2.2.9 or before)
       const day = new Date().toISOString().slice(0, 10);
-      const { fishTop } = await this.board();
+      const { fishTop, fishKinds } = await this.board();
       const from = new DataView(data).getUint32(6, true), id = idHash(from), tag = tagOf(new Uint8Array(data, 34, 12));
-      if (boardAdd(fishTop, { id, tag, score: f.kg10, dex: f.dex, shiny: f.shiny, day })) await this.ctx.storage.put('fishTop' + SEASON, fishTop);
-      if (fishTop[0].id === id) this.tellTop(ws, from, 5, f.kg10);  // the heaviest of all: Reel Fishing's first
+      const e = { id, tag, score: f.kg10, dex: f.dex, shiny: f.shiny, day };
+      if (boardAdd(fishTop, { ...e })) await this.ctx.storage.put('fishTop' + SEASON, fishTop);  // (a device's heaviest)
+      if (recordAdd(fishKinds, f.dex, { ...e })) await this.ctx.storage.put('fishKinds' + SEASON, fishKinds);
+      if (fishTop[0] && fishTop[0].id === id) this.tellTop(ws, from, 5, fishTop[0].score);  // the heaviest of all: Reel Fishing's first
       return;
     }
     if (type === BM_SCORE) {  // a game's best, with the gamer tag: the board's; never passed on

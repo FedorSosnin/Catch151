@@ -6,6 +6,12 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **A record for each fish:** the [leaderboard page](https://fedorsosnin.github.io/Catch151/leaderboard/) lists all 23 kinds of fish in Reel Fishing, each with the heaviest anyone has landed, the gamer tag and the day; the ones nobody has caught yet wait there too. Your game sends the heaviest of each kind you land (your biggest fish since the board started over counts for its kind).
+- **Shiny music:** a shiny wild Pokémon gets the legendary battle music.
+- **The keyboard zooms for fingers only:** on the Mac and Windows apps, and with a mouse in the browser, a click types the letter under it. The Knomi, and the web game on a phone or a tablet, keep the zoom.
+
 ## [2.2.10] - 2026-11-16
 
 - **The Leaderboard starts over:** its first scores came from games still changing while they were made (a Berry Drop of 255 from before it sped up), and from before gamer tags. The board is empty again, and each game keeps a best for the board from now on, from zero, beside its all-time record: only games you play from this version count, and the gamer tag is asked for after the first of them. Copies on 2.2.9 no longer put their all-time records on the board.

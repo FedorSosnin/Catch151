@@ -2342,7 +2342,16 @@ static int v2KbNext(int L, int code) {
 // keys", then "swap the blue upward arrow to the blue downward facing arrow"): that arrow, pointing down, is the only
 // way back to the whole keyboard. The keys already wide (shift, backspace, the layer key, SPACE and OK) act at once
 // there, as before.
-// One zoom for every keyboard (only one is open at a time): v2KbZoomX, with the open screens' flags in the sketch
+// One zoom for every keyboard (only one is open at a time): v2KbZoomX, with the open screens' flags in the sketch.
+// Only for fingers (Fedor: "Since mac and PC builds arent meant for touchscreen, lets remove the keyboard zoom from
+// them"): the Knomi and other boards always zoom; on a computer the tap a mouse's types its key at once, and only a
+// finger's (the web game on a phone or a tablet, host_runtime.cpp) zooms in. The Mac and Windows apps never zoom.
+#ifdef BOARD_HOST
+extern volatile bool gHostFinger;
+static bool v2KbZooms() { return gHostFinger; }
+#else
+static bool v2KbZooms() { return true; }
+#endif
 #define V2_KZ_X 3     // how much wider
 #define V2_KZ_YN 5    // and taller: 5/3
 #define V2_KZ_YD 3
@@ -2370,7 +2379,7 @@ static int v2KbTapZ(int L, int x, int y) {
   if (v2KbZoomX < 0) {
     V2Key b;
     int c = v2KbAt(L, x, y, &b);
-    if (c >= 32 && b.y0 < V2_KCHAR_Y1) {  // a character (SPACE is on the bottom row): zoom in round it
+    if (c >= 32 && b.y0 < V2_KCHAR_Y1 && v2KbZooms()) {  // a character (SPACE is on the bottom row): zoom in round it
       int lo = v2KbRowX(10, 0) + V2_KZ_HALF / V2_KZ_X, hi = 466 - lo, zx = (b.x0 + b.x1) / 2;  // (no further than its ends)
       v2KbZoomX = zx < lo ? lo : zx > hi ? hi : zx;
       sfxPlay(SFX_TAP);

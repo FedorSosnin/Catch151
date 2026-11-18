@@ -4682,16 +4682,19 @@ void renderRun() {
 // Reel Fishing's heaviest fish since the leaderboard started over (pet.boardHi[5]), to the relay alone (BM_FISH,
 // marked BOARD_SEASON): the weight, the kind and the gamer tag. Sent each time the relay connects and at each
 // game's end
-void fishReport() {
-  if (!pet.boardHi[5] || !buddyDexOk(pet.boardFishDex)) return;
+static void fishSend(int16_t dex, uint16_t kg10, bool shiny) {
+  if (!buddyDexOk(dex) || !kg10) return;
   BuddyMsg m;
   buddyInit(m, BM_FISH, buddyNetId(), 0, 0);
-  m.dex = pet.boardFishDex;  // V2: the biggest since the leaderboard started over (pet.boardHi), marked so
-  m.shiny = pet.boardFishShiny ? 1 : 0;
-  m.hp = (uint16_t)pet.boardHi[5];
-  m.turn = BOARD_SEASON;
+  m.dex = dex;
+  m.shiny = shiny ? 1 : 0;
+  m.hp = kg10;
+  m.turn = BOARD_SEASON;  // V2: a fish since the leaderboard started over, marked so
   strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);  // V2: the gamer tag, for the leaderboard
   buddyNetReport(m);
+}
+void fishReport() {
+  if (pet.boardHi[5]) fishSend(pet.boardFishDex, (uint16_t)pet.boardHi[5], pet.boardFishShiny);  // (pet.boardHi)
 }
 
 // V2: a game's best to the relay with the gamer tag, for the leaderboard (relay/src/index.js), as fishReport() sends the
@@ -4712,6 +4715,21 @@ void scoreReportAll() {
   static const uint8_t G[] = { 0, 2, 3, 4, 6 };
   for (uint8_t g : G) scoreReport(g);
   fishReport();
+  for (int i = 0; i < Pet::BOARD_FISH_KINDS; i++)  // and each kind's heaviest, a few a second (fishKindsTick())
+    if (pet.boardKinds[i].dex) pet.boardKindsUnsent |= 1UL << i;
+}
+// V2: each kind of fish's heaviest since the board started over (pet.boardKinds; Fedor: "a record weight for each type
+// of fish caught"), to the relay as BM_FISH too, for its record of each kind: one every FISH_KIND_SEND_MS, the
+// ones not sent yet (all of them each time it connects: the relay takes 16 at once at most, and the scores go then)
+#define FISH_KIND_SEND_MS 400
+void fishKindsTick(uint32_t now) {
+  static uint32_t t = 0;
+  if (!pet.boardKindsUnsent || now - t < FISH_KIND_SEND_MS) return;
+  t = now;
+  int i = __builtin_ctz(pet.boardKindsUnsent);
+  pet.boardKindsUnsent &= ~(1UL << i);
+  const Pet::BoardFish &k = pet.boardKinds[i];
+  fishSend(k.dex, k.kg10, k.shiny);
 }
 
 void startFish() {
@@ -6742,6 +6760,7 @@ void buddyTick(uint32_t now) {
     BuddyMsg m;
     for (int i = 0; i < 8 && buddyNetPoll(m); i++) buddyHandle(m, now);
     if (buddyNetRelayFresh()) scoreReportAll();  // the relay keeps the leaderboard: each game's best, and the heaviest fish
+    fishKindsTick(now);                           // ...and each kind of fish's
     buddyReadyTick(now);
   }
   // touches and messages have already stamped bsT and trT with millis(): with the old now the subtraction would wrap around

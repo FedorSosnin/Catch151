@@ -1,11 +1,11 @@
 #!/bin/zsh
-# The zoom keyboard's test copy of Catch 151 for Mac, apart from the real app: its own save folder, its own buddy port
+# The keyboard's test copy of Catch 151 for Mac, apart from the real app: its own save folder, its own buddy port
 # (it never visits the real pets), no relay, and another bundle id. It opens on the gamer tag's keyboard with a
 # Squirtle.
 # The test state isn't saved (NOSAVE): each launch starts the same.
 #   tools/keyboard_test.sh
-# Click a letter and the keyboard zooms in round it; click the big keys to type (it stays zoomed). The blue down arrow
-# where the X was zooms back out. Shift, backspace, 123, SPACE and OK work at once.
+# Click a letter to type it: on a Mac the keyboard doesn't zoom (only a finger's tap zooms it, on the Knomi and the
+# web game on a phone). Shift, backspace, 123, SPACE and OK work as everywhere.
 # Hold the mouse down to see the key under it big; slide off before letting go to change your mind. The Terminal
 # window takes console commands too:
 #   GAMERTAG   the gamer tag's keyboard again (four at most; a rude one gets PICK ANOTHER)
@@ -13,6 +13,7 @@
 #   GAMES      the Games menu, with the gamer tag's label on the Game Boy (a click there opens its keyboard)
 #   TOPSCORE   as if the relay said one of your bests is the first: the High Score medal (the golden cartridge)
 #   TROPHIES   the trophy room (the cartridge is on the trophies' shelf, with the cups)
+#   WILD 129 S a shiny Magikarp: the legendary battle music (WILD 129: a plain one's, WILD 150: Mewtwo's)
 # Close it with its menu (the Poke Ball) or Cmd-Q.
 set -e
 cd "${0:A:h}/.."

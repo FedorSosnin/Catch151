@@ -881,9 +881,24 @@ void Pet::askedForTag() {
   pendingSave = true;
 }
 
+bool Pet::boardKind(int16_t dex, uint16_t kg10, bool shiny) {
+  if (dex < 1 || !kg10) return false;
+  for (int i = 0; i < BOARD_FISH_KINDS; i++) {
+    BoardFish &k = boardKinds[i];
+    if (k.dex && k.dex != dex) continue;
+    if (k.dex && kg10 <= k.kg10) return false;
+    k = { dex, kg10, (uint8_t)(shiny ? 1 : 0), 0 };
+    boardKindsUnsent |= 1UL << i;
+    pendingSave = true;
+    return true;
+  }
+  return false;  // (more kinds than places: none, while there are 23)
+}
+
 bool Pet::fishBiggest(uint16_t kg10, int16_t dex, bool shiny) {
   if (ceremony != CER_NONE || isEgg()) return false;
   if (kg10 > boardHi[5]) boardHi[5] = kg10, boardFishDex = dex, boardFishShiny = shiny;  // the leaderboard's
+  boardKind(dex, kg10, shiny);  // ...and its kind's
   if (kg10 <= fishBig) return false;
   fishBig = kg10, fishBigDex = dex, fishBigShiny = shiny;
   return true;
@@ -1282,6 +1297,7 @@ void Pet::save() {
   prefs.putBytes("lbhi", boardHi, sizeof(boardHi));
   prefs.putShort("lbfd", boardFishDex);
   prefs.putBool("lbfs", boardFishShiny);
+  prefs.putBytes("lbkd", boardKinds, sizeof(boardKinds));
   prefs.putBool("gtak", tagAsked);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
@@ -1405,6 +1421,11 @@ void Pet::load() {
     memset(boardHi, 0, sizeof(boardHi));  // (a save from before 2.2.10 has none: the board starts from zero)
   boardFishDex = prefs.getShort("lbfd", 0);
   boardFishShiny = prefs.getBool("lbfs", false);
+  if (prefs.getBytes("lbkd", boardKinds, sizeof(boardKinds)) != sizeof(boardKinds)) {
+    memset(boardKinds, 0, sizeof(boardKinds));  // (a save from before 2.2.11: its biggest fish since the board started over)
+    if (boardHi[5]) boardKind(boardFishDex, (uint16_t)boardHi[5], boardFishShiny);
+  }
+  boardKindsUnsent = 0;
   dungeonHi = prefs.getUChar("dhi", 0);
   candyToday = prefs.getUChar("cdyn", 0);
   candyDay = prefs.getUInt("cdyd", 0);

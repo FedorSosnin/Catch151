@@ -6,8 +6,9 @@
 static int8_t v2MusicForced = -1;    // MUSIC n on the console: that track whatever the screen (-1: the screens')
 static void v2MusicForce(int track) { v2MusicForced = track >= 0 && track < MUS_COUNT ? (int8_t)track : -1; }
 
-// a battle's: its zone's (a wild one from home or the island: the zone its Pokemon lives in), a legend's, the tower's,
-// a buddy's; a win and a catch, the victory jingle; a loss, running and a catch that got away, quiet
+// a battle's: its zone's (a wild one from home or the island: the zone its Pokemon lives in), a legend's (a shiny wild
+// one's too: Fedor, the same music for a shiny as for a legendary), the tower's, a buddy's; a win and a catch, the
+// victory jingle; a loss, running and a catch that got away, quiet
 static uint8_t v2MusicBattle() {
   if (bPhase == BP_END) return bWon ? MUS_VICTORY : MUS_NONE;
   if (bPhase == BP_CAUGHT || bPhase == BP_RESULT) return MUS_VICTORY;
@@ -15,6 +16,7 @@ static uint8_t v2MusicBattle() {
   if (bPhase >= BP_AIM) return MUS_NONE;  // the throw and the shakes, in the hush before the catch
   if (bPvp) return MUS_BUDDY;
   if (bTower) return twStep == TOWER_LEGEND ? MUS_LEGEND : MUS_TOWER_FIGHT;
+  if (bFoeShiny) return MUS_LEGEND;
   if (bFoe.dex >= 1 && bFoe.dex <= DEX_COUNT && DEX_TBL[bFoe.dex].rarity == R_LEGENDARY) return MUS_LEGEND;
   int z = bZone >= 0 ? bZone : (bFoe.dex >= 1 && bFoe.dex <= DEX_COUNT ? zoneOf(bFoe.dex) : Z_FIELD);
   return (uint8_t)(MUS_FOREST + z);

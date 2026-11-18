@@ -179,6 +179,15 @@ public:
   uint32_t boardHi[7] = {};
   int16_t boardFishDex = 0;
   bool boardFishShiny = false;
+  // ...and the heaviest of each kind of fish since then (Fedor: "a record weight for each type of fish caught. That
+  // would give incentive to try to catch all fish"), by its dex (fishing.h FISH_KINDS: 23 kinds), in the order first
+  // landed: the relay keeps each kind's record from them. Unsent: the ones the relay hasn't been sent yet (not saved:
+  // all of them go each time it connects)
+  struct BoardFish { int16_t dex; uint16_t kg10; uint8_t shiny, pad; };
+  static constexpr int BOARD_FISH_KINDS = 24;
+  BoardFish boardKinds[BOARD_FISH_KINDS] = {};
+  uint32_t boardKindsUnsent = 0;
+  bool boardKind(int16_t dex, uint16_t kg10, bool shiny);  // a fish landed: kept if its kind's heaviest yet (true)
   bool hasScore() const {  // a best on the board since it started over: the gamer tag is asked for after the first
     for (int g = 0; g < 7; g++)
       if (boardHi[g]) return true;

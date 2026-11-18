@@ -2,8 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf } from '../src/board.js';
-import { boardPublic, fishReport } from '../src/index.js';
+import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf } from '../src/board.js';
+import { boardPublic, fishReport, FISH } from '../src/index.js';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
@@ -110,4 +110,31 @@ test('the board started over: only a fish or score with the mark counts, and the
   assert.equal(seasonOf(msg(17, { dex: 130, hp: 2500, season: 0 })), 0);
   const h = readFileSync(HERE + '../../src/buddy.h', 'utf8');
   assert.match(h, new RegExp('#define BOARD_SEASON ' + SEASON + '\\b'));
+});
+
+test('the fish are the game\'s: each kind, its name and its weight (src/fishing.h FISH_KINDS)', () => {
+  const h = readFileSync(HERE + '../../src/fishing.h', 'utf8');
+  const kinds = [...h.matchAll(/\{ (\d+), (\d+), FC_\w+, \d+ \},\s*\/\/ (\w+)/g)].map(([, d, kg, name]) => [+d, name, +kg]);
+  assert.equal(kinds.length, 23);
+  assert.deepEqual(Object.fromEntries(kinds.map(([d, name, kg]) => [d, [name, kg]])), FISH);
+});
+
+test('each kind of fish\'s record: the heavier takes it, a tie stays with the first, its holder\'s new tag comes along', () => {
+  const r = {};
+  assert.ok(recordAdd(r, 129, { id: 'a', tag: 'ZOE', score: 90, day: '2026-11-17' }));
+  assert.ok(!recordAdd(r, 129, { id: 'b', tag: 'KAI', score: 90, day: '2026-11-18' }));  // a tie
+  assert.ok(!recordAdd(r, 129, { id: 'b', tag: 'KAI', score: 80, day: '2026-11-18' }));
+  assert.ok(!recordAdd(r, 129, { id: 'a', tag: 'ZOE', score: 70, day: '2026-11-18' }));
+  assert.ok(recordAdd(r, 129, { id: 'a', tag: 'ZO3', score: 70, day: '2026-11-18' }));  // a new tag, the record as it was
+  assert.deepEqual(r[129], { id: 'a', tag: 'ZO3', score: 90, day: '2026-11-17' });
+  assert.ok(recordAdd(r, 129, { id: 'b', tag: 'KAI', score: 110, day: '2026-11-18' }));
+  assert.equal(r[129].tag, 'KAI');
+  assert.ok(recordAdd(r, 130, { id: 'a', tag: 'ZOE', score: 2000, shiny: true, day: '2026-11-18' }));
+  const b = boardPublic({}, [], r);
+  assert.equal(b.kinds.length, 23);
+  assert.deepEqual(b.kinds.map((k) => k.dex), Object.keys(FISH).map(Number));  // every kind, in Pokedex order
+  assert.deepEqual(b.kinds.find((k) => k.dex === 129), { dex: 129, kind: 'Magikarp', lb: 24.3, shiny: undefined, tag: 'KAI', day: '2026-11-18' });
+  assert.deepEqual(b.kinds.find((k) => k.dex === 90), { dex: 90, kind: 'Shellder', lb: null });  // none landed yet
+  assert.equal(b.kinds.find((k) => k.dex === 130).shiny, true);
+  assert.ok(!JSON.stringify(b).includes('"id"'));
 });

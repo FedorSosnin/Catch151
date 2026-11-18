@@ -162,6 +162,8 @@ void hostPointer(int x, int y, bool down) {
   gPointerDown = down;
 }
 void hostPointerHover(void) { hostGameWake(); }
+volatile bool gHostFinger = false;  // (the sketch's V2 reads it: menus_v2.h v2KbZooms())
+void hostPointerFinger(bool finger) { gHostFinger = finger; }
 volatile int16_t gHostHoverX = -1, gHostHoverY = -1;  // (the sketch's V2 reads them: menus_v2.h v2HoverUpdate())
 void hostPointerHoverAt(int x, int y) {
   if (x >= 0) hostGameWake();

@@ -1129,9 +1129,17 @@ static void testGame() {
       CHECK(hostMusicWanted() == MUS_ZONE_BEACH);
     }
     zoneScreen = ZS_NONE;
+    extern bool bFoeShiny;
     hostSerialPush("WILD 129");
     runTicks(300);
+    bFoeShiny = false;  // (one wild one in 100 is shiny)
+    runTicks(100);
     CHECK(battleOpen && hostMusicWanted() == MUS_BEACH);
+    bFoeShiny = true;  // a shiny one: the legend's music (Fedor: the same as for a legendary)
+    runTicks(100);
+    CHECK(battleOpen && hostMusicWanted() == MUS_LEGEND);
+    bFoeShiny = false;
+    runTicks(100);
     hostSerialPush("BTLWIN");
     runTicks(300);
     CHECK(hostMusicWanted() == MUS_VICTORY);
@@ -1291,6 +1299,7 @@ static void testKeyboard() {
     hostPointer(x, y, false);
     runTicks(300);
   };
+  hostPointerFinger(true);  // a finger's taps (the web on a phone): the zoom
   hostSerialPush("KEYBOARD");
   runTicks(300);
   CHECK(kbOpen && v2KbZoomX < 0);
@@ -1359,6 +1368,42 @@ static void testKeyboard() {
   CHECK(!kbOpen && gamesMenuOpen && !strcmp(pet.gamerTag, "YYYY"));
   gamesMenuOpen = false;
   memcpy(pet.boardHi, board, sizeof(board));
+
+  // a mouse's taps (the Mac and Windows apps, the web on a computer; Fedor: "remove the keyboard zoom from them"):
+  // a letter on the whole keyboard is typed at once, and it never zooms
+  hostPointerFinger(false);
+  hostSerialPush("KEYBOARD");
+  runTicks(300);
+  n0 = nameLen;
+  tapAt(133, 146);  // E: typed
+  CHECK(kbOpen && v2KbZoomX < 0 && nameLen == n0 + 1 && (nameBuf[n0] == 'E' || nameBuf[n0] == 'e'));
+  tapAt(413, 146);  // P
+  CHECK(v2KbZoomX < 0 && nameLen == n0 + 2 && nameBuf[n0 + 1] == 'p');
+  tapAt(233, 422);  // the X: out without renaming
+  CHECK(!kbOpen);
+}
+
+// each kind of fish's heaviest since the board started over (Fedor: "a record weight for each type of fish caught"):
+// a new kind takes the next place, a lighter one of a kind is ignored, a heavier one replaces it; each is marked to
+// go to the relay, and every one is when the relay connects (scoreReportAll())
+static void testFishKinds() {
+  extern Pet pet;
+  extern void scoreReportAll();
+  Pet::BoardFish saved[Pet::BOARD_FISH_KINDS];
+  memcpy(saved, pet.boardKinds, sizeof(saved));
+  memset(pet.boardKinds, 0, sizeof(pet.boardKinds));
+  pet.boardKindsUnsent = 0;
+  CHECK(pet.boardKind(129, 90, false) && pet.boardKinds[0].dex == 129 && pet.boardKindsUnsent == 1);
+  CHECK(pet.boardKind(130, 2000, true) && pet.boardKinds[1].dex == 130 && pet.boardKinds[1].shiny && pet.boardKindsUnsent == 3);
+  pet.boardKindsUnsent = 0;
+  CHECK(!pet.boardKind(129, 80, false) && pet.boardKinds[0].kg10 == 90 && !pet.boardKindsUnsent);
+  CHECK(pet.boardKind(129, 110, true) && pet.boardKinds[0].kg10 == 110 && pet.boardKinds[0].shiny && pet.boardKindsUnsent == 1);
+  CHECK(!pet.boardKind(0, 50, false) && !pet.boardKind(90, 0, false) && !pet.boardKinds[2].dex);
+  pet.boardKindsUnsent = 0;
+  scoreReportAll();
+  CHECK(pet.boardKindsUnsent == 3);  // (fishKindsTick() sends them, a few a second, while the relay is there)
+  pet.boardKindsUnsent = 0;
+  memcpy(pet.boardKinds, saved, sizeof(saved));
 }
 
 // the Catch 151 Dex page says what the game says: tools/dex.json is the game's Pokedex, moves and type chart as they
@@ -1434,6 +1479,7 @@ int main() {
   testClock();
   testGame();
   testKeyboard();
+  testFishKinds();
   testDexPage();
   printf("host layer: %d checks, %d failures\n", gChecks, gFails);
   return gFails ? 1 : 0;

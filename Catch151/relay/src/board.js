@@ -109,6 +109,19 @@ export function boardAdd(list, e) {
   list.length = Math.min(list.length, TOP);
   return true;
 }
+// a kind of fish's record ({ id, tag, score, ... }) in records, by its dex (Fedor: "a record weight for each type of
+// fish caught. That would give incentive to try to catch all fish"): the heavier one takes it (a tie: the first to it
+// keeps it), and its holder's new tag comes with any report from it. Returns whether anything changed
+export function recordAdd(records, key, e) {
+  const o = records[key];
+  if (!o || e.score > o.score) {
+    records[key] = e;
+    return true;
+  }
+  if (o.id !== e.id || o.tag === e.tag) return false;
+  o.tag = e.tag;
+  return true;
+}
 const byBest = (a, b) => b.score - a.score || (a.day < b.day ? -1 : a.day > b.day ? 1 : 0);  // a tie: the first to it
 
 // ----- the picture: /board.svg, in the game's own 5x7 font, each game's cartridge beside it. GitHub shows it in the
@@ -190,7 +203,7 @@ export function boardSvg(online, board) {
     text(640, y + 24, `${MONTH[+mm - 1]} ${+dd}`, 2, WHITE);
     text(640, y + 44, yy, 2, MUTED);
   });
-  const foot = 'LIVE FROM THE GAMES / TOP 10 OF EACH: FEDORSOSNIN.GITHUB.IO/CATCH151/LEADERBOARD';
+  const foot = 'LIVE FROM THE GAMES / TOP 10 OF EACH AND EVERY FISH\'S RECORD: FEDORSOSNIN.GITHUB.IO/CATCH151/LEADERBOARD';
   text((W - textW(foot, 1)) / 2, H - 32, foot, 1, MUTED);
   const defs = [...used].map((c) => `<path id="c${c}" d="${glyph(c)}"/>`).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">` +
