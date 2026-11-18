@@ -47,9 +47,8 @@ static void v2SetTzRect(int &x0, int &x1, char *b, int n) {  // as wide as the c
 #endif
 #if HAS_MUSIC
 // ----- a level slider (a computer and the web: SOUND's, all of it, and the music's): a track with four notches, 0 off,
-// then 1, 2 and 3, and a knob showing its number (Fedor: "Maybe a slider with 4 notches. From 0 to 3"). A tap on a
-// notch moves it there; a finger sliding along it moves the choice, the press preview showing the number, and it
-// lands where the finger lifts. Off, it comes back on at the level it had
+// then 1, 2 and 3, and a knob showing its number (Fedor: "Maybe a slider with 4 notches. From 0 to 3"). A tap or a
+// click on a notch moves it there. Off, it comes back on at the level it had
 #define V2_SL_X0 212   // the first notch (0); each 48 further
 #define V2_SL_STEP 48
 #define V2_SL_R 14     // the knob

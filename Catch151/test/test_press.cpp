@@ -46,6 +46,14 @@ TEST(press, flick_vs_slide) {
   CHECK(!pressIsFlick(30, 20, 100));    // a tap that wobbled
 }
 
+TEST(press, a_hold_is_a_finger_kept_still) {
+  CHECK(!pressHoldMoved(0, 0));
+  CHECK(!pressHoldMoved(PRESS_HOLD_PX, -PRESS_HOLD_PX));  // a wobble
+  CHECK(pressHoldMoved(PRESS_HOLD_PX + 1, 0));            // sliding on: the hold starts over
+  CHECK(pressHoldMoved(0, -40));
+  CHECK(PRESS_HOLD_MS >= 300);                            // not on the touch (Fedor)
+}
+
 TEST(press, soft_targets_give_way_to_swipes) {
   CHECK(!pressSoftShows(0, 0, 50));      // just landed: a swipe may be starting
   CHECK(pressSoftShows(5, -8, 200));     // resting on the buddy: preview it

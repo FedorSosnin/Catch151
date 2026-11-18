@@ -488,7 +488,7 @@ uint32_t lastInteract = 0;
 uint32_t v2PlayInputAt = 0;  // V2: the last touch, tilt or key held (only time played earns a Repel: repel_v2.h)
 uint8_t dimStage = 0;        // 0 awake, 1 dimmed (90s), 2 nearly off (5min)
 bool swallowGesture = false; // the touch that wakes it does nothing
-extern bool gTapOnDown;       // controls act on a finger's touch, not its lift (handleTouch())
+extern bool gTapOnDown;       // controls act on the touch or click, not its lift (handleTouch())
 uint32_t confirmUntil = 0;  // "release?" dialog active until this millis
 #ifdef BOARD_KNOMI_V2
 uint32_t gBtnSimUntil = 0;  // simulated press of the physical button (serial console)
@@ -1330,6 +1330,27 @@ void pressUpdate(int16_t x, int16_t y) {
   // where left and right turn pages (buddies, time/settings, the card), a sideways drag is a swipe
   bool pagesSideways = buddyMenuOpen || cardOpen || (clockOpen && wifiSetupState() == WS_OFF);
   if (pagesSideways && abs(x - tX0) > 40 && abs(x - tX0) > abs(y - tY0)) on = false;
+  // the preview only for a finger held still on the control a while (Fedor: "on HOLD. But not right away on
+  // touch"): a swipe or a slide across controls shows nothing, and lifts on nothing. Once it shows, it follows the
+  // finger to a neighbour at once, and the lift chooses
+  static PressTarget holdT;
+  static bool holdHave = false;
+  static uint32_t holdSince = 0;
+  static int16_t holdX = 0, holdY = 0;
+  if (on) {
+    bool same = holdHave && t.x == holdT.x && t.y == holdT.y && t.w == holdT.w && t.h == holdT.h &&
+                !pressHoldMoved(x - holdX, y - holdY);
+    if (!same) {
+      holdT = t;
+      holdHave = true;
+      holdSince = millis();
+      holdX = x;
+      holdY = y;
+    }
+    if (!pressOn && millis() - holdSince < PRESS_HOLD_MS) on = false;
+  } else {
+    holdHave = false;
+  }
   if (on == pressOn && (!on || (t.x == pressT.x && t.y == pressT.y && t.w == pressT.w && t.h == pressT.h))) return;
   pressOn = on;
   if (on) pressT = t;
@@ -1347,17 +1368,13 @@ bool pressRelease() {
   return picked;
 }
 
-// On a touch screen a control acts the moment the finger touches it, with no press preview (Fedor, 2026-11-18,
-// after trying it on the Knomi: "this instant click feels way better"): the Knomi, the Waveshare, and the web
-// game under a finger. A mouse (the Mac, Windows, the web with a mouse) keeps the preview and acts on the
-// release. Swipes, holds, the pet and buddies act on the lift either way. The console's TAPDOWN 0/1 turns it off.
+// A control acts the moment a finger touches it or a mouse button goes down, in every build (Fedor, 2026-11-18,
+// after trying it on the Knomi: "this instant click feels way better"), with no press preview: that shows only
+// for a finger held still on a control it didn't land on (pressUpdate()). A swipe that starts on a control presses
+// it; one that starts off them turns the page. Swipes, holds, the pet and buddies act on the lift. The console's
+// TAPDOWN 0/1 turns it off (back to acting on the lift).
 bool gTapOnDown = true;
-#ifdef BOARD_HOST
-extern volatile bool gHostFinger;  // (host_runtime.cpp: the web sets it for each press, from its pointer's type)
-static bool tapDownNow() { return gTapOnDown && gHostFinger; }
-#else
 static bool tapDownNow() { return gTapOnDown; }
-#endif
 static bool tapDownDone = false;  // this touch already acted on its way down: the rest of it does nothing
 static void tapDownTry(int16_t x, int16_t y, bool game) {
   if (!tapDownNow() || swallowGesture) return;

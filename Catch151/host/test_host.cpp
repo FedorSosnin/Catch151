@@ -747,15 +747,43 @@ static void testGame() {
     runTicks(300);
     tapAt(432, 228);  // no third page: nothing (and the menu stays)
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
-    hostPointer(130, 300, true);
+    // a swipe turns the page when it starts off the cartridges (one that starts on one presses it, as every control
+    // acts on the touch: Fedor's choice, 2026-11-18)
+    int sy = 0;
+    for (int yy = 150; yy < 300 && !sy; yy++)
+      if (gameAt(130, yy) < 0 && gameAt(230, yy) < 0 && gameAt(330, yy) < 0) sy = yy;
+    CHECK(sy > 0);
+    hostPointer(130, sy, true);
     runTicks(50);
-    hostPointer(230, 300, true);
+    hostPointer(230, sy, true);
     runTicks(50);
-    hostPointer(330, 300, true);
+    hostPointer(330, sy, true);
     runTicks(50);
-    hostPointer(330, 300, false);
+    hostPointer(330, sy, false);
     runTicks(300);
     CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
+    // the press preview only on a hold (Fedor: "on HOLD. But not right away on touch"): a finger that slides onto a
+    // cartridge shows nothing and, lifted at once, starts nothing; held still there, it shows; slid off, it goes
+    extern bool pressOn;
+    hostPointer(230, sy, true);
+    runTicks(50);
+    hostPointer(150, 128, true);
+    runTicks(100);
+    CHECK(!pressOn);
+    hostPointer(150, 128, false);
+    runTicks(300);
+    CHECK(gamesMenuOpen && !pressOn);  // no game started
+    hostPointer(230, sy, true);
+    runTicks(50);
+    hostPointer(150, 128, true);
+    runTicks(700);
+    CHECK(pressOn);
+    hostPointer(230, sy, true);
+    runTicks(100);
+    CHECK(!pressOn);
+    hostPointer(230, sy, false);
+    runTicks(300);
+    CHECK(gamesMenuOpen);
   }
 
   // auto-update: on unless turned off, and kept apart from the pet's save; an update found waits for the
@@ -1386,10 +1414,10 @@ static void testKeyboard() {
 // each kind of fish's heaviest since the board started over (Fedor: "a record weight for each type of fish caught"):
 // a new kind takes the next place, a lighter one of a kind is ignored, a heavier one replaces it; each is marked to
 // go to the relay, and every one is when the relay connects (scoreReportAll())
-// a finger acts on the touch, a mouse on the release (Fedor, 2026-11-18: "this instant click feels way better"),
-// here on the name keyboard: a finger's E zooms in, and the zoomed E is typed, while it's still down; a mouse's E is
-// typed (a mouse has no zoom) only when the button comes up
-static void testTapOnTouch() {
+// a control acts on the touch or the click, with no large copy while it's held (Fedor, 2026-11-18: "this instant
+// click feels way better", then for the other builds too), here on the name keyboard: a finger's E zooms in, and
+// the zoomed E is typed, while it's still down; a mouse's E is typed (a mouse has no zoom) when its button goes down
+static void testTapOnPress() {
   extern bool kbOpen;
   extern uint8_t nameLen;
   extern int16_t v2KbZoomX;
@@ -1415,13 +1443,12 @@ static void testTapOnTouch() {
   CHECK(v2KbZoomX < 0 && kbOpen);
   hostPointerFinger(false);  // a mouse
   press(133, 146, true);
-  CHECK(nameLen == n0 + 1 && v2KbZoomX < 0);  // held: nothing yet
+  CHECK(nameLen == n0 + 2 && v2KbZoomX < 0);  // E, on the click, no zoom
   press(133, 146, false);
-  CHECK(nameLen == n0 + 2 && v2KbZoomX < 0);  // released: E, no zoom
+  CHECK(nameLen == n0 + 2);  // the release: nothing more
   press(233, 422, true);  // the X
-  CHECK(kbOpen);
-  press(233, 422, false);
   CHECK(!kbOpen);
+  press(233, 422, false);
 }
 
 static void testFishKinds() {
@@ -1517,7 +1544,7 @@ int main() {
   testClock();
   testGame();
   testKeyboard();
-  testTapOnTouch();
+  testTapOnPress();
   testFishKinds();
   testDexPage();
   printf("host layer: %d checks, %d failures\n", gChecks, gFails);

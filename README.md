@@ -272,7 +272,7 @@ See [How it works](Catch151/docs/HOW_IT_WORKS.md) for charts of what every actio
 | **Settings** in the ring | The clock and your time zone (or set the time, without Wi-Fi), sound and language; the next page for Wi-Fi and updates; then **About**: the version, and the GitHub and YouTube links as QR codes |
 | **The arrows at the sides**, or a swipe | Turn the pages. "Page 2 of 7" shows where you are |
 | **Tap the round ✕ at the bottom** | Close a menu, the card, the Pokédex or the clock |
-| **Tap a button** | It acts the moment you touch it. With a mouse (the Mac, Windows), the button under the pointer shows large above it while you hold: slide to another if you missed, and let go to choose |
+| **Tap a button** | It acts the moment you touch or click it. A swipe that starts on a button presses it, so start page swipes beside the buttons, or use the arrows at the sides. If your finger slides onto a button instead, hold it still there and a large copy shows above it: slide to another if you missed, and lift to choose |
 | **Press the button** | Start a wild battle |
 | **Hold the button for 1–3 seconds** | Turn the screen on or off |
 | **Hold the button for 10 seconds** | Asks whether to erase the game and start over |

@@ -8,7 +8,7 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 
 ## [Unreleased]
 
-- **Instant taps:** on the Knomi, and in the web game under a finger, a button acts the moment you touch it, with no wait for your finger to lift (Fedor: "this instant click feels way better"). With a mouse (the Mac, Windows, the web with a mouse) a button still shows large while you hold it and acts when you let go.
+- **Instant taps:** a button acts the moment you touch or click it, on the Knomi, the Mac, Windows and the web (Fedor: "this instant click feels way better"). The large copy of a button no longer pops up while you swipe or move around: it shows only when you hold your finger still on a button you slid onto. A swipe that starts on a button presses it; start it beside the buttons, or use the arrows at the sides.
 - **Several Wi-Fi networks:** the Knomi remembers the last five networks it joined and connects to whichever it hears best, so it can go between home and work. The **Change Wi-Fi** list ticks the ones it knows, and picking one doesn't ask for the password again.
 - **Wi-Fi tries again sooner:** a Knomi that can't join its network, for whatever reason (out of range, turned away), tries again after 1, 2 and 3 minutes before falling back to every 10. Before, only a refusal got a quick retry.
 - **Wi-Fi trouble is easier to see:** the USB console logs every connection event with the reason the router gave, and `TXPOWER` lowers the radio's transmit power for boards that hear a network but can't get in.
