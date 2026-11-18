@@ -964,8 +964,18 @@ void handleSerial() {
     clockWifiScanLog();
     Serial.println("DONE");
     return;
+  } else if (line.startsWith("TXPOWER ")) {  // the radio's transmit power in quarter dBm (34 = 8.5 dBm), 0 = default; saved
+    clockWifiSetTxPower(line.substring(8).toInt());
+    Serial.printf("wifi: tx power %d\n", clockWifiTxPower());
+    Serial.println("DONE");
+    return;
+  } else if (line == "WIFINOW") {  // tries the saved network now
+    clockPollPause(false);
+    Serial.println("DONE");
+    return;
   } else if (line == "WIFIINFO") {
-    Serial.printf("wifi: network '%s' state=%u setup=%u\n", clockWifiSsid(), clockWifiStatus(), wifiSetupState());
+    Serial.printf("wifi: network '%s' state=%u setup=%u tx=%d reason=%u\n", clockWifiSsid(), clockWifiStatus(), wifiSetupState(),
+                  clockWifiTxPower(), clockWifiLastReason());
     Serial.println("DONE");
     return;
   } else if (line.startsWith("WIFITRY ")) {  // test of the failure path, with a made-up password

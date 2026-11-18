@@ -24,6 +24,11 @@ void clockSetWifiSsid(const char *s);
 void clockPollPause(bool p);
 void clockWifiScanLog();           // the console: every access point it hears (Wi-Fi trouble)
 void clockWifiSignOff();          // before a restart: says goodbye to the router, so it lets the Knomi back in at once
+void clockWifiHook();             // every connection event on the console (Wi-Fi trouble)
+uint8_t clockWifiLastReason();    // the access point's last reason for dropping it
+void clockWifiTxApply();          // the saved transmit power, after the radio starts
+void clockWifiSetTxPower(int q);  // quarter dBm (34 = 8.5 dBm), 0 = the default; saved
+int clockWifiTxPower();           // what the radio uses now (quarter dBm)
 // time zones (timezones.h). Mac, Windows and the web follow the computer's: clockTzIndex() is -1 there
 int clockTzIndex();
 void clockSetTz(int i);          // saved; the local time moves to it at once

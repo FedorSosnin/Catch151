@@ -153,6 +153,11 @@ void clockSetWifiSsid(const char *) {}
 void clockPollPause(bool) {}
 void clockWifiSignOff() {}
 void clockWifiScanLog() {}
+void clockWifiHook() {}
+uint8_t clockWifiLastReason() { return 0; }
+void clockWifiTxApply() {}
+void clockWifiSetTxPower(int) {}
+int clockWifiTxPower() { return 0; }
 bool clockWasSeed() { return false; }
 
 // ---- power: always plugged in ----

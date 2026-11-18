@@ -6,6 +6,11 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Wi-Fi tries again sooner:** a Knomi that can't join its network, for whatever reason (out of range, turned away), tries again after 1, 2 and 3 minutes before falling back to every 10. Before, only a refusal got a quick retry.
+- **Wi-Fi trouble is easier to see:** the USB console logs every connection event with the reason the router gave, and `TXPOWER` lowers the radio's transmit power for boards that hear a network but can't get in.
+
 ## [2.2.11] - 2026-11-18
 
 - **A record for each fish:** the [leaderboard page](https://fedorsosnin.github.io/Catch151/leaderboard/) lists all 23 kinds of fish in Reel Fishing, each with the heaviest anyone has landed, the gamer tag and the day; the ones nobody has caught yet wait there too. Your game sends the heaviest of each kind you land (your biggest fish since the board started over counts for its kind).

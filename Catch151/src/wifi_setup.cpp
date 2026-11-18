@@ -39,6 +39,8 @@ static void setState(WifiSetupState s) {
 // strongest first, without repeating names (a network can have several access points)
 static void scan() {
   WiFi.mode(WIFI_STA);
+  clockWifiHook();
+  clockWifiTxApply();
   WiFi.disconnect(false, false);
   netCount = 0;
   int found = WiFi.scanNetworks();
@@ -87,10 +89,11 @@ void wifiSetupStop() {
 
 static void beginTry() {
   esp_wifi_get_config(WIFI_IF_STA, &oldCfg);
-  Serial.printf("wifi setup: trying '%s'\n", trySsid);
+  Serial.printf("[%lu] wifi setup: trying '%s' (tx %d)\n", (unsigned long)millis(), trySsid, clockWifiTxPower());
   // in RAM until it is known to work: neither a failure nor a power cut touches the saved network
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   WiFi.begin(trySsid, tryPass);
+  clockWifiTxApply();
   setState(WS_TRY);
 }
 
@@ -202,7 +205,8 @@ void wifiSetupPoll() {
         if (saved) clockSetWifiSsid(trySsid);
         setState(saved ? WS_OK : WS_FAIL);
       } else if (now - stateT > TRY_TIMEOUT_MS) {
-        Serial.println("wifi setup: failed, restoring the previous network");
+        Serial.printf("[%lu] wifi setup: failed (last reason %u), restoring the previous network\n", (unsigned long)millis(),
+                      clockWifiLastReason());
         applyStaConfig(&oldCfg);
         memset(&oldCfg, 0, sizeof(oldCfg));
         setState(WS_FAIL);

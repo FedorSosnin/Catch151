@@ -16,18 +16,22 @@
 #define NTP_RESYNC_MS (24UL * 3600UL * 1000UL)
 #define NTP_RETRY_MS (10UL * 60UL * 1000UL)
 #define WIFI_RECONNECT_MS 60000UL
-// Turned away (the access point refused it, or the handshake timed out), it tries again after a minute, then two,
-// then the usual; and before a restart of its own (an update) the Knomi says goodbye first (clockWifiSignOff()), so
-// the router lets it straight back in. (Fedor's test Knomi, 2026-11-14, refused at nearly every try on a poor USB
-// cable: it heard the network but its replies weren't getting through; on a known good cable, straight in every
-// time. These keep a Knomi from waiting 10 minutes after a refusal, whatever its cause)
-#define WIFI_REFUSED_RETRY_MS 60000UL
+// A try that fails, for whatever reason (refused, the handshake timed out, the network not in view), is tried again
+// after a minute, then two, then three, then the usual; and before a restart of its own (an update) the Knomi says
+// goodbye first (clockWifiSignOff()), so the router lets it straight back in. (Fedor's test Knomi, 2026-11-14 and
+// -18, heard the network well and was turned away; a refusal used to wait a minute, anything else 10)
+#define WIFI_FAILED_RETRY_MS 60000UL
+#define WIFI_FAILED_QUICK 3
 
 // The clock keeps UTC (millis() on top of a base) and shows it in the chosen time zone: changing the zone
 // moves the hours, never the time that passed. fromNet: the base came from NTP and nobody set it since.
 static uint32_t baseUtc = 0, baseMs = 0;
 static bool fromNet = false;
 static int tzIdx = TIME_ZONE_DEFAULT;
+// The radio's transmit power: 0 leaves the default (about 20 dBm); otherwise WiFi.setTxPower()'s steps of a quarter
+// dBm (34 = 8.5 dBm). Saved as "txp". Some ESP32-S3 boards hear a network well but are turned away at full power
+// and get in at a lower one (the console's TXPOWER, for Fedor's test Knomi, 2026-11-18)
+static int8_t txPow = 0;
 
 static uint32_t civilEpoch(const struct tm &t);
 
@@ -42,6 +46,7 @@ static void tzLoad() {
   p.begin(SAVE_NS, true);  // read-only
   char city[24] = "";
   if (p.isKey("tzc")) p.getString("tzc", city, sizeof(city));
+  txPow = p.getChar("txp", 0);
   p.end();
   for (int i = 0; i < TIME_ZONE_COUNT; i++)
     if (!strcmp(city, TIME_ZONES[i].city)) tzIdx = i;
@@ -127,15 +132,49 @@ static bool stayedOn = false;   // wifi stays on after the last network time
 static uint8_t wifiStatus = 0;  // 0 not tried, 1 last network time correct, 2 no connection
 static char savedSsid[33] = "";
 static volatile uint8_t lastReason = 0;  // last disconnect reason: tells whether it's the password or the coverage
-static uint8_t refused = 0;              // refusals in a row (WIFI_REFUSED_RETRY_MS)
+static uint8_t failed = 0;               // failed tries in a row (WIFI_FAILED_RETRY_MS)
 
 const char *clockWifiSsid() { return savedSsid; }
+uint8_t clockWifiLastReason() { return lastReason; }
+
+void clockWifiTxApply() {
+  if (txPow && WiFi.getMode() != WIFI_OFF) WiFi.setTxPower((wifi_power_t)txPow);
+}
+void clockWifiSetTxPower(int q) {
+  txPow = (int8_t)q;
+  Preferences p;
+  p.begin(SAVE_NS, false);
+  p.putChar("txp", txPow);
+  p.end();
+  clockWifiTxApply();
+}
+int clockWifiTxPower() { return WiFi.getMode() != WIFI_OFF ? (int)WiFi.getTxPower() : txPow; }
+
+// every connection event on the console, with its time and the reason the access point gave (Wi-Fi trouble)
+void clockWifiHook() {
+  static bool hooked = false;
+  if (hooked) return;
+  hooked = true;
+  WiFi.onEvent([](WiFiEvent_t e, WiFiEventInfo_t i) {
+    if (e == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+      uint8_t r = i.wifi_sta_disconnected.reason;
+      lastReason = r;
+      Serial.printf("[%lu] wifi: dropped, reason %u %s (rssi %d, tx %d)\n", (unsigned long)millis(), r,
+                    WiFi.disconnectReasonName((wifi_err_reason_t)r), (int)i.wifi_sta_disconnected.rssi, (int)WiFi.getTxPower());
+    } else if (e == ARDUINO_EVENT_WIFI_STA_CONNECTED) {
+      Serial.printf("[%lu] wifi: associated, channel %u\n", (unsigned long)millis(), (unsigned)i.wifi_sta_connected.channel);
+    } else if (e == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+      Serial.printf("[%lu] wifi: got an address\n", (unsigned long)millis());
+    }
+  });
+}
 uint8_t clockWifiStatus() { return wifiStatus; }
 void clockSetWifiSsid(const char *s) { strlcpy(savedSsid, s, sizeof(savedSsid)); wifiStatus = 0; }
 
 // the wifi change screen takes priority over the radio; when it ends it retries right away
 void clockWifiScanLog() {
   if (WiFi.getMode() == WIFI_OFF) WiFi.mode(WIFI_STA);
+  clockWifiTxApply();
   int n = WiFi.scanNetworks(false, true);
   for (int i = 0; i < n; i++)
     Serial.printf("scan: '%s' %s ch %ld %ld dBm auth %d\n", WiFi.SSID(i).c_str(), WiFi.BSSIDstr(i).c_str(),
@@ -178,26 +217,23 @@ static bool clockStep() {
       stayedOn = false;
       lastTry = t0 = now;
       WiFi.mode(WIFI_STA);
+      clockWifiHook();
+      clockWifiTxApply();
       {
-        static bool hooked = false;
-        if (!hooked) {
-          hooked = true;
-          WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t i) {
-            lastReason = i.wifi_sta_disconnected.reason;
-          }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
-        }
         // what the previous firmware saved, passed through again to clear old channel/BSSID
         wifi_config_t cfg = {};
         esp_wifi_get_config(WIFI_IF_STA, &cfg);
         strlcpy(savedSsid, (const char *)cfg.sta.ssid, sizeof(savedSsid));
+        Serial.printf("[%lu] wifi: trying '%s' (tx %d)\n", (unsigned long)millis(), savedSsid, clockWifiTxPower());
         if (cfg.sta.ssid[0]) WiFi.begin((const char *)cfg.sta.ssid, (const char *)cfg.sta.password);
         else WiFi.begin();
+        clockWifiTxApply();
       }
       st = CONNECTING;
       return false;
     case CONNECTING:
       if (WiFi.status() == WL_CONNECTED) {
-        refused = 0;
+        failed = 0;
         Serial.printf("wifi ok, ip=%s\n", WiFi.localIP().toString().c_str());
         configTzTime(TIME_ZONES[tzIdx].posix, "pool.ntp.org", "time.google.com");
         t0 = now;
@@ -208,11 +244,9 @@ static bool clockStep() {
         Serial.printf("wifi: no connection (reason %u, state %d, saved ssid '%s', password of %u characters), continuing with the internal clock\n",
                       lastReason, (int)WiFi.status(), (const char *)cfg.sta.ssid, (unsigned)strlen((const char *)cfg.sta.password));
         WiFi.mode(WIFI_OFF);
-        bool turnedAway = lastReason == WIFI_REASON_AUTH_FAIL || lastReason == WIFI_REASON_HANDSHAKE_TIMEOUT ||
-                          lastReason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT || lastReason == WIFI_REASON_AUTH_EXPIRE;
-        refused = turnedAway ? refused + 1 : 0;
-        wait = turnedAway && refused <= 2 ? WIFI_REFUSED_RETRY_MS * refused : NTP_RETRY_MS;
-        if (wait < NTP_RETRY_MS) Serial.printf("wifi: turned away, trying again in %lu s\n", (unsigned long)(wait / 1000));
+        if (failed < 255) failed++;
+        wait = failed <= WIFI_FAILED_QUICK ? WIFI_FAILED_RETRY_MS * failed : NTP_RETRY_MS;
+        Serial.printf("wifi: trying again in %lu s\n", (unsigned long)(wait / 1000));
         wifiStatus = 2;
         st = IDLE;
       }
