@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes relay/src/board_art.js: what the relay's leaderboard picture (/board.svg) is drawn with. The game's 5x7 font (its
-printable characters, from host/glcdfont.h) and each game's cartridge as the Games menu draws it, a small PNG cropped
-from the menu's two pages (host_shot pictures of them: tools/relay_board_art.sh takes them and runs this).
+printable characters, from host/glcdfont.h) and each game's cartridge as the Games menu draws it, a small PNG cut out
+along the cartridge's outline (see-through round it) from the menu's two pages (host_shot pictures of them: tools/relay_board_art.sh takes them and runs this).
 
 usage: relay_board_art.py <page 1 .ppm> <page 2 .ppm>
 """
@@ -27,8 +27,34 @@ def font():
     return b[32 * 5:127 * 5]  # the printable ones, space to tilde
 
 
+def cart_mask():
+    """The cartridge's own shape in the crop, as src/menus_v2.h v2Cart() draws it: 21 x 26 cells of 5 px with the
+    notched top right corner, and its dark outline one cell round it. Everything else is the Game Boy's green screen
+    behind it (Fedor: the board's cartridges had "some kind of green corner. Let's remove that"), left out."""
+    def inside(cx, cy):
+        return 0 <= cx < 21 and 0 <= cy < 26 and cx - 17 <= cy
+    m = Image.new('L', (116, 141), 0)
+    for py in range(141):
+        for px in range(116):
+            cx, cy = px // 5 - 1, py // 5 - 1
+            if inside(cx, cy) or any(inside(cx + dx, cy + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                m.putpixel((px, py), 255)
+    return m
+
+
+MASK = None
+
+
 def cart(page, x, y):
-    im = page.crop((x - 5, y - 5, x + 111, y + 136)).resize((W, H), Image.BOX)
+    global MASK
+    MASK = MASK or cart_mask()
+    im = page.crop((x - 5, y - 5, x + 111, y + 136))
+    # outside the shape: the outline's ink (so halving it blends the edge into the outline, not into the green), then
+    # see-through
+    ink = Image.new('RGB', im.size, (0x1B, 0x1B, 0x25))
+    im = Image.composite(im, ink, MASK).convert('RGBA')
+    im.putalpha(MASK)
+    im = im.resize((W, H), Image.BOX)
     buf = io.BytesIO()
     im.save(buf, 'PNG', optimize=True)
     return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
