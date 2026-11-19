@@ -6,6 +6,11 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **A missed ball flies away:** a ball that misses keeps going the way you threw it, past the Pokémon and off into the distance, smaller and smaller until it's gone, instead of dropping to the bottom of the screen.
+- **Goodbye: it walks off into the distance:** a Pokémon you say goodbye to (or that runs away) walks away getting smaller and smaller, then fades out, instead of sinking into the ground. A new Pokémon walking in comes up from behind the hill's top again, not out of the ground below it.
+
 ## [2.2.13] - 2026-11-19
 
 - **Search is easier to press:** in a zone, the Search bar is half again as tall, with the grid's squares a little smaller to make room, and it answers anywhere in the band between the grid and the X, the "Page 1 of 5" line included, and out past the grid's sides (Fedor: "too small to press on the knomi"). The squares and the X work as before.

@@ -74,19 +74,20 @@ static uint16_t v2UltraInk(char c) {
     default: return C565(0x1b, 0x1b, 0x25);
   }
 }
-// a ball turned deg about (ax, ay) of its sprite, that point at (px, py), cells of s px: drawMapTurned() in its colours
+// a ball turned deg about (ax, ay) of its sprite, that point at (px, py), cells of s px: drawMapTurned() in its colours.
+// step: how many of its pixels a cell moves (drawMapTurnedStep(): above 1, smaller than s times its size)
 static void v2BallSprTurned(const char *const *spr, uint16_t (*ink)(char), int s, float deg, float px, float py, float ax,
-                            float ay) {
+                            float ay, float step = 1) {
   const int n = HOME_ICON_N;
   float a = deg * 0.0174533f, ca = cosf(a), sa = sinf(a), reach = 0;
   for (int i = 0; i < 4; i++) reach = fmaxf(reach, hypotf(((i & 1) ? n : 0) - ax, ((i & 2) ? n : 0) - ay));
-  int cells = (int)reach + 1;
+  int cells = (int)(reach / step) + 1;
   for (int cy = -cells; cy < cells; cy++) {
     int runC = 0, runK = -1;
     for (int cx = -cells; cx <= cells; cx++) {
       int k = -1;
       if (cx < cells) {
-        float dx = cx + 0.5f, dy = cy + 0.5f;
+        float dx = (cx + 0.5f) * step, dy = (cy + 0.5f) * step;
         float u = dx * ca + dy * sa + ax, v = dy * ca - dx * sa + ay;
         if (u >= 0 && v >= 0 && u < n && v < n && spr[(int)v][(int)u] != '.') k = spr[(int)v][(int)u];
       }
@@ -97,11 +98,11 @@ static void v2BallSprTurned(const char *const *spr, uint16_t (*ink)(char), int s
     }
   }
 }
-static void v2MasterBallTurned(int s, float deg, float px, float py, float ax, float ay) {
-  v2BallSprTurned(SPR_V2_MASTER_BALL, v2MasterInk, s, deg, px, py, ax, ay);
+static void v2MasterBallTurned(int s, float deg, float px, float py, float ax, float ay, float step = 1) {
+  v2BallSprTurned(SPR_V2_MASTER_BALL, v2MasterInk, s, deg, px, py, ax, ay, step);
 }
-static void v2UltraBallTurned(int s, float deg, float px, float py, float ax, float ay) {
-  v2BallSprTurned(SPR_V2_ULTRA_BALL, v2UltraInk, s, deg, px, py, ax, ay);
+static void v2UltraBallTurned(int s, float deg, float px, float py, float ax, float ay, float step = 1) {
+  v2BallSprTurned(SPR_V2_ULTRA_BALL, v2UltraInk, s, deg, px, py, ax, ay, step);
 }
 static void v2MasterBall(int x, int y, int s) { v2MasterBallTurned(s, 0, x, y, 0, 0); }  // its top left at (x, y)
 static void v2UltraBall(int x, int y, int s) { v2UltraBallTurned(s, 0, x, y, 0, 0); }
@@ -111,9 +112,9 @@ static void v2UltraBall(int x, int y, int s) { v2UltraBallTurned(s, 0, x, y, 0, 
 #define V2_BALL_ULTRA 1
 #define V2_BALL_MASTER 2
 static uint8_t v2Throw = V2_BALL_POKE;
-static void v2SpecialBallTurned(int s, float deg, float px, float py, float ax, float ay) {  // (an Ultra or a Master Ball)
-  if (v2Throw == V2_BALL_MASTER) v2MasterBallTurned(s, deg, px, py, ax, ay);
-  else v2UltraBallTurned(s, deg, px, py, ax, ay);
+static void v2SpecialBallTurned(int s, float deg, float px, float py, float ax, float ay, float step = 1) {  // (an Ultra or a Master Ball)
+  if (v2Throw == V2_BALL_MASTER) v2MasterBallTurned(s, deg, px, py, ax, ay, step);
+  else v2UltraBallTurned(s, deg, px, py, ax, ay, step);
 }
 static void v2SpecialBall(int x, int y, int s) { v2SpecialBallTurned(s, 0, x, y, 0, 0); }
 

@@ -3867,6 +3867,24 @@ void drawCatchShine(int cx, int cy, uint32_t t) {
   }
 }
 
+// A miss flies on the way it was thrown, off into the distance (Fedor, 2026-11-19: it dropped to the bottom of the
+// screen; "it should appear to fly away into the distance ... get smaller and smaller until you cant see it"): on up
+// the screen from where it passed the Pokemon, at the throw's speed at first, its size falling steadily to nothing
+// and its speed with the size squared, as a thing going away does; still spinning
+#define CATCH_MISS_FLY_MS 1100
+void catchMissBall(uint32_t now) {
+  uint32_t t = now - bPhaseT;
+  if (t >= CATCH_MISS_FLY_MS) return;
+  float g = 1 - t / (float)CATCH_MISS_FLY_MS;  // its size against the throw's end (2x), 1 down to 0
+  if (g < 0.1f) return;                       // a speck: gone
+  int ringY = catchRingY();
+  float vy = (360 - ringY) / 1500.0f;  // the throw's speed up the screen (renderCatch(): 360 to the rings in 1.5 s)
+  float y = ringY - vy * CATCH_MISS_FLY_MS / 3 * (1 - g * g * g);  // (the speed vy g^2, added up)
+  float spin = (1500 + t) * CATCH_SPIN_DEG_MS, step = 1 / g;  // cells of 2 px, each 1/g of its pixels: 2g times its size
+  if (v2Throw) v2SpecialBallTurned(2, spin, bBallX, y, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f, step);
+  else drawMapTurnedStep(SPR_HOME_BALL, HOME_ICON_N, 2, step, spin, bBallX, y, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);
+}
+
 void renderCatch() {
   uint32_t now = millis();
   v2BattleScene(bZone, false, BTL_FOE_X, BTL_FOE_GROUND, BTL_ME_X, BTL_ME_GROUND);  // V2: the scene, no bases
@@ -3874,6 +3892,7 @@ void renderCatch() {
   float foeX = held ? bCatchX : battleFoeSway(now);
   bFoeX = foeX;
   uint16_t soil = battleSoil();
+  if (bPhase == BP_MISS) catchMissBall(now);  // gone past it, so behind it
   if (bPhase == BP_BROKE) {  // out of the ball and off it runs
     uint32_t t = now - bPhaseT;
     int dir = bCatchX < CX ? -1 : 1;
@@ -3907,15 +3926,6 @@ void renderCatch() {
     if (v2Throw) v2SpecialBallTurned(s, spin, bBallX, y, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);  // V2
     else
     drawMapTurned(SPR_HOME_BALL, HOME_ICON_N, s, spin, bBallX, y, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);
-  } else if (bPhase == BP_MISS) {  // bounces and falls: clearly it didn't go in
-    float k = (now - bPhaseT) / 700.0f;
-    if (k > 1) k = 1;
-    float spin = (1500 + now - bPhaseT) * CATCH_SPIN_DEG_MS * (bBallX < foeX ? -1 : 1);  // still spinning as it falls
-    if (v2Throw) v2SpecialBallTurned(2, spin, bBallX + (bBallX < foeX ? -70 : 70) * k, catchRingY() + 200 * k * k,
-                                          HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);  // V2
-    else
-    drawMapTurned(SPR_HOME_BALL, HOME_ICON_N, 2, spin, bBallX + (bBallX < foeX ? -70 : 70) * k, catchRingY() + 200 * k * k,
-                  HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);
   } else if (bPhase == BP_SHAKE) {  // on the ground, tipping over to one side on each count: it wants out
     uint32_t t = now - bPhaseT;
     if (t < V2_CATCH_DROP_MS) {  // V2: first it falls from where it hit to the ground where the Pokemon stood (Fedor)
@@ -8694,16 +8704,21 @@ void drawMap(const char *const *map, int n, int x, int y, int s, bool silhouette
 // map, in map pixels. It turns on the map's own pixel grid (each s x s block takes the map pixel under
 // its centre), so the turned sprite is still clean pixel art, not a ragged edge.
 void drawMapTurned(const char *const *map, int n, int s, float deg, float px, float py, float ax, float ay) {
+  drawMapTurnedStep(map, n, s, 1, deg, px, py, ax, ay);
+}
+// ...each cell of s px moving step of the map's pixels: above 1 it's drawn smaller than s times its size (s / step
+// times), still in cells of s px, so a shrinking ball keeps the screen's pixel grid
+void drawMapTurnedStep(const char *const *map, int n, int s, float step, float deg, float px, float py, float ax, float ay) {
   float a = deg * 0.0174533f, ca = cosf(a), sa = sinf(a), reach = 0;
   for (int i = 0; i < 4; i++)  // the corner farthest from the pivot bounds what can be covered
     reach = fmaxf(reach, hypotf(((i & 1) ? n : 0) - ax, ((i & 2) ? n : 0) - ay));
-  int cells = (int)reach + 1;
+  int cells = (int)(reach / step) + 1;
   for (int cy = -cells; cy < cells; cy++) {
     int runC = 0, runK = -1;
     for (int cx = -cells; cx <= cells; cx++) {
       int k = -1;
       if (cx < cells) {
-        float dx = cx + 0.5f, dy = cy + 0.5f;
+        float dx = (cx + 0.5f) * step, dy = (cy + 0.5f) * step;
         float u = dx * ca + dy * sa + ax, v = dy * ca - dx * sa + ay;  // back into the map
         if (u >= 0 && v >= 0 && u < n && v < n) k = charKey(map[(int)v][(int)u], false);
       }

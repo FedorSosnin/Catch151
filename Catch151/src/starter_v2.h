@@ -400,7 +400,11 @@ static void v2PickTap(int16_t x, int16_t y) {
 // the far side. Hearts float up and a panel says goodbye ("Thank you for 4 days"). A runaway goes the same way
 // at the hour's light, in the rain, head down first, and the panel says it ran away. A new Pokemon comes the
 // other way: up from behind the crest, toward you, bigger and bigger, to its place, and the home goes on.
-#define V2_CREST_Y 276     // the near hill's top at the middle (V2_HILL_NEAR, on the 4 px grid)
+#define V2_CREST_Y (276 - V2_SCENE_UP)  // the near hill's top at the middle (V2_HILL_NEAR, on the 4 px grid), where the
+                                       // home's scene is drawn (it was 276 before the scene moved up: a goodbye sank
+                                       // into the ground there, and a new one rose out of it)
+#define V2_AWAY_Y V2_CREST_Y           // a goodbye walks away toward this line in the distance (on the land: the beach's
+                                       // sea starts just past it)
 #define V2_ARRIVE_MS 3600
 // v2ArriveT (declared with the starters): when a new one started walking in (0: none)
 
@@ -435,12 +439,39 @@ static void v2PixHeart(int x, int y, int cell, Rgb col) {
   scSprite(H, 6, x, y, cell, k, 1);
 }
 
+// a Pokemon at (cx, feet), s times its pixels times g (any size, below its whole sizes too, on the screen's pixels),
+// blended in by a (256 solid, 0 gone): each screen pixel takes the sprite's pixel under it. At g 1 it's what
+// drawPmdActM() draws at s
+static void v2PmdAway(PmdMon &m, uint8_t act, int cx, int feet, int s, float g, uint32_t t, int a) {
+  if (!m.has(act)) act = PMD_IDLE;
+  const PmdAct &pa = m.acts[act];
+  float sc = s * g;
+  if (!pa.frames || sc <= 0.05f || a <= 0) return;
+  uint8_t fi = pmdFrameAt(pa, t, true);
+  const uint8_t *fr = pa.data + (uint32_t)fi * pa.w * pa.h;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  int base = pa.base ? pa.base : pa.h, low = fi < 24 && pa.low[fi] ? pa.low[fi] : base, hop = (base - low) / 2;
+  int x0 = SNAP2(cx - (int)(pa.w * sc / 2)), y0 = SNAP2(feet - (int)(low * sc + (hop > 12 ? 12 : hop) * g));  // (as pmdFrameRise())
+  int w = (int)(pa.w * sc + 0.5f), h = (int)(pa.h * sc + 0.5f);
+  for (int r = 0; r < h; r++) {
+    int y = y0 + r, sr = (int)((r + 0.5f) / sc);
+    if (y < 0 || y >= V2_W || sr >= pa.h) continue;
+    const uint8_t *row = fr + sr * pa.w;
+    for (int c = 0; c < w; c++) {
+      int x = x0 + c, sx = (int)((c + 0.5f) / sc);
+      if (x < 0 || x >= V2_W || sx >= pa.w || row[sx] == 0xFF) continue;
+      uint16_t &px = fb[y * V2_W + x];
+      px = a >= 256 ? m.pal[row[sx]] : v2Blend(px, m.pal[row[sx]], a);
+    }
+  }
+}
+
 static void v2Departure() {
   if (!pmd.loaded) return;
   uint32_t now = millis();
   float t = pet.ceremonyT();
   bool ranAway = pet.ceremony == CER_RUNAWAY;
-  int s0 = v2HomeScale(pmd), h1 = pmd.acts[PMD_WALKU].h ? pmd.acts[PMD_WALKU].h : pmd.acts[PMD_IDLE].h;
+  int s0 = v2HomeScale(pmd);
   scScreen();
   scGradeTod = 0;
   if (ranAway) {  // rain, slanting down the screen
@@ -455,11 +486,13 @@ static void v2Departure() {
       v2PixHeart(x, y, 3, i % 2 ? 0xF080A0 : 0xE85878);
     }
   }
-  // where it is: thanking you, turning its back, walking up the hill, then over the crest
-  const float T1 = ranAway ? 0.20f : 0.14f, T2 = T1 + 0.08f, T3 = 0.70f, T4 = 0.88f;
+  // where it is: thanking you, turning its back, then walking away into the distance (Fedor, 2026-11-19: "They should
+  // just keep walking into the distance and keep getting smaller for a little while ... they can fade out at some
+  // point. So the player isnt waiting too long"): smaller and smaller, as a thing walking steadily away, its feet
+  // nearing the far line (V2_AWAY_Y, the hill's crest), fading out over the last of it, gone at T3
+  const float T1 = ranAway ? 0.20f : 0.14f, T2 = T1 + 0.08f, T3 = 0.74f;
   uint8_t act = PMD_IDLE;
   int feet = PET_GROUND, s = s0, x = CX;
-  bool behind = false;
   uint32_t at = now;
   if (t < T1) {
     if (ranAway) {  // head down, trembling
@@ -470,21 +503,17 @@ static void v2Departure() {
     static const uint8_t TURN[5] = { PMD_WALKD, PMD_WALKDL, PMD_WALKL, PMD_WALKUL, PMD_WALKU };
     act = TURN[(int)((t - T1) / (T2 - T1) * 5) % 5];
     at = 0;
-  } else if (t < T3) {  // up the hill, smaller and smaller
-    float u = (t - T2) / (T3 - T2);
-    act = PMD_WALKU;
-    s = s0 - (int)(u * (s0 - 1) + 0.5f);
-    feet = PET_GROUND - (int)(u * (PET_GROUND - V2_CREST_Y + 4));
-  } else if (t < T4) {  // over the crest and down the far side, out of sight
-    float u = (t - T3) / (T4 - T3);
-    act = PMD_WALKU;
-    s = 1;
-    feet = V2_CREST_Y - 4 + (int)(u * (h1 + 8));
-    behind = true;
+  } else if (t < T3) {  // away it walks
+    float u = (t - T2) / (T3 - T2), g = 1 / (1 + 9 * u);  // its size: a tenth of home's by the end
+    int a = u < 0.55f ? 256 : (int)(256 * (1 - u) / 0.45f);  // then it fades out
+    int fy = V2_AWAY_Y + (int)((PET_GROUND - V2_AWAY_Y) * g), rx = (int)((6 + 9 * s0) * g);
+    if (a >= 256 && rx >= 10) v2PetShadow(CX, fy - 4, rx);  // its shadow while it's near
+    v2PmdAway(pmd, PMD_WALKU, CX, fy, s0, g, now, a);
+    act = 0xFF;
   } else {
     act = 0xFF;  // gone
   }
-  if (act != 0xFF) v2CrestPet(pmd, act, x, feet, s, at, behind);
+  if (act != 0xFF) v2CrestPet(pmd, act, x, feet, s, at, false);
   if (!ranAway && t < T1) {  // its thank-you heart, popping up over its head
     int hy = feet - pmd.acts[PMD_IDLE].h * s0 - 30 - (int)(t / T1 * 24);
     v2PixHeart(CX - 14, hy, 4, 0xE85878);
