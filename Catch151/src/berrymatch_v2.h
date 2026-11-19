@@ -1,6 +1,6 @@
 // V2: BerryMatch, drawn: the game from berrymatch.h's state (bmDraw()). A lawn seen from above, with the board on it
-// in the home's see-through dark tint (its squares two shades of it, a checkerboard, and a fainter rim round
-// it), cached together. The pieces are the food icons at 4x (BM_PIECE px, the home food picker's size): the Razz,
+// in the home's see-through dark tint (one even tint, and a fainter rim round it), cached together; yours comes and
+// goes round its cut corners (bmPetDraw()). The pieces are the food icons at 4x (BM_PIECE px, the home food picker's size): the Razz,
 // Oran and Pinap Berries and the Rare Candy; the balls four or five in a line make are the Great, Ultra and Master Balls. The score over the
 // board, the moves left under it.
 // scene_v2.h includes this after pinball_v2.h, whose painters it borrows (fsBlend, fsSq, fsCircle, fsSay, twGlow).
@@ -131,13 +131,9 @@ static void bmPaintBack(int tod) {
     for (int x = BM_X0 - BM_RIM; x < BM_X0 + BM_N * BM_CELL + BM_RIM; x += 2) {
       int d = bmShapeDist(x, y);
       if (d > BM_RIM) continue;
-      int a;
-      if (d == 0) {
-        int i = (x - BM_X0) / BM_CELL, j = (y - BM_Y0) / BM_CELL;
-        a = (i + j) % 2 ? 112 : 138;  // the squares: two shades of the tint
-      } else {
-        a = V2_TRACK_A;  // the rim, as the home's band
-      }
+      // the board one even tint, its rim fainter (Fedor didn't like seeing each square: they were two shades, a
+      // checkerboard)
+      int a = d == 0 ? 120 : V2_TRACK_A;
       v2Cell(scFb, x, y, ink, a);
     }
 }
@@ -188,10 +184,94 @@ static void bmFlash(const BmFx &f, float k) {
   }
 }
 
+// ----- yours at the board's edge (Fedor: "a sprite of your pokemon ... coming in and out of the frame around the edge
+// as you play. That way it feels like you are still playing with your pokemon"): it walks in from the round screen's
+// rim to one of the board's four cut corners, watches, hops for a ball made or set off, moves earned, a long chain,
+// and walks back out; a while later it comes in at another corner. Off the rim it can't be seen, so it comes "in and
+// out of the frame". Drawn before the pieces, so it stands behind the board's edge -----
+enum : uint8_t { BM_PET_AWAY, BM_PET_IN, BM_PET_WATCH, BM_PET_OUT };
+#define BM_PET_SPEED 70.0f  // px a second
+#define BM_PET_OFF 140      // how far out along its side it starts and goes back to (off the round screen)
+// the feet at each corner, and the side it comes from (-1 the left, 1 the right): inside the screen, clear of the
+// score and the moves left
+static const int16_t BM_PET_SPOT[4][3] = { { 96, 408, -1 }, { 370, 408, 1 }, { 96, 116, -1 }, { 370, 116, 1 } };
+struct BmPet {
+  uint8_t phase = BM_PET_AWAY, spot = 0, scale = 2;
+  float x = 0;
+  uint32_t until = 0, cheerT = 0, lastT = 0, seed = 1;
+};
+static BmPet bmPet;
+static uint32_t bmPetRand(uint32_t n) {
+  bmPet.seed = bmPet.seed * 1103515245u + 12345u;
+  return (bmPet.seed >> 16) % n;
+}
+// a game starting: away, coming in a moment after the card's gone; 4x if that fits a corner, else 2x (an even scale:
+// each of its pixels whole on the Knomi's 2 x 2 ones; at 2x a Squirtle was a speck)
+static void bmPetStart(uint32_t now) {
+  bmPet = BmPet();
+  bmPet.until = now + 1500;
+  bmPet.seed = now | 1;
+  uint8_t fit = pmd.loaded ? pmdFitScale(pmd, PMD_IDLE, 96, 84) : 2;
+  bmPet.scale = fit >= 4 ? 4 : 2;
+}
+static void bmPetIn(uint32_t now) {  // to a corner it wasn't at last
+  uint8_t s = (uint8_t)((bmPet.spot + 1 + bmPetRand(3)) % 4);
+  bmPet.spot = s;
+  bmPet.x = BM_PET_SPOT[s][0] + BM_PET_SPOT[s][2] * BM_PET_OFF;
+  bmPet.phase = BM_PET_IN;
+}
+// a good moment: a hop if it's there, and it comes at once if it's away
+static void bmPetCheer(uint32_t now) {
+  bmPet.cheerT = now | 1;
+  if (bmPet.phase == BM_PET_AWAY) bmPetIn(now);
+  else if (bmPet.phase == BM_PET_WATCH && bmPet.until < now + 2500) bmPet.until = now + 2500;
+  else if (bmPet.phase == BM_PET_OUT) bmPet.phase = BM_PET_IN;  // (it turns round)
+}
+static void bmPetDraw(uint32_t now) {
+  float dt = bmPet.lastT ? (now - bmPet.lastT) / 1000.0f : 0;
+  bmPet.lastT = now;
+  if (dt > 0.1f) dt = 0.1f;
+  const int16_t *sp = BM_PET_SPOT[bmPet.spot];
+  float home = sp[0], out = sp[0] + sp[2] * BM_PET_OFF;
+  switch (bmPet.phase) {
+    case BM_PET_AWAY:
+      if ((int32_t)(now - bmPet.until) >= 0) bmPetIn(now);
+      return;
+    case BM_PET_IN:
+      bmPet.x += (home > bmPet.x ? 1 : -1) * BM_PET_SPEED * dt;
+      if ((out < home) == (bmPet.x >= home)) {
+        bmPet.x = home;
+        bmPet.phase = BM_PET_WATCH;
+        bmPet.until = now + 5000 + bmPetRand(4000);
+      }
+      break;
+    case BM_PET_WATCH:
+      if ((int32_t)(now - bmPet.until) >= 0) bmPet.phase = BM_PET_OUT;
+      break;
+    default:  // BM_PET_OUT
+      bmPet.x += (out > bmPet.x ? 1 : -1) * BM_PET_SPEED * dt;
+      if ((out < home) == (bmPet.x <= out)) {
+        bmPet.phase = BM_PET_AWAY;
+        bmPet.until = now + 4000 + bmPetRand(5000);
+        return;
+      }
+      break;
+  }
+  if (!pmd.loaded) return;
+  bool right = (bmPet.phase == BM_PET_IN) == (sp[2] < 0);  // the way it walks
+  uint8_t act = bmPet.phase == BM_PET_WATCH ? (bmPet.cheerT && now - bmPet.cheerT < 1400 ? PMD_HOP : PMD_IDLE)
+                                            : right ? PMD_WALKR : PMD_WALKL;
+  if (!pmd.has(act)) act = PMD_IDLE;
+  gPmdForceScale = bmPet.scale;
+  drawPmdAct(act, (int)bmPet.x, sp[1], now, true, false, bmPet.scale);
+  gPmdForceScale = 0;
+}
+
 // the whole game: the board, the pieces where they are in their move, the score and the moves left; on a computer,
 // the keys' cursor once an arrow has been used
 static void bmDraw(const BmState &s, uint32_t now) {
   bmBack();
+  bmPetDraw(now);  // yours, behind the board's edge
   float k = 0;
   switch (s.phase) {
     case BMP_SWAP:

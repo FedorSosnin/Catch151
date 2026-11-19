@@ -5143,6 +5143,7 @@ void startMatch() {
   bmOverT = 0;
   bmLast = millis();
   bmBotT = 0;
+  bmPetStart(bmLast);  // yours at the board's edge (berrymatch_v2.h)
 }
 
 void closeMatch() {
@@ -5167,6 +5168,7 @@ void bmEvents(uint32_t ev) {
   }
   if (ev & BE_LAST) bmSay(S_BM_LAST);
   if (ev & BE_EARN) bmEarn(bm.gain);  // moves earned: a ball made, a long chain
+  if (ev & (BE_BALL | BE_FIRE | BE_EARN) || ((ev & BE_CHAIN) && bm.chain >= 3)) bmPetCheer(millis());  // yours hops
   if (ev & BE_END) {
     bmNewHi = bm.score > pet.matchHi;
     pet.matchResult(bm.score);  // the reward and record only at the end
