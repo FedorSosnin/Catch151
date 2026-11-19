@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.13] - 2026-11-19
 
 - **Search is easier to press:** in a zone, the Search bar is half again as tall, with the grid's squares a little smaller to make room, and it answers anywhere in the band between the grid and the X, the "Page 1 of 5" line included, and out past the grid's sides (Fedor: "too small to press on the knomi"). The squares and the X work as before.
 
