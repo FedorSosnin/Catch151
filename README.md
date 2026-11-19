@@ -48,7 +48,7 @@
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, a board of berries, candy and Poké Balls to swap and line up. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, a board of berries and candy to swap and line up. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** New: **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett, who evolves into Dugtrio. Roll the ball into the tall grass (at night, a cave) and a wild Pokémon that lives there jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
 
@@ -139,9 +139,9 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 
 ## New: BerryMatch
 
-<p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch on the lawn: a piece is picked with a gold outline and swapped, three Oran Berries in a row spin away with sparkles and +30, the pieces above fall into the gap and new ones drop in from the top, and the next swaps catch three more each" width="360"></p>
+<p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch on the lawn: an Ultra Ball swapped goes off in a gold ring and catches everything round it, the pieces fall and new ones drop in, then a Great Ball swapped sends beams along its row and column and catches them all" width="360"></p>
 
-The eighth cartridge, on the Game Boy's second page: a board of the game's own Razz, Oran and Pinap Berries, Rare Candies and Poké Balls, six by six with the corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back. Four in a line leave a Great Ball (it catches its row and column), an L or a T an Ultra Ball (everything two steps around it), five in a line a Master Ball (the whole board): swap one with any piece next to it to set it off. Twenty moves a game, a shuffle when no swap is left, a hint after a while, and on a computer the arrow keys and Space work too. The best score is kept.
+The eighth cartridge, on the Game Boy's second page: a board of the game's own Razz, Oran and Pinap Berries and Rare Candies, as big as in the backpack, five by five with the corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back. Four in a line leave a Great Ball (it catches its row and column), an L or a T an Ultra Ball (everything two steps around it), five in a line a Master Ball (the whole board): swap one with any piece next to it to set it off. Twenty moves a game, a shuffle when no swap is left, a hint after a while, and on a computer the arrow keys and Space work too. The best score is kept.
 
 ## New: Pinball
 

@@ -1,7 +1,7 @@
 // V2: BerryMatch, drawn: the game from berrymatch.h's state (bmDraw()). A lawn seen from above, with the board on it
 // in the home's see-through dark tint (its squares two shades of it, a checkerboard, and a fainter rim round
-// it), cached together. The pieces are the food icons drawn BM_PIECE px (a little over 3x): the Razz, Oran and Pinap
-// Berries, the Rare Candy and the Poke Ball; the balls four or five in a line make are the Great, Ultra and Master Balls. The score over the
+// it), cached together. The pieces are the food icons at 4x (BM_PIECE px, the home food picker's size): the Razz,
+// Oran and Pinap Berries and the Rare Candy; the balls four or five in a line make are the Great, Ultra and Master Balls. The score over the
 // board, the moves left under it.
 // scene_v2.h includes this after pinball_v2.h, whose painters it borrows (fsBlend, fsSq, fsCircle, fsSay, twGlow).
 
@@ -55,7 +55,7 @@ static void bmPiece(uint8_t p, int cx, int cy, float deg = 0, float step = 1, in
     v2BallSprTurned(spr, ink, 2, deg, SNAP2(cx), SNAP2(cy), mid, mid, st);
     return;
   }
-  static const char *const *const SPR[BM_KINDS] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP, SPR_CANDY, SPR_HOME_BALL };
+  static const char *const *const SPR[BM_KINDS] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP, SPR_CANDY };
   if (!bmIsKind(p)) return;
   const char *const *spr = SPR[p - 1];
   if (deg != 0 || step != 1) {
@@ -282,7 +282,7 @@ static void bmPaintLabel() {
       fsBlend(x, y, x + 18, y + 18, 0x1B1B25, (i + j) % 2 ? 92 : 118);
     }
   fsBlend(2, 22, 58, 40, 0xFFF3B0, 90);  // the three in a line, lit
-  static const char *const *const SPR[BM_KINDS] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP, SPR_CANDY, SPR_HOME_BALL };
+  static const char *const *const SPR[BM_KINDS] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP, SPR_CANDY };
   for (int j = 0; j < 2; j++)
     for (int i = 0; i < 3; i++) drawMap(SPR[P[j][i] - 1], HOME_ICON_N, 2 + i * 19, 3 + j * 19, 1, false);
   for (int k = 0; k < 3; k++) gfx->fillRect(8 + k * 19, 19, 2, 2, UI_WHITE);  // sparkles over them

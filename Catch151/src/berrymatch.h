@@ -4,8 +4,9 @@
 #include <string.h>
 
 // BerryMatch: a match-3 on the round screen, its rules without hardware (test/test_berrymatch.cpp); berrymatch_v2.h
-// draws it and the sketch wires it in. The board is 6 x 6 with its four corners off, so it sits round on the round
-// screen, its squares BM_CELL px: big enough for a finger on the Knomi (its pieces are the food icons at 3x).
+// draws it and the sketch wires it in. The board is 5 x 5 with its four corners off, so it sits round on the round
+// screen, its squares BM_CELL px: big enough for a finger on the Knomi (its pieces are the food icons at 4x, as the
+// home's food picker has them: each icon pixel two of the Knomi's own, sharp).
 // Tap a piece, then one beside it: the two swap. Three or more of a kind in a row or a column are caught; the pieces
 // above fall into the gaps and new ones drop in from the top, and what lines up as they land is caught too, each step
 // of a chain scoring more. A swap that lines nothing up swaps back. Four in a line leave a Great Ball, a row and a
@@ -14,11 +15,13 @@
 // it, a Master Ball the whole board. A ball caught by another goes off too. BM_MOVES swaps a game; when no swap
 // lines anything up, the board shuffles.
 
-#define BM_N 6            // the board: BM_N x BM_N squares, the four corners off
-#define BM_KINDS 5        // Razz Berry, Oran Berry, Pinap Berry, Rare Candy, Poke Ball
+#define BM_N 5            // the board: BM_N x BM_N squares, the four corners off (it was 6 x 6, 62 px squares)
+#define BM_KINDS 4        // Razz Berry, Oran Berry, Pinap Berry, Rare Candy (the balls are the special pieces; with
+                          // five kinds on 21 squares most games would need a shuffle)
 #define BM_MOVES 20       // swaps a game (the how-to cards say 20)
-#define BM_CELL 62        // a square, in px: the most six fit across the round screen (Fedor: "just a hair larger")
-#define BM_PIECE 58       // a piece: an 18 x 18 icon drawn this big (it was 54, at 3x)
+#define BM_CELL 76        // a square, in px: five across the round screen, the corners off
+#define BM_PIECE 72       // a piece: an 18 x 18 icon at 4x, the home's size (58 on 6 x 6 squares went uneven on the
+                          // Knomi: Fedor, "so low resolution compared to the berries ... on the main ui")
 // the board's top left (the corner square's, though it's off), on an even pixel: the Knomi shows each 2 x 2 block from
 // one as one of its pixels, so the squares, their tint and outlines keep to its grid (at 47 they straddled two)
 #define BM_X0 ((233 - BM_N * BM_CELL / 2) & ~1)
@@ -34,7 +37,7 @@
 #define BM_FALL_G 60.0f   // ...speeding up by this a second
 
 // a square's piece: 0 nothing (a corner off, or caught and not refilled yet), 1..BM_KINDS a kind, then the balls
-enum : uint8_t { BM_EMPTY = 0, BM_RAZZ = 1, BM_ORAN, BM_PINAP, BM_CANDY, BM_POKE, BM_GREAT = 8, BM_ULTRA, BM_MASTER };
+enum : uint8_t { BM_EMPTY = 0, BM_RAZZ = 1, BM_ORAN, BM_PINAP, BM_CANDY, BM_GREAT = 8, BM_ULTRA, BM_MASTER };
 inline bool bmIsBall(uint8_t p) { return p >= BM_GREAT; }
 inline bool bmIsKind(uint8_t p) { return p >= 1 && p <= BM_KINDS; }
 

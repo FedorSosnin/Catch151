@@ -7,7 +7,7 @@
 
 static const float DT = 1.0f / 30;
 
-// the board from rows of digits (0: nothing, 1..5 kinds, 8 Great, 9 Ultra, M Master); a corner is '.'
+// the board from rows of digits (0: nothing, 1..4 kinds, 8 Great, 9 Ultra, M Master); a corner is '.'
 static void setBoard(BmState &s, const char *const rows[BM_N]) {
   for (int y = 0; y < BM_N; y++)
     for (int x = 0; x < BM_N; x++) {
@@ -15,10 +15,16 @@ static void setBoard(BmState &s, const char *const rows[BM_N]) {
       s.b[y][x] = c == '.' ? 0 : c == 'M' ? BM_MASTER : (uint8_t)(c - '0');
     }
 }
-// the board with no swap that catches and no line (each kind two places on from the one to its left, three in a column)
+// the board with no swap that catches and no line: each kind one on from the one to its left and the one above, so
+// the kinds run in diagonal stripes
+//   . 2 3 4 .
+//   2 3 4 1 2
+//   3 4 1 2 3
+//   4 1 2 3 4
+//   . 2 3 4 .
 static void setStuck(BmState &s) {
   for (int y = 0; y < BM_N; y++)
-    for (int x = 0; x < BM_N; x++) s.b[y][x] = bmOn(x, y) ? (uint8_t)(1 + (x + 2 * y) % BM_KINDS) : 0;
+    for (int x = 0; x < BM_N; x++) s.b[y][x] = bmOn(x, y) ? (uint8_t)(1 + (x + y) % BM_KINDS) : 0;
 }
 static bool full(const BmState &s) {
   for (int y = 0; y < BM_N; y++)
@@ -62,7 +68,7 @@ TEST(berrymatch, the_board_is_round_and_every_square_is_on_the_screen_and_big_en
   CHECK_EQ(on, BM_N * BM_N - 4);  // only the four corners are off
   CHECK(!bmOn(0, 0) && !bmOn(BM_N - 1, 0) && !bmOn(0, BM_N - 1) && !bmOn(BM_N - 1, BM_N - 1));
   CHECK(BM_CELL >= 56);  // (the zone squares that worked on the Knomi are 78, the Search bar 56 tall)
-  CHECK(BM_PIECE > 18 * 3 && BM_PIECE + 2 <= BM_CELL);  // a piece: the 18 x 18 icon a little over 3x, room round it
+  CHECK(BM_PIECE == 18 * 4 && BM_PIECE + 2 <= BM_CELL);  // a piece: the 18 x 18 icon at 4x (the home's), room round it
   CHECK(BM_PIECE % 2 == 0);  // (drawn in the Knomi's 2 px cells)
   CHECK(BM_X0 % 2 == 0 && BM_Y0 % 2 == 0 && BM_CELL % 2 == 0);  // every square on the Knomi's 2 x 2 grid
   int x, y;
@@ -92,12 +98,11 @@ TEST(berrymatch, a_new_board_is_full_with_no_line_and_a_swap_that_works) {
 
 TEST(berrymatch, lines_of_three_or_more_are_found_in_rows_and_columns_and_nothing_else) {
   static const char *const R[BM_N] = {
-    ".1231.",
-    "222413",
-    "314524",
-    "413152",
-    "524231",
-    ".3514.",
+    ".234.",
+    "22212",
+    "34123",
+    "41234",
+    ".234.",
   };
   BmState s = board(R);
   BmRun r[30];
@@ -106,12 +111,11 @@ TEST(berrymatch, lines_of_three_or_more_are_found_in_rows_and_columns_and_nothin
   CHECK(r[0].across && r[0].x == 0 && r[0].y == 1 && r[0].len == 3 && r[0].kind == 2);
   CHECK(bmMatchAt(s, 0, 1) && bmMatchAt(s, 2, 1) && !bmMatchAt(s, 3, 1));
   static const char *const C[BM_N] = {
-    ".5231.",
-    "314153",
-    "314524",
-    "413152",
-    "524231",
-    ".3514.",
+    ".234.",
+    "21412",
+    "31123",
+    "41234",
+    ".234.",
   };
   s = board(C);
   n = bmRuns(s, r);
@@ -124,12 +128,11 @@ TEST(berrymatch, lines_of_three_or_more_are_found_in_rows_and_columns_and_nothin
 
 TEST(berrymatch, a_swap_that_lines_up_three_catches_them_scores_and_costs_a_move) {
   static const char *const R[BM_N] = {
-    ".1231.",
-    "224413",  // the 4 at (2, 1) swapped with the 2 below it: 2 2 2 along row 1
-    "312524",
-    "413152",
-    "524231",
-    ".3514.",
+    ".234.",
+    "22412",  // the 4 at (2, 1) swapped with the 2 below it: 2 2 2 along row 1
+    "34223",
+    "41234",
+    ".234.",
   };
   BmState s = board(R);
   CHECK(!bmAnyMatch(s));
@@ -175,8 +178,8 @@ TEST(berrymatch, picking_tapping_it_again_a_square_farther_off_and_a_corner) {
   CHECK(bmTap(s, 2, 2) & BE_UNPICK);  // the same again: put down
   CHECK(s.selX < 0);
   bmTap(s, 2, 2);
-  CHECK(bmTap(s, 4, 4) & BE_PICK);  // not beside it: that one picked instead, nothing swapped
-  CHECK(s.selX == 4 && s.selY == 4 && s.phase == BMP_PLAY);
+  CHECK(bmTap(s, 4, 2) & BE_PICK);  // not beside it: that one picked instead, nothing swapped
+  CHECK(s.selX == 4 && s.selY == 2 && s.phase == BMP_PLAY);
   CHECK(bmTap(s, 3, 3) & BE_PICK);  // corner to corner isn't beside it either
   CHECK(s.phase == BMP_PLAY);
   CHECK(bmTap(s, 0, 0) & BE_UNPICK);  // a corner that's off: put down
@@ -224,31 +227,30 @@ TEST(berrymatch, with_a_piece_picked_a_near_miss_beside_it_still_swaps_for_big_f
 TEST(berrymatch, gravity_brings_the_pieces_down_in_order_and_new_ones_fill_the_top) {
   BmState s;
   bmStart(s, 9);
-  // column 2: knock out rows 1 and 3 (of 0..5); column 0 (rows 1..4 in play): its bottom one
+  // column 2: knock out rows 1 and 3 (of 0..4); column 0 (rows 1..3 in play): its bottom one
   uint8_t col2[BM_N], col0[BM_N];
   for (int y = 0; y < BM_N; y++) col2[y] = s.b[y][2], col0[y] = s.b[y][0];
   s.b[1][2] = s.b[3][2] = 0;
-  s.b[4][0] = 0;
+  s.b[3][0] = 0;
   int most = bmFall(s);
   CHECK(full(s));
   CHECK_EQ(most, 2);
-  // column 2: 5 and 4 stay, 2 falls one, 0 falls two, two new ones on top
-  CHECK_EQ(s.b[5][2], col2[5]);
+  // column 2: 4 stays, 2 falls one, 0 falls two, two new ones on top
   CHECK_EQ(s.b[4][2], col2[4]);
   CHECK_EQ(s.b[3][2], col2[2]);
   CHECK_EQ(s.b[2][2], col2[0]);
-  CHECK_EQ(s.drop[5][2], 0);
+  CHECK_EQ(s.drop[4][2], 0);
   CHECK_EQ(s.drop[3][2], 1);
   CHECK_EQ(s.drop[2][2], 2);
   CHECK_EQ(s.drop[1][2], 2);  // the new ones come from as far above as there were gaps
   CHECK_EQ(s.drop[0][2], 2);
   CHECK(bmIsKind(s.b[0][2]) && bmIsKind(s.b[1][2]));
   // column 0: its top square is row 1 (row 0 is a corner)
-  CHECK_EQ(s.b[4][0], col0[3]);
+  CHECK_EQ(s.b[3][0], col0[2]);
   CHECK_EQ(s.b[2][0], col0[1]);
   CHECK(bmIsKind(s.b[1][0]) && s.drop[1][0] == 1);
-  CHECK_EQ(s.b[0][0], 0);  // the corner stays empty
-  CHECK_EQ(s.b[5][0], 0);
+  CHECK_EQ(s.b[0][0], 0);  // the corners stay empty
+  CHECK_EQ(s.b[4][0], 0);
   // a column left alone doesn't move
   for (int y = 0; y < BM_N; y++) CHECK_EQ(s.drop[y][3], 0);
   // the fall's time: longer for farther, landed at its end
@@ -261,10 +263,10 @@ TEST(berrymatch, what_lines_up_as_the_pieces_land_is_caught_too_as_a_chain_scori
   BmState s;
   bmStart(s, 3);
   setStuck(s);
-  // column 2: a line of 1s in rows 3..5 and a 4 above it, which lands in row 5 beside two 4s
-  s.b[3][2] = s.b[4][2] = s.b[5][2] = 1;
-  s.b[2][2] = 4;
-  s.b[5][3] = s.b[5][4] = 4;
+  // column 2: a line of 1s in rows 2..4 and a 4 above it, which lands in row 4 between two 4s
+  s.b[2][2] = s.b[3][2] = s.b[4][2] = 1;
+  s.b[1][2] = 4;
+  s.b[4][1] = s.b[4][3] = 4;
   BmRun r[30];
   CHECK_EQ(bmRuns(s, r), 1);
   s.ax = s.ay = s.bx = s.by = -1;
@@ -278,7 +280,7 @@ TEST(berrymatch, what_lines_up_as_the_pieces_land_is_caught_too_as_a_chain_scori
   CHECK(ev & BE_LAND);
   CHECK(ev & BE_CHAIN);
   CHECK_EQ(s.chain, 2);
-  CHECK(s.gone[5][2] == 4 && s.gone[5][3] == 4 && s.gone[5][4] == 4);
+  CHECK(s.gone[4][1] == 4 && s.gone[4][2] == 4 && s.gone[4][3] == 4);
   int n = 0;
   for (int y = 0; y < BM_N; y++)
     for (int x = 0; x < BM_N; x++) n += s.gone[y][x] != 0;
@@ -292,19 +294,19 @@ TEST(berrymatch, four_in_a_line_leave_a_great_ball_where_the_swap_put_its_piece)
   BmState s;
   bmStart(s, 3);
   setStuck(s);
-  s.b[3][1] = s.b[3][2] = s.b[3][3] = s.b[3][4] = 4;  // (row 3 is 2 _ _ _ _ 2 round it)
-  int8_t at[1][2] = { { 3, 3 } };
+  s.b[2][1] = s.b[2][2] = s.b[2][3] = s.b[2][4] = 1;  // (row 2 starts with a 3)
+  int8_t at[1][2] = { { 3, 2 } };
   uint32_t ev = 0;
   int n = bmCatch(s, nullptr, 0, at, 1, &ev);
   CHECK_EQ(n, 4);
   CHECK(ev & BE_BALL);
-  CHECK_EQ(s.b[3][3], (uint8_t)BM_GREAT);  // the piece the swap put there turns into the ball
-  CHECK_EQ(s.made[3][3], (uint8_t)BM_GREAT);
-  CHECK(!s.b[3][1] && !s.b[3][2] && !s.b[3][4]);
-  CHECK(s.gone[3][3] == 4);
+  CHECK_EQ(s.b[2][3], (uint8_t)BM_GREAT);  // the piece the swap put there turns into the ball
+  CHECK_EQ(s.made[2][3], (uint8_t)BM_GREAT);
+  CHECK(!s.b[2][1] && !s.b[2][2] && !s.b[2][4]);
+  CHECK(s.gone[2][3] == 1);
   // no swap in it (a chain): the line's middle
   setStuck(s);
-  for (int y = 1; y <= 4; y++) s.b[y][2] = 4;
+  for (int y = 1; y <= 4; y++) s.b[y][2] = 2;  // (column 2 starts with a 3)
   bmCatch(s, nullptr, 0, nullptr, 0);
   CHECK_EQ(s.b[2][2], (uint8_t)BM_GREAT);
 }
@@ -324,7 +326,7 @@ TEST(berrymatch, a_row_and_a_column_crossing_leave_an_ultra_ball_and_five_in_a_l
     for (int x = 0; x < BM_N; x++) balls += bmIsBall(s.b[y][x]);
   CHECK_EQ(balls, 1);  // one ball for the group, not one a line
   setStuck(s);
-  for (int x = 0; x < 5; x++) s.b[2][x] = 3;
+  for (int x = 0; x < 5; x++) s.b[2][x] = 1;
   n = bmCatch(s, nullptr, 0, nullptr, 0);
   CHECK_EQ(n, 5);
   CHECK_EQ(s.b[2][2], (uint8_t)BM_MASTER);
@@ -364,7 +366,7 @@ TEST(berrymatch, each_ball_catches_its_own_shape_when_swapped_and_a_ball_caught_
   ev = 0;
   n = bmCatch(s, fire, 1, nullptr, 0, &ev);
   CHECK_EQ(s.fxN, 2);
-  CHECK(s.gone[5][4] && s.gone[0][4]);  // the Great Ball's column, out of the Ultra Ball's reach
+  CHECK(s.gone[1][4] && s.gone[3][4]);  // the Great Ball's column, out of the Ultra Ball's reach
   CHECK(n > 13);
 }
 
@@ -380,7 +382,7 @@ TEST(berrymatch, a_ball_swapped_with_any_piece_beside_it_is_a_move_and_goes_off_
   ev |= bmTap(s, 2, 1);
   for (int i = 0; i < 30 && s.phase != BMP_POP; i++) ev |= bmStep(s, DT);
   CHECK(ev & BE_FIRE);
-  CHECK(s.gone[1][0] && s.gone[1][5] && s.gone[0][2] && s.gone[5][2]);  // row 1, column 2 (where it went)
+  CHECK(s.gone[1][0] && s.gone[1][4] && s.gone[0][2] && s.gone[4][2]);  // row 1, column 2 (where it went)
   CHECK_EQ(s.gone[0][1], 0);  // (column 1, row 0: neither)
   ev |= settle(s);
   CHECK(full(s));

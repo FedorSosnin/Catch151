@@ -107,7 +107,7 @@ A round table, the round screen itself, its rim the wall, with a drain between t
 
 ### BerryMatch
 
-A board of berries to swap and line up, 6 squares by 6 with the four corners cut off so it sits round on the round screen. Each square is 62 px, the pieces the game's own food icons drawn 58 px big: the Razz, Oran and Pinap Berries, the Rare Candy and the Poké Ball. Twenty moves a game; the best score is kept.
+A board of berries to swap and line up, 5 squares by 5 with the four corners cut off so it sits round on the round screen, 21 squares in all. Each square is 76 px, the pieces the game's own food icons at the backpack's size (72 px, four times the icon, so they're sharp on the Knomi): the Razz, Oran and Pinap Berries and the Rare Candy. Poké Balls only come as the special balls. Twenty moves a game; the best score is kept.
 
 - **Swapping:** tap a piece and it lights up with a gold outline and hops; tap one next to it (above, below or beside, not corner to corner) and the two swap. Tap it again to put it down, or tap another one farther off to pick that one instead. With a piece picked, a tap that just misses the one beside it (onto a corner-to-corner square, or a little past it) still swaps with it, as long as it points clearly along the row or the column. A swap that lines nothing up slides back and costs nothing. Pieces act the moment they're touched.
 - **Catching:** three or more of a kind in a row or a column are caught and spin away. The pieces above fall into the gaps, new ones drop in from the top of each column, and anything that lines up as they land is caught too: a chain. A piece can be picked while the board is still moving; a swap asked for then waits until it settles.
@@ -117,7 +117,7 @@ A board of berries to swap and line up, 6 squares by 6 with the four corners cut
 - **A hint:** ten seconds with nothing done and two pieces that would match start to wiggle, until you tap. Three hints a game, then no more.
 - **The last moves:** the count under the board turns gold for the last three, and **LAST MOVE!** shows before the last one. When it's played and the board settles, the game ends: the score, the record and Play Again!
 - **On a computer and the web:** the mouse works as a finger. The arrow keys move a white cursor round the board (past the cut corners), Space picks the piece under it, and with one picked an arrow swaps it that way. Space also sends off the how-to card, as the Knomi's button does.
-- **Rewards:** joy and speed training from the score, a point for every 100 (a game scores about 1,900 on average), as the table above. The game plays Berry Drop's song.
+- **Rewards:** joy and speed training from the score, a point for every 100 (a game scores about 2,300 on average), as the table above. The game plays Berry Drop's song.
 
 ## Battles
 

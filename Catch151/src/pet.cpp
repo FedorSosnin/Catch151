@@ -858,7 +858,7 @@ void Pet::pinResult(uint32_t score) {
 }
 
 // BerryMatch: the record, and exercise as the other games give it (a point for every 100: a game of 20 moves scores
-// about 1900, as a game of Berry Drop does about 19)
+// about 2300, as a game of Berry Drop does about 20)
 void Pet::matchResult(uint32_t score) {
   if (ceremony != CER_NONE || isEgg()) return;
   if (score > matchHi) matchHi = score;

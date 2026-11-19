@@ -8,14 +8,14 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
   round screen, a fresh deal (no line, a move), finding lines, a swap that catches and one that swaps back, gravity and
   the refill, chains, the balls made and gone off (and caught by each other), no move left leading to a shuffle of the
   same pieces, taps while the board moves, the hint, the keys, and 200 whole games played by a bot that swaps the hint
-  (the board always full and settled between moves; scores 750 to 4,660, about 1,900 on average, 3 balls a game, a
-  shuffle in about 1 game in 14).
+  (the board always full and settled between moves; on the 5 x 5 board scores 990 to 4,640, about 2,260 on average,
+  4 balls a game, a shuffle in about 1 game in 30).
 - **The drawing** is `src/berrymatch_v2.h` (`bmDraw()`): a lawn seen from above with the board on it in the home's
   see-through dark tint, cached together for each light of the day (`v2Cached`). Fedor picked the lawn from four
   (`bmPaintBack()`): Berry Drop's clearing, the first, put the light sky under the board's top half and its tint came
   out grey-blue, hiding the Oran Berries and the Rare Candy; a wooden table and a berry patch were the others (in the
-  history at 390d154, `BMSCENE n`). The pieces are the 18 x 18 food icons drawn 58 px (`SPR_HOME_FOOD`,
-  `SPR_BERRY_ORAN`, `SPR_BERRY_PINAP`, `SPR_CANDY`, `SPR_HOME_BALL`); the balls are
+  history at 390d154, `BMSCENE n`). The pieces are the 18 x 18 food icons at 4x, 72 px, as the backpack draws them
+  (`SPR_HOME_FOOD`, `SPR_BERRY_ORAN`, `SPR_BERRY_PINAP`, `SPR_CANDY`); the balls are
   master_v2.h's Ultra and Master Balls and a Great Ball made from the same sprite (its cap blue, its marks red, as
   Pinball's bumper has them). The cartridge's label (`bmPaintLabel()`) is a little board with three Oran Berries lined
   up and Squirtle watching.
@@ -34,18 +34,22 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
 
 ## As built
 
-- **The board:** 6 x 6 squares of 62 px with the four corners off: every square's corners lie within 226 px of the
-  screen's middle (a test checks it), and the squares are the biggest that fit six across (the zone squares that work
-  on the Knomi are 78 px, the Search bar 56 px tall). First built at 60 px with the icons at 3x (54 px); after Fedor
-  tried it on his Knomi ("just a hair larger", big fingers) 62 px squares and 58 px pieces, drawn in 2 px cells,
-  and a near miss beside a picked piece still swaps (`bmTapAt()`, `bmTapNear()`). A 5 x 5 board of 76 px squares with
-  the icons at 4x and 4 kinds was simulated as the next step up (it plays about the same: shuffles 0.06 a game).
-  The score sits over the board, the moves left under it.
+- **The board:** 5 x 5 squares of 76 px with the four corners off (21 squares), its top left on an even pixel (42):
+  every square's corners lie within 226 px of the screen's middle (a test checks it). The pieces are the icons at 4x
+  (72 px = 36 of the Knomi's pixels), the only size that's sharp on the Knomi and fits: there the panel shows each 2 x
+  2 block as one pixel, so 18 px art is clean at 36, 72 or 108 px only. History: 6 x 6 at 60 px with the icons at 3x
+  (54 px), then "just a hair larger" (Fedor, big fingers) 62 px squares and 58 px pieces, which on the Knomi came out
+  uneven ("so low resolution compared to the berries ... on the main ui"); a near miss beside a picked piece still
+  swaps since then (`bmTapAt()`, `bmTapNear()`). The 5 x 5 board was simulated first (it plays about the same) and
+  tried on Fedor's Knomi as a preview from the branch `berrymatch-5x5`. The score sits over the board, the moves left
+  under it.
 - **Sharp on the Knomi:** its panel shows each 2 x 2 block from an even pixel as one pixel, so a piece's cells start on
   even pixels (`SNAP2(cx - n)`). The first 58 px build drew them one pixel off and every piece blurred (Fedor: "all
-  the graphics seem blurry on the knomi"); a host test checks a Poke Ball's white lies in whole blocks.
-- **Five kinds:** with four the board lines up too much by itself; with five a game still has a move nearly always
-  (the shuffle is for the rest).
+  the graphics seem blurry on the knomi"), and the board itself started on an odd pixel (47) until `BM_X0` rounded it
+  down; a host test checks a Razz Berry's white lies in whole blocks.
+- **Four kinds:** Razz, Oran, Pinap, Rare Candy. On 21 squares five kinds would need a shuffle in most games; with four
+  a game still nearly always has a move. The plain Poke Ball, a fifth kind on the 6 x 6 board, went: it looked most
+  like the Great, Ultra and Master Balls.
 - **Hints:** after 10 s with nothing done (`BM_HINT_S`), three a game (`BM_HINTS`; Fedor: at 6 s with no limit they
   came too soon and too often).
 - **Moves, not time:** 20 swaps a game, so nothing hurries a finger on the small screen. A swap that swaps back costs

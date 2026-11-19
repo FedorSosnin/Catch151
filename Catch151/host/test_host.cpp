@@ -761,9 +761,9 @@ static void testGame() {
       runTicks(400);
       CHECK(bmOpen && introCard == -1 && bm.phase == BMP_PLAY && bm.moves == BM_MOVES);
       {  // the pieces lie whole on the Knomi's pixels (each of its panel's pixels is a 2x2 block from an even pixel):
-         // a Poke Ball's white in whole blocks, never half of one (one pixel off, every piece blurred on the Knomi)
+         // a Razz Berry's white in whole blocks, never half of one (one pixel off, every piece blurred on the Knomi)
         uint8_t was = bm.b[2][2];
-        bm.b[2][2] = BM_POKE;
+        bm.b[2][2] = BM_RAZZ;
         runTicks(100);
         std::vector<uint8_t> f(HOST_CANVAS_SIZE * HOST_CANVAS_SIZE * 4);
         hostFrameRGBA(f.data());
