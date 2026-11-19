@@ -7816,16 +7816,16 @@ void tradeTap(int16_t x, int16_t y) {
 #define ZONE_ICON_R 50
 // a zone: the count and its name, its Pokedex as a 3 x 3 grid (as the Pokedex), Search, the page and X
 // V2: the grid in a panel under the board, Search under it, the page in words above the X at 422. Search is a tall
-// bar (Fedor, 2026-11-19: "too small to press on the knomi", even with a wider tap area): the squares are 72 px
-// (84 before) to make room, and the bar 72 px tall (38 before)
-#define ZONE_CELL 72
+// bar (Fedor, 2026-11-19: "too small to press on the knomi", even with a wider tap area; at 72 px "comically large.
+// Lets go inbetween"): the squares are 78 px (84 before) to make room, and the bar 56 px tall (38 before)
+#define ZONE_CELL 78
 #define ZONE_GRID_X (CX - 3 * ZONE_CELL / 2)
 #define ZONE_GRID_Y 72
 #define ZONE_PAGE DEXG_PAGE
 #define ZONE_BTN_X (ZONE_GRID_X - 9)  // V2: Search as wide as the grid's white panel, rims and all (Fedor)
 #define ZONE_BTN_W (3 * ZONE_CELL + 18)
 #define ZONE_BTN_Y (ZONE_GRID_Y + 3 * ZONE_CELL + 12)  // under the panel's rim
-#define ZONE_BTN_H 72
+#define ZONE_BTN_H 56
 #define ZONE_PAGE_Y 386
 #define ZONE_CLOSE_Y V2_CLOSE_Y
 static_assert(ZONE_BTN_Y - 2 == V2_SLIDE_ZONE_Y && DEXG_PAGE_Y - 2 == V2_SLIDE_DEX_Y, "slide_v2.h keeps these still");

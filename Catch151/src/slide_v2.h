@@ -18,7 +18,7 @@
 #define V2_SLIDE_CHROME_Y 380  // the page line's top (v2PageOf()); the card's panels end 375, Settings', a buddy's, the
                                // Wi-Fi list's and a medal's 377 at most
 #define V2_SLIDE_DEX_Y 360     // the Pokedex grid: its page line (DEXG_PAGE_Y 362), its panel's rim ends 359
-#define V2_SLIDE_ZONE_Y 298    // a zone's grid: from SEARCH's rim (ZONE_BTN_Y 300), its panel's ends 297 (both checked
+#define V2_SLIDE_ZONE_Y 316    // a zone's grid: from SEARCH's rim (ZONE_BTN_Y 318), its panel's ends 315 (both checked
                                // there)
 #define V2_SLIDE_ENTRY_Y 392   // an entry: its panel's rim ends 389, the X's starts 396
 #define V2_SLIDE_TRADE_Y 397   // the trade grid: its page line sits on its panel's rim, so it moves with the grid
