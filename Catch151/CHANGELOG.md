@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.14] - 2026-11-19
 
 - **A cleaner leaderboard:** the cartridges on the leaderboard picture are cut out along their own outline, without the Game Boy's green screen showing in the corner each cartridge has cut off. BerryMatch has its row.
 - **Even text and lines on the Knomi:** the Knomi's screen is 240 pixels across but the game's picture is 233, so it used to be stretched by showing 7 columns and 7 rows twice, and any letter stroke or line that landed on one came out twice as thick. The picture now shows pixel for pixel in the middle of the screen, with a thin dark edge (3 to 4 pixels) round it inside the rim's shadow, and taps line up with it the same way. Every stroke is the same width on every screen.
