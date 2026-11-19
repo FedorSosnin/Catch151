@@ -139,7 +139,7 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 
 ## New: BerryMatch
 
-<p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch: three Razz Berries in a row spin away with sparkles and +30, the pieces above fall into the gap and new ones drop in from the top, the next swap sets off a chain worth +90 in gold that leaves an Ultra Ball, and the Ultra Ball swapped goes off in a gold ring" width="360"></p>
+<p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch on the lawn: a piece is picked with a gold outline and swapped, three Oran Berries in a row spin away with sparkles and +30, the pieces above fall into the gap and new ones drop in from the top, and the next swaps catch three more each" width="360"></p>
 
 The eighth cartridge, on the Game Boy's second page: a board of the game's own Razz, Oran and Pinap Berries, Rare Candies and Poké Balls, six by six with the corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back. Four in a line leave a Great Ball (it catches its row and column), an L or a T an Ultra Ball (everything two steps around it), five in a line a Master Ball (the whole board): swap one with any piece next to it to set it off. Twenty moves a game, a shuffle when no swap is left, a hint after a while, and on a computer the arrow keys and Space work too. The best score is kept.
 

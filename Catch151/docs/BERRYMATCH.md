@@ -10,9 +10,12 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
   same pieces, taps while the board moves, the hint, the keys, and 200 whole games played by a bot that swaps the hint
   (the board always full and settled between moves; scores 750 to 4,660, about 1,900 on average, 3 balls a game, a
   shuffle in about 1 game in 14).
-- **The drawing** is `src/berrymatch_v2.h` (`bmDraw()`): Berry Drop's clearing with the board on it in the home's
-  see-through dark tint, cached together for each light of the day (`v2Cached`); the pieces are the 18 x 18 food icons
-  at 3x (`SPR_HOME_FOOD`, `SPR_BERRY_ORAN`, `SPR_BERRY_PINAP`, `SPR_CANDY`, `SPR_HOME_BALL`); the balls are
+- **The drawing** is `src/berrymatch_v2.h` (`bmDraw()`): a lawn seen from above with the board on it in the home's
+  see-through dark tint, cached together for each light of the day (`v2Cached`). Fedor picked the lawn from four
+  (`bmPaintBack()`): Berry Drop's clearing, the first, put the light sky under the board's top half and its tint came
+  out grey-blue, hiding the Oran Berries and the Rare Candy; a wooden table and a berry patch were the others (in the
+  history at 390d154, `BMSCENE n`). The pieces are the 18 x 18 food icons drawn 58 px (`SPR_HOME_FOOD`,
+  `SPR_BERRY_ORAN`, `SPR_BERRY_PINAP`, `SPR_CANDY`, `SPR_HOME_BALL`); the balls are
   master_v2.h's Ultra and Master Balls and a Great Ball made from the same sprite (its cap blue, its marks red, as
   Pinball's bumper has them). The cartridge's label (`bmPaintLabel()`) is a little board with three Oran Berries lined
   up and Squirtle watching.

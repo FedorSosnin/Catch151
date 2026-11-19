@@ -1,7 +1,7 @@
-// V2: BerryMatch, drawn: the game from berrymatch.h's state (bmDraw()). Berry Drop's clearing behind, with the board
-// on it in the home's see-through dark tint (its squares two shades of it, a checkerboard, and a fainter rim round
-// it), cached together. The pieces are the food icons at 3x: the Razz, Oran and Pinap Berries, the Rare Candy and
-// the Poke Ball; the balls four or five in a line make are the Great, Ultra and Master Balls. The score over the
+// V2: BerryMatch, drawn: the game from berrymatch.h's state (bmDraw()). A lawn seen from above, with the board on it
+// in the home's see-through dark tint (its squares two shades of it, a checkerboard, and a fainter rim round
+// it), cached together. The pieces are the food icons drawn BM_PIECE px (a little over 3x): the Razz, Oran and Pinap
+// Berries, the Rare Candy and the Poke Ball; the balls four or five in a line make are the Great, Ultra and Master Balls. The score over the
 // board, the moves left under it.
 // scene_v2.h includes this after pinball_v2.h, whose painters it borrows (fsBlend, fsSq, fsCircle, fsSay, twGlow).
 
@@ -90,40 +90,14 @@ static int bmShapeDist(int px, int py) {
   return best;
 }
 #define BM_RIM 8
-// the scene under the board (BMSCENE n on a test copy's console: trying them side by side). The first, Berry Drop's
-// clearing, put a light sky under the board's top half, and its tint over the sky came out grey-blue, the Oran
-// Berry's and the Rare Candy's own colours (Fedor: "hard to see on the background"): the others are warm or green.
-// (bmScene is the sketch's, with the game's state)
+// the lawn under the board (Fedor's pick of four: Berry Drop's clearing put a light sky under the board's top half, and
+// its tint over the sky came out grey-blue, the Oran Berry's and the Rare Candy's own colours, "hard to see on the
+// background"; a wooden table and a berry patch were the others)
 static uint32_t bmHash(int a, int b) {
   uint32_t h = (uint32_t)(a * 73856093) ^ (uint32_t)(b * 19349663);
   h ^= h >> 13;
   h *= 0x5bd1e995;
   return h ^ (h >> 15);
-}
-// a picnic table seen from above: warm planks across the screen, their grain, a knot now and then, the gaps dark
-static void bmPaintWood() {
-  static const Rgb PLANK[3] = { 0xB98250, 0xAE7848, 0xC28C58 };
-  const int H = 48;
-  for (int y = 0; y < V2_W; y += 4) {
-    int k = y / H, row = (y % H) / 4;
-    Rgb base = PLANK[bmHash(k, 7) % 3];
-    int joint = 40 + (int)(bmHash(k, 3) % 380);  // where this plank meets the next along
-    for (int x = 0; x < V2_W; x += 4) {
-      Rgb c = base;
-      if (row == 0) c = 0x5A3A20;                              // the gap
-      else if (row == 1) c = scMix(base, 0xFFFFFF, .14);        // the lit edge under it
-      else if (row == H / 4 - 1) c = scMix(base, 0x5A3A20, .3); // its shaded far edge
-      else if (bmHash(x / 4 + k * 7, row) % 11 == 0 || (bmHash(k * 5 + row, x / 28) % 5 == 0 && row % 3 == 1))
-        c = scMix(base, 0x6E4A2C, .28);                         // the grain
-      if (abs(x - joint) < 4 && row) c = 0x5A3A20;
-      scCell(x, y, c);
-    }
-    if (row == 5 && bmHash(k, 11) % 3 == 0) {  // a knot
-      int kx = 60 + (int)(bmHash(k, 13) % 340);
-      scOval(scE(kx - 10, y - 6, kx + 10, y + 8), scMix(base, 0x5A3A20, .45), SC_NONE);
-      scOval(scE(kx - 5, y - 2, kx + 5, y + 4), 0x6E4A2C);
-    }
-  }
 }
 // a lawn seen from above: the grass in two greens with darker tufts, clover and a few flowers round the board
 static void bmPaintGrass() {
@@ -146,37 +120,10 @@ static void bmPaintGrass() {
     scCell(x, y, i % 3 == 2 ? 0xE8803A : 0xF2C230);
   }
 }
-// a berry patch: dark tilled soil under the board, and round it a ring of leafy bushes with red berries on them
-static void bmPaintPatch() {
-  for (int y = 0; y < V2_W; y += 4)
-    for (int x = 0; x < V2_W; x += 4) {
-      uint32_t h = bmHash(x / 4, y / 4) % 100;
-      bool furrow = (y / 4) % 6 == 0;
-      scCell(x, y, furrow ? 0x5E4028 : h < 14 ? 0x6E4C30 : h < 22 ? 0x9A7048 : 0x86603C);
-    }
-  for (int a = 0; a < 360; a += 15) {  // the bushes, all round the edge
-    float r = 3.14159f * a / 180;
-    int cx = CX + (int)(220 * cosf(r)), cy = CY + (int)(220 * sinf(r));
-    scOval(scE(cx - 34, cy - 30, cx + 34, cy + 30), 0x3F8A4C, 0x58B868, 0x2F6A3A);
-  }
-  for (int a = 7; a < 360; a += 30) {  // berries on them
-    float r = 3.14159f * a / 180;
-    int cx = CX + (int)(214 * cosf(r)), cy = CY + (int)(214 * sinf(r));
-    if (bmShapeDist(cx, cy) < 10) continue;
-    scOval(scE(cx - 5, cy - 5, cx + 5, cy + 5), 0xE8503A, 0xFF8A6A);
-  }
-}
-static void bmPaintBack(int key) {
-  int tod = key & 3, scene = key >> 2;
-  if (scene == 0) {
-    scTilt(tod);
-  } else {
-    scGradeTod = tod;  // (dusk and night graded as the other scenes)
-    if (scene == 1) bmPaintWood();
-    else if (scene == 2) bmPaintGrass();
-    else bmPaintPatch();
-    scGradeTod = 0;
-  }
+static void bmPaintBack(int tod) {
+  scGradeTod = tod;  // (dusk and night graded as the other scenes)
+  bmPaintGrass();
+  scGradeTod = 0;
   uint16_t ink = sc565(0x1B1B25);
   for (int y = BM_Y0 - BM_RIM; y < BM_Y0 + BM_N * BM_CELL + BM_RIM; y += 2)
     for (int x = BM_X0 - BM_RIM; x < BM_X0 + BM_N * BM_CELL + BM_RIM; x += 2) {
@@ -192,10 +139,7 @@ static void bmPaintBack(int key) {
       v2Cell(scFb, x, y, ink, a);
     }
 }
-static void bmBack() {
-  int key = (bmScene << 2) | v2HourTod();
-  v2Cached(0x3B000000 + key, bmPaintBack, key);
-}
+static void bmBack() { uint8_t t = v2HourTod(); v2Cached(0x3B000000 + t, bmPaintBack, t); }
 
 // ----- what's said over the board for a moment (SHUFFLE!, LAST MOVE!) -----
 static StrId bmSayId = S_BM_SHUFFLE;
