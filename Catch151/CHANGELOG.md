@@ -8,7 +8,7 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 
 ## [Unreleased]
 
-- **Search is easier to press:** in a zone, Search answers anywhere in the band between the grid and the X, the "Page 1 of 5" line included, and out past the grid's sides, not just on the thin bar itself (Fedor: "too small to press on the knomi"). It looks the same; the squares and the X work as before.
+- **Search is easier to press:** in a zone, the Search bar is nearly twice as tall, with the grid's squares a little smaller to make room, and it answers anywhere in the band between the grid and the X, the "Page 1 of 5" line included, and out past the grid's sides (Fedor: "too small to press on the knomi"). The squares and the X work as before.
 
 ## [2.2.12] - 2026-11-18
 

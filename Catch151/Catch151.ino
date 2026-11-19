@@ -7815,24 +7815,26 @@ void tradeTap(int16_t x, int16_t y) {
 // ---------- Battle: the zones ----------
 #define ZONE_ICON_R 50
 // a zone: the count and its name, its Pokedex as a 3 x 3 grid (as the Pokedex), Search, the page and X
-#define ZONE_GRID_X 107
-#define ZONE_CELL 84
-#define ZONE_PAGE DEXG_PAGE
-// V2: the grid in a panel under the board, Search under it, the page as dots above the X at 422
-#define ZONE_BTN_X 98   // V2: Search as wide as the grid's white panel, rims and all (Fedor)
-#define ZONE_BTN_W 271
+// V2: the grid in a panel under the board, Search under it, the page in words above the X at 422. Search is a tall
+// bar (Fedor, 2026-11-19: "too small to press on the knomi", even with a wider tap area): the squares are 72 px
+// (84 before) to make room, and the bar 72 px tall (38 before)
+#define ZONE_CELL 72
+#define ZONE_GRID_X (CX - 3 * ZONE_CELL / 2)
 #define ZONE_GRID_Y 72
-#define ZONE_BTN_Y 336
-#define ZONE_BTN_H 38
+#define ZONE_PAGE DEXG_PAGE
+#define ZONE_BTN_X (ZONE_GRID_X - 9)  // V2: Search as wide as the grid's white panel, rims and all (Fedor)
+#define ZONE_BTN_W (3 * ZONE_CELL + 18)
+#define ZONE_BTN_Y (ZONE_GRID_Y + 3 * ZONE_CELL + 12)  // under the panel's rim
+#define ZONE_BTN_H 72
 #define ZONE_PAGE_Y 386
 #define ZONE_CLOSE_Y V2_CLOSE_Y
 static_assert(ZONE_BTN_Y - 2 == V2_SLIDE_ZONE_Y && DEXG_PAGE_Y - 2 == V2_SLIDE_DEX_Y, "slide_v2.h keeps these still");
-// Search answers far wider than it's drawn (Fedor, 2026-11-19: "too small to press on the knomi"): the whole band
-// from the grid's panel down to the X, page line and all (nothing there is tapped), and out past the panel's sides.
-// The bottom row of squares ends at 324; the X answers from 390 (closeHitAt)
+static_assert(ZONE_BTN_Y + ZONE_BTN_H <= 376, "Search clears the page line (its top at 380)");
+// ...and it answers wider than it's drawn: the whole band from the grid's panel down to the X, page line and all
+// (nothing there is tapped), and out past the panel's sides. The X answers from 390 (closeHitAt)
 #define ZONE_HIT_X0 64
 #define ZONE_HIT_X1 402
-#define ZONE_HIT_Y0 330
+#define ZONE_HIT_Y0 (ZONE_GRID_Y + 3 * ZONE_CELL + 6)
 #define ZONE_HIT_Y1 390
 static_assert(ZONE_HIT_Y0 >= ZONE_GRID_Y + 3 * ZONE_CELL && ZONE_HIT_Y1 <= ZONE_CLOSE_Y - (CLOSE_R + 8),
               "Search's tap area stays off the squares and the X");
