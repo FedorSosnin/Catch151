@@ -284,9 +284,14 @@ TEST(fishing, the_weigh_in_moves_on_and_a_tap_skips_it) {
   FishState s;
   hookOne(s, FC_SMALL);
   reelAt(s, FISH_CLASS[FC_SMALL].pace);
+  CHECK_EQ((int)s.phase, (int)FP_LANDED);
+  for (float t = 0; t < 1.8f; t += DT) fishStep(s, DT);  // up in the air long enough to see what it is
+  CHECK_EQ((int)s.phase, (int)FP_LANDED);
   CHECK(runUntil(s, FP_WEIGH) & FE_WEIGH);
   CHECK_EQ(fishTap(s), 0u);  // not at once: a tap still reeling lands on nothing
-  for (float t = 0; t < FISH_WEIGH_TAP_S; t += DT) fishStep(s, DT);
+  for (float t = 0; t < 1.5f; t += DT) fishStep(s, DT);
+  CHECK_EQ(fishTap(s), 0u);  // nor before it has said how big
+  for (float t = 1.5f; t < FISH_WEIGH_TAP_S; t += DT) fishStep(s, DT);
   CHECK(fishTap(s) & FE_NEXT);
   CHECK_EQ((int)s.cast, 1);
   CHECK_EQ((int)s.phase, (int)FP_AIM);

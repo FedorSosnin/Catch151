@@ -11,6 +11,8 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 - **Instant taps:** a button acts the moment you touch or click it, on the Knomi, the Mac, Windows and the web (Fedor: "this instant click feels way better"). The large copy of a button no longer pops up while you swipe or move around: it shows only when you hold your finger still on a button you slid onto. A swipe that starts on a button presses it; start it beside the buttons, or use the arrows at the sides.
 - **Several Wi-Fi networks:** the Knomi remembers the last five networks it joined and connects to whichever it hears best, so it can go between home and work. The **Change Wi-Fi** list ticks the ones it knows, and picking one doesn't ask for the password again.
 - **Wi-Fi tries again sooner:** a Knomi that can't join its network, for whatever reason (out of range, turned away), tries again after 1, 2 and 3 minutes before falling back to every 10. Before, only a refusal got a quick retry.
+- **Reel Fishing: a better look at your catch:** a fish you land hangs in the air with its name for about two seconds, and the weigh-in stays up until it has said how big it is, so the last quick taps of a reel no longer skip it. A tap moves on after that, as before.
+- **Reel Fishing: the moon is out of the way:** at night the moon sat under the LINE gauge's label while you reeled; it has moved a little left and down, and the sun with it.
 - **Wi-Fi trouble is easier to see:** the USB console logs every connection event with the reason the router gave, and `TXPOWER` lowers the radio's transmit power for boards that hear a network but can't get in.
 
 ## [2.2.11] - 2026-11-18

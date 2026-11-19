@@ -4876,7 +4876,7 @@ void fishBotStep(uint32_t now) {
     const FishClassDef &c = FISH_CLASS[fish.b[fish.target].cls];
     if (fish.T > (c.lo + c.hi - c.pull) * 0.5f) return;
     fishTouchDown(260, 330);
-  } else if (fish.phase == FP_WEIGH && fish.t > 1.2f) {
+  } else if (fish.phase == FP_WEIGH && fish.t > FISH_WEIGH_TAP_S) {
     fishTouchDown(300, 300);
   } else {
     return;

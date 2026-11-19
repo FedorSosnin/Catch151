@@ -21,9 +21,14 @@
 #define FISH_REACH 90.0f     // a fish this near the float (px, across) notices it
 #define FISH_SLIP_S 1.5f     // the line slack (the notch under the green) this long and it slips off
 #define FISH_WARN_S 0.4f     // a thrash is warned this long before it
-#define FISH_LANDED_S 1.2f   // the leap
-#define FISH_WEIGH_S 2.8f    // the weigh-in: its gauge fills, then says how big (a tap moves on after FISH_WEIGH_TAP_S)
-#define FISH_WEIGH_TAP_S 0.6f
+// The catch stays up long enough to see what it is (Fedor, 2026-11-18: "it has to stay on the screen for a bit
+// longer. It's hard to see what you caught"): the leap rises in FISH_LEAP_S and hangs there with its name to
+// FISH_LANDED_S; the weigh-in fills its gauge (1.2 s), says how big, and a tap moves on only once that has shown a
+// moment, so the last taps of a reel don't skip it (taps act on press now, a reel's last ones come quick)
+#define FISH_LEAP_S 0.85f    // the leap up out of the water
+#define FISH_LANDED_S 2.0f   // ...and held there
+#define FISH_WEIGH_S 4.2f    // the weigh-in: its gauge fills, then says how big (a tap moves on after FISH_WEIGH_TAP_S)
+#define FISH_WEIGH_TAP_S 2.0f
 #define FISH_AWAY_S 1.6f     // got away, too slow
 #define FISH_SOON_S 1.0f     // TOO SOON! shows this long; the cast goes on
 #define FISH_RESPAWN_S 2.5f  // a fish gone (landed, scared, lost) is back as another of its size after this

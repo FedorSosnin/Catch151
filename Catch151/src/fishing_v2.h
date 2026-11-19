@@ -47,7 +47,7 @@ static void fsPaintScene(int night) {
   Rgb sky[3] = { p.top, scMix(p.top, p.bot, .5), p.bot };
   const int16_t se[4] = { 0, 100, 160, FS_SURF };
   scBands(sky, se, 3, 0, V2_W);
-  scSun(p, night, 388, 92);
+  scSun(p, night, 360, 112);  // inside the LINE arc's ring: at 388, 92 its label sat on the moon (Fedor, 2026-11-18)
   scCloud(p, 20, 132, 3);
   scCloud(p, 236, 150, 2);
   // a far islet on the horizon, faded toward the sky: Knomi Island seen from its pier
@@ -1425,7 +1425,7 @@ static void fsGame(uint32_t now) {
       const FishBlob &b = fish.b[fish.target];
       int16_t dex = fish.slot[fish.cast];
       bool giant = fish.target == FISH_GIANT;
-      float p = fish.t / FISH_LANDED_S, up = sinf(3.14159f * (p * 1.4f > 1 ? 1 : p * 1.4f) * 0.5f);
+      float p = fish.t / FISH_LEAP_S, up = sinf(3.14159f * (p > 1 ? 1 : p) * 0.5f);  // up, then held (FISH_LANDED_S)
       int cx = (int)b.x, feet = FS_SURF + 30 - (int)(up * (giant ? 116 : 104));
       if (giant) {
         fsRays(cx, feet - 60, 18, 0xFFE27A, 110);
@@ -1436,8 +1436,12 @@ static void fsGame(uint32_t now) {
       fsAngler(tx, ty, bx, by);
       fsLine(tx, ty, cx - 14, feet - 30, 4, giant ? 0xFFE27A : 0xF4F4F8);
       fsThumb(thumbs.getForm(dex, fish.slotShiny[fish.cast]), cx, feet, 3);
-      fsSplash(cx, FS_SURF + 4, giant ? 60 : 40, giant ? 40 : 26, 21);
-      fsRing(cx, 50, 0xFFFFFF, 2);
+      if (p < 1.4f) {  // its splash, settling as it hangs there
+        fsSplash(cx, FS_SURF + 4, giant ? 60 : 40, giant ? 40 : 26, 21);
+        fsRing(cx, 50, 0xFFFFFF, 2);
+      } else {
+        fsRing(cx, 50 + (int)((p - 1.4f) * 30), fsNight ? 0x6A8CB8 : 0xE6F6FF, 2);
+      }
       for (int i = 0; i < 4; i++) {
         static const int8_t SP[4][2] = { { -62, -70 }, { 58, -86 }, { 66, -24 }, { -50, -10 } };
         if ((now / 200 + i) % 4 == 0) continue;
