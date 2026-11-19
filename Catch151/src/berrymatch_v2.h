@@ -62,7 +62,9 @@ static void bmPiece(uint8_t p, int cx, int cy, float deg = 0, float step = 1, in
     drawMapTurnedStep(spr, HOME_ICON_N, 2, st, deg, SNAP2(cx), SNAP2(cy), mid, mid);
     return;
   }
-  const int n = BM_PIECE / 2, x0 = SNAP2(cx) - n, y0 = SNAP2(cy) - n;
+  // its top left on an even pixel, as the turned ones' cells are: n (29) is odd, and from SNAP2(cx) - n every cell lay
+  // across two of the Knomi's pixels and blurred (Fedor: "all the graphics seem blurry on the knomi")
+  const int n = BM_PIECE / 2, x0 = SNAP2(cx - n), y0 = SNAP2(cy - n);
   for (int j = 0; j < n; j++) {
     int y = y0 + 2 * j;
     if (y < clipY) continue;

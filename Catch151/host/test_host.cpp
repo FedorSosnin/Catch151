@@ -760,6 +760,29 @@ static void testGame() {
       hostButton(false);
       runTicks(400);
       CHECK(bmOpen && introCard == -1 && bm.phase == BMP_PLAY && bm.moves == BM_MOVES);
+      {  // the pieces lie whole on the Knomi's pixels (each of its panel's pixels is a 2x2 block from an even pixel):
+         // a Poke Ball's white in whole blocks, never half of one (one pixel off, every piece blurred on the Knomi)
+        uint8_t was = bm.b[2][2];
+        bm.b[2][2] = BM_POKE;
+        runTicks(100);
+        std::vector<uint8_t> f(HOST_CANVAS_SIZE * HOST_CANVAS_SIZE * 4);
+        hostFrameRGBA(f.data());
+        auto white = [&](int x, int y) {
+          const uint8_t *p = &f[(y * HOST_CANVAS_SIZE + x) * 4];
+          return p[0] >= 240 && p[1] >= 240 && p[2] >= 240;
+        };
+        int x0 = BM_X0 + 2 * BM_CELL, y0 = BM_Y0 + 2 * BM_CELL, whole = 0, split = 0;
+        for (int y = y0 & ~1; y < y0 + BM_CELL; y += 2)
+          for (int x = x0 & ~1; x < x0 + BM_CELL; x += 2) {
+            int w = white(x, y) + white(x + 1, y) + white(x, y + 1) + white(x + 1, y + 1);
+            whole += w == 4;
+            split += w > 0 && w < 4;
+          }
+        CHECK(whole > 20);
+        CHECK(split == 0);
+        bm.b[2][2] = was;
+        runTicks(100);
+      }
       bmFindHint(bm);
       int8_t h[4];
       memcpy(h, bm.hint, sizeof(h));

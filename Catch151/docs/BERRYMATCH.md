@@ -41,6 +41,9 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
   and a near miss beside a picked piece still swaps (`bmTapAt()`, `bmTapNear()`). A 5 x 5 board of 76 px squares with
   the icons at 4x and 4 kinds was simulated as the next step up (it plays about the same: shuffles 0.06 a game).
   The score sits over the board, the moves left under it.
+- **Sharp on the Knomi:** its panel shows each 2 x 2 block from an even pixel as one pixel, so a piece's cells start on
+  even pixels (`SNAP2(cx - n)`). The first 58 px build drew them one pixel off and every piece blurred (Fedor: "all
+  the graphics seem blurry on the knomi"); a host test checks a Poke Ball's white lies in whole blocks.
 - **Five kinds:** with four the board lines up too much by itself; with five a game still has a move nearly always
   (the shuffle is for the rest).
 - **Hints:** after 10 s with nothing done (`BM_HINT_S`), three a game (`BM_HINTS`; Fedor: at 6 s with no limit they
