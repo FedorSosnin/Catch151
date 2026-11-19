@@ -30,9 +30,13 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
 
 ## As built
 
-- **The board:** 6 x 6 squares of 60 px with the four corners off: every square's corners lie within 226 px of the
+- **The board:** 6 x 6 squares of 62 px with the four corners off: every square's corners lie within 226 px of the
   screen's middle (a test checks it), and the squares are the biggest that fit six across (the zone squares that work
-  on the Knomi are 78 px, the Search bar 56 px tall). The score sits over the board, the moves left under it.
+  on the Knomi are 78 px, the Search bar 56 px tall). First built at 60 px with the icons at 3x (54 px); after Fedor
+  tried it on his Knomi ("just a hair larger", big fingers) 62 px squares and 58 px pieces, drawn in 2 px cells,
+  and a near miss beside a picked piece still swaps (`bmTapAt()`, `bmTapNear()`). A 5 x 5 board of 76 px squares with
+  the icons at 4x and 4 kinds was simulated as the next step up (it plays about the same: shuffles 0.06 a game).
+  The score sits over the board, the moves left under it.
 - **Five kinds:** with four the board lines up too much by itself; with five a game still has a move nearly always
   (the shuffle is for the rest).
 - **Hints:** after 10 s with nothing done (`BM_HINT_S`), three a game (`BM_HINTS`; Fedor: at 6 s with no limit they

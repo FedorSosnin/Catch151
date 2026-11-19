@@ -62,7 +62,8 @@ TEST(berrymatch, the_board_is_round_and_every_square_is_on_the_screen_and_big_en
   CHECK_EQ(on, BM_N * BM_N - 4);  // only the four corners are off
   CHECK(!bmOn(0, 0) && !bmOn(BM_N - 1, 0) && !bmOn(0, BM_N - 1) && !bmOn(BM_N - 1, BM_N - 1));
   CHECK(BM_CELL >= 56);  // (the zone squares that worked on the Knomi are 78, the Search bar 56 tall)
-  CHECK(BM_CELL >= 18 * 3);  // a piece is an 18 x 18 icon at 3x
+  CHECK(BM_PIECE > 18 * 3 && BM_PIECE + 2 <= BM_CELL);  // a piece: the 18 x 18 icon a little over 3x, room round it
+  CHECK(BM_PIECE % 2 == 0);  // (drawn in the Knomi's 2 px cells)
   int x, y;
   CHECK(bmCellAt(BM_X0 + BM_CELL + 5, BM_Y0 + 5, x, y) && x == 1 && y == 0);
   CHECK(!bmCellAt(BM_X0 + 5, BM_Y0 + 5, x, y));  // a corner
@@ -180,6 +181,43 @@ TEST(berrymatch, picking_tapping_it_again_a_square_farther_off_and_a_corner) {
   CHECK(bmTap(s, 0, 0) & BE_UNPICK);  // a corner that's off: put down
   CHECK(s.selX < 0);
   CHECK(!bmNext(0, 0, 1, 0) && bmNext(1, 0, 2, 0) && !bmNext(1, 1, 2, 2));
+}
+
+// a point dx, dy squares from square (x, y)'s middle
+static int spx(int x, float dx) { return BM_X0 + (int)((x + 0.5f + dx) * BM_CELL); }
+static int spy(int y, float dy) { return BM_Y0 + (int)((y + 0.5f + dy) * BM_CELL); }
+
+TEST(berrymatch, with_a_piece_picked_a_near_miss_beside_it_still_swaps_for_big_fingers) {
+  BmState s;
+  bmStart(s, 12);
+  // a tap on a square picks it, as a tap on its middle does
+  CHECK(bmTapAt(s, spx(2, 0), spy(2, 0)) & BE_PICK);
+  CHECK(s.selX == 2 && s.selY == 2);
+  // off the corner-to-corner square up and right, but mostly to the right: the square to the right
+  CHECK(bmTapAt(s, spx(2, 1.0f), spy(2, -0.6f)) & BE_SWAP);
+  CHECK(s.ax == 2 && s.ay == 2 && s.bx == 3 && s.by == 2);
+  settle(s);
+  // as much up as across: no telling which, so that square is picked instead
+  bmTapAt(s, spx(2, 0), spy(2, 0));
+  CHECK(bmTapAt(s, spx(2, 1.0f), spy(2, -0.8f)) & BE_PICK);
+  CHECK(s.selX == 3 && s.selY == 1 && s.phase == BMP_PLAY);
+  bmTapAt(s, spx(3, 0), spy(1, 0));  // (put down)
+  // a little past the square beside it: still that one; well past: the one tapped
+  bmTapAt(s, spx(2, 0), spy(2, 0));
+  CHECK(bmTapAt(s, spx(2, 0.1f), spy(2, 1.6f)) & BE_SWAP);
+  CHECK(s.bx == 2 && s.by == 3);
+  settle(s);
+  bmTapAt(s, spx(2, 0), spy(2, 0));
+  CHECK(bmTapAt(s, spx(2, 0.05f), spy(2, 1.9f)) & BE_PICK);
+  CHECK(s.selX == 2 && s.selY == 4);
+  // the picked square and the squares beside it take the tap as they are: off its middle on itself, put down
+  CHECK(bmTapAt(s, spx(2, 0.4f), spy(4, 0.1f)) & BE_UNPICK);
+  CHECK(s.selX < 0);
+  // with nothing picked, nothing is guessed: the square under the finger
+  CHECK(bmTapAt(s, spx(1, 0.45f), spy(1, 0)) & BE_PICK);
+  CHECK(s.selX == 1 && s.selY == 1);
+  // off the board: put down
+  CHECK(bmTapAt(s, 5, 233) & BE_UNPICK);
 }
 
 TEST(berrymatch, gravity_brings_the_pieces_down_in_order_and_new_ones_fill_the_top) {

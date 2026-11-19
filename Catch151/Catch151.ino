@@ -300,6 +300,7 @@ bool bmOpen = false, bmNewHi = false;
 uint32_t bmLast = 0, bmOverT = 0;
 bool bmBot = false;                    // BMBOT on the console: it plays by itself (testing, screenshots)
 uint32_t bmBotT = 0;
+uint8_t bmScene = 1;                   // the scene under the board (berrymatch_v2.h bmPaintBack(); BMSCENE n)
 uint32_t fishBotT = 0;
 uint32_t gBacklightFlashUntil = 0;     // the Knomi's backlight to full until then (the bite; too tight)
 // a PikaSurf duel with a buddy (BK_SURF): both on the same course (the session id is the seed), each
@@ -1129,6 +1130,9 @@ void handleSerial() {
     int x, y, p;                                           // numbers them: 1..5 kinds, 8 Great, 9 Ultra, 10 Master; testing)
     if (bmOpen && sscanf(line.c_str() + 6, "%d %d %d", &x, &y, &p) == 3 && bmOn(x, y) && (bmIsKind(p) || bmIsBall(p)) && p <= BM_MASTER)
       bm.b[y][x] = (uint8_t)p;
+    Serial.println("DONE");
+  } else if (line.startsWith("BMSCENE ") && pet.noSave) {  // BerryMatch: the scene under the board, 0..3 (testing)
+    bmScene = (uint8_t)(line.substring(8).toInt() & 3);
     Serial.println("DONE");
   } else if (line == "BMSTUCK" && pet.noSave) {  // BerryMatch: a board with no swap left, so it shuffles (testing)
     if (bmOpen && bm.phase == BMP_PLAY) {
@@ -5180,9 +5184,7 @@ void bmEvents(uint32_t ev) {
 void matchTouchDown(int16_t x, int16_t y) {
   if (!bmOpen || bmOverT) return;
   v2PlayInputAt = millis();
-  int cx, cy;
-  if (!bmCellAt(x, y, cx, cy)) cx = cy = -1;
-  bmEvents(bmTap(bm, cx, cy));
+  bmEvents(bmTapAt(bm, x, y));  // (a near miss beside the piece picked still swaps: berrymatch.h)
 }
 
 // the Knomi's button (Space on a computer): the card's READY, GO!; then, on a computer, Space picks under the cursor

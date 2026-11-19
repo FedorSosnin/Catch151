@@ -17,7 +17,8 @@
 #define BM_N 6            // the board: BM_N x BM_N squares, the four corners off
 #define BM_KINDS 5        // Razz Berry, Oran Berry, Pinap Berry, Rare Candy, Poke Ball
 #define BM_MOVES 20       // swaps a game (the how-to cards say 20)
-#define BM_CELL 60        // a square, in px: the pieces are 18 x 18 icons at 3x (54 px)
+#define BM_CELL 62        // a square, in px: the most six fit across the round screen (Fedor: "just a hair larger")
+#define BM_PIECE 58       // a piece: an 18 x 18 icon drawn this big (it was 54, at 3x)
 #define BM_X0 (233 - BM_N * BM_CELL / 2)  // the board's top left (the corner square's, though it's off)
 #define BM_Y0 (233 - BM_N * BM_CELL / 2)
 #define BM_PTS 10         // a piece caught, times the chain's step
@@ -53,6 +54,21 @@ inline bool bmCellAt(int px, int py, int &x, int &y) {
   x = (px - BM_X0) / BM_CELL;
   y = (py - BM_Y0) / BM_CELL;
   return bmOn(x, y);
+}
+// Big fingers (Fedor: "sometimes have trouble selecting them"): with a piece picked, a tap that misses the square
+// beside it onto a corner-to-corner one, or a little past it, still swaps with it if it points clearly along a row or
+// a column from the picked piece's middle: up to BM_TAP_REACH squares that way, at least BM_TAP_CLEAR times as far
+// as across. The picked square and the squares beside it take the tap as they are.
+#define BM_TAP_REACH 1.7f
+#define BM_TAP_CLEAR 1.5f
+inline bool bmTapNear(int selX, int selY, int px, int py, int &nx, int &ny) {
+  float dx = (px - (BM_X0 + selX * BM_CELL + BM_CELL / 2.0f)) / BM_CELL;
+  float dy = (py - (BM_Y0 + selY * BM_CELL + BM_CELL / 2.0f)) / BM_CELL;
+  float ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
+  nx = selX, ny = selY;
+  if (ax >= BM_TAP_CLEAR * ay && ax <= BM_TAP_REACH) nx += dx > 0 ? 1 : -1;
+  else if (ay >= BM_TAP_CLEAR * ax && ay <= BM_TAP_REACH) ny += dy > 0 ? 1 : -1;
+  return (nx != selX || ny != selY) && bmNext(selX, selY, nx, ny);
 }
 
 enum BmPhase : uint8_t { BMP_PLAY, BMP_SWAP, BMP_BACK, BMP_POP, BMP_FALL, BMP_SHUFFLE, BMP_END };
@@ -456,6 +472,17 @@ inline uint32_t bmTap(BmState &s, int x, int y) {
   s.selX = (int8_t)x, s.selY = (int8_t)y;
   s.queueX = s.queueY = -1;
   return BE_PICK;
+}
+
+// a finger at (px, py) on the screen: the square under it (off the board: the piece picked is put down), kinder to a
+// near miss once a piece is picked (bmTapNear())
+inline uint32_t bmTapAt(BmState &s, int px, int py) {
+  int x, y;
+  if (!bmCellAt(px, py, x, y)) x = y = -1;
+  int nx, ny;
+  bool beside = s.selX >= 0 && (x < 0 || bmNext(s.selX, s.selY, x, y) || (x == s.selX && y == s.selY));
+  if (s.selX >= 0 && !beside && bmTapNear(s.selX, s.selY, px, py, nx, ny)) return bmTap(s, nx, ny);
+  return bmTap(s, x, y);
 }
 
 // the keys' cursor: an arrow moves it (past a corner that's off, to the next square in play); with a piece picked,

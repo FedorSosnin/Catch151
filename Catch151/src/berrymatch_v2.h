@@ -44,30 +44,31 @@ static uint16_t v2GreatInk(char c) {
 static int bmPx(float x) { return BM_X0 + (int)lroundf(x * BM_CELL) + BM_HALF; }  // a square's middle (x may be between)
 static int bmPy(float y) { return BM_Y0 + (int)lroundf(y * BM_CELL) + BM_HALF; }
 
-// a piece, its middle at (cx, cy): turned deg, smaller for step > 1; clipY: none of it above that row (a new piece
-// coming in at the top of its column)
+// a piece, its middle at (cx, cy), BM_PIECE px: turned deg, smaller for step > 1; clipY: none of it above that row (a
+// new piece coming in at the top of its column). Drawn in 2 px cells (the Knomi's own pixels), each the icon's pixel
+// under its middle
 static void bmPiece(uint8_t p, int cx, int cy, float deg = 0, float step = 1, int clipY = -1) {
+  const float st = step * 2.0f * HOME_ICON_N / BM_PIECE, mid = HOME_ICON_N / 2.0f;  // the icon's pixels a cell moves
   if (bmIsBall(p)) {
     const char *const *spr = p == BM_GREAT ? SPR_V2_GREAT_BALL : p == BM_ULTRA ? SPR_V2_ULTRA_BALL : SPR_V2_MASTER_BALL;
     uint16_t (*ink)(char) = p == BM_GREAT ? v2GreatInk : p == BM_ULTRA ? v2UltraInk : v2MasterInk;
-    v2BallSprTurned(spr, ink, 3, deg, cx, cy, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f, step);
+    v2BallSprTurned(spr, ink, 2, deg, SNAP2(cx), SNAP2(cy), mid, mid, st);
     return;
   }
   static const char *const *const SPR[BM_KINDS] = { SPR_HOME_FOOD, SPR_BERRY_ORAN, SPR_BERRY_PINAP, SPR_CANDY, SPR_HOME_BALL };
   if (!bmIsKind(p)) return;
   const char *const *spr = SPR[p - 1];
   if (deg != 0 || step != 1) {
-    drawMapTurnedStep(spr, HOME_ICON_N, 3, step, deg, cx, cy, HOME_ICON_N / 2.0f, HOME_ICON_N / 2.0f);
+    drawMapTurnedStep(spr, HOME_ICON_N, 2, st, deg, SNAP2(cx), SNAP2(cy), mid, mid);
     return;
   }
-  const int s = 3, x = SNAP2(cx - HOME_ICON_N * s / 2), y = SNAP2(cy - HOME_ICON_N * s / 2);
-  for (int r = 0; r < HOME_ICON_N; r++) {
-    int y0 = y + r * s, h = s;
-    if (y0 + s <= clipY) continue;
-    if (y0 < clipY) h -= clipY - y0, y0 = clipY;
-    const char *row = spr[r];
-    forRuns(HOME_ICON_N, [&](int c) { return charKey(row[c], false); },
-            [&](int c0, int len, int k) { gfx->fillRect(x + c0 * s, y0, len * s, h, spriteColor((char)k)); });
+  const int n = BM_PIECE / 2, x0 = SNAP2(cx) - n, y0 = SNAP2(cy) - n;
+  for (int j = 0; j < n; j++) {
+    int y = y0 + 2 * j;
+    if (y < clipY) continue;
+    const char *row = spr[(int)((j + 0.5f) * st)];
+    forRuns(n, [&](int c) { return charKey(row[(int)((c + 0.5f) * st)], false); },
+            [&](int c0, int len, int k) { gfx->fillRect(x0 + 2 * c0, y, 2 * len, 2, spriteColor((char)k)); });
   }
 }
 
@@ -89,8 +90,93 @@ static int bmShapeDist(int px, int py) {
   return best;
 }
 #define BM_RIM 8
-static void bmPaintBack(int tod) {
-  scTilt(tod);
+// the scene under the board (BMSCENE n on a test copy's console: trying them side by side). The first, Berry Drop's
+// clearing, put a light sky under the board's top half, and its tint over the sky came out grey-blue, the Oran
+// Berry's and the Rare Candy's own colours (Fedor: "hard to see on the background"): the others are warm or green.
+// (bmScene is the sketch's, with the game's state)
+static uint32_t bmHash(int a, int b) {
+  uint32_t h = (uint32_t)(a * 73856093) ^ (uint32_t)(b * 19349663);
+  h ^= h >> 13;
+  h *= 0x5bd1e995;
+  return h ^ (h >> 15);
+}
+// a picnic table seen from above: warm planks across the screen, their grain, a knot now and then, the gaps dark
+static void bmPaintWood() {
+  static const Rgb PLANK[3] = { 0xB98250, 0xAE7848, 0xC28C58 };
+  const int H = 48;
+  for (int y = 0; y < V2_W; y += 4) {
+    int k = y / H, row = (y % H) / 4;
+    Rgb base = PLANK[bmHash(k, 7) % 3];
+    int joint = 40 + (int)(bmHash(k, 3) % 380);  // where this plank meets the next along
+    for (int x = 0; x < V2_W; x += 4) {
+      Rgb c = base;
+      if (row == 0) c = 0x5A3A20;                              // the gap
+      else if (row == 1) c = scMix(base, 0xFFFFFF, .14);        // the lit edge under it
+      else if (row == H / 4 - 1) c = scMix(base, 0x5A3A20, .3); // its shaded far edge
+      else if (bmHash(x / 4 + k * 7, row) % 11 == 0 || (bmHash(k * 5 + row, x / 28) % 5 == 0 && row % 3 == 1))
+        c = scMix(base, 0x6E4A2C, .28);                         // the grain
+      if (abs(x - joint) < 4 && row) c = 0x5A3A20;
+      scCell(x, y, c);
+    }
+    if (row == 5 && bmHash(k, 11) % 3 == 0) {  // a knot
+      int kx = 60 + (int)(bmHash(k, 13) % 340);
+      scOval(scE(kx - 10, y - 6, kx + 10, y + 8), scMix(base, 0x5A3A20, .45), SC_NONE);
+      scOval(scE(kx - 5, y - 2, kx + 5, y + 4), 0x6E4A2C);
+    }
+  }
+}
+// a lawn seen from above: the grass in two greens with darker tufts, clover and a few flowers round the board
+static void bmPaintGrass() {
+  for (int y = 0; y < V2_W; y += 4)
+    for (int x = 0; x < V2_W; x += 4) {
+      uint32_t h = bmHash(x / 4, y / 4) % 100;
+      scCell(x, y, h < 12 ? 0x5A9A3A : h < 20 ? 0x86C860 : ((x / 4 + y / 4 * 3) % 7 == 0 ? 0x64A846 : 0x6DB04A));
+    }
+  for (int i = 0; i < 260; i++) {  // tufts: a little v
+    int x = (int)(bmHash(i, 1) % 116) * 4, y = (int)(bmHash(i, 2) % 116) * 4;
+    scCell(x, y, 0x4A8A34);
+    scCell(x + 8, y, 0x4A8A34);
+    scCell(x + 4, y + 4, 0x4A8A34);
+  }
+  for (int i = 0; i < 70; i++) {  // flowers, only off the board
+    int x = (int)(bmHash(i, 5) % 112) * 4 + 4, y = (int)(bmHash(i, 6) % 112) * 4 + 4;
+    if (bmShapeDist(x, y) < 14) continue;
+    Rgb petal = i % 3 == 0 ? 0xF4F4F8 : i % 3 == 1 ? 0xF8C8D8 : 0xF8E070;
+    scCell(x - 4, y, petal), scCell(x + 4, y, petal), scCell(x, y - 4, petal), scCell(x, y + 4, petal);
+    scCell(x, y, i % 3 == 2 ? 0xE8803A : 0xF2C230);
+  }
+}
+// a berry patch: dark tilled soil under the board, and round it a ring of leafy bushes with red berries on them
+static void bmPaintPatch() {
+  for (int y = 0; y < V2_W; y += 4)
+    for (int x = 0; x < V2_W; x += 4) {
+      uint32_t h = bmHash(x / 4, y / 4) % 100;
+      bool furrow = (y / 4) % 6 == 0;
+      scCell(x, y, furrow ? 0x5E4028 : h < 14 ? 0x6E4C30 : h < 22 ? 0x9A7048 : 0x86603C);
+    }
+  for (int a = 0; a < 360; a += 15) {  // the bushes, all round the edge
+    float r = 3.14159f * a / 180;
+    int cx = CX + (int)(220 * cosf(r)), cy = CY + (int)(220 * sinf(r));
+    scOval(scE(cx - 34, cy - 30, cx + 34, cy + 30), 0x3F8A4C, 0x58B868, 0x2F6A3A);
+  }
+  for (int a = 7; a < 360; a += 30) {  // berries on them
+    float r = 3.14159f * a / 180;
+    int cx = CX + (int)(214 * cosf(r)), cy = CY + (int)(214 * sinf(r));
+    if (bmShapeDist(cx, cy) < 10) continue;
+    scOval(scE(cx - 5, cy - 5, cx + 5, cy + 5), 0xE8503A, 0xFF8A6A);
+  }
+}
+static void bmPaintBack(int key) {
+  int tod = key & 3, scene = key >> 2;
+  if (scene == 0) {
+    scTilt(tod);
+  } else {
+    scGradeTod = tod;  // (dusk and night graded as the other scenes)
+    if (scene == 1) bmPaintWood();
+    else if (scene == 2) bmPaintGrass();
+    else bmPaintPatch();
+    scGradeTod = 0;
+  }
   uint16_t ink = sc565(0x1B1B25);
   for (int y = BM_Y0 - BM_RIM; y < BM_Y0 + BM_N * BM_CELL + BM_RIM; y += 2)
     for (int x = BM_X0 - BM_RIM; x < BM_X0 + BM_N * BM_CELL + BM_RIM; x += 2) {
@@ -106,7 +192,10 @@ static void bmPaintBack(int tod) {
       v2Cell(scFb, x, y, ink, a);
     }
 }
-static void bmBack() { uint8_t t = v2HourTod(); v2Cached(0x3B000000 + t, bmPaintBack, t); }
+static void bmBack() {
+  int key = (bmScene << 2) | v2HourTod();
+  v2Cached(0x3B000000 + key, bmPaintBack, key);
+}
 
 // ----- what's said over the board for a moment (SHUFFLE!, LAST MOVE!) -----
 static StrId bmSayId = S_BM_SHUFFLE;
@@ -223,7 +312,7 @@ static void bmDraw(const BmState &s, uint32_t now) {
   snprintf(b, sizeof(b), "%lu", (unsigned long)s.score);
   fsSay(b, CX, 16, 0xFFFFFF, 3);
   snprintf(b, sizeof(b), T(S_BM_MOVES_FMT), (unsigned)s.moves);
-  fsSay(b, CX, BM_Y0 + BM_N * BM_CELL + 10, s.moves <= 3 ? BM_GOLD : 0xFFFFFF, 2);
+  fsSay(b, CX, BM_Y0 + BM_N * BM_CELL + 6, s.moves <= 3 ? BM_GOLD : 0xFFFFFF, 2);
   // a word for a moment: SHUFFLE! (as long as it takes), LAST MOVE!
   if (bmSayT && now - bmSayT < 1300) {
     float j = (now - bmSayT) / 1300.0f;
