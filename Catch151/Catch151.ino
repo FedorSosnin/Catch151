@@ -7827,6 +7827,18 @@ void tradeTap(int16_t x, int16_t y) {
 #define ZONE_PAGE_Y 386
 #define ZONE_CLOSE_Y V2_CLOSE_Y
 static_assert(ZONE_BTN_Y - 2 == V2_SLIDE_ZONE_Y && DEXG_PAGE_Y - 2 == V2_SLIDE_DEX_Y, "slide_v2.h keeps these still");
+// Search answers far wider than it's drawn (Fedor, 2026-11-19: "too small to press on the knomi"): the whole band
+// from the grid's panel down to the X, page line and all (nothing there is tapped), and out past the panel's sides.
+// The bottom row of squares ends at 324; the X answers from 390 (closeHitAt)
+#define ZONE_HIT_X0 64
+#define ZONE_HIT_X1 402
+#define ZONE_HIT_Y0 330
+#define ZONE_HIT_Y1 390
+static_assert(ZONE_HIT_Y0 >= ZONE_GRID_Y + 3 * ZONE_CELL && ZONE_HIT_Y1 <= ZONE_CLOSE_Y - (CLOSE_R + 8),
+              "Search's tap area stays off the squares and the X");
+static bool zoneSearchAt(int16_t x, int16_t y) {
+  return y >= ZONE_HIT_Y0 && y < ZONE_HIT_Y1 && x >= ZONE_HIT_X0 && x < ZONE_HIT_X1;
+}
 
 // two rows of three: the five zones, then Wild Encounter (a wild Pokemon from anywhere, like the
 // Knomi's button; the apps and the web have none), met at home: its window is your Pokemon's own
@@ -7945,7 +7957,7 @@ void zoneTap(int16_t x, int16_t y) {
     zoneScreen = ZS_ZONE;
     return;
   }
-  if (y >= ZONE_BTN_Y && y < ZONE_BTN_Y + ZONE_BTN_H && x >= ZONE_BTN_X && x < ZONE_BTN_X + ZONE_BTN_W) {
+  if (zoneSearchAt(x, y)) {
     zoneSearch();
     return;
   }
@@ -8802,7 +8814,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   if (zoneScreen) {
     if (zoneDetail) return v2PressDexEntry(x, y, t);  // V2: an entry's side buttons and its X
     if (zoneDetail) return false;  // an entry: tap anywhere to go back
-    if (y >= ZONE_BTN_Y && y < ZONE_BTN_Y + ZONE_BTN_H && x >= ZONE_BTN_X && x < ZONE_BTN_X + ZONE_BTN_W)
+    if (zoneSearchAt(x, y))
       return pressSet(t, ZONE_BTN_X, ZONE_BTN_Y, ZONE_BTN_W, ZONE_BTN_H, T(S_ZONE_SEARCH));
     if (int d = pageArrowAt(x, y, zonePage, (zoneSize(zoneCur) + ZONE_PAGE - 1) / ZONE_PAGE, PAGE_ARROW_Y))
       return pressSet(t, CX + d * pageArrowDx(PAGE_ARROW_Y) - CLOSE_R, PAGE_ARROW_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, d < 0 ? "<" : ">");

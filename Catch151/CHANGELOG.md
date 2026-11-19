@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Search is easier to press:** in a zone, Search answers anywhere in the band between the grid and the X, the "Page 1 of 5" line included, and out past the grid's sides, not just on the thin bar itself (Fedor: "too small to press on the knomi"). It looks the same; the squares and the X work as before.
+
 ## [2.2.12] - 2026-11-18
 
 - **Instant taps:** a button acts the moment you touch or click it, on the Knomi, the Mac, Windows and the web (Fedor: "this instant click feels way better"). The large copy of a button no longer pops up while you swipe or move around: it shows only when you hold your finger still on a button you slid onto. A swipe that starts on a button presses it; start it beside the buttons, or use the arrows at the sides.
