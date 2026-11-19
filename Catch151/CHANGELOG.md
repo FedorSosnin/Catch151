@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.12] - 2026-11-18
 
 - **Instant taps:** a button acts the moment you touch or click it, on the Knomi, the Mac, Windows and the web (Fedor: "this instant click feels way better"). The large copy of a button no longer pops up while you swipe or move around: it shows only when you hold your finger still on a button you slid onto. A swipe that starts on a button presses it; start it beside the buttons, or use the arrows at the sides.
 - **Several Wi-Fi networks:** the Knomi remembers the last five networks it joined and connects to whichever it hears best, so it can go between home and work. The **Change Wi-Fi** list ticks the ones it knows, and picking one doesn't ask for the password again.
