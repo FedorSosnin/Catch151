@@ -147,7 +147,7 @@ TEST(berrymatch, a_swap_that_lines_up_three_catches_them_scores_and_costs_a_move
   CHECK(ev & BE_POP);
   CHECK(!(ev & BE_BACK));
   CHECK(s.phase == BMP_PLAY);
-  CHECK_EQ(s.moves, (uint8_t)(BM_MOVES - 1));
+  CHECK_EQ(s.moves, (uint8_t)(BM_MOVES - 1 + s.earned));  // (a move used, and any it earned back)
   CHECK(s.score >= 3 * BM_PTS);
   CHECK(full(s));          // refilled
   CHECK(!bmAnyMatch(s));   // and settled: whatever lined up on landing went too
@@ -386,7 +386,58 @@ TEST(berrymatch, a_ball_swapped_with_any_piece_beside_it_is_a_move_and_goes_off_
   CHECK_EQ(s.gone[0][1], 0);  // (column 1, row 0: neither)
   ev |= settle(s);
   CHECK(full(s));
-  CHECK_EQ(s.moves, (uint8_t)(BM_MOVES - 1));
+  CHECK_EQ(s.moves, (uint8_t)(BM_MOVES - 1 + s.earned));  // (a move used, and any it earned back)
+}
+
+TEST(berrymatch, a_ball_made_earns_moves_one_two_or_three_and_a_long_chain_one_a_step) {
+  BmState s;
+  bmStart(s, 3);
+  struct { int ball, earn; } want[3] = { { BM_GREAT, BM_EARN_GREAT }, { BM_ULTRA, BM_EARN_ULTRA }, { BM_MASTER, BM_EARN_MASTER } };
+  CHECK(BM_EARN_GREAT >= 1 && BM_EARN_ULTRA > BM_EARN_GREAT && BM_EARN_MASTER > BM_EARN_ULTRA);  // the rarer, the more
+  for (auto &w : want) {
+    setStuck(s);
+    if (w.ball == BM_GREAT) for (int x = 1; x <= 4; x++) s.b[2][x] = 1;              // four in a line
+    if (w.ball == BM_ULTRA) s.b[2][1] = s.b[2][2] = s.b[2][3] = s.b[3][3] = s.b[4][3] = 2;  // an L
+    if (w.ball == BM_MASTER) for (int x = 0; x < 5; x++) s.b[2][x] = 1;              // five
+    s.moves = 7, s.earned = 0, s.chain = 0;
+    s.ax = s.ay = s.bx = s.by = -1;
+    uint32_t ev = bmResolve(s, nullptr, 0);
+    CHECK(ev & BE_BALL);
+    CHECK(ev & BE_EARN);
+    CHECK_EQ(s.gain, (uint8_t)w.earn);
+    CHECK_EQ(s.moves, (uint8_t)(7 + w.earn));
+    CHECK_EQ(s.earned, (uint16_t)w.earn);
+  }
+  // a plain line of three earns nothing; nor does a chain's second or third step; its fourth on, one a step
+  for (int step = 1; step <= 5; step++) {
+    setStuck(s);
+    s.b[1][1] = s.b[1][2] = 2;  // (row 1: 2 2 2 1 2)
+    s.moves = 7, s.chain = (uint8_t)(step - 1);
+    uint32_t ev = bmResolve(s, nullptr, 0);
+    CHECK(ev & BE_POP);
+    bool earns = step >= BM_EARN_CHAIN_FROM;
+    CHECK_EQ((ev & BE_EARN) != 0, earns);
+    CHECK_EQ(s.moves, (uint8_t)(7 + (earns ? BM_EARN_CHAIN : 0)));
+  }
+  // never more than BM_MOVES_MAX left
+  setStuck(s);
+  for (int x = 0; x < 5; x++) s.b[2][x] = 1;
+  s.moves = BM_MOVES_MAX - 1, s.chain = 0;
+  bmResolve(s, nullptr, 0);
+  CHECK_EQ(s.moves, (uint8_t)BM_MOVES_MAX);
+  CHECK_EQ(s.gain, (uint8_t)1);
+}
+
+TEST(berrymatch, last_move_is_said_once_the_board_is_ready_with_one_move_left) {
+  BmState s;
+  bmStart(s, 6);
+  s.moves = 2;
+  bmFindHint(s);
+  int8_t h[4];
+  memcpy(h, s.hint, sizeof(h));
+  uint32_t ev = swap(s, h[0], h[1], h[2], h[3]);  // (it may earn moves back: then it isn't the last yet)
+  CHECK(s.phase == BMP_PLAY);
+  CHECK_EQ((ev & BE_LAST) != 0, s.moves == 1);
 }
 
 TEST(berrymatch, no_swap_left_shuffles_the_same_pieces_into_a_board_with_one) {
@@ -436,7 +487,7 @@ TEST(berrymatch, a_swap_asked_for_while_the_board_moves_is_played_once_it_is_rea
     if (s.phase == BMP_END) continue;
     CHECK(ev & BE_SWAP);  // the swap went once the board was ready
     settle(s);
-    CHECK(s.moves == moves || s.moves == moves - 1);  // (it may not have worked: then it swapped back)
+    CHECK(s.moves + 1 >= moves);  // (one used, or none if it swapped back; and any it earned)
     return;
   }
   CHECK(false);  // no seed tried it
@@ -493,7 +544,7 @@ TEST(berrymatch, the_keys_move_a_cursor_past_the_corners_space_picks_and_an_arro
   CHECK(s.curX == s.hint[2] && s.curY == s.hint[3]);
   uint32_t ev = settle(s);
   CHECK(ev & BE_POP);
-  CHECK_EQ(s.moves, (uint8_t)(BM_MOVES - 1));
+  CHECK_EQ(s.moves, (uint8_t)(BM_MOVES - 1 + s.earned));  // (a move used, and any it earned back)
 }
 
 // a bot that plays a working swap each turn (the hint), as a player would
@@ -518,7 +569,7 @@ static uint32_t playGame(BmState &s, uint32_t seed, int *shuffles = nullptr) {
 TEST(berrymatch, a_whole_game_ends_after_its_moves_the_board_always_full_and_settled) {
   uint64_t total = 0;
   uint32_t lo = 0xFFFFFFFF, hi = 0;
-  int shuffles = 0, balls = 0, games = 200;
+  int shuffles = 0, balls = 0, games = 200, played = 0, most = 0;
   uint32_t seen = 0;
   for (int g = 0; g < games; g++) {
     BmState s;
@@ -528,6 +579,9 @@ TEST(berrymatch, a_whole_game_ends_after_its_moves_the_board_always_full_and_set
     CHECK(ev & BE_LAST);
     CHECK_EQ(s.moves, (uint8_t)0);
     CHECK(s.phase == BMP_END);
+    CHECK_EQ(s.played, (uint16_t)(BM_MOVES + s.earned));  // the 20 it started with and every one it earned
+    played += s.played;
+    if (s.played > most) most = s.played;
     CHECK(s.score >= BM_MOVES * 3 * BM_PTS);  // every move caught three at least
     CHECK(bmTap(s, 2, 2) == 0);  // over: taps do nothing
     total += s.score;
@@ -538,6 +592,7 @@ TEST(berrymatch, a_whole_game_ends_after_its_moves_the_board_always_full_and_set
   CHECK(seen & BE_CHAIN);
   CHECK(seen & BE_BALL);
   CHECK(seen & BE_FIRE);
-  printf("    (bot: %d games, score %u..%u, mean %u; %d balls made, %d shuffles)\n", games, lo, hi,
-         (unsigned)(total / games), balls, shuffles);
+  printf("    (bot: %d games, score %u..%u, mean %u; moves played %.1f on average, %d at most; %d balls made, %d shuffles)\n",
+         games, lo, hi, (unsigned)(total / games), played / (float)games, most, balls, shuffles);
+  CHECK(played / (float)games >= 28 && played / (float)games <= 45);  // the moves earned keep a game near 30 to 40
 }

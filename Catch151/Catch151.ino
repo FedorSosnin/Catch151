@@ -5166,6 +5166,7 @@ void bmEvents(uint32_t ev) {
     bmSay(S_BM_SHUFFLE);
   }
   if (ev & BE_LAST) bmSay(S_BM_LAST);
+  if (ev & BE_EARN) bmEarn(bm.gain);  // moves earned: a ball made, a long chain
   if (ev & BE_END) {
     bmNewHi = bm.score > pet.matchHi;
     pet.matchResult(bm.score);  // the reward and record only at the end

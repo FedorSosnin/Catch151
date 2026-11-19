@@ -790,7 +790,7 @@ static void testGame() {
       CHECK(bm.selX == h[0] && bm.selY == h[1]);
       tapAt(BM_X0 + h[2] * BM_CELL + BM_CELL / 2, BM_Y0 + h[3] * BM_CELL + BM_CELL / 2);
       for (int i = 0; i < 60 && bm.phase != BMP_PLAY; i++) runTicks(100);
-      CHECK(bm.phase == BMP_PLAY && bm.moves == BM_MOVES - 1 && bm.score > 0);
+      CHECK(bm.phase == BMP_PLAY && bm.moves == BM_MOVES - 1 + bm.earned && bm.score > 0);
       CHECK(!bm.keys);
       bm.curX = 2, bm.curY = 2;
       hostTiltKeys(false, true);  // Right: the cursor one along

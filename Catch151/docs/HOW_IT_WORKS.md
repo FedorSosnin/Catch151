@@ -41,7 +41,7 @@ Games don't raise anything if you quit by swiping up.
 | 🕳️ **Dungeon Crawler** | +5, plus 4 per floor | −10, more for deep dives | −5 | Yes | +2 | Yes |
 | 🎣 **Reel Fishing** | +5, plus 2 per 44 lb | −10, more for heavy catches | −5 | Yes | +2 | Yes |
 | 🕹️ **Pinball** | +5, plus 2 per 400 points | −10, more for high scores | −5 | Yes | +2 | Yes |
-| 🫐 **BerryMatch** | +5, plus 2 per 100 points | −10, more for high scores | −5 | Yes | +2 | Yes |
+| 🫐 **BerryMatch** | +5, plus 2 per 200 points | −10, more for high scores | −5 | Yes | +2 | Yes |
 | ❓ **Who's That?** | +3, plus 3 per right answer | | | | +1 | |
 
 Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball and BerryMatch each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
@@ -107,7 +107,7 @@ A round table, the round screen itself, its rim the wall, with a drain between t
 
 ### BerryMatch
 
-A board of berries to swap and line up, 5 squares by 5 with the four corners cut off so it sits round on the round screen, 21 squares in all. Each square is 76 px, the pieces the game's own food icons at the backpack's size (72 px, four times the icon, so they're sharp on the Knomi): the Razz, Oran and Pinap Berries and the Rare Candy. Poké Balls only come as the special balls. Twenty moves a game; the best score is kept.
+A board of berries to swap and line up, 5 squares by 5 with the four corners cut off so it sits round on the round screen, 21 squares in all. Each square is 76 px, the pieces the game's own food icons at the backpack's size (72 px, four times the icon, so they're sharp on the Knomi): the Razz, Oran and Pinap Berries and the Rare Candy. Poké Balls only come as the special balls. A game starts with twenty moves and playing well earns more; the best score is kept.
 
 - **Swapping:** tap a piece and it lights up with a gold outline and hops; tap one next to it (above, below or beside, not corner to corner) and the two swap. Tap it again to put it down, or tap another one farther off to pick that one instead. With a piece picked, a tap that just misses the one beside it (onto a corner-to-corner square, or a little past it) still swaps with it, as long as it points clearly along the row or the column. A swap that lines nothing up slides back and costs nothing. Pieces act the moment they're touched.
 - **Catching:** three or more of a kind in a row or a column are caught and spin away. The pieces above fall into the gaps, new ones drop in from the top of each column, and anything that lines up as they land is caught too: a chain. A piece can be picked while the board is still moving; a swap asked for then waits until it settles.
@@ -115,9 +115,10 @@ A board of berries to swap and line up, 5 squares by 5 with the four corners cut
 - **The balls:** four in a line leave a **Great Ball** where the piece you moved landed (or in the line's middle, in a chain); a row and a column of one kind crossing, an L or a T, leave an **Ultra Ball** where they cross; five in a line leave a **Master Ball**. Balls aren't a kind and don't line up: swap one with any piece next to it (always a move) and it goes off where it lands. A Great Ball catches its whole row and column, an Ultra Ball everything up to two steps away, a Master Ball the whole board. A ball caught by another one goes off too.
 - **No moves left:** when no swap would line anything up (and no ball is on the board), **SHUFFLE!**: the same pieces turn round into new places, with a swap that works and nothing already lined up. It costs no move.
 - **A hint:** ten seconds with nothing done and two pieces that would match start to wiggle, until you tap. Three hints a game, then no more.
-- **The last moves:** the count under the board turns gold for the last three, and **LAST MOVE!** shows before the last one. When it's played and the board settles, the game ends: the score, the record and Play Again!
+- **Earning moves:** a Great Ball made earns 1 move, an Ultra Ball 2 and a Master Ball 3, and a chain that keeps going after its third catch earns 1 for each catch after that (the fourth, the fifth...). A green **+1** (or +2, +3) rises by the count of moves left, which flashes green. The count stops at 99. A game lasts about 35 moves on average, a lucky one 80 or more.
+- **The last moves:** the count under the board turns gold for the last three, and **LAST MOVE!** shows when the board is ready for the last one (a move that earns more isn't the last). When the moves are gone and the board settles, the game ends: the score, the record and Play Again!
 - **On a computer and the web:** the mouse works as a finger. The arrow keys move a white cursor round the board (past the cut corners), Space picks the piece under it, and with one picked an arrow swaps it that way. Space also sends off the how-to card, as the Knomi's button does.
-- **Rewards:** joy and speed training from the score, a point for every 100 (a game scores about 2,300 on average), as the table above. The game plays Berry Drop's song.
+- **Rewards:** joy and speed training from the score, a point for every 200 (a game scores about 4,000 on average), as the table above. The game plays Berry Drop's song.
 
 ## Battles
 

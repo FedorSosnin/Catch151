@@ -52,8 +52,13 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
   like the Great, Ultra and Master Balls.
 - **Hints:** after 10 s with nothing done (`BM_HINT_S`), three a game (`BM_HINTS`; Fedor: at 6 s with no limit they
   came too soon and too often).
-- **Moves, not time:** 20 swaps a game, so nothing hurries a finger on the small screen. A swap that swaps back costs
-  nothing.
+- **Moves, not time:** a game starts with 20 swaps, so nothing hurries a finger on the small screen; a swap that swaps
+  back costs nothing. Playing well earns more (Fedor picked this over 30 fixed moves or an endless game, which would
+  make the score measure patience and need the board saved between visits): `BM_EARN_GREAT` 1, `BM_EARN_ULTRA` 2,
+  `BM_EARN_MASTER` 3, and `BM_EARN_CHAIN` 1 for each chain step from `BM_EARN_CHAIN_FROM` 4 on, up to `BM_MOVES_MAX`
+  99 left. Tuned with the bot (2,000 games each): earning from a chain's second step made games run thousands of
+  moves (four kinds chain all the time), balls alone averaged 30.5; these average 35.7 (20 to 121, 1 game in 8 under
+  25, 1 in 25 over 60). Scores about doubled, so the reward is a point per 200 (`Pet::matchResult()`).
 - **Pace:** a swap slides in 0.16 s, the catch pops in 0.3 s, pieces fall from 5 squares a second speeding up by 60;
   the game runs at the arcade rate (25 frames a second on the Knomi) while it's open.
 - **Sounds:** the effects there are: a tap to pick, the reel's click to swap, the deny buzz for a swap back, a hit for

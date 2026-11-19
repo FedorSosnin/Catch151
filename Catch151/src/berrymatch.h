@@ -12,13 +12,24 @@
 // of a chain scoring more. A swap that lines nothing up swaps back. Four in a line leave a Great Ball, a row and a
 // column crossing (an L, a T, a +) an Ultra Ball, five in a line a Master Ball; swapped with a piece beside it, a
 // ball goes off where it lands: a Great Ball catches its row and its column, an Ultra Ball everything two steps from
-// it, a Master Ball the whole board. A ball caught by another goes off too. BM_MOVES swaps a game; when no swap
+// it, a Master Ball the whole board. A ball caught by another goes off too. A game starts with BM_MOVES swaps, and
+// playing well earns more (Fedor's pick of three, over a longer fixed count or an endless game): each step of a chain
+// after the first, and each ball made. The game ends when they're gone; when no swap
 // lines anything up, the board shuffles.
 
 #define BM_N 5            // the board: BM_N x BM_N squares, the four corners off (it was 6 x 6, 62 px squares)
 #define BM_KINDS 4        // Razz Berry, Oran Berry, Pinap Berry, Rare Candy (the balls are the special pieces; with
                           // five kinds on 21 squares most games would need a shuffle)
-#define BM_MOVES 20       // swaps a game (the how-to cards say 20)
+#define BM_MOVES 20       // swaps a game starts with (the how-to cards say 20)...
+#define BM_MOVES_MAX 99   // ...never more than this left (two digits under the board)
+#ifndef BM_EARN_CHAIN     // ...and the swaps earned (tuned with the bot in test/test_berrymatch.cpp's whole games):
+#define BM_EARN_CHAIN 1   // each step of a chain from BM_EARN_CHAIN_FROM on (the swap's own catch is step 1: from step
+#define BM_EARN_CHAIN_FROM 4  // 2, the four kinds chain so often a game hardly ended; a bot's game: 20..121 swaps, 36 on
+                              // average, a game in 8 under 25)
+#define BM_EARN_GREAT 1   // a Great Ball made
+#define BM_EARN_ULTRA 2   // an Ultra Ball
+#define BM_EARN_MASTER 3  // a Master Ball
+#endif
 #define BM_CELL 76        // a square, in px: five across the round screen, the corners off
 #define BM_PIECE 72       // a piece: an 18 x 18 icon at 4x, the home's size (58 on 6 x 6 squares went uneven on the
                           // Knomi: Fedor, "so low resolution compared to the berries ... on the main ui")
@@ -91,7 +102,8 @@ enum BmPhase : uint8_t { BMP_PLAY, BMP_SWAP, BMP_BACK, BMP_POP, BMP_FALL, BMP_SH
 #define BE_LAND 512u     // the falling pieces landed
 #define BE_SHUFFLE 1024u // no swap left: shuffled
 #define BE_END 2048u     // the last move played out
-#define BE_LAST 4096u    // one move left
+#define BE_LAST 4096u    // one move left, the board ready for it
+#define BE_EARN 8192u    // moves earned (BmState::gain of them)
 
 struct BmFx {  // a ball gone off in this pop, for its flash
   uint8_t ball, x, y;
@@ -119,6 +131,9 @@ struct BmState {
   bool keys = false;          // the keys have been used: the cursor shows
   uint8_t chain = 0, bestChain = 0;
   uint8_t moves = BM_MOVES;
+  uint8_t gain = 0;           // the moves the last catch earned (BE_EARN)
+  uint16_t earned = 0;        // ...and all this game's
+  uint16_t played = 0;        // swaps played this game
   uint8_t balls = 0;          // balls made this game
   uint32_t score = 0;
   uint16_t pts = 0;           // the last pop's points...
@@ -415,6 +430,7 @@ inline uint32_t bmSettle(BmState &s) {
     s.selX = s.selY = -1;
     return BE_END;
   }
+  uint32_t last = s.moves == 1 ? BE_LAST : 0;  // (LAST MOVE! only once there's no catching left to earn more)
   if (!bmHasMove(s)) {
     bmShuffle(s);
     s.phase = BMP_SHUFFLE;
@@ -423,7 +439,7 @@ inline uint32_t bmSettle(BmState &s) {
   }
   s.phase = BMP_PLAY;
   bmFindHint(s);
-  uint32_t ev = 0;
+  uint32_t ev = last;
   if (s.queueX >= 0) {  // the swap asked for while it moved
     int qx = s.queueX, qy = s.queueY;
     s.queueX = s.queueY = -1;
@@ -438,6 +454,18 @@ inline uint32_t bmResolve(BmState &s, const int8_t (*fire)[2], int nFire) {
   int8_t at[2][2] = { { s.bx, s.by }, { s.ax, s.ay } };  // (the piece picked went to b)
   if (bmCatch(s, fire, nFire, at, s.chain == 1 ? 2 : 0, &ev) > 0) {
     if (s.chain > s.bestChain) s.bestChain = s.chain;
+    // moves earned: a long chain's later steps, and each ball made
+    int gain = s.chain >= BM_EARN_CHAIN_FROM ? BM_EARN_CHAIN : 0;
+    for (int y = 0; y < BM_N; y++)
+      for (int x = 0; x < BM_N; x++)
+        gain += s.made[y][x] == BM_GREAT ? BM_EARN_GREAT : s.made[y][x] == BM_ULTRA ? BM_EARN_ULTRA : s.made[y][x] == BM_MASTER ? BM_EARN_MASTER : 0;
+    if (gain > BM_MOVES_MAX - s.moves) gain = BM_MOVES_MAX - s.moves;
+    s.gain = (uint8_t)gain;
+    if (gain > 0) {
+      s.moves += (uint8_t)gain;
+      s.earned += (uint16_t)gain;
+      ev |= BE_EARN;
+    }
     s.phase = BMP_POP;
     s.t = 0;
     return ev;
@@ -533,7 +561,7 @@ inline uint32_t bmStep(BmState &s, float dt) {
       {
         bmSwapCells(s, s.ax, s.ay, s.bx, s.by);
         s.moves--;
-        if (s.moves == 1) ev |= BE_LAST;
+        s.played++;
         int8_t fire[2][2];
         int nf = 0;
         if (bmIsBall(s.b[s.by][s.bx])) fire[nf][0] = s.bx, fire[nf++][1] = s.by;

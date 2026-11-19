@@ -150,6 +150,18 @@ static void bmSay(StrId id) {
   bmSayId = id;
   bmSayT = millis() | 1;
 }
+// moves earned (BE_EARN): "+2" rising beside the moves left, which show green for a moment
+static uint8_t bmEarnN = 0;
+static uint32_t bmEarnT = 0;
+#define BM_EARN_MS 1300
+#define BM_GREEN 0x9AF07A
+static void bmEarn(uint8_t n) {
+  bmEarnN = n;
+  bmEarnT = millis() | 1;
+}
+// how long ago t was, for a frame drawn at now: 0 for a t set after now (an event handled in the frame being drawn,
+// a millisecond or so on: as a uint32_t subtraction it came out huge, and the word or the +1 was cleared unseen)
+static uint32_t bmAge(uint32_t now, uint32_t t) { return (int32_t)(now - t) > 0 ? now - t : 0; }
 
 static float bmEase(float k) { return k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k); }
 
@@ -258,10 +270,21 @@ static void bmDraw(const BmState &s, uint32_t now) {
   snprintf(b, sizeof(b), "%lu", (unsigned long)s.score);
   fsSay(b, CX, 16, 0xFFFFFF, 3);
   snprintf(b, sizeof(b), T(S_BM_MOVES_FMT), (unsigned)s.moves);
-  fsSay(b, CX, BM_Y0 + BM_N * BM_CELL + 6, s.moves <= 3 ? BM_GOLD : 0xFFFFFF, 2);
+  const int my = BM_Y0 + BM_N * BM_CELL + 6;
+  bool earning = bmEarnT && bmAge(now, bmEarnT) < BM_EARN_MS;
+  fsSay(b, CX, my, earning && bmAge(now, bmEarnT) < BM_EARN_MS / 2 ? BM_GREEN : s.moves <= 3 ? BM_GOLD : 0xFFFFFF, 2);
+  if (earning) {  // the moves just earned, rising off the count's right end
+    setSize(2);
+    char e[8];
+    snprintf(e, sizeof(e), "+%u", (unsigned)bmEarnN);
+    float k = bmAge(now, bmEarnT) / (float)BM_EARN_MS;
+    fsSay(e, CX + textW(b, 2) / 2 + 10 + textW(e, 2) / 2, my - (int)(26 * k), BM_GREEN, 2);
+  } else {
+    bmEarnT = 0;
+  }
   // a word for a moment: SHUFFLE! (as long as it takes), LAST MOVE!
-  if (bmSayT && now - bmSayT < 1300) {
-    float j = (now - bmSayT) / 1300.0f;
+  if (bmSayT && bmAge(now, bmSayT) < 1300) {
+    float j = bmAge(now, bmSayT) / 1300.0f;
     int y = CY - 14 - (j < 0.15f ? (int)(30 * (0.15f - j) / 0.15f) : 0);
     fsSay(T(bmSayId), CX, y, BM_GOLD, 3);
   } else {
