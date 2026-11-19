@@ -401,19 +401,31 @@ TEST(berrymatch, a_swap_asked_for_while_the_board_moves_is_played_once_it_is_rea
   CHECK(false);  // no seed tried it
 }
 
-TEST(berrymatch, the_hint_is_a_swap_that_works_shown_after_a_while_idle) {
+TEST(berrymatch, the_hint_is_a_swap_that_works_shown_after_a_while_idle_three_times_a_game_at_most) {
   for (uint32_t seed = 1; seed < 50; seed++) {
     BmState s;
     bmStart(s, seed);
-    bmFindHint(s);
     CHECK(s.hint[0] >= 0);
     CHECK(bmSwapWorks(s, s.hint[0], s.hint[1], s.hint[2], s.hint[3]));
-    CHECK(!bmHintShows(s));
-    for (float t = 0; t < BM_HINT_S + 0.1f; t += DT) bmStep(s, DT);
+    for (float t = 0; t < BM_HINT_S - 0.5f; t += DT) bmStep(s, DT);
+    CHECK(!bmHintShows(s));  // not yet
+    for (float t = 0; t < 0.6f; t += DT) bmStep(s, DT);
     CHECK(bmHintShows(s));
     bmTap(s, 2, 2);  // a tap: not idle any more
     CHECK(!bmHintShows(s));
+    bmTap(s, 2, 2);  // (put down again)
   }
+  BmState s;
+  bmStart(s, 7);
+  int shown = 0;
+  for (int k = 0; k < BM_HINTS + 3; k++) {  // left alone again and again: the first BM_HINTS times only
+    for (float t = 0; t < BM_HINT_S + 0.2f; t += DT) bmStep(s, DT);
+    shown += bmHintShows(s);
+    bmTap(s, 2, 2);
+    bmTap(s, 2, 2);
+  }
+  CHECK_EQ(shown, BM_HINTS);
+  CHECK_EQ(s.hintsLeft, 0);
 }
 
 TEST(berrymatch, the_keys_move_a_cursor_past_the_corners_space_picks_and_an_arrow_swaps) {

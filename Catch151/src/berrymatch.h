@@ -25,7 +25,8 @@
 #define BM_SWAP_S 0.16f   // a swap sliding (and sliding back)
 #define BM_POP_S 0.30f    // the caught pieces popping
 #define BM_SHUFFLE_S 0.80f
-#define BM_HINT_S 6.0f    // idle this long: two pieces that swap wiggle
+#define BM_HINT_S 10.0f   // idle this long: two pieces that swap wiggle...
+#define BM_HINTS 3        // ...this many times a game at most, then no more (Fedor: they came too soon and too often)
 #define BM_FALL_V0 5.0f   // the falling pieces: squares a second at the start...
 #define BM_FALL_G 60.0f   // ...speeding up by this a second
 
@@ -91,6 +92,8 @@ struct BmState {
   bool swapOk = false;
   int8_t queueX = -1, queueY = -1;  // a tap during a fall, played once the board is ready
   int8_t hint[4] = { -1, -1, -1, -1 };  // a swap that works (shown once idle for BM_HINT_S)
+  bool hintOn = false;        // ...showing now
+  uint8_t hintsLeft = BM_HINTS;
   int8_t curX = 2, curY = 2;  // the keys' cursor (a computer, the web)
   bool keys = false;          // the keys have been used: the cursor shows
   uint8_t chain = 0, bestChain = 0;
@@ -373,14 +376,18 @@ inline void bmFindHint(BmState &s) {
   }
   memcpy(s.hint, m[bmRand(s) % (uint32_t)n], 4);
 }
-inline bool bmHintShows(const BmState &s) { return s.phase == BMP_PLAY && s.idle >= BM_HINT_S && s.hint[0] >= 0; }
+inline bool bmHintShows(const BmState &s) { return s.phase == BMP_PLAY && s.hintOn; }
+inline void bmBusy(BmState &s) {  // something was done: idle from now (the hint showing stops)
+  s.idle = 0;
+  s.hintOn = false;
+}
 
 inline uint32_t bmTap(BmState &s, int x, int y);
 // the board is still: the game's end, a shuffle, or ready for the next swap (and a tap that came in while it moved)
 inline uint32_t bmSettle(BmState &s) {
   s.chain = 0;
   s.t = 0;
-  s.idle = 0;
+  bmBusy(s);
   s.hint[0] = -1;
   if (s.moves == 0) {
     s.phase = BMP_END;
@@ -427,7 +434,7 @@ inline uint32_t bmTap(BmState &s, int x, int y) {
     s.selX = s.selY = -1;
     return had ? BE_UNPICK : 0;
   }
-  s.idle = 0;
+  bmBusy(s);
   if (s.selX == x && s.selY == y) {
     s.selX = s.selY = -1;
     return BE_UNPICK;
@@ -478,6 +485,10 @@ inline uint32_t bmStep(BmState &s, float dt) {
   switch (s.phase) {
     case BMP_PLAY:
       s.idle += dt;
+      if (s.idle >= BM_HINT_S && !s.hintOn && s.hintsLeft > 0 && s.hint[0] >= 0) {  // one of the game's few hints
+        s.hintOn = true;
+        s.hintsLeft--;
+      }
       break;
     case BMP_SWAP:
       if (s.t < BM_SWAP_S) break;
@@ -504,7 +515,7 @@ inline uint32_t bmStep(BmState &s, float dt) {
       if (s.t >= BM_SWAP_S) {
         s.phase = BMP_PLAY;
         s.t = 0;
-        s.idle = 0;
+        bmBusy(s);
         if (s.queueX >= 0) {
           int qx = s.queueX, qy = s.queueY;
           s.queueX = s.queueY = -1;

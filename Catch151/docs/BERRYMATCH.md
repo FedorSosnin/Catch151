@@ -35,6 +35,8 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
   on the Knomi are 78 px, the Search bar 56 px tall). The score sits over the board, the moves left under it.
 - **Five kinds:** with four the board lines up too much by itself; with five a game still has a move nearly always
   (the shuffle is for the rest).
+- **Hints:** after 10 s with nothing done (`BM_HINT_S`), three a game (`BM_HINTS`; Fedor: at 6 s with no limit they
+  came too soon and too often).
 - **Moves, not time:** 20 swaps a game, so nothing hurries a finger on the small screen. A swap that swaps back costs
   nothing.
 - **Pace:** a swap slides in 0.16 s, the catch pops in 0.3 s, pieces fall from 5 squares a second speeding up by 60;
