@@ -61,6 +61,8 @@ EMSCRIPTEN_KEEPALIVE void webHoverAt(int x, int y) { hostPointerHoverAt(x, y); }
 EMSCRIPTEN_KEEPALIVE void webTilt(int left, int right) { hostTiltKeys(left != 0, right != 0); }
 EMSCRIPTEN_KEEPALIVE void webArrows(int up, int down) { hostArrowKeys(up != 0, down != 0); }
 EMSCRIPTEN_KEEPALIVE void webButton(int down) { hostButton(down != 0); }
+EMSCRIPTEN_KEEPALIVE int webTyping(void) { return hostTyping(); }  // a keyboard open in the game: keys type
+EMSCRIPTEN_KEEPALIVE void webTypeKey(int key) { hostTypeKey(key); }
 EMSCRIPTEN_KEEPALIVE void webSave(void) {
   if (gStarted) hostFlushSave();
 }

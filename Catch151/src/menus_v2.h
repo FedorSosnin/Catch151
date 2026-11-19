@@ -2536,14 +2536,8 @@ static void v2TagKb() {
   setCur(centerX(s, 2), 362);
   printT(s);
 }
-static void v2TagKbTap(int16_t x, int16_t y) {
-  if (v2KbZoomX < 0 && closeHit(x, y)) {  // the X: as it was
-    sfxPlay(SFX_TAP);
-    v2TagKbClose();
-    return;
-  }
-  int c = v2KbTapZ(v2TagLayer, x, y);
-  if (c < 0) return;
+// a key of the gamer tag's keyboard, tapped or typed
+static void v2TagKbKey(int c) {
   size_t n = strlen(v2TagBuf);
   if (c == V2K_SHIFT || c == V2K_LAYER) {
     sfxPlay(SFX_TAP);
@@ -2569,6 +2563,15 @@ static void v2TagKbTap(int16_t x, int16_t y) {
     sfxPlay(SFX_DENY);  // four already
   }
 }
+static void v2TagKbTap(int16_t x, int16_t y) {
+  if (v2KbZoomX < 0 && closeHit(x, y)) {  // the X: as it was
+    sfxPlay(SFX_TAP);
+    v2TagKbClose();
+    return;
+  }
+  int c = v2KbTapZ(v2TagLayer, x, y);
+  if (c >= 0) v2TagKbKey(c);
+}
 
 // the nickname's keyboard: it starts in capitals for an empty name, and turns small after the first letter
 static uint8_t v2NameLayer = 0;
@@ -2592,18 +2595,8 @@ static void v2NameKb() {
   char title[24];
   v2Keyboard(v2NameLayer, v2Caps(T(S_NAME), title, sizeof(title)), nameBuf, -1, true);  // (the key under the finger: press.h)
 }
-static void v2NameKbTap(int16_t x, int16_t y) {
-  if (v2TagKbOn) {
-    v2TagKbTap(x, y);
-    return;
-  }
-  if (v2KbZoomX < 0 && closeHit(x, y)) {  // the X: out without renaming (V1 had only OK)
-    sfxPlay(SFX_TAP);
-    kbOpen = false;
-    return;
-  }
-  int c = v2KbTapZ(v2NameLayer, x, y);
-  if (c < 0) return;
+// a key of the nickname's keyboard, tapped or typed
+static void v2NameKbKey(int c) {
   sfxPlay(SFX_TAP);
   if (c == V2K_SHIFT || c == V2K_LAYER) {
     v2NameLayer = v2KbNext(v2NameLayer, c);
@@ -2619,6 +2612,45 @@ static void v2NameKbTap(int16_t x, int16_t y) {
   }
   screenKeyValid = false;  // (the layer isn't in the screen's key)
 }
+static void v2NameKbTap(int16_t x, int16_t y) {
+  if (v2TagKbOn) {
+    v2TagKbTap(x, y);
+    return;
+  }
+  if (v2KbZoomX < 0 && closeHit(x, y)) {  // the X: out without renaming (V1 had only OK)
+    sfxPlay(SFX_TAP);
+    kbOpen = false;
+    return;
+  }
+  int c = v2KbTapZ(v2NameLayer, x, y);
+  if (c >= 0) v2NameKbKey(c);
+}
+#if defined(BOARD_HOST)
+// Typing on a computer's keyboard (Fedor, 2026-11-19: "On builds with a keyboard, such as mac, pc, and browser, we
+// should probably allow players to use their keyboards to type"): while a keyboard is open the front end sends what's
+// typed (host.h hostTypeKey()) instead of its game keys, and each acts as its key would: a character (32..126) types
+// it, Backspace and Enter are the keys and OK, Escape the X (zoomed in, it zooms out first). A letter typed while the
+// keyboard shows capitals comes out a capital, as a tap there would (the name's first letter, the gamer tag)
+void v2KbTyped() {
+  for (int k; (k = hostTypedKey()) >= 0;) {
+    if (!kbOpen) continue;  // (typed as it closed)
+    int c = k == HOST_KEY_BACKSPACE ? V2K_BKSP : k == HOST_KEY_ENTER ? V2K_OK : k;
+    if (k == HOST_KEY_ESCAPE) {
+      sfxPlay(SFX_TAP);
+      if (v2KbZoomX >= 0) v2KbZoomX = -1;
+      else if (v2TagKbOn) v2TagKbClose();
+      else kbOpen = false;
+      screenKeyValid = false;
+      continue;
+    }
+    if (c >= 'a' && c <= 'z' && v2KbLayerNow() == 1) c -= 'a' - 'A';
+    if (c != V2K_BKSP && c != V2K_OK && (c < 32 || c > 126)) continue;
+    if (v2TagKbOn) v2TagKbKey(c);
+    else v2NameKbKey(c);
+    screenKeyValid = false;
+  }
+}
+#endif
 // what a key says in the press preview over the finger (words for the arrows: the CJK font has none)
 static const char *v2KeyLabel(int c, int L, char *buf) {
   if (c == V2K_SHIFT) return L < 2 ? (L == 1 ? "abc" : "ABC") : L == 2 ? "#+=" : "123";

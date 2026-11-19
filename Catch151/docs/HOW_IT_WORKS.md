@@ -21,13 +21,13 @@ Everything your Pokémon needs, what each action does, and how to fill the Poké
 | Action | 🍖 | 😊 | ⚡ | 🧼 | 💞 | ⚖️ | Limit |
 |---|---|---|---|---|---|---|---|
 | 🤚 **Pet** | | +5 | | | +1 | | Only the first 3 pets each hour add joy |
-| 🍓 **Favorite berry** | +35 | +10 | | | +2 | | |
-| 🫐 **Other berries** | +25 | | | | | | |
+| 🍓 **Favorite berry** | +35 | +10 | | −25 if already full | +2 | | |
+| 🫐 **Other berries** | +25 | | | −25 if already full | | | |
 | 🍬 **Candy** | +10 | +12 | Full | | | +12 | 2 a day (3 on the day the visitor brings one): a red number on it shows how many are left, and it leaves the menu at 0 |
 | 🛁 **Bath** | | | | Full | +1 | | Also clears every poop |
 | 🌙 **Sleep** | | | +6 a minute | | | | Turn the light off, then back on to wake it. While it sleeps the clock moves down under it, big, so a Knomi left on a desk is a bedside clock |
 
-There are three berries, a Razz, an Oran and a Pinap Berry, and each Pokémon has one favorite. Try them to find out which: once found, it shows on the Pokémon's card. Berries and candy are in the backpack, the first icon: tap one and it drops onto your Pokémon, and the backpack stays open for another. Your Repels are in there too (see [Items](#items)).
+There are three berries, a Razz, an Oran and a Pinap Berry, and each Pokémon has one favorite. Try them to find out which: once found, it shows on the Pokémon's card. Berries and candy are in the backpack, the first icon: tap one and it drops onto your Pokémon, and the backpack stays open for another. Don't overfeed it: a berry given when the food bar is already full makes a mess, and takes a quarter off its hygiene. Your Repels are in there too (see [Items](#items)).
 
 ## Games
 

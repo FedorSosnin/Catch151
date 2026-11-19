@@ -498,6 +498,7 @@ int8_t v2RadialHover = -1;   // its section under the finger
 static void v2RadialStart();
 #ifdef BOARD_HOST
 void v2HoverUpdate();   // V2 on a computer and the web: the control under the mouse, lifted (hover_v2.h)
+void v2KbTyped();       // ...and the keys typed on it, while a keyboard is open (menus_v2.h)
 void v2HoverOverlay();
 #endif
 static int v2RadialAt(int16_t x, int16_t y);
@@ -669,6 +670,7 @@ void loop() {
   handleTouch();
 #if defined(BOARD_HOST)
   v2HoverUpdate();  // V2 on a computer and the web: what's under the mouse (hover_v2.h)
+  v2KbTyped();      // ...and what's typed on its keyboard, while one of the game's keyboards is open (menus_v2.h)
 #endif
   v2RepelTick(now);  // V2: every second of a minigame played counts toward a Repel
 #if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)

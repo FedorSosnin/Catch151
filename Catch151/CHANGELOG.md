@@ -9,6 +9,8 @@ Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 ## [Unreleased]
 
 - **A missed ball flies away:** a ball that misses keeps going the way you threw it, past the Pokémon and off into the distance, smaller and smaller until it's gone, instead of dropping to the bottom of the screen.
+- **Type on your keyboard:** on the Mac, Windows and the web, while the keyboard for a nickname or your gamer tag is open, you can type on your computer's keyboard: letters, numbers and symbols, Space, Backspace, Enter for OK and Escape to close it. The rest of the time the keys work as before (the arrows, and Space for the button).
+- **Overfeeding makes a mess:** a berry given when the food bar is already full takes a quarter off its hygiene, so stuffing your Pokémon is no longer free.
 - **Goodbye: it walks off into the distance:** a Pokémon you say goodbye to (or that runs away) walks away getting smaller and smaller, then fades out, instead of sinking into the ground. A new Pokémon walking in comes up from behind the hill's top again, not out of the ground below it.
 
 ## [2.2.13] - 2026-11-19

@@ -30,6 +30,7 @@
 #define WGT_CANDY 12
 #define WGT_OVERFULL 6           // extra if it was already this full or more when it ate:
 #define WGT_FULL_AT 80
+#define BERRY_OVERFULL_HYG 25    // a berry when the food bar is already full: a quarter of hygiene off (feedBerry())
 #define WGT_BURN_MIN 6           // awake: -1 every 6 minutes (asleep: every 12)
 #define WGT_FIT 20               // the Fit medal: this or less
 #define EVOLVE_ANIM_MS 5200UL              // evolution animation (longer = more epic)
@@ -211,7 +212,7 @@ public:
 
   // Actions (touch buttons)
   void feed();              // red berry (compatibility)
-  void feedBerry(uint8_t color);  // 0 red, 1 blue, 2 green
+  void feedBerry(uint8_t color);  // 0 red, 1 blue, 2 green (on a full bar: BERRY_OVERFULL_HYG of hygiene)
   void feedCandy();
   void gainWeight(uint8_t base);
   bool lovesBerry(uint8_t color) const {

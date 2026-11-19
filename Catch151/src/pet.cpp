@@ -767,6 +767,9 @@ void Pet::gainWeight(uint8_t base) {
 void Pet::feedBerry(uint8_t color) {
   if (ceremony != CER_NONE) return;
   if (isEgg() || sleeping) return;
+  // a berry on a full bar makes a mess: a quarter of hygiene each (Fedor, 2026-11-19: "each berry after the full bar
+  // should bring down the HYGENE by 1/4. That will curb how easy it is to overfeed")
+  if (fullness >= 100) hygiene = hygiene > BERRY_OVERFULL_HYG ? hygiene - BERRY_OVERFULL_HYG : 0;
   gainWeight(WGT_BERRY);
   if (lovesBerry(color)) {
     fullness = clamp100(fullness + 35);

@@ -1409,6 +1409,47 @@ static void testKeyboard() {
   CHECK(v2KbZoomX < 0 && nameLen == n0 + 2 && nameBuf[n0 + 1] == 'p');
   tapAt(233, 422);  // the X: out without renaming
   CHECK(!kbOpen);
+
+  // typed on a computer's keyboard (host.h hostTypeKey(); Fedor: "allow players to use their keyboards to type"): only
+  // while a keyboard is open; an empty name's first letter a capital as its keyboard shows, then as typed; Space a
+  // space; Backspace; Enter is OK; Escape the X
+  CHECK(!hostTyping());
+  char oldNick[sizeof(pet.nick)];
+  strcpy(oldNick, pet.nick);
+  pet.nick[0] = 0;
+  hostSerialPush("KEYBOARD");
+  runTicks(300);
+  CHECK(kbOpen && hostTyping() && nameLen == 0);
+  for (const char *p = "pika chu"; *p; p++) hostTypeKey(*p);
+  runTicks(100);
+  CHECK(!strcmp(nameBuf, "Pika chu") && kbOpen);
+  for (int i = 0; i < 4; i++) hostTypeKey(HOST_KEY_BACKSPACE);
+  hostTypeKey('!');
+  hostTypeKey(HOST_KEY_ENTER);
+  runTicks(100);
+  CHECK(!kbOpen && !strcmp(pet.nick, "Pika!"));
+  hostSerialPush("KEYBOARD");
+  runTicks(300);
+  hostTypeKey('X');
+  hostTypeKey(HOST_KEY_ESCAPE);
+  runTicks(100);
+  CHECK(!kbOpen && !strcmp(pet.nick, "Pika!"));
+  hostTypeKey('Z');  // nothing open: dropped
+  runTicks(100);
+  CHECK(!kbOpen && !strcmp(pet.nick, "Pika!"));
+  strcpy(pet.nick, oldNick);
+  // the gamer tag's: in capitals while its keyboard shows them, four at most; Enter keeps it
+  char oldTag[sizeof(pet.gamerTag)];
+  strcpy(oldTag, pet.gamerTag);
+  extern void openTagKeyboard(bool fromGames);
+  openTagKeyboard(false);
+  runTicks(100);
+  for (int i = 0; i < 4; i++) hostTypeKey(HOST_KEY_BACKSPACE);
+  for (const char *p = "fedr2"; *p; p++) hostTypeKey(*p);
+  hostTypeKey(HOST_KEY_ENTER);
+  runTicks(100);
+  CHECK(!kbOpen && !strcmp(pet.gamerTag, "FEDR"));
+  strcpy(pet.gamerTag, oldTag);
 }
 
 // each kind of fish's heaviest since the board started over (Fedor: "a record weight for each type of fish caught"):

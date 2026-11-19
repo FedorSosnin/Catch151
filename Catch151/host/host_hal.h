@@ -11,6 +11,10 @@ void hostCanvasFlushed();
 bool hostPointerRead(int16_t *x, int16_t *y);
 float hostTiltValue();
 bool hostArrowDir(int8_t *dx, int8_t *dy);  // the arrow held (the last one pressed): a step's direction
+int hostTypedKey();  // the next key typed on a keyboard (host.h hostTypeKey()), or -1
+#define HOST_KEY_BACKSPACE 8
+#define HOST_KEY_ENTER 13
+#define HOST_KEY_ESCAPE 27
 void pressOverlay();  // the sketch's press preview, drawn over every frame
 
 class KnomiPanel {

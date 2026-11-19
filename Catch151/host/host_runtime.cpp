@@ -206,6 +206,22 @@ void hostTiltSensor(float x) {
   if (gTiltSensorOn) gTiltSensor = x < -1 ? -1 : x > 1 ? 1 : x;
 }
 void hostButton(bool down) { gButtonDown = down; }
+// what's typed while a keyboard is open (menus_v2.h v2KbTyped() takes it)
+static std::mutex gTypedMutex;
+static std::deque<int> gTyped;
+extern bool kbOpen;
+bool hostTyping(void) { return kbOpen; }
+void hostTypeKey(int key) {
+  std::lock_guard<std::mutex> lock(gTypedMutex);
+  if (gTyped.size() < 64) gTyped.push_back(key);
+}
+int hostTypedKey() {
+  std::lock_guard<std::mutex> lock(gTypedMutex);
+  if (gTyped.empty()) return -1;
+  int k = gTyped.front();
+  gTyped.pop_front();
+  return k;
+}
 
 bool hostPointerRead(int16_t *x, int16_t *y) {
   *x = gPointerX;

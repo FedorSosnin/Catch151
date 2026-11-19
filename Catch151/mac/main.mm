@@ -738,7 +738,24 @@ static NSAttributedString *aboutLine(NSString *label, NSString *text, NSString *
   return false;
 }
 
+// a keyboard open in the game (the nickname, the gamer tag): what's typed goes to it, Space and repeats too
+- (bool)typeKey:(NSEvent *)event {
+  if (!hostTyping() || (event.modifierFlags & (NSEventModifierFlagCommand | NSEventModifierFlagControl))) return false;
+  switch (event.keyCode) {
+    case 51: hostTypeKey(HOST_KEY_BACKSPACE); return true;  // delete
+    case 36: case 76: hostTypeKey(HOST_KEY_ENTER); return true;  // return, enter
+    case 53: hostTypeKey(HOST_KEY_ESCAPE); return true;  // esc
+  }
+  NSString *c = event.characters;
+  for (NSUInteger i = 0; i < c.length; i++) {
+    unichar u = [c characterAtIndex:i];
+    if (u >= 32 && u <= 126) hostTypeKey(u);
+  }
+  return true;  // (the rest typed nothing: no game key either)
+}
+
 - (void)keyDown:(NSEvent *)event {
+  if ([self typeKey:event]) return;
   if (event.isARepeat) return;
   if (![self handleKey:event down:true]) [super keyDown:event];
 }

@@ -1614,9 +1614,17 @@ static LRESULT CALLBACK wndProc(HWND w, UINT msg, WPARAM wp, LPARAM lp) {
       break;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
+      if (msg == WM_KEYDOWN && hostTyping()) return 0;  // a keyboard open in the game: it gets WM_CHAR instead
       if (lp & (1 << 30)) return 0;  // held down: the game counts the first press only
       if (handleKey(wp, true)) return 0;
       break;
+    case WM_CHAR:  // ...what's typed (repeats too): characters, Backspace, Enter, Escape
+      if (!hostTyping()) break;
+      if (wp == 8) hostTypeKey(HOST_KEY_BACKSPACE);
+      else if (wp == 13) hostTypeKey(HOST_KEY_ENTER);
+      else if (wp == 27) hostTypeKey(HOST_KEY_ESCAPE);
+      else if (wp >= 32 && wp <= 126) hostTypeKey((int)wp);
+      return 0;
     case WM_KEYUP:
     case WM_SYSKEYUP:
       if (handleKey(wp, false)) return 0;

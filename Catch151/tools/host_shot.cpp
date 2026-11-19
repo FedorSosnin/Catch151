@@ -3,7 +3,8 @@
 //   build/host_shot <resources> <save dir> <script>
 // Script lines: WAIT ms | SER <console line> | TAP x y | SWIPE x0 y0 x1 y1 | TAPQ x y (no wait after) | HOVER x y (-1 -1: off) |
 //               DOWN x y, then UP x y (a finger held there: WAIT between for how long) | SHOT file.ppm |
-//               REC n ms prefix (n frames ms apart, prefix-000.ppm on: a moving picture)
+//               REC n ms prefix (n frames ms apart, prefix-000.ppm on: a moving picture) |
+//               TYPE text (typed on a computer's keyboard, as hostTypeKey()) | KEY n (one key: 8 Backspace, 13 Enter, 27 Escape)
 // Run it with POKEMACGOCHI_BUDDY_PORT set to a test port, as every test copy is, so it never meets a real Knomi.
 #include "host.h"
 #include <stdio.h>
@@ -42,6 +43,10 @@ int main(int argc, char **argv) {
     char path[400];
     if (sscanf(line, "WAIT %d", &a) == 1) run(a);
     else if (!strncmp(line, "SER ", 4)) { hostSerialPush(line + 4); run(120); }
+    else if (!strncmp(line, "TYPE ", 5)) {
+      for (const char *p = line + 5; *p; p++) { hostTypeKey((unsigned char)*p); run(40); }
+      run(200);
+    } else if (sscanf(line, "KEY %d", &a) == 1) { hostTypeKey(a); run(200); }
     else if (sscanf(line, "TAP %d %d", &a, &b) == 2) {
       hostPointer(a, b, true); run(120);
       hostPointer(a, b, false); run(400);

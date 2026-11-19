@@ -151,6 +151,27 @@ TEST(feed, every_meal_adds_weight_and_overeating_more) {
   CHECK_EQ(p.weight, (uint8_t)(2 * WGT_BERRY + WGT_OVERFULL));
 }
 
+TEST(feed, a_berry_on_a_full_bar_costs_a_quarter_of_hygiene) {  // (Fedor: "to curb how easy it is to overfeed")
+  Pet p;
+  makePet(p, 4);
+  p.fullness = 90;
+  p.hygiene = 100;
+  p.feedBerry(0);  // the one that fills it: free
+  CHECK_EQ(p.fullness, (uint8_t)100);
+  CHECK_EQ(p.hygiene, (uint8_t)100);
+  p.feedBerry(0);  // full already: a quarter off
+  CHECK_EQ(p.hygiene, (uint8_t)75);
+  p.feedBerry(1);  // the loved one too
+  CHECK_EQ(p.hygiene, (uint8_t)50);
+  p.hygiene = 10;
+  p.feedBerry(0);  // never below empty
+  CHECK_EQ(p.hygiene, (uint8_t)0);
+  p.fullness = 99;
+  p.hygiene = 60;
+  p.feedBerry(0);  // not quite full: free
+  CHECK_EQ(p.hygiene, (uint8_t)60);
+}
+
 TEST(feed, a_day_of_overfeeding_makes_it_chubby) {
   Pet p;
   makePet(p, 4);

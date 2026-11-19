@@ -45,6 +45,14 @@ void hostArrowKeys(bool up, bool down);
 void hostTiltSensor(float x);
 // The Knomi's physical button: tap = wild rival, 1-3 s = screen, 10 s = erase save
 void hostButton(bool down);
+// Typing: true while one of the game's keyboards is open (the nickname, the gamer tag). Then a front end sends what's
+// typed to hostTypeKey() instead of its game keys (Space types a space, not the button): a printable character
+// (32..126) as itself, or one of these. Any thread; the game takes them on its next pass
+bool hostTyping(void);
+void hostTypeKey(int key);
+#define HOST_KEY_BACKSPACE 8
+#define HOST_KEY_ENTER 13   // OK
+#define HOST_KEY_ESCAPE 27  // the X
 
 // A line for the game's serial console (the same commands as on the Knomi)
 void hostSerialPush(const char *line);
