@@ -19,8 +19,10 @@
 #define BM_MOVES 20       // swaps a game (the how-to cards say 20)
 #define BM_CELL 62        // a square, in px: the most six fit across the round screen (Fedor: "just a hair larger")
 #define BM_PIECE 58       // a piece: an 18 x 18 icon drawn this big (it was 54, at 3x)
-#define BM_X0 (233 - BM_N * BM_CELL / 2)  // the board's top left (the corner square's, though it's off)
-#define BM_Y0 (233 - BM_N * BM_CELL / 2)
+// the board's top left (the corner square's, though it's off), on an even pixel: the Knomi shows each 2 x 2 block from
+// one as one of its pixels, so the squares, their tint and outlines keep to its grid (at 47 they straddled two)
+#define BM_X0 ((233 - BM_N * BM_CELL / 2) & ~1)
+#define BM_Y0 ((233 - BM_N * BM_CELL / 2) & ~1)
 #define BM_PTS 10         // a piece caught, times the chain's step
 
 #define BM_SWAP_S 0.16f   // a swap sliding (and sliding back)

@@ -64,6 +64,7 @@ TEST(berrymatch, the_board_is_round_and_every_square_is_on_the_screen_and_big_en
   CHECK(BM_CELL >= 56);  // (the zone squares that worked on the Knomi are 78, the Search bar 56 tall)
   CHECK(BM_PIECE > 18 * 3 && BM_PIECE + 2 <= BM_CELL);  // a piece: the 18 x 18 icon a little over 3x, room round it
   CHECK(BM_PIECE % 2 == 0);  // (drawn in the Knomi's 2 px cells)
+  CHECK(BM_X0 % 2 == 0 && BM_Y0 % 2 == 0 && BM_CELL % 2 == 0);  // every square on the Knomi's 2 x 2 grid
   int x, y;
   CHECK(bmCellAt(BM_X0 + BM_CELL + 5, BM_Y0 + 5, x, y) && x == 1 && y == 0);
   CHECK(!bmCellAt(BM_X0 + 5, BM_Y0 + 5, x, y));  // a corner
