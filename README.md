@@ -48,11 +48,11 @@
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, a board of berries and candy to swap and line up. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, the newest mini game: a board of berries and candy to swap and line up. Your Pokémon runs in to watch from the corners. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** New: **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett, who evolves into Dugtrio. Roll the ball into the tall grass (at night, a cave) and a wild Pokémon that lives there jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett, who evolves into Dugtrio. Roll the ball into the tall grass (at night, a cave) and a wild Pokémon that lives there jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** New: **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Eight mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing, Pinball and BerryMatch, on cartridges in a Game Boy, four a page. **Play Again!** at the end.
 
@@ -78,8 +78,8 @@ The Mac and Windows apps and the browser game, as they open: in the Poké Ball r
 | **Battle wild Pokémon** | **Climb Knomi Tower** |
 | <img src="Catch151/docs/images/v2/crt-island.webp" width="381" alt="Knomi Island with the CRT screen: five zones and the pier out to the tower"> | <img src="Catch151/docs/images/v2/crt-starters.webp" width="381" alt="Choose your starter with the CRT screen: Bulbasaur, Charmander, Squirtle and Pikachu"> |
 | **Travel Knomi Island** | **Choose your partner** |
-| <img src="Catch151/docs/images/v2/crt-pinball.webp" width="381" alt="Pinball with the CRT screen: the ball goes into the tall grass with a !, a wild Butterfree jumps into the ring in the middle, Diglett pops up between the bumpers, and each hit of the ball is Squirtle's Bite"> | <img src="Catch151/docs/images/v2/crt-fishing.webp" width="381" alt="Reel Fishing with the CRT screen: the float bobs, goes under with a ! and TAP!, then the fish is reeled in with QUICK TAPS! and the LINE bar on the right"> |
-| **New: Pinball** | **New: Reel Fishing** |
+| <img src="Catch151/docs/images/v2/crt-pinball.webp" width="381" alt="Pinball with the CRT screen: the ball goes into the tall grass with a !, a wild Butterfree jumps into the ring in the middle, Diglett pops up between the bumpers, and each hit of the ball is Squirtle's Bite"> | <img src="Catch151/docs/images/v2/crt-berrymatch.webp" width="381" alt="BerryMatch with the CRT screen: pieces caught and refilled, a Great Ball and an Ultra Ball on the board, moves earned, and Pikachu running in to sit in the top-left corner"> |
+| **Pinball** | **New: BerryMatch** |
 
 ## Minigame Leaderboard
 
@@ -126,7 +126,7 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Battle wild Pokémon** | **Pick a ball and throw** | **Catch them, 1 to 3 ★** |
 | ![The Pokédex at 54 of 151, with stars, the shinies sparkling](Catch151/docs/images/v2/pokedex.gif) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](Catch151/docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](Catch151/docs/images/v2/zone.png) |
 | **Fill the Pokédex** | **Travel Knomi Island** | **See what's missing** |
-| ![The games: four cartridges a page on a Game Boy's screen, then the arrow turns to page 2, Dungeon Crawler, Reel Fishing and Pinball, the power light flickering](Catch151/docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](Catch151/docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](Catch151/docs/images/v2/game-end.png) |
+| ![The games: four cartridges a page on a Game Boy's screen, then the arrow turns to page 2, Dungeon Crawler, Reel Fishing, Pinball and the new BerryMatch](Catch151/docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](Catch151/docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](Catch151/docs/images/v2/game-end.png) |
 | **Eight mini games** | **How to play, before each game** | **Play Again!** |
 | ![Who's That Pokémon? The clock counts down, a wrong name turns red and the answer shows: Nidoqueen](Catch151/docs/images/v2/quiz.gif) | ![The trophy room: 9 of 26 medals, a gleam sweeping over the ones won](Catch151/docs/images/v2/trophy-room.gif) | ![The shiny medal's card: a golden Pikachu under glass in a spotlight, sparkling, earned](Catch151/docs/images/v2/medal-card.gif) |
 | **Who's That Pokémon?** | **The trophy room** | **How to earn each medal** |
@@ -139,11 +139,20 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 
 ## New: BerryMatch
 
-<p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch on the lawn: an Ultra Ball swapped goes off in a gold ring and catches everything round it, the pieces fall and new ones drop in, then a Great Ball swapped sends beams along its row and column and catches them all" width="360"></p>
+<p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch on the lawn: pieces caught and refilled, a chain worth more, a Great Ball and an Ultra Ball made, moves earned, and Pikachu running off one corner and in at another" width="360"></p>
 
-The eighth cartridge, on the Game Boy's second page: a board of the game's own Razz, Oran and Pinap Berries and Rare Candies, as big as in the backpack, five by five with the corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back. Four in a line leave a Great Ball (it catches its row and column), an L or a T an Ultra Ball (everything two steps around it), five in a line a Master Ball (the whole board): swap one with any piece next to it to set it off. A game starts with twenty moves, and every ball you make (and a long chain) earns more, so playing well keeps it going. A shuffle when no swap is left, a hint after a while, and on a computer the arrow keys and Space work too. The best score is kept.
+The newest mini game, the eighth cartridge on the Game Boy's second page: a match-3 on the game's own Razz, Oran and Pinap Berries and Rare Candies, as big and sharp as in the backpack, on a five by five board with its corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back, and a tap that just misses the piece you meant still swaps it. Four in a line leave a **Great Ball** (it catches its row and column), an L or a T an **Ultra Ball** (everything two steps around it), five in a line a **Master Ball** (the whole board): swap one with any piece next to it to set it off, and one caught in another's blast goes off too.
 
-## New: Pinball
+A game starts with twenty moves, and playing well earns more: a Great Ball made earns 1, an Ultra Ball 2, a Master Ball 3, and a chain that keeps going 1 for each catch after its third, so a good game runs on. Your Pokémon plays along, small as if a little way off: it runs in from the edge of the screen to one of the board's cut corners, watches, hops when you make a ball or earn moves, and runs off to come back at another. The board shuffles when no swap is left, a hint wiggles after a while (three a game), and on a computer the arrow keys and Space work too. It has its own song, [▶&nbsp;BerryMatch](https://fedorsosnin.github.io/Catch151/music/), and your best goes on the leaderboard.
+
+| | | |
+|:--:|:--:|:--:|
+| ![Four Pinap Berries lined up make a Great Ball and +1 move; a Great Ball swapped sends beams along its row and column; an Ultra Ball goes off in a gold ring and sets off the other Great Ball; a Master Ball catches the whole board](Catch151/docs/images/v2/berrymatch-balls.gif) | ![Close up on the bottom of the board: Pikachu runs in to the corner, waits, hops, and runs off](Catch151/docs/images/v2/berrymatch-pet.gif) | ![A game's end: 760, NEW RECORD!, Play Again! and the Repel bar](Catch151/docs/images/v2/berrymatch-end.png) |
+| **Great, Ultra and Master Balls** | **Your Pokémon plays along** | **Beat your record** |
+
+How it all works: [BerryMatch](Catch151/docs/HOW_IT_WORKS.md#berrymatch).
+
+## Pinball
 
 <p align="center"><img src="Catch151/docs/images/v2/pinball.gif" alt="Pinball on the meadow table: the ball rolls into the tall grass with a !, a wild Butterfree jumps out into the ring in the middle, Diglett pops up between the bumpers and is hit, Squirtle's Bite lands on Butterfree with each hit of the ball, a shot goes up the ramp, and Butterfree is knocked out: YOU WON! +500" width="360"></p>
 
@@ -160,7 +169,7 @@ Each game deals one of two tables at random, a night-blue one on a chrome rim, w
 
 How it all works: [Pinball](Catch151/docs/HOW_IT_WORKS.md#pinball).
 
-## New: Reel Fishing
+## Reel Fishing
 
 <p align="center"><img src="Catch151/docs/images/v2/fishing.gif" alt="One cast of Reel Fishing: the float flies out, dips at two nibbles and goes under with a !, the Tentacool is reeled in to its beat with the LINE bar's white needle on the right, leaps out and is weighed on the gold gauge on the left: 42.3 kg" width="360"></p>
 
