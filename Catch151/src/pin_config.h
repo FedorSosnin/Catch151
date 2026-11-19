@@ -9,6 +9,11 @@
 #define LCD_WIDTH 466
 #define LCD_HEIGHT 466
 #define PANEL_SIZE 240
+// ...each 2 x 2 block of it one of the panel's pixels: the canvas's 233 x 233 shown one to one, centred, a dark edge
+// round it 3 px wide (4 on the right and below). Stretched over all 240, 7 columns and 7 rows were shown twice and a
+// line on one of them came out twice as thick (Fedor: "some of the text in the how to play has thick lines")
+#define PANEL_PIC (LCD_WIDTH / 2)
+#define PANEL_OFF ((PANEL_SIZE - PANEL_PIC) / 2)
 
 // GC9A01 240x240 SPI display, single-wire AW9346 backlight
 #define LCD_MOSI 14

@@ -46,7 +46,8 @@ private:
 
 void pressOverlay();  // the sketch's press preview, drawn over every frame
 
-// Logical 466x466 canvas in PSRAM; flush() averages 2x2 onto the 240x240 panel, with the current rotation
+// Logical 466x466 canvas in PSRAM; flush() averages 2x2 onto the 240x240 panel, one to one in its middle
+// (PANEL_PIC x PANEL_PIC from PANEL_OFF, pin_config.h), with the current rotation
 class ScaledCanvas : public Arduino_Canvas {
 public:
   ScaledCanvas(Arduino_G *out) : Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, out) {}
@@ -58,8 +59,11 @@ public:
     size_t s = PANEL_SIZE * PANEL_SIZE * 2;
     panel = (uint16_t *)heap_caps_malloc(s, MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
     if (!panel) panel = (uint16_t *)ps_malloc(s);
-    knomiRimBegin(PANEL_SIZE);
-    for (int x = 0; x < PANEL_SIZE; x++) sxOf[x] = (uint16_t)(2 * (x * (LCD_WIDTH / 2) / PANEL_SIZE));
+    knomiRimBegin(PANEL_PIC);  // (the rim round the picture's own edge)
+    for (int x = 0; x < PANEL_SIZE; x++) {
+      int px = x - PANEL_OFF;
+      sxOf[x] = (uint16_t)(2 * (px < 0 ? 0 : px >= PANEL_PIC ? PANEL_PIC - 1 : px));
+    }
     // the panel's SPI send runs on the other core (the game's loop is on core 1), so the frame after it is drawn
     // meanwhile; flush() only waits when the last send hasn't finished yet
     sendGo = xSemaphoreCreateBinary();
@@ -71,10 +75,11 @@ public:
     return panel != nullptr;
   }
 
-  // Each panel pixel averages a 2x2 block that always starts on an even canvas pixel: the 233 pairs
-  // of columns (and rows) spread over the 240 panel pixels, 7 of them shown twice. With blocks that
-  // drifted by one pixel every 16, half the screen blurred every edge; aligned, what is drawn on even
-  // pixels (sprites, icons, text: SNAP2 in the sketch) lands whole on the panel and stays sharp.
+  // Each panel pixel averages a 2x2 block that always starts on an even canvas pixel, the 233 pairs of columns (and
+  // rows) one to one in the panel's middle, the PANEL_OFF pixels round them dark. With blocks that drifted by one pixel
+  // every 16, half the screen blurred every edge; aligned, what is drawn on even pixels (sprites, icons, text: SNAP2
+  // in the sketch) lands whole on the panel and stays sharp. (Spread over all 240, 7 of the pairs were shown twice,
+  // and a line on one came out twice as thick.)
   // (The canvas is in PSRAM: the loop reads it two pixels at a time, and each row's columns go in stretches, the
   // black corners, the rim's edge and the middle, so the middle has no rim to check.)
   void flush(bool = false) override {
@@ -82,15 +87,19 @@ public:
     if (sendGo) xSemaphoreTake(sendDone, portMAX_DELAY);  // the last frame has gone out: the panel buffer is free
     const RotBlit r = rotBlit(gPanelRot, PANEL_SIZE);
     for (int y = 0; y < PANEL_SIZE; y++) {
-      const uint16_t *a = _framebuffer + (2 * (y * (LCD_HEIGHT / 2) / PANEL_SIZE)) * LCD_WIDTH;
-      const uint16_t *b = a + LCD_WIDTH;
-      // the rim (knomi_rim.h): black past the round screen, darkening toward its edge, the middle as it is
-      const uint8_t *rim = gKnomiRim ? gKnomiRim + y * PANEL_SIZE : nullptr;
-      const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : PANEL_SIZE;
-      const int i0 = rim ? gKnomiRimI0[y] : 0, i1 = rim ? gKnomiRimI1[y] : PANEL_SIZE;
-      const int cy = y * (LCD_HEIGHT / 2) / PANEL_SIZE;  // the canvas's cell row (for what's over the shadow)
       uint16_t *out = panel + r.base + y * r.dy;
       const int dx = r.dx;
+      const int cy = y - PANEL_OFF;  // the canvas's cell row (for what's over the shadow)
+      if (cy < 0 || cy >= PANEL_PIC) {  // the dark edge above and below the picture
+        for (int x = 0; x < PANEL_SIZE; x++) out[x * dx] = 0;
+        continue;
+      }
+      const uint16_t *a = _framebuffer + 2 * cy * LCD_WIDTH;
+      const uint16_t *b = a + LCD_WIDTH;
+      // the rim (knomi_rim.h): black past the round picture, darkening toward its edge, the middle as it is
+      const uint8_t *rim = gKnomiRim ? gKnomiRim + cy * PANEL_PIC : nullptr;
+      const int x0 = PANEL_OFF + (rim ? gKnomiRimX0[cy] : 0), x1 = PANEL_OFF + (rim ? gKnomiRimX1[cy] : PANEL_PIC);
+      const int i0 = PANEL_OFF + (rim ? gKnomiRimI0[cy] : 0), i1 = PANEL_OFF + (rim ? gKnomiRimI1[cy] : PANEL_PIC);
       int x = 0;
       for (; x < x0; x++) out[x * dx] = 0;
       for (; x < i0; x++) out[x * dx] = edge(a, b, x, rim, cy);
@@ -114,11 +123,12 @@ private:
     s = (s >> 2) & 0x07E0F81F;
     return (uint16_t)(s | (s >> 16));
   }
-  // ...near the edge: darkened by the rim, unless a need bar's label is over the shadow there
+  // ...near the edge: darkened by the rim (its row, by the picture's columns), unless a need bar's label is over the
+  // shadow there
   inline uint16_t edge(const uint16_t *a, const uint16_t *b, int x, const uint8_t *rim, int cy) const {
     int sx = sxOf[x];
     uint16_t c = average(a, b, sx);
-    return gKnomiLiftOn && knomiLifted(sx >> 1, cy) ? c : knomiRimPixel(c, rim[x]);
+    return gKnomiLiftOn && knomiLifted(sx >> 1, cy) ? c : knomiRimPixel(c, rim[x - PANEL_OFF]);
   }
   static void sendLoop(void *self) {
     ScaledCanvas *c = (ScaledCanvas *)self;
@@ -181,8 +191,11 @@ public:
     if (wire->endTransmission(false) != 0 || wire->requestFrom(addr, (uint8_t)5) != 5) return 0;
     uint8_t n = wire->read(), xh = wire->read(), xl = wire->read(), yh = wire->read(), yl = wire->read();
     if ((n & 0x0F) == 0) return 0;
-    int32_t px = (((xh & 0x0F) << 8 | xl) * LCD_WIDTH) / PANEL_SIZE;
-    int32_t py = (((yh & 0x0F) << 8 | yl) * LCD_HEIGHT) / PANEL_SIZE;
+    // the panel's pixel to the canvas's: the picture one to one from PANEL_OFF, each of its pixels a 2 x 2 block (the
+    // middle of it); on the dark edge, the picture's nearest
+    int32_t px = (((xh & 0x0F) << 8 | xl) - PANEL_OFF) * 2 + 1, py = (((yh & 0x0F) << 8 | yl) - PANEL_OFF) * 2 + 1;
+    px = px < 0 ? 0 : px > LCD_WIDTH - 1 ? LCD_WIDTH - 1 : px;
+    py = py < 0 ? 0 : py > LCD_HEIGHT - 1 ? LCD_HEIGHT - 1 : py;
     int32_t lx, ly;
     rotTouch(gPanelRot, px, py, LCD_WIDTH, &lx, &ly);
     *x = lx;

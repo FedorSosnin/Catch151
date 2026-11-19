@@ -4,6 +4,8 @@
 // things harder to read and see. I do like the edges of the screen having a bit of shadow though. Makes it look
 // bubbly."): the computers' CRT screen's rim (host/host_crt.cpp), done to the panel's pixels near the edge as the
 // frame goes out (ScaledCanvas::flush()). The middle is left as it is; the corners the round screen hides are black.
+// Its table is the picture's (PANEL_PIC square, shown one to one in the panel's middle), so the shadow follows the
+// picture's own round edge.
 #include <stdint.h>
 #include <math.h>
 #include <esp_heap_caps.h>
