@@ -18,13 +18,14 @@
   * { box-sizing:border-box; }
   body { margin:0; font-family:system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; padding-bottom:60px; }
   a { color:var(--accent); }
-  header, main { max-width:1060px; margin:0 auto; padding:0 16px; }
+  /* one width for the picture, the games' cards and the fish (Fedor): the picture's own 760, where its pixels are whole */
+  header, main { max-width:792px; margin:0 auto; padding:0 16px; }
   header { padding-top:20px; }
   h1 { margin:0 0 6px; font-size:1.6rem; }
   .lede { margin:0; color:var(--muted); max-width:720px; }
   .live { margin:12px 0 0; font-weight:600; color:#a0dcaa; display:flex; align-items:center; gap:8px; }
   .live i { width:10px; height:10px; border-radius:50%; background:var(--green); }
-  .board { display:block; width:100%; max-width:760px; height:auto; margin:22px 0 6px; }
+  .board { display:block; width:100%; height:auto; margin:22px 0 6px; }
   .games { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px; margin-top:22px; }
   .game { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px 10px; }
   .game h2 { margin:0 0 8px; font-size:1.05rem; }
@@ -38,7 +39,7 @@
     background:var(--tag); color:var(--tagink); border-radius:5px; padding:1px 6px; box-shadow:0 0 0 2px #3a4a5a; }
   .none { color:var(--muted); margin:4px 0; }
   .err { color:var(--accent); }
-  footer { max-width:1060px; margin:28px auto 0; padding:0 16px; color:var(--muted); font-size:.9rem; }
+  footer { max-width:792px; margin:28px auto 0; padding:0 16px; color:var(--muted); font-size:.9rem; }
   /* each kind of fish's record (Reel Fishing): every kind, the ones nobody has landed yet dim */
   .kinds { margin-top:30px; }
   .kinds h2 { margin:0 0 4px; font-size:1.25rem; }
