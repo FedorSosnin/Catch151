@@ -12,8 +12,10 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
   4 balls a game, a shuffle in about 1 game in 30).
 - **The drawing** is `src/berrymatch_v2.h` (`bmDraw()`): a lawn seen from above with the board on it in the home's
   see-through dark tint (one even tint: two shades in a checkerboard showed each square, which Fedor didn't like),
-  yours walking in and out round its cut corners (`bmPetDraw()`, `bmPetCheer()`: Fedor wanted it to feel like playing
-  with your Pokemon; 4x when it fits a corner, else 2x, even scales to keep it sharp on the Knomi), cached together for each light of the day (`v2Cached`). Fedor picked the lawn from four
+  yours running in and out round its cut corners (`bmPetDraw()`, `bmPetCheer()`: Fedor wanted it to feel like playing
+  with your Pokemon. Tried big and cut off by the rim, it covered the board or went under it; now it's small, as big as
+  fits a 66 px square at an even scale, whole in a corner, running in from the side or the top/bottom, waiting facing
+  you, hopping now and then; a Pokemon's own Sit faces any way, Pikachu's away, so it waits in its idle), cached together for each light of the day (`v2Cached`). Fedor picked the lawn from four
   (`bmPaintBack()`): Berry Drop's clearing, the first, put the light sky under the board's top half and its tint came
   out grey-blue, hiding the Oran Berries and the Rare Candy; a wooden table and a berry patch were the others (in the
   history at 390d154, `BMSCENE n`). The pieces are the 18 x 18 food icons at 4x, 72 px, as the backpack draws them

@@ -184,71 +184,80 @@ static void bmFlash(const BmFx &f, float k) {
   }
 }
 
-// ----- yours at the board's edge (Fedor: "a sprite of your pokemon ... coming in and out of the frame around the edge
-// as you play. That way it feels like you are still playing with your pokemon"): it walks in from the round screen's
-// rim to one of the board's four cut corners, watches, hops for a ball made or set off, moves earned, a long chain,
-// and walks back out; a while later it comes in at another corner. Off the rim it can't be seen, so it comes "in and
-// out of the frame". Drawn before the pieces, so it stands behind the board's edge -----
-enum : uint8_t { BM_PET_AWAY, BM_PET_IN, BM_PET_WATCH, BM_PET_OUT };
-#define BM_PET_SPEED 80.0f  // px a second
-// Big, and partly off the screen (Fedor: "I'd like to see it a little bit bigger ... it's fine if it's cut off and you
-// don't see all of the Pokemon on the screen, but just a hint of it being there"): about bmPetTall (200) px tall
-// whatever it is, but never under bmPetMin (4x), an even scale so it stays sharp on the Knomi: a Diglett at 8x, a
-// Pikachu at 6x, a Gyarados at 4x (taller, cut off by the rim). Tried against the same height with no floor and a
-// fixed 4x or 6x for all (BMPETSCALE n), which left a Gyarados small or a Diglett hardly there. Its feet a
-// little past the round screen's rim at the bottom corners, by the board's corner at the top ones, so the rim cuts it.
-// Where it's over the board it's under the board's tint, so the pieces stay easy to see (bmPetUnderBoard()).
-// bmPetTall is the sketch's (BMPETSIZE n on a test copy), and BMPETAT n puts it at a corner (bmPetForce).
-static const int16_t BM_PET_SPOT[4][3] = { { 84, 436, -1 }, { 382, 436, 1 }, { 84, 140, -1 }, { 382, 140, 1 } };
+// ----- yours round the board (Fedor: "a sprite of your pokemon ... coming in and out of the frame around the edge as
+// you play. That way it feels like you are still playing with your pokemon"; then, after trying it big: "making them
+// small so you can see the whole sprite, but having them run around the edge ... run in from the side, sit for a
+// minute, and then run back out, and then come in on the other side or on the top corner ... jumping up and down a
+// little bit"). Small enough to stand whole in one of the board's four cut corners, as if seen from a way off. It runs
+// in from off the round screen, along the board's side or from above (below, at the bottom corners), its walk played
+// twice as fast; waits a while facing you, hopping now and then, and for a ball made or set off, moves earned, a long chain; runs
+// out one of those two ways; and a while later comes in at another corner, picked at random -----
+enum : uint8_t { BM_PET_AWAY, BM_PET_IN, BM_PET_SIT, BM_PET_OUT };
+#define BM_PET_SPEED 150.0f  // px a second: a run
+#define BM_PET_OFF 150       // how far out it starts and goes to: off the round screen
+#define BM_PET_FIT 66        // as big as fits this square (an even scale, so it stays sharp on the Knomi)
+#define BM_PET_HOP_MS 1300
+// where it sits (its feet) at each cut corner, and which side of the screen that corner is on (x, y: -1 or 1)
+static const int16_t BM_PET_SPOT[4][4] = { { 90, 116, -1, -1 }, { 376, 116, 1, -1 }, { 90, 404, -1, 1 }, { 376, 404, 1, 1 } };
 struct BmPet {
   uint8_t phase = BM_PET_AWAY, spot = 0, scale = 2;
-  int16_t dex = 0, tall = 0, fix = 0, w = 60, h = 60;  // what it's sized for, and how big it comes out
-  float x = 0;
-  uint32_t until = 0, cheerT = 0, lastT = 0, seed = 1;
+  int16_t dex = -1;
+  float x = 0, y = 0, tx = 0, ty = 0;  // where it is, where it's running to
+  uint32_t until = 0, hopT = 0, nextHopT = 0, lastT = 0, seed = 1;
 };
 static BmPet bmPet;
 static uint32_t bmPetRand(uint32_t n) {
   bmPet.seed = bmPet.seed * 1103515245u + 12345u;
   return (bmPet.seed >> 16) % n;
 }
-static void bmPetSize() {  // the scale for about bmPetTall px, even, and the size it comes out
+static void bmPetSize() {
   bmPet.dex = pmd.loaded ? pmd.dex : 0;
-  bmPet.tall = (int16_t)bmPetTall;
-  bmPet.fix = (int16_t)bmPetScale;
-  int top, bottom, left, right;
-  if (!pmd.loaded || !pmdBox(pmd, PMD_IDLE, top, bottom, left, right)) {
-    bmPet.scale = 2;
-    return;
-  }
-  int s = bmPetScale ? bmPetScale : pmdFitScale(pmd, PMD_IDLE, 466, bmPetTall) & ~1;  // (a fixed scale: BMPETSCALE n)
-  if (!bmPetScale && s < bmPetMin) s = bmPetMin;  // a big one bigger still, cut off by the rim
+  int s = pmd.loaded ? pmdFitScale(pmd, PMD_IDLE, BM_PET_FIT, BM_PET_FIT) & ~1 : 2;
   bmPet.scale = (uint8_t)(s < 2 ? 2 : s);
-  bmPet.w = (int16_t)((right - left + 1) * bmPet.scale);
-  bmPet.h = (int16_t)((bottom - top + 1) * bmPet.scale);
 }
-static int bmPetOff() { return 110 + bmPet.w / 2; }  // how far out along its side it starts: off the round screen
-// a game starting: away, coming in a moment after the card's gone
+// a game starting: away, running in a moment after the card's gone
 static void bmPetStart(uint32_t now) {
   bmPet = BmPet();
   bmPet.until = now + 1500;
   bmPet.seed = now | 1;
   bmPetSize();
 }
-static void bmPetIn(uint32_t now) {  // to a corner it wasn't at last
+// a point off the screen beside corner s: along the board's side (across) or past the top or the bottom (up and down)
+static void bmPetOffAt(uint8_t s, bool across, float &x, float &y) {
+  const int16_t *c = BM_PET_SPOT[s];
+  x = c[0] + (across ? c[2] * BM_PET_OFF : 0);
+  y = c[1] + (across ? 0 : c[3] * BM_PET_OFF);
+}
+static void bmPetIn(uint32_t now) {  // to a corner it wasn't at last, from one of its two ways in
   uint8_t s = (uint8_t)((bmPet.spot + 1 + bmPetRand(3)) % 4);
   bmPet.spot = s;
-  bmPet.x = BM_PET_SPOT[s][0] + BM_PET_SPOT[s][2] * bmPetOff();
+  bmPetOffAt(s, bmPetRand(2), bmPet.x, bmPet.y);
+  bmPet.tx = BM_PET_SPOT[s][0], bmPet.ty = BM_PET_SPOT[s][1];
   bmPet.phase = BM_PET_IN;
 }
-// a good moment: a hop if it's there, and it comes at once if it's away
-static void bmPetCheer(uint32_t now) {
-  bmPet.cheerT = now | 1;
-  if (bmPet.phase == BM_PET_AWAY) bmPetIn(now);
-  else if (bmPet.phase == BM_PET_WATCH && bmPet.until < now + 2500) bmPet.until = now + 2500;
-  else if (bmPet.phase == BM_PET_OUT) bmPet.phase = BM_PET_IN;  // (it turns round)
+static void bmPetSit(uint32_t now) {
+  bmPet.phase = BM_PET_SIT;
+  bmPet.until = now + 6000 + bmPetRand(5000);
+  bmPet.nextHopT = now + 1500 + bmPetRand(2500);
 }
-// what of it was drawn over the board's squares goes under the board's tint, as if behind it: the pixels in its box
-// that differ from the cached scene, inside a square in play
+static void bmPetOut() {  // out one of the corner's two ways
+  bmPetOffAt(bmPet.spot, bmPetRand(2), bmPet.tx, bmPet.ty);
+  bmPet.phase = BM_PET_OUT;
+}
+// a good moment: a hop if it's there, and it runs in at once if it's away
+static void bmPetCheer(uint32_t now) {
+  if (bmPet.phase == BM_PET_AWAY) {
+    bmPetIn(now);
+  } else if (bmPet.phase == BM_PET_SIT) {
+    bmPet.hopT = now | 1;
+    if (bmPet.until < now + 2500) bmPet.until = now + 2500;
+  } else if (bmPet.phase == BM_PET_OUT) {  // (it turns round)
+    bmPet.tx = BM_PET_SPOT[bmPet.spot][0], bmPet.ty = BM_PET_SPOT[bmPet.spot][1];
+    bmPet.phase = BM_PET_IN;
+  }
+}
+// what of it is over the board's squares goes under the board's tint, as if behind it (a corner's edge, now and then):
+// the pixels in its box that differ from the cached scene, inside a square in play
 static void bmPetUnderBoard(int x0, int y0, int x1, int y1) {
   if (!v2SceneBuf) return;
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer(), ink = sc565(0x1B1B25);
@@ -267,50 +276,65 @@ static void bmPetDraw(uint32_t now) {
   float dt = bmPet.lastT ? (now - bmPet.lastT) / 1000.0f : 0;
   bmPet.lastT = now;
   if (dt > 0.1f) dt = 0.1f;
-  if (pmd.loaded && (pmd.dex != bmPet.dex || bmPetTall != (uint16_t)bmPet.tall || bmPetScale != bmPet.fix)) bmPetSize();  // (a test copy's TOWERPET, BMPETSIZE)
-  if (bmPetForce >= 0 && bmPetForce < 4) {  // (BMPETAT n: there now, watching, for a picture)
+  if (pmd.loaded && pmd.dex != bmPet.dex) bmPetSize();  // (another Pokemon: a test copy's TOWERPET)
+  if (bmPetForce >= 0 && bmPetForce < 4) {  // (BMPETAT n: sitting there now, for a picture)
     bmPet.spot = (uint8_t)bmPetForce;
-    bmPet.x = BM_PET_SPOT[bmPetForce][0];
-    bmPet.phase = BM_PET_WATCH;
+    bmPet.x = bmPet.tx = BM_PET_SPOT[bmPetForce][0];
+    bmPet.y = bmPet.ty = BM_PET_SPOT[bmPetForce][1];
+    bmPetSit(now);
     bmPet.until = now + 600000;
     bmPetForce = -1;
   }
-  const int16_t *sp = BM_PET_SPOT[bmPet.spot];
-  float home = sp[0], out = sp[0] + sp[2] * bmPetOff();
-  switch (bmPet.phase) {
-    case BM_PET_AWAY:
-      if ((int32_t)(now - bmPet.until) >= 0) bmPetIn(now);
-      return;
-    case BM_PET_IN:
-      bmPet.x += (home > bmPet.x ? 1 : -1) * BM_PET_SPEED * dt;
-      if ((out < home) == (bmPet.x >= home)) {
-        bmPet.x = home;
-        bmPet.phase = BM_PET_WATCH;
-        bmPet.until = now + 5000 + bmPetRand(4000);
-      }
-      break;
-    case BM_PET_WATCH:
-      if ((int32_t)(now - bmPet.until) >= 0) bmPet.phase = BM_PET_OUT;
-      break;
-    default:  // BM_PET_OUT
-      bmPet.x += (out > bmPet.x ? 1 : -1) * BM_PET_SPEED * dt;
-      if ((out < home) == (bmPet.x <= out)) {
+  float dx = 0, dy = 0;  // its run this frame
+  if (bmPet.phase == BM_PET_AWAY) {
+    if ((int32_t)(now - bmPet.until) >= 0) bmPetIn(now);
+    else return;
+  }
+  if (bmPet.phase == BM_PET_IN || bmPet.phase == BM_PET_OUT) {
+    float ex = bmPet.tx - bmPet.x, ey = bmPet.ty - bmPet.y, d = sqrtf(ex * ex + ey * ey), step = BM_PET_SPEED * dt;
+    dx = ex, dy = ey;
+    if (d <= step) {
+      bmPet.x = bmPet.tx, bmPet.y = bmPet.ty;
+      if (bmPet.phase == BM_PET_IN) {
+        bmPetSit(now);
+      } else {
         bmPet.phase = BM_PET_AWAY;
-        bmPet.until = now + 4000 + bmPetRand(5000);
+        bmPet.until = now + 3000 + bmPetRand(5000);
         return;
       }
-      break;
+    } else {
+      bmPet.x += ex / d * step, bmPet.y += ey / d * step;
+    }
+  } else if (bmPet.phase == BM_PET_SIT) {
+    if ((int32_t)(now - bmPet.nextHopT) >= 0) {  // a hop now and then, on its own
+      bmPet.hopT = now | 1;
+      bmPet.nextHopT = now + 2500 + bmPetRand(3500);
+    }
+    if ((int32_t)(now - bmPet.until) >= 0) bmPetOut();
   }
   if (!pmd.loaded) return;
-  bool right = (bmPet.phase == BM_PET_IN) == (sp[2] < 0);  // the way it walks
-  uint8_t act = bmPet.phase == BM_PET_WATCH ? (bmPet.cheerT && now - bmPet.cheerT < 1400 ? PMD_HOP : PMD_IDLE)
-                                            : right ? PMD_WALKR : PMD_WALKL;
+  uint8_t act;
+  int lift = 0;
+  bool running = bmPet.phase != BM_PET_SIT;
+  if (running) {  // facing the way it runs
+    float ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
+    act = ax >= ay ? (dx > 0 ? PMD_WALKR : PMD_WALKL) : (dy > 0 ? PMD_WALKD : PMD_WALKU);
+  } else if (bmPet.hopT && now - bmPet.hopT < BM_PET_HOP_MS) {
+    act = PMD_HOP;
+    if (!pmd.has(act)) {  // (no hop of its own: a bounce, twice)
+      act = PMD_IDLE;
+      float k = (now - bmPet.hopT) / (float)BM_PET_HOP_MS;
+      lift = SNAP2((int)(14 * fabsf(sinf(k * 6.2832f))));
+    }
+  } else {
+    act = PMD_IDLE;  // (facing you: a Pokemon's own Sit faces any way, Pikachu's away from the board)
+  }
   if (!pmd.has(act)) act = PMD_IDLE;
   gPmdForceScale = bmPet.scale;
-  drawPmdAct(act, (int)bmPet.x, sp[1], now, true, false, bmPet.scale);
+  drawPmdAct(act, (int)bmPet.x, (int)bmPet.y - lift, running ? now * 2 : now, true, false, bmPet.scale);  // (a run: its walk twice as fast)
   gPmdForceScale = 0;
-  int hw = bmPet.w / 2 + 3 * bmPet.scale + 8;  // (its box, with room for a hop and a walk's sway)
-  bmPetUnderBoard((int)bmPet.x - hw, sp[1] - bmPet.h - 12 * bmPet.scale, (int)bmPet.x + hw, sp[1] + 4);
+  int hw = BM_PET_FIT / 2 + 12;
+  bmPetUnderBoard((int)bmPet.x - hw, (int)bmPet.y - BM_PET_FIT - 30, (int)bmPet.x + hw, (int)bmPet.y + 4);
 }
 
 // the whole game: the board, the pieces where they are in their move, the score and the moves left; on a computer,
