@@ -300,6 +300,10 @@ bool bmOpen = false, bmNewHi = false;
 uint32_t bmLast = 0, bmOverT = 0;
 bool bmBot = false;                    // BMBOT on the console: it plays by itself (testing, screenshots)
 uint32_t bmBotT = 0;
+uint16_t bmPetTall = 200;              // yours at the board's edge: about this tall (berrymatch_v2.h; BMPETSIZE n)
+int8_t bmPetForce = -1;                // BMPETAT n: yours at that corner now (testing, pictures)
+uint8_t bmPetScale = 0;                // ...or a fixed scale for every Pokemon, 0: by bmPetTall (BMPETSCALE n)
+uint8_t bmPetMin = 4;                  // ...by height, but never smaller than this (BMPETMIN n)
 uint32_t fishBotT = 0;
 uint32_t gBacklightFlashUntil = 0;     // the Knomi's backlight to full until then (the bite; too tight)
 // a PikaSurf duel with a buddy (BK_SURF): both on the same course (the session id is the seed), each
@@ -1129,6 +1133,18 @@ void handleSerial() {
     int x, y, p;                                           // numbers them: 1..5 kinds, 8 Great, 9 Ultra, 10 Master; testing)
     if (bmOpen && sscanf(line.c_str() + 6, "%d %d %d", &x, &y, &p) == 3 && bmOn(x, y) && (bmIsKind(p) || bmIsBall(p)) && p <= BM_MASTER)
       bm.b[y][x] = (uint8_t)p;
+    Serial.println("DONE");
+  } else if (line.startsWith("BMPETSIZE ") && pet.noSave) {  // BerryMatch: how tall yours comes out, in px (testing)
+    bmPetTall = (uint16_t)line.substring(10).toInt();
+    Serial.println("DONE");
+  } else if (line.startsWith("BMPETSCALE ") && pet.noSave) {  // BerryMatch: yours at a fixed scale, 0 by height (testing)
+    bmPetScale = (uint8_t)line.substring(11).toInt();
+    Serial.println("DONE");
+  } else if (line.startsWith("BMPETMIN ") && pet.noSave) {  // BerryMatch: yours by height, at least this scale (testing)
+    bmPetMin = (uint8_t)line.substring(9).toInt();
+    Serial.println("DONE");
+  } else if (line.startsWith("BMPETAT ") && pet.noSave) {  // BerryMatch: yours at corner n (0..3) now, watching (testing)
+    bmPetForce = (int8_t)line.substring(8).toInt();
     Serial.println("DONE");
   } else if (line == "BMSTUCK" && pet.noSave) {  // BerryMatch: a board with no swap left, so it shuffles (testing)
     if (bmOpen && bm.phase == BMP_PLAY) {

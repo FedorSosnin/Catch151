@@ -190,13 +190,19 @@ static void bmFlash(const BmFx &f, float k) {
 // and walks back out; a while later it comes in at another corner. Off the rim it can't be seen, so it comes "in and
 // out of the frame". Drawn before the pieces, so it stands behind the board's edge -----
 enum : uint8_t { BM_PET_AWAY, BM_PET_IN, BM_PET_WATCH, BM_PET_OUT };
-#define BM_PET_SPEED 70.0f  // px a second
-#define BM_PET_OFF 140      // how far out along its side it starts and goes back to (off the round screen)
-// the feet at each corner, and the side it comes from (-1 the left, 1 the right): inside the screen, clear of the
-// score and the moves left
-static const int16_t BM_PET_SPOT[4][3] = { { 96, 408, -1 }, { 370, 408, 1 }, { 96, 116, -1 }, { 370, 116, 1 } };
+#define BM_PET_SPEED 80.0f  // px a second
+// Big, and partly off the screen (Fedor: "I'd like to see it a little bit bigger ... it's fine if it's cut off and you
+// don't see all of the Pokemon on the screen, but just a hint of it being there"): about bmPetTall (200) px tall
+// whatever it is, but never under bmPetMin (4x), an even scale so it stays sharp on the Knomi: a Diglett at 8x, a
+// Pikachu at 6x, a Gyarados at 4x (taller, cut off by the rim). Tried against the same height with no floor and a
+// fixed 4x or 6x for all (BMPETSCALE n), which left a Gyarados small or a Diglett hardly there. Its feet a
+// little past the round screen's rim at the bottom corners, by the board's corner at the top ones, so the rim cuts it.
+// Where it's over the board it's under the board's tint, so the pieces stay easy to see (bmPetUnderBoard()).
+// bmPetTall is the sketch's (BMPETSIZE n on a test copy), and BMPETAT n puts it at a corner (bmPetForce).
+static const int16_t BM_PET_SPOT[4][3] = { { 84, 436, -1 }, { 382, 436, 1 }, { 84, 140, -1 }, { 382, 140, 1 } };
 struct BmPet {
   uint8_t phase = BM_PET_AWAY, spot = 0, scale = 2;
+  int16_t dex = 0, tall = 0, fix = 0, w = 60, h = 60;  // what it's sized for, and how big it comes out
   float x = 0;
   uint32_t until = 0, cheerT = 0, lastT = 0, seed = 1;
 };
@@ -205,19 +211,33 @@ static uint32_t bmPetRand(uint32_t n) {
   bmPet.seed = bmPet.seed * 1103515245u + 12345u;
   return (bmPet.seed >> 16) % n;
 }
-// a game starting: away, coming in a moment after the card's gone; 4x if that fits a corner, else 2x (an even scale:
-// each of its pixels whole on the Knomi's 2 x 2 ones; at 2x a Squirtle was a speck)
+static void bmPetSize() {  // the scale for about bmPetTall px, even, and the size it comes out
+  bmPet.dex = pmd.loaded ? pmd.dex : 0;
+  bmPet.tall = (int16_t)bmPetTall;
+  bmPet.fix = (int16_t)bmPetScale;
+  int top, bottom, left, right;
+  if (!pmd.loaded || !pmdBox(pmd, PMD_IDLE, top, bottom, left, right)) {
+    bmPet.scale = 2;
+    return;
+  }
+  int s = bmPetScale ? bmPetScale : pmdFitScale(pmd, PMD_IDLE, 466, bmPetTall) & ~1;  // (a fixed scale: BMPETSCALE n)
+  if (!bmPetScale && s < bmPetMin) s = bmPetMin;  // a big one bigger still, cut off by the rim
+  bmPet.scale = (uint8_t)(s < 2 ? 2 : s);
+  bmPet.w = (int16_t)((right - left + 1) * bmPet.scale);
+  bmPet.h = (int16_t)((bottom - top + 1) * bmPet.scale);
+}
+static int bmPetOff() { return 110 + bmPet.w / 2; }  // how far out along its side it starts: off the round screen
+// a game starting: away, coming in a moment after the card's gone
 static void bmPetStart(uint32_t now) {
   bmPet = BmPet();
   bmPet.until = now + 1500;
   bmPet.seed = now | 1;
-  uint8_t fit = pmd.loaded ? pmdFitScale(pmd, PMD_IDLE, 96, 84) : 2;
-  bmPet.scale = fit >= 4 ? 4 : 2;
+  bmPetSize();
 }
 static void bmPetIn(uint32_t now) {  // to a corner it wasn't at last
   uint8_t s = (uint8_t)((bmPet.spot + 1 + bmPetRand(3)) % 4);
   bmPet.spot = s;
-  bmPet.x = BM_PET_SPOT[s][0] + BM_PET_SPOT[s][2] * BM_PET_OFF;
+  bmPet.x = BM_PET_SPOT[s][0] + BM_PET_SPOT[s][2] * bmPetOff();
   bmPet.phase = BM_PET_IN;
 }
 // a good moment: a hop if it's there, and it comes at once if it's away
@@ -227,12 +247,36 @@ static void bmPetCheer(uint32_t now) {
   else if (bmPet.phase == BM_PET_WATCH && bmPet.until < now + 2500) bmPet.until = now + 2500;
   else if (bmPet.phase == BM_PET_OUT) bmPet.phase = BM_PET_IN;  // (it turns round)
 }
+// what of it was drawn over the board's squares goes under the board's tint, as if behind it: the pixels in its box
+// that differ from the cached scene, inside a square in play
+static void bmPetUnderBoard(int x0, int y0, int x1, int y1) {
+  if (!v2SceneBuf) return;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer(), ink = sc565(0x1B1B25);
+  x0 = x0 < BM_X0 ? BM_X0 : x0, y0 = y0 < BM_Y0 ? BM_Y0 : y0;
+  x1 = x1 > BM_X0 + BM_N * BM_CELL - 1 ? BM_X0 + BM_N * BM_CELL - 1 : x1;
+  y1 = y1 > BM_Y0 + BM_N * BM_CELL - 1 ? BM_Y0 + BM_N * BM_CELL - 1 : y1;
+  for (int y = y0; y <= y1; y++) {
+    int j = (y - BM_Y0) / BM_CELL;
+    for (int x = x0; x <= x1; x++) {
+      int k = y * V2_W + x;
+      if (fb[k] != v2SceneBuf[k] && bmOn((x - BM_X0) / BM_CELL, j)) fb[k] = v2Blend(fb[k], ink, 120);
+    }
+  }
+}
 static void bmPetDraw(uint32_t now) {
   float dt = bmPet.lastT ? (now - bmPet.lastT) / 1000.0f : 0;
   bmPet.lastT = now;
   if (dt > 0.1f) dt = 0.1f;
+  if (pmd.loaded && (pmd.dex != bmPet.dex || bmPetTall != (uint16_t)bmPet.tall || bmPetScale != bmPet.fix)) bmPetSize();  // (a test copy's TOWERPET, BMPETSIZE)
+  if (bmPetForce >= 0 && bmPetForce < 4) {  // (BMPETAT n: there now, watching, for a picture)
+    bmPet.spot = (uint8_t)bmPetForce;
+    bmPet.x = BM_PET_SPOT[bmPetForce][0];
+    bmPet.phase = BM_PET_WATCH;
+    bmPet.until = now + 600000;
+    bmPetForce = -1;
+  }
   const int16_t *sp = BM_PET_SPOT[bmPet.spot];
-  float home = sp[0], out = sp[0] + sp[2] * BM_PET_OFF;
+  float home = sp[0], out = sp[0] + sp[2] * bmPetOff();
   switch (bmPet.phase) {
     case BM_PET_AWAY:
       if ((int32_t)(now - bmPet.until) >= 0) bmPetIn(now);
@@ -265,6 +309,8 @@ static void bmPetDraw(uint32_t now) {
   gPmdForceScale = bmPet.scale;
   drawPmdAct(act, (int)bmPet.x, sp[1], now, true, false, bmPet.scale);
   gPmdForceScale = 0;
+  int hw = bmPet.w / 2 + 3 * bmPet.scale + 8;  // (its box, with room for a hop and a walk's sway)
+  bmPetUnderBoard((int)bmPet.x - hw, sp[1] - bmPet.h - 12 * bmPet.scale, (int)bmPet.x + hw, sp[1] + 4);
 }
 
 // the whole game: the board, the pieces where they are in their move, the score and the moves left; on a computer,
