@@ -14,14 +14,16 @@ export const seasonOf = (data) => new Uint8Array(data)[20];
 export const RELAY_ID = 0xffffffff;  // the relay as a message's sender (src/buddy.h BUDDY_RELAY_ID)
 export const TOP = 10;       // kept a game
 // the games on the board, as the Games menu numbers them (src/menus_v2.h V2_CART_GAME), with the most a real one can
-// score (the game's own limits: Berry Drop's is a byte, Dungeon Crawler's floor too, times in seconds), and how a
-// score is shown. Reel Fishing's place is its biggest fish (BM_FISH, index.js)
+// score (the game's own limits: Berry Drop's is a byte, Dungeon Crawler's floor too, times in seconds; BerryMatch has
+// none, its 20 moves scoring 750 to 4,700 a game, 20,000 a rare one: six figures is far past that), and how a score is
+// shown. Reel Fishing's place is its biggest fish (BM_FISH, index.js)
 export const GAMES = {
   0: { name: 'Berry Drop', max: 255, show: (v) => num(v) },
   2: { name: 'Rock Hopper', max: 65535, show: (v) => mmss(v), sub: 'LONGEST RUN' },
   3: { name: 'Dungeon Crawler', max: 255, show: (v) => `FLOOR ${v}` },
   4: { name: 'PikaSurf', max: 65535, show: (v) => mmss(v), sub: 'LONGEST RIDE' },
   6: { name: 'Pinball', max: 9999999, show: (v) => num(v) },
+  7: { name: 'BerryMatch', max: 999999, show: (v) => num(v) },
 };
 const FISH_GAME = 5;
 const num = (v) => String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -166,7 +168,7 @@ export function boardSvg(board) {
     if (t) out.push(`<g fill="${fill}" transform="scale(${k})">${t}</g>`);
   };
   const rows = [];
-  for (const g of [0, 2, 3, 4, FISH_GAME, 6]) {
+  for (const g of [0, 2, 3, 4, FISH_GAME, 6, 7]) {
     if (g === FISH_GAME) {
       const f = board.fish[0];
       rows.push({ g, name: 'Reel Fishing', best: f ? `${f.lb.toFixed(1)} LB` : null, sub: f ? `${f.shiny ? 'SHINY ' : ''}${f.kind}, BIGGEST FISH` : null, e: f });

@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf } from '../src/board.js';
+import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf, GAMES } from '../src/board.js';
+import { CART } from '../src/board_art.js';
 import { boardPublic, fishReport, FISH, liveSince } from '../src/index.js';
 
 const HERE = new URL('.', import.meta.url).pathname;
@@ -52,6 +53,18 @@ test('a score message is read, and one past what a game can score is ignored', (
   assert.equal(scoreReport(msg(17, { kind: 6, session: 5 })), null);           // not a score
   assert.equal(scoreReport(msg(BM_SCORE, { kind: 6, session: 5, season: 0 })), null);  // unmarked: 2.2.9's all-time records
   assert.equal(scoreReport(new ArrayBuffer(64)), null);
+  assert.deepEqual(scoreReport(msg(BM_SCORE, { kind: 7, session: 4660, nick: 'ZOE' })), { game: 7, score: 4660, tag: 'ZOE', id: idHash(1234) });  // BerryMatch
+  assert.equal(scoreReport(msg(BM_SCORE, { kind: 7, session: 1000000 })), null);  // far past any game of 20 moves
+  assert.equal(scoreReport(msg(BM_SCORE, { kind: 8, session: 50 })), null);       // no such game
+});
+
+test('the board\'s games are the ones the game sends (scoreReportAll() in Catch151.ino), each with its cartridge', () => {
+  const ino = readFileSync(HERE + '../../Catch151.ino', 'utf8');
+  const match = +ino.match(/#define GAME_MATCH (\d+)/)[1];
+  const sent = ino.match(/static const uint8_t G\[\] = \{([^}]*)\}/)[1].split(',').map((s) => s.trim() === 'GAME_MATCH' ? match : +s);
+  assert.deepEqual(Object.keys(GAMES).map(Number), sent);
+  assert.equal(GAMES[match].name, 'BerryMatch');
+  for (const g of [...sent, 5]) assert.ok(CART[g]?.startsWith('data:image/png;base64,'), `game ${g}'s cartridge`);
 });
 
 test('a fish message carries the tag; the fish itself is checked as before', () => {
@@ -91,6 +104,21 @@ test('the board as /stats shows it hides ids and rude tags, and the picture is d
   assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'));
   assert.ok(svg.includes('<image') && svg.includes('id="c87"'));  // a W, drawn
   assert.ok(!/playing/i.test(svg) && !svg.includes('<circle'));  // no count of players: the page has the one
+  assert.equal(svg.match(/<image /g).length, 7);  // seven games, each with its cartridge
+  assert.ok(svg.includes(`href="${CART[7]}"`));   // BerryMatch's among them
+  assert.ok(svg.includes('height="770"'));        // the page's <img> is sized so (web/leaderboard/index.html)
+});
+
+test('BerryMatch\'s row: none yet, then its best with thousands commas, as Pinball\'s', () => {
+  const none = boardPublic({}, []);
+  assert.deepEqual(none.games.find((g) => g.game === 7), { game: 7, name: 'BerryMatch', top: [] });
+  const b = boardPublic({ 7: [{ id: 'a', tag: 'ZOE', score: 12480, day: '2026-11-19' }] }, []);
+  assert.deepEqual(b.games.find((g) => g.game === 7).top, [{ tag: 'ZOE', score: 12480, shown: '12,480', day: '2026-11-19' }]);
+  const gold = (svg) => svg.split('<g fill="#f0c04a"').length - 1;  // a best, drawn in gold
+  assert.equal(gold(boardSvg(none)), 0);
+  assert.equal(gold(boardSvg(b)), 1);
+  const page = readFileSync(HERE + '../../web/leaderboard/index.html', 'utf8');
+  assert.match(page, /width="760" height="770"/);
 });
 
 test('the first of a game is told so: a BM_SCORE from the relay to it, as src/buddy.h reads one', () => {

@@ -16,7 +16,8 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'relay', 'src', 'board_art.js')
 # each game on the board (as the Games menu numbers them) and where its cartridge is: (page, x, y) of its top left
-CARTS = {0: (0, 106, 96), 2: (0, 106, 238), 3: (1, 106, 96), 4: (0, 254, 238), 5: (1, 254, 96), 6: (1, 106, 238)}
+CARTS = {0: (0, 106, 96), 2: (0, 106, 238), 3: (1, 106, 96), 4: (0, 254, 238), 5: (1, 254, 96), 6: (1, 106, 238),
+         7: (1, 254, 238)}
 W, H = 58, 70  # half the cartridge's size on the menu
 
 

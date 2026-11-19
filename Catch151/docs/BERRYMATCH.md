@@ -23,10 +23,11 @@ gem-swapping games, built on the game's own art and look (Fedor, 2026-11-19). Th
   a piece there (1 to 5 the kinds, 8 Great, 9 Ultra, 10 Master), `BMSTUCK` leaves no move so it shuffles, and
   `BMMOVES n` sets the moves left.
 - **Saved:** the record as `bmhi`, the leaderboard's best since it started over as `lbbm` (apart from the other games'
-  `lbhi` blob, which older saves read whole). The game sends it to the relay as game 7 (`scoreReport()`); the relay
-  doesn't know game 7 yet and drops it, so BerryMatch isn't on the leaderboard and doesn't count toward asking for the
-  gamer tag (`Pet::hasScore()`). Putting it there is the relay's `GAMES` table, the board picture's rows and
-  cartridge, the leaderboard page, then `hasScore()`.
+  `lbhi` blob, which older saves read whole). The game sends it to the relay as game 7 (`scoreReport()`), and it's on
+  the leaderboard: the relay's `GAMES[7]` (`relay/src/board.js`, a score up to 999,999 shown with commas), the board
+  picture's last row with the pink cartridge (`tools/relay_board_art.sh` crops it from the Games menu's second page),
+  the leaderboard page's last card. It counts toward asking for the gamer tag (`Pet::hasScore()`). A relay from before
+  this drops game 7, so the relay goes out before the game does.
 
 ## As built
 

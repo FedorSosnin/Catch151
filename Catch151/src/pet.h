@@ -192,9 +192,9 @@ public:
   uint32_t boardKindsUnsent = 0;
   bool boardKind(int16_t dex, uint16_t kg10, bool shiny);  // a fish landed: kept if its kind's heaviest yet (true)
   bool hasScore() const {  // a best on the board since it started over: the gamer tag is asked for after the first
-    for (int g = 0; g < 7; g++)  // (not BerryMatch's yet: the relay's board doesn't show it, so it's no reason to ask)
+    for (int g = 0; g < 7; g++)
       if (boardHi[g]) return true;
-    return false;
+    return boardMatch != 0;  // (BerryMatch's too: the board shows it as game 7)
   }
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;

@@ -2073,6 +2073,14 @@ TEST(save, state_survives_a_reboot) {
   CHECK(b.topScore());
   CHECK(b.hasMedal(MED_HISCORE) && b.newMedal == MED_HISCORE);
   CHECK(!b.topScore());
+  Pet d;  // BerryMatch's best counts toward asking for the gamer tag too: it's on the board as game 7
+  d.begin();
+  memset(d.boardHi, 0, sizeof(d.boardHi));
+  d.boardMatch = 0;
+  CHECK(!d.hasScore());
+  d.matchResult(2140);
+  CHECK_EQ(d.boardMatch, (uint32_t)2140);
+  CHECK(d.hasScore());
   CHECK_STREQ(b.nick, "SPARKY");
   CHECK(b.isRegistered(25));
   CHECK(!b.awaitingStarter());

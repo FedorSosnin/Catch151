@@ -66,7 +66,7 @@
   <p class="live" id="live" hidden><i></i><span></span></p>
 </header>
 <main>
-  <img class="board" src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" height="686"
+  <img class="board" src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" height="770"
     alt="The leaderboard: each game's best, with its gamer tag and day">
   <div class="games" id="games"><p class="none">Loading the board...</p></div>
   <section class="kinds" id="kinds" hidden>
@@ -104,7 +104,7 @@ async function load() {
     const cards = [0, 2, 3, 4].map((g) => by[g] && card(by[g].name, by[g].top.map((e) => ({ tag: e.tag, best: esc(e.shown), day: e.day }))));
     cards.push(card('Reel Fishing: biggest fish', b.fish.map((f) => ({
       tag: f.tag, best: `${(+f.lb).toFixed(1)} lb<small>${f.shiny ? 'shiny ' : ''}${esc(f.kind)}</small>`, day: f.day }))));
-    if (by[6]) cards.push(card(by[6].name, by[6].top.map((e) => ({ tag: e.tag, best: esc(e.shown), day: e.day }))));
+    for (const g of [6, 7]) if (by[g]) cards.push(card(by[g].name, by[g].top.map((e) => ({ tag: e.tag, best: esc(e.shown), day: e.day }))));
     document.getElementById('games').innerHTML = cards.filter(Boolean).join('');
     const kinds = b.kinds || [];
     document.getElementById('kinds').hidden = !kinds.length;

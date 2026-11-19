@@ -71,7 +71,7 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 
 ### The leaderboard and your gamer tag
 
-Each minigame's best ten, from every copy of the game, are on the **[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**, with the gamer tag that set each one and the day: Berry Drop's score, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball's score. The README shows each game's best. BerryMatch keeps your best on your own device but isn't on the leaderboard yet.
+Each minigame's best ten, from every copy of the game, are on the **[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**, with the gamer tag that set each one and the day: Berry Drop's score, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish, Pinball's score and BerryMatch's score. The README shows each game's best.
 
 - **A record for each fish:** the leaderboard page also lists every kind of fish Reel Fishing has, 23 of them, each with the heaviest anyone has landed, who landed it and the day. The ones nobody has caught yet wait there too. Your game sends the heaviest of each kind you've landed, from 2.2.11 on (your biggest fish before then counts for its kind).
 
