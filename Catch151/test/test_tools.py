@@ -512,7 +512,7 @@ class TestHowToPlayCards(unittest.TestCase):
 
     IDS = ('S_HOW_BERRY', 'S_HOW_BERRY_KEYS', 'S_HOW_WHO', 'S_HOW_RUN', 'S_HOW_DN', 'S_HOW_DN_KEYS',
            'S_HOW_SURF', 'S_HOW_SURF_KEYS', 'S_HOW_VB', 'S_HOW_VB_KEYS', 'S_HOW_SD', 'S_HOW_DUEL', 'S_HOW_DUEL_KEYS',
-           'S_HOW_FISH', 'S_HOW_FISH_KEYS')
+           'S_HOW_FISH', 'S_HOW_FISH_KEYS', 'S_HOW_MATCH', 'S_HOW_MATCH_KEYS')
     MAX_LINES = 8  # the panel's 176 px at CARD_LINE_H
 
     @classmethod

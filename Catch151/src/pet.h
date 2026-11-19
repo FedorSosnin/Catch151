@@ -165,6 +165,7 @@ public:
   int16_t fishBigDex = 0;  // what it was (0: none yet)
   bool fishBigShiny = false;
   uint32_t pinHi = 0;      // Pinball's record: the best score
+  uint32_t matchHi = 0;    // BerryMatch's record: the best score
   // V2: the gamer tag (gamertag.h): the trainer's, kept through a goodbye, shown with the best scores on the world
   // board. tagAsked: asked for once already, after a first scored game (the Games menu's label changes it after that)
   char gamerTag[GAMER_TAG_LEN + 1] = "";
@@ -178,6 +179,7 @@ public:
   // biggest fish's tenths of a kg 5 with its kind, Pinball 6), from zero, beside the all-time records above. What
   // goes to the relay (marked BOARD_SEASON, buddy.h)
   uint32_t boardHi[7] = {};
+  uint32_t boardMatch = 0;  // ...and BerryMatch's (game 7), saved apart: the board's seven are one blob older saves read whole
   int16_t boardFishDex = 0;
   bool boardFishShiny = false;
   // ...and the heaviest of each kind of fish since then (Fedor: "a record weight for each type of fish caught. That
@@ -190,7 +192,7 @@ public:
   uint32_t boardKindsUnsent = 0;
   bool boardKind(int16_t dex, uint16_t kg10, bool shiny);  // a fish landed: kept if its kind's heaviest yet (true)
   bool hasScore() const {  // a best on the board since it started over: the gamer tag is asked for after the first
-    for (int g = 0; g < 7; g++)
+    for (int g = 0; g < 7; g++)  // (not BerryMatch's yet: the relay's board doesn't show it, so it's no reason to ask)
       if (boardHi[g]) return true;
     return false;
   }
@@ -224,6 +226,7 @@ public:
   void fishResult(uint16_t kg10);  // Reel Fishing's end: the record and the exercise
   bool fishBiggest(uint16_t kg10, int16_t dex, bool shiny);  // a fish landed: kept if it's the heaviest yet (true)
   void pinResult(uint32_t score);  // Pinball's end: the record and the exercise
+  void matchResult(uint32_t score);  // BerryMatch's end: the same
   void dungeonResult(uint8_t floor);
   int candiesLeft() const {  // today's candies still to have (the visitor's included)
     int limit = CANDY_PER_DAY + (today() != 0 && candyGiftDay == today() ? 1 : 0);

@@ -41,9 +41,10 @@ Games don't raise anything if you quit by swiping up.
 | 🕳️ **Dungeon Crawler** | +5, plus 4 per floor | −10, more for deep dives | −5 | Yes | +2 | Yes |
 | 🎣 **Reel Fishing** | +5, plus 2 per 44 lb | −10, more for heavy catches | −5 | Yes | +2 | Yes |
 | 🕹️ **Pinball** | +5, plus 2 per 400 points | −10, more for high scores | −5 | Yes | +2 | Yes |
+| 🫐 **BerryMatch** | +5, plus 2 per 100 points | −10, more for high scores | −5 | Yes | +2 | Yes |
 | ❓ **Who's That?** | +3, plus 3 per right answer | | | | +1 | |
 
-Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing and Pinball each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
+Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball and BerryMatch each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
 
 At the end, **Play Again!** starts the same game again and the ✕ goes back to the games; a tap on the Repel bar under them opens the Repel's page on your Pokémon's card. Every second you actually play counts toward a Repel (see [Items](#items)): not the how-to card or the end, and only while you're touching, tilting or pressing keys, so sitting in the dungeon earns nothing. The games with a buddy count too.
 
@@ -70,7 +71,7 @@ Five casts off the end of the Beach's pier. The fish are the Beach's water Poké
 
 ### The leaderboard and your gamer tag
 
-Each minigame's best ten, from every copy of the game, are on the **[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**, with the gamer tag that set each one and the day: Berry Drop's score, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball's score. The README shows each game's best.
+Each minigame's best ten, from every copy of the game, are on the **[Leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/)**, with the gamer tag that set each one and the day: Berry Drop's score, Rock Hopper's longest run, Dungeon Crawler's deepest floor, PikaSurf's longest ride, Reel Fishing's biggest fish and Pinball's score. The README shows each game's best. BerryMatch keeps your best on your own device but isn't on the leaderboard yet.
 
 - **A record for each fish:** the leaderboard page also lists every kind of fish Reel Fishing has, 23 of them, each with the heaviest anyone has landed, who landed it and the day. The ones nobody has caught yet wait there too. Your game sends the heaviest of each kind you've landed, from 2.2.11 on (your biggest fish before then counts for its kind).
 
@@ -103,6 +104,20 @@ A round table, the round screen itself, its rim the wall, with a drain between t
 - **The battle in the ring:** the ball into the gap in the tall grass by the right wall (on the night table, into the cave's mouth) brings out a wild Pokémon of about your Pokémon's level that lives there, picked as a Search in its zone picks one: out of the grass one of the Forest's or the Field's, out of the cave one of the Cave's (never Diglett or Dugtrio, the bumpers' own; a zone's legendary, seldom). It jumps into the ring in the middle with its HP over it and 20 seconds on a gold ring round it. Each hit of the ball is the stronger of your Pokémon's two moves, its damage worked out as in a battle (its type against the wild one's), but always between two and five hits to knock it out. While one is in the ring the grass (or the cave) takes no ball, and losing the ball ends the battle. Nothing outside Pinball changes: it isn't caught or added to the Pokédex.
 - **Rewards:** joy and speed training from the score, a point for every 400, as the table above. A ball stuck still for 2.5 seconds (anywhere but held up on a flipper) gets a nudge.
 - **The pace:** the Knomi draws about 10 frames a second, so the table is a gentle one, low gravity and a top speed the eye can follow, and the ball moves in many small steps between frames so it never passes through a flipper.
+
+### BerryMatch
+
+A board of berries to swap and line up, 6 squares by 6 with the four corners cut off so it sits round on the round screen. Each square is 60 px, the pieces the game's own food icons at three times their size: the Razz, Oran and Pinap Berries, the Rare Candy and the Poké Ball. Twenty moves a game; the best score is kept.
+
+- **Swapping:** tap a piece and it lights up with a gold outline and hops; tap one next to it (above, below or beside, not corner to corner) and the two swap. Tap it again to put it down, or tap another one farther off to pick that one instead. A swap that lines nothing up slides back and costs nothing. Pieces act the moment they're touched.
+- **Catching:** three or more of a kind in a row or a column are caught and spin away. The pieces above fall into the gaps, new ones drop in from the top of each column, and anything that lines up as they land is caught too: a chain. A piece can be picked while the board is still moving; a swap asked for then waits until it settles.
+- **Points:** 10 a piece, times the step of the chain: the swap's own catch is step 1, what lines up after the first fall step 2 (20 a piece), and so on.
+- **The balls:** four in a line leave a **Great Ball** where the piece you moved landed (or in the line's middle, in a chain); a row and a column of one kind crossing, an L or a T, leave an **Ultra Ball** where they cross; five in a line leave a **Master Ball**. Balls aren't a kind and don't line up: swap one with any piece next to it (always a move) and it goes off where it lands. A Great Ball catches its whole row and column, an Ultra Ball everything up to two steps away, a Master Ball the whole board. A ball caught by another one goes off too.
+- **No moves left:** when no swap would line anything up (and no ball is on the board), **SHUFFLE!**: the same pieces turn round into new places, with a swap that works and nothing already lined up. It costs no move.
+- **A hint:** six seconds with nothing done and two pieces that would match start to wiggle.
+- **The last moves:** the count under the board turns gold for the last three, and **LAST MOVE!** shows before the last one. When it's played and the board settles, the game ends: the score, the record and Play Again!
+- **On a computer and the web:** the mouse works as a finger. The arrow keys move a white cursor round the board (past the cut corners), Space picks the piece under it, and with one picked an arrow swaps it that way. Space also sends off the how-to card, as the Knomi's button does.
+- **Rewards:** joy and speed training from the score, a point for every 100 (a game scores about 1,900 on average), as the table above. The game plays Berry Drop's song.
 
 ## Battles
 
@@ -154,7 +169,7 @@ Every form in the Pokédex (regular and shiny count apart) has 1–3 ★: its ge
 
 - **Winning a battle** adds attack training (+3 a win).
 - **Every 6 hours of good care** adds defense training (+1). Good care means every need stays at 40 or more. Hours asleep count too, and a need can dip under 40 for up to 15 minutes while it's awake (time to notice and feed it) before the 6 hours start over. The count is saved, so a restart or an update doesn't lose it.
-- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing and Pinball add 1 for every 5 points.
+- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball and BerryMatch add 1 for every 5 points.
 - **Weight** isn't training: every berry adds 4 and candy 12 (6 more if it was already 80% full). Games, battles and time burn it off. Over 50, energy drops twice as fast; 20 or less earns the Fit medal.
 
 Each kind of training stops at 100. Hold your Pokémon and tap **Stats** for the card, then two pages on: the **Training** page shows each one's bar, with **MAX** when it's full, and what trains it, plus a row for weight. Training belongs to the Pokémon: a new one starts from zero.

@@ -120,6 +120,7 @@ static const ExpectedFmt EXPECTED[] = {
   { S_PIN_BERRIES_FMT, "%u" },
   { S_PIN_DIG_FMT, "%s" },
   { S_PIN_WIN_FMT, "%u" },
+  { S_BM_MOVES_FMT, "%u" },    // BerryMatch: the moves left
   { S_FISH_SMALL_FMT, "%s" },   // the weigh-in: how big it is for its kind, its name
   { S_FISH_FINE_FMT, "%s" },
   { S_FISH_LARGE_FMT, "%s" },

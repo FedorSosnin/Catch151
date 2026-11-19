@@ -132,6 +132,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "DALE A %s!",
     "RAMPA!",
     "GANASTE! +%u",
+    "BerryMatch",
+    "Toca una pieza y luego otra a su lado para cambiarlas. Junta 3 o mas iguales! 4 o 5 en linea dan una bola que atrapa muchas. 20 jugadas!",
+    "Haz clic en una pieza y luego en otra a su lado, o usa las flechas y Espacio. Junta 3 o mas iguales! 4 o 5 en linea dan una bola. 20 jugadas!",
+    "JUGADAS %u",
+    "MEZCLANDO!",
+    "ULTIMA JUGADA!",
   },
   // ---------------- EN ----------------
   {
@@ -258,6 +264,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "HIT %s!",
     "RAMP!",
     "WIN! +%u",
+    "BerryMatch",
+    "Tap a piece, then one next to it, to swap them. Line up 3 or more alike! 4 or 5 in a line make a ball that catches lots. 20 moves!",
+    "Click a piece, then one next to it, to swap them, or use the arrows and Space. Line up 3 or more alike! 4 or 5 in a line make a ball. 20 moves!",
+    "MOVES %u",
+    "SHUFFLE!",
+    "LAST MOVE!",
   },
   // ---------------- FR ----------------
   {
@@ -384,6 +396,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "FRAPPE %s !",
     "RAMPE !",
     "GAGNE ! +%u",
+    "BerryMatch",
+    "Touche une piece, puis sa voisine, pour les echanger. Aligne 3 pieces pareilles ! 4 ou 5 en ligne donnent une Ball qui en attrape plein. 20 coups !",
+    "Clique sur une piece, puis sa voisine, ou utilise les fleches et Espace. Aligne 3 pieces pareilles ! 4 ou 5 en ligne donnent une Ball. 20 coups !",
+    "COUPS %u",
+    "ON MELANGE !",
+    "DERNIER COUP !",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -515,6 +533,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "TRIFF %s!",
     "RAMPE!",
     "SIEG! +%u",
+    "BerryMatch",
+    "Tippe ein Teil an, dann eins daneben: Sie tauschen. Bilde Reihen aus 3 gleichen! 4 oder 5 in einer Reihe geben einen Ball, der viele faengt. 20 Zuege!",
+    "Klicke ein Teil an, dann eins daneben, oder nimm die Pfeiltasten und die Leertaste. Bilde Reihen aus 3 gleichen! 4 oder 5 geben einen Ball. 20 Zuege!",
+    "ZUEGE %u",
+    "MISCHEN!",
+    "LETZTER ZUG!",
   },
   // ---------------- IT ----------------
   {
@@ -641,6 +665,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "COLPISCI %s!",
     "RAMPA!",
     "VITTORIA! +%u",
+    "BerryMatch",
+    "Tocca un pezzo, poi uno accanto, per scambiarli. Allinea 3 pezzi uguali! 4 o 5 in fila danno una Ball che ne prende tanti. 20 mosse!",
+    "Clicca un pezzo, poi uno accanto, o usa le frecce e Spazio. Allinea 3 pezzi uguali! 4 o 5 in fila danno una Ball. 20 mosse!",
+    "MOSSE %u",
+    "MESCOLO!",
+    "ULTIMA MOSSA!",
   },
   // ---------------- PT ----------------
   {
@@ -767,6 +797,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ACERTE %s!",
     "RAMPA!",
     "VITORIA! +%u",
+    "BerryMatch",
+    "Toque numa peca e depois noutra ao lado para troca-las. Junte 3 iguais! 4 ou 5 em linha dao uma bola que pega muitas. 20 jogadas!",
+    "Clique numa peca e depois noutra ao lado, ou use as setas e o Espaco. Junte 3 iguais! 4 ou 5 em linha dao uma bola. 20 jogadas!",
+    "JOGADAS %u",
+    "BARALHANDO!",
+    "ULTIMA JOGADA!",
   },
   // ---------------- JA ----------------
   {
@@ -916,6 +952,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%sを ねらえ！",
     "スロープ！",
     "かち！ +%u",
+    "BerryMatch",
+    "ピースを タッチして、となりの ピースを タッチすると いれかわるよ！ おなじものを 3つ ならべよう。4つか 5つで ボールが できるよ。20かい！",
+    "ピースを クリックして、となりを クリックすると いれかわるよ。やじるしと スペースでも できるよ！ おなじものを 3つ ならべよう。4つか 5つで ボールが できるよ。20かい！",
+    "のこり %u",
+    "シャッフル！",
+    "ラスト 1かい！",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -1047,6 +1089,12 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "%s 맞혀라!",
     "경사로!",
     "승리! +%u",
+    "BerryMatch",
+    "조각을 누르고 옆 조각을 누르면 자리가 바뀌어요! 같은 것을 3개 이상 줄 세우세요. 4개나 5개면 볼이 생겨요. 20번!",
+    "조각을 클릭하고 옆 조각을 클릭하면 바뀌어요. 화살표와 스페이스도 돼요! 같은 것을 3개 이상 줄 세우세요. 4개나 5개면 볼이 생겨요. 20번!",
+    "남은 수 %u",
+    "셔플!",
+    "마지막 한 번!",
   },
 };
 

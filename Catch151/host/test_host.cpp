@@ -23,6 +23,7 @@
 #include "host_internal.h"
 #include "rtcbat.h"
 #include "pinball.h"  // Pinball's state, to check the game played (the sketch's pin)
+#include "berrymatch.h"  // BerryMatch's, the same (the sketch's bm)
 #include "i18n.h"
 #include "pet.h"
 #include "press.h"
@@ -717,7 +718,7 @@ static void testGame() {
     extern PinState pin;
     CHECK(gameAt(150, 128) == 0 && gameAt(300, 300) == 4);  // Berry Drop; PikaSurf
     tapAt(432, 228);  // the right arrow, where every paged screen has it
-    CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == -1);
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == 7);
     tapAt(170, 300);  // Pinball
     CHECK(pinOpen && !gamesMenuOpen && introCard == 6);
     runTicks(500);
@@ -747,6 +748,52 @@ static void testGame() {
     runTicks(300);
     tapAt(432, 228);  // no third page: nothing (and the menu stays)
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
+    {  // BerryMatch, the second page's fourth: under its card (the button, Space, sends it off); a piece touched is
+       // picked and one beside it swaps; the arrows move its cursor and Space picks; a swipe up quits
+      extern bool bmOpen;
+      extern BmState bm;
+      tapAt(300, 300);
+      CHECK(bmOpen && !gamesMenuOpen && introCard == 7);
+      runTicks(500);
+      hostButton(true);
+      runTicks(60);
+      hostButton(false);
+      runTicks(400);
+      CHECK(bmOpen && introCard == -1 && bm.phase == BMP_PLAY && bm.moves == BM_MOVES);
+      bmFindHint(bm);
+      int8_t h[4];
+      memcpy(h, bm.hint, sizeof(h));
+      tapAt(BM_X0 + h[0] * BM_CELL + BM_CELL / 2, BM_Y0 + h[1] * BM_CELL + BM_CELL / 2);
+      CHECK(bm.selX == h[0] && bm.selY == h[1]);
+      tapAt(BM_X0 + h[2] * BM_CELL + BM_CELL / 2, BM_Y0 + h[3] * BM_CELL + BM_CELL / 2);
+      for (int i = 0; i < 60 && bm.phase != BMP_PLAY; i++) runTicks(100);
+      CHECK(bm.phase == BMP_PLAY && bm.moves == BM_MOVES - 1 && bm.score > 0);
+      CHECK(!bm.keys);
+      bm.curX = 2, bm.curY = 2;
+      hostTiltKeys(false, true);  // Right: the cursor one along
+      runTicks(60);
+      hostTiltKeys(false, false);
+      runTicks(100);
+      CHECK(bm.keys && bm.curX == 3 && bm.curY == 2);
+      hostButton(true);  // Space: picked
+      runTicks(60);
+      hostButton(false);
+      runTicks(100);
+      CHECK(bm.selX == 3 && bm.selY == 2);
+      tapAt(30, 233);  // off the board: put down
+      CHECK(bm.selX < 0 && bmOpen);
+      hostPointer(233, 400, true);  // a swipe up quits
+      for (int k = 1; k <= 8; k++) {
+        hostPointer(233, 400 - k * 30, true);
+        runTicks(16);
+      }
+      hostPointer(233, 160, false);
+      runTicks(400);
+      CHECK(!bmOpen && !gamesMenuOpen);
+      hostSerialPush("GAMES");  // the menu again, on its second page
+      runTicks(300);
+      CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
+    }
     // a swipe turns the page when it starts off the cartridges (one that starts on one presses it, as every control
     // acts on the touch: Fedor's choice, 2026-11-18)
     int sy = 0;

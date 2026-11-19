@@ -144,6 +144,8 @@ enum StrId : STRID_BASE {
   S_GAME_PINBALL, S_HOW_PINBALL, S_HOW_PINBALL_KEYS,  // Pinball: its name and how-to cards
   S_PIN_HINT, S_PIN_FLIP, S_PIN_BOTH, S_PIN_SPACE, S_PIN_BALL_FMT, S_PIN_BERRIES_FMT, S_PIN_DIG_FMT,  // ...in play
   S_PIN_RAMP, S_PIN_WIN_FMT,
+  S_GAME_MATCH, S_HOW_MATCH, S_HOW_MATCH_KEYS,  // BerryMatch (berrymatch.h): its name and how-to cards
+  S_BM_MOVES_FMT, S_BM_SHUFFLE, S_BM_LAST,      // ...in play: the moves left, no swap left so the board shuffles, the last move
   STR_COUNT
 };
 

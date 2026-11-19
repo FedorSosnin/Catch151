@@ -13,7 +13,7 @@
   <a href="Catch151/relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
 </p>
 
-**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play seven mini games by tapping and tilting, the newest Pinball on a round table and a fishing contest off the Beach's pier, with a live [minigame leaderboard](#minigame-leaderboard) for each one's best.
+**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play eight mini games by tapping and tilting, the newest BerryMatch, a berry-swapping puzzle, Pinball on a round table and a fishing contest off the Beach's pier, with a live [minigame leaderboard](#minigame-leaderboard) for each one's best.
 
 | | |
 |:--:|:--:|
@@ -48,11 +48,13 @@
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
 
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, a board of berries, candy and Poké Balls to swap and line up. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
+
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** New: **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett, who evolves into Dugtrio. Roll the ball into the tall grass (at night, a cave) and a wild Pokémon that lives there jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** New: **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Seven mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing and Pinball, on cartridges in a Game Boy, four a page. **Play Again!** at the end.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Eight mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing, Pinball and BerryMatch, on cartridges in a Game Boy, four a page. **Play Again!** at the end.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
 
@@ -125,7 +127,7 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | ![The Pokédex at 54 of 151, with stars, the shinies sparkling](Catch151/docs/images/v2/pokedex.gif) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](Catch151/docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](Catch151/docs/images/v2/zone.png) |
 | **Fill the Pokédex** | **Travel Knomi Island** | **See what's missing** |
 | ![The games: four cartridges a page on a Game Boy's screen, then the arrow turns to page 2, Dungeon Crawler, Reel Fishing and Pinball, the power light flickering](Catch151/docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](Catch151/docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](Catch151/docs/images/v2/game-end.png) |
-| **Seven mini games** | **How to play, before each game** | **Play Again!** |
+| **Eight mini games** | **How to play, before each game** | **Play Again!** |
 | ![Who's That Pokémon? The clock counts down, a wrong name turns red and the answer shows: Nidoqueen](Catch151/docs/images/v2/quiz.gif) | ![The trophy room: 9 of 26 medals, a gleam sweeping over the ones won](Catch151/docs/images/v2/trophy-room.gif) | ![The shiny medal's card: a golden Pikachu under glass in a spotlight, sparkling, earned](Catch151/docs/images/v2/medal-card.gif) |
 | **Who's That Pokémon?** | **The trophy room** | **How to earn each medal** |
 | ![The backpack's band out of the bag: three berries, a candy and a Repel](Catch151/docs/images/v2/backpack.png) | ![Gengar in the bath: drops, bubbles and a rubber duck, then sparkling clean](Catch151/docs/images/v2/bath.gif) | ![A new medal, DEX 10, dropping in on its ribbon over Gengar's home, then away](Catch151/docs/images/v2/medal-banner.gif) |
@@ -134,6 +136,12 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Buddies visit** | **Battle, trade or play** | **Games for two** |
 | ![Say goodbye? Goodbye or Stay together](Catch151/docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](Catch151/docs/images/v2/release.png) | ![Settings: the clock, set automatically, Sound and Music each on a slider from 0 to 3, the language, and Start Over](Catch151/docs/images/v2/settings.png) |
 | **One day, a goodbye** | **Let it go** | **Settings** |
+
+## New: BerryMatch
+
+<p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch: three Razz Berries in a row spin away with sparkles and +30, the pieces above fall into the gap and new ones drop in from the top, the next swap sets off a chain worth +90 in gold that leaves an Ultra Ball, and the Ultra Ball swapped goes off in a gold ring" width="360"></p>
+
+The eighth cartridge, on the Game Boy's second page: a board of the game's own Razz, Oran and Pinap Berries, Rare Candies and Poké Balls, six by six with the corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back. Four in a line leave a Great Ball (it catches its row and column), an L or a T an Ultra Ball (everything two steps around it), five in a line a Master Ball (the whole board): swap one with any piece next to it to set it off. Twenty moves a game, a shuffle when no swap is left, a hint after a while, and on a computer the arrow keys and Space work too. The best score is kept.
 
 ## New: Pinball
 

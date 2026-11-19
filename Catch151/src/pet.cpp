@@ -857,6 +857,16 @@ void Pet::pinResult(uint32_t score) {
   save();
 }
 
+// BerryMatch: the record, and exercise as the other games give it (a point for every 100: a game of 20 moves scores
+// about 1900, as a game of Berry Drop does about 19)
+void Pet::matchResult(uint32_t score) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (score > matchHi) matchHi = score;
+  if (score > boardMatch) boardMatch = score;
+  exerciseReward(score / 100 > 255 ? 255 : score / 100);
+  save();
+}
+
 // Reel Fishing's heaviest single fish, with what it was (saved by fishResult(), at the game's end)
 bool Pet::setGamerTag(const char *tag) {
   char t[GAMER_TAG_LEN + 1];
@@ -1296,8 +1306,10 @@ void Pet::save() {
   prefs.putShort("fsbd", fishBigDex);
   prefs.putBool("fsbs", fishBigShiny);
   prefs.putUInt("pnhi", pinHi);
+  prefs.putUInt("bmhi", matchHi);
   prefs.putString("gtag", gamerTag);
   prefs.putBytes("lbhi", boardHi, sizeof(boardHi));
+  prefs.putUInt("lbbm", boardMatch);
   prefs.putShort("lbfd", boardFishDex);
   prefs.putBool("lbfs", boardFishShiny);
   prefs.putBytes("lbkd", boardKinds, sizeof(boardKinds));
@@ -1414,6 +1426,7 @@ void Pet::load() {
   fishBigDex = prefs.getShort("fsbd", 0);
   fishBigShiny = prefs.getBool("fsbs", false);
   pinHi = prefs.getUInt("pnhi", 0);
+  matchHi = prefs.getUInt("bmhi", 0);
   {
     char t[16] = "";
     prefs.getString("gtag", t, sizeof(t));
@@ -1422,6 +1435,7 @@ void Pet::load() {
   tagAsked = prefs.getBool("gtak", false);
   if (prefs.getBytes("lbhi", boardHi, sizeof(boardHi)) != sizeof(boardHi))
     memset(boardHi, 0, sizeof(boardHi));  // (a save from before 2.2.10 has none: the board starts from zero)
+  boardMatch = prefs.getUInt("lbbm", 0);
   boardFishDex = prefs.getShort("lbfd", 0);
   boardFishShiny = prefs.getBool("lbfs", false);
   if (prefs.getBytes("lbkd", boardKinds, sizeof(boardKinds)) != sizeof(boardKinds)) {

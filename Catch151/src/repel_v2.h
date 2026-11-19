@@ -54,6 +54,7 @@ static bool v2PlayingGame() {
   if (surfOpen) return surfDuel ? buddyGameReady() && !surfDuelDoneT : !surfOverT;
   if (fishOpen) return !fishOverT;
   if (pinOpen) return !pinOverT;
+  if (bmOpen) return !bmOverT;
   if (sdOpen) return sdPhase == SD_ASK || sdPhase == SD_REVEAL;
   if (vbOpen) return vbPhase != VB_READY && vbPhase != VB_DONE;
   return false;

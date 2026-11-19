@@ -2256,5 +2256,6 @@ static void v2DrawPoops(int n, bool party) {
 #include "tower_v2.h"    // Knomi Tower: Travel's second page and the climb
 #include "fishing_v2.h"  // Reel Fishing: MOCKUPS only (FISHMOCK n)
 #include "pinball_v2.h"  // Pinball, drawn
+#include "berrymatch_v2.h"  // BerryMatch, drawn
 #include "slide_v2.h"    // a menu's pages slide as they turn
 #include "music_v2.h"    // the music each screen wants (a computer and the web)
