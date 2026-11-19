@@ -610,6 +610,29 @@ s.section('B', 8, 'G | A | F#m | Bm | Em7 | A | Bb | A7', """
 s.section('A2', 8, PIN_CA, PIN_A, 'thirds', PIN_B, [CRASH] + [ROCK] * 6 + [ROCK_FILL], insts=('lead50', 'soft25', 'bass'))
 s.form(['I'], ['A', 'B', 'A2', 'B'])
 
+# ------------------------------------------------------------------ BerryMatch: the puzzle's own, sweet and bouncy
+# A berry-picking tune for swapping pieces: the old handhelds' lead on a tune that skips up and down its chords like
+# pieces dropping into place, a quarter pulse picking the chords under it, a plucked bass hopping root, fifth and
+# octave, and a light beat of kick, shaker and clap. F major, which no other song is in. The second time round the
+# tune goes to a bell, the harmony a third under it, as a chain goes on
+s = add(song('BERRYMATCH', 'BerryMatch', 116, key=('F', 'major'), insts=('gblead', 'gbpick', 'basspl'), vols=(13, 7, 15, 9)))
+BM_DR = '16: k . S . x . S . k . S k x . S .'
+BM_FILL = '16: k . S . x . S . x . x . T . t .'
+BM_PICK = '8: 1 2 3 2 1 2 3 2'
+BM_BASS = '8: R . 5 . O . 5 .'
+BM_A = """
+  o5 c8 f8 a8 o6 c8 r8 o5 a8 f4 | d8 f8 a8 o6 d8 r8 o5 a8 f4 | b-8 o6 d8 f8 d8 o5 b-4 d4 | c8 e8 g8 o6 c8 e4 c4 |
+  o5 a8 o6 c8 f8 c8 o5 a4 f4 | e8 a8 o6 c8 o5 a8 e8 a8 o6 c4 | o5 d8 g8 b-8 g8 o6 c8 o5 b-8 g8 e8 | f4 a4 f4 r4 |"""
+BM_B = """
+  o5 f4. d8 f4 b-4 | g4. e8 g4 o6 c4 | c8 o5 b-8 a8 g8 a4 e4 | f8 e8 d8 e8 f4 a4 |
+  b-8 a8 b-8 o6 d8 f8 d8 o5 b-4 | o6 c8 o5 b-8 g8 e8 c4 e4 | d8 g8 b-8 o6 d8 o5 b-8 g8 f8 d8 | e4 g4 b-4 o6 c4 |"""
+BM_CA, BM_CB = 'F | Dm | Bb | C | F | Am | Gm7 C7 | F', 'Bb | C | Am | Dm | Bb | C | Gm7 | C7'
+s.section('I', 2, 'F | C7', None, BM_PICK, BM_BASS, [BM_DR, BM_FILL])
+s.section('A', 8, BM_CA, BM_A, BM_PICK, BM_BASS, [CRASH] + [BM_DR] * 6 + [BM_FILL])
+s.section('B', 8, BM_CB, BM_B, BM_PICK, BM_BASS, [BM_DR] * 7 + [BM_FILL])
+s.section('A2', 8, BM_CA, BM_A, 'thirds', BM_BASS, [CRASH] + [BM_DR] * 6 + [BM_FILL], insts=('bell25', 'gbharm', 'basspl'))
+s.form(['I'], ['A', 'B', 'A2', 'B'])
+
 # ------------------------------------------------------------------ how loud each plays
 # Measured (each voice's RMS: host/music_wav.cpp prints the mix's) so they all sit about 8 dB under the effects: the
 # home and the menus at -24.5 dBFS, the battles and the games at -24, the night and the goodbye softer, the jingles

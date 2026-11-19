@@ -1,7 +1,7 @@
 # Music (V2: the Mac, Windows and the web)
 
 Background music for every screen: the home, the menus, Travel and each of its zones, Knomi Tower, a battle theme
-for each zone, the legends, the tower's guardians, a buddy, the six minigames, evolving and a goodbye. All of it is original, written
+for each zone, the legends, the tower's guardians, a buddy, the minigames, evolving and a goodbye. All of it is original, written
 for this game as chiptune in the same square-wave family as the effects. No tune comes from any other game.
 
 The Knomi has no speaker, so it gets none of it: no music code and no songs go into its firmware (`HAS_MUSIC` is 0),
@@ -29,7 +29,7 @@ it's left for later.
 | A buddy | Buddy Battle |
 | A battle won, a catch, a tower floor won | Victory, once |
 | A battle lost, run from, a catch that broke free; the throw itself | nothing (a quick fade) |
-| Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Volley | Each its own |
+| Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Volley, Reel Fishing, Pinball, BerryMatch | Each its own (Reel Fishing has two: at the pier, and a fish on the line) |
 | Who's That? and Showdown | Who's That? |
 | Evolving | Evolution, once, under the evolve effect |
 | A goodbye | Goodbye |

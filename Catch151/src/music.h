@@ -38,6 +38,7 @@ enum MusicTrack : uint8_t {
   MUS_FISH,        // Reel Fishing: at the pier, waiting for a bite
   MUS_FISH_FIGHT,  // ...and a fish on the line, played at its pace (musicTempo)
   MUS_PINBALL,     // Pinball
+  MUS_BERRYMATCH,  // BerryMatch
   MUS_COUNT
 };
 

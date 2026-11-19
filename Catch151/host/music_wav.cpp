@@ -15,7 +15,7 @@
 static const char *const TRACK_IDS[MUS_COUNT] = {
   "none", "hello", "home", "night", "menu", "travel", "tower", "forest", "beach", "cave", "mansion", "field",
   "legend", "tower_fight", "buddy", "victory", "berry", "run", "surf", "dungeon", "quiz", "volley", "evolve", "goodbye",
-  "zone_forest", "zone_beach", "zone_cave", "zone_mansion", "zone_field", "fish", "fish_fight", "pinball",
+  "zone_forest", "zone_beach", "zone_cave", "zone_mansion", "zone_field", "fish", "fish_fight", "pinball", "berrymatch",
 };
 
 // where each plays (music.h)
@@ -28,7 +28,7 @@ static const char *const TRACK_WHERE[MUS_COUNT] = {
   "A battle won, a catch: once", "Berry Drop", "Rock Hopper", "PikaSurf", "Dungeon Crawler", "Who's That? and Showdown",
   "Volley Ball", "While it evolves: once", "A goodbye", "Travel: in the Forest", "Travel: at the Beach",
   "Travel: in the Cave", "Travel: in the Mansion", "Travel: in the Field",
-  "Reel Fishing: at the pier, waiting for a bite", "Reel Fishing: a fish on the line", "Pinball",
+  "Reel Fishing: at the pier, waiting for a bite", "Reel Fishing: a fish on the line", "Pinball", "BerryMatch",
 };
 
 static void put32(FILE *f, uint32_t v) { fwrite(&v, 4, 1, f); }
