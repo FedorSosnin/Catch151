@@ -80,7 +80,10 @@
 #define IMU_I2C_ADDR 0x6B
 #define WS21_ROT_DEG 45  // the picture turned clockwise on the panel, in degrees (ws21_hal.h): 45 puts a USB-C port
                          // straight down. 0: as the panel is, the plain and fastest copy
-#define WS21_ACC_MAP(a, g) ((g)[0] = (a)[0], (g)[1] = (a)[1], (g)[2] = (a)[2])
+// The QMI8658 sits on the board's back, so its axes are mirrored against the screen's: held upright it read up as
+// (0.59, -0.74), the screen's up at 45 degrees as it should, but turned sideways the picture went the wrong way
+// (2026-11-20). Mirrored about that line: x and y swapped and both negated.
+#define WS21_ACC_MAP(a, g) ((g)[0] = -(a)[1], (g)[1] = -(a)[0], (g)[2] = (a)[2])
 
 // PCF85063 clock: 0x51, SensorLib's default
 

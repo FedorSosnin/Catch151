@@ -168,14 +168,19 @@ public:
     // after each band is copied out, its cache lines are dropped: the refill (27 MB/s) would otherwise push the game's
     // own data out of the 32 KB cache all the time. So a frame buffer must be written back before it's shown (present())
     c.flags.bb_invalidate_cache = 1;
-    // Made on core 0, so its refill interrupt runs there: copying each band out of PSRAM takes a good part of a core,
-    // and the game draws on core 1. (The interrupt is set up on the core that makes the panel.)
-    makeCfg = &c;
-    makeDone = xSemaphoreCreateBinary();
-    xTaskCreatePinnedToCore(makeOnCore0, "ws21lcd", 4096, this, 5, nullptr, 0);
-    xSemaphoreTake(makeDone, portMAX_DELAY);
-    vSemaphoreDelete(makeDone);
-    if (!handle) return false;
+    // Made here, on the game's core, so its refill interrupt runs there too: then the refill (each band copied out of
+    // PSRAM) and the game's own heavy PSRAM work (drawing, flush()) never run at the same moment. With the refill on
+    // the other core, or flush() shared by both, they did, the refill fell behind and the streaks came back
+    // (2026-11-20).
+    if (esp_lcd_new_rgb_panel(&c, &handle) != ESP_OK) {
+      handle = nullptr;
+      return false;
+    }
+    esp_lcd_rgb_panel_event_callbacks_t cb = {};
+    cb.on_frame_buf_complete = frameDone;
+    esp_lcd_rgb_panel_register_event_callbacks(handle, &cb, this);
+    esp_lcd_panel_reset(handle);
+    esp_lcd_panel_init(handle);
     void *f0 = nullptr, *f1 = nullptr;
     esp_lcd_rgb_panel_get_frame_buffer(handle, 2, &f0, &f1);
     fbs[0] = (uint16_t *)f0;
@@ -236,21 +241,7 @@ public:
 
 private:
   static constexpr size_t FB_BYTES = (size_t)PANEL_SIZE * PANEL_SIZE * 2;
-  static void makeOnCore0(void *arg) {
-    Ws21Panel *p = (Ws21Panel *)arg;
-    if (esp_lcd_new_rgb_panel(p->makeCfg, &p->handle) != ESP_OK) p->handle = nullptr;
-    if (p->handle) {
-      esp_lcd_rgb_panel_event_callbacks_t cb = {};
-      cb.on_frame_buf_complete = frameDone;
-      esp_lcd_rgb_panel_register_event_callbacks(p->handle, &cb, p);
-      esp_lcd_panel_reset(p->handle);
-      esp_lcd_panel_init(p->handle);
-    }
-    xSemaphoreGive(p->makeDone);
-    vTaskDelete(nullptr);
-  }
-  const esp_lcd_rgb_panel_config_t *makeCfg = nullptr;
-  SemaphoreHandle_t makeDone = nullptr;
+
   // the RGB driver's interrupt, each time it has sent a whole buffer: from then on it reads the one last presented
   // (not IRAM_ATTR: this core's RGB interrupt isn't IRAM-safe either, and inline it won't link)
   static bool frameDone(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t *, void *ctx) {
@@ -282,7 +273,7 @@ void pressOverlay();  // the sketch's press preview, drawn over every frame
 
 // The 466x466 canvas in PSRAM. flush() copies it into the panel's frame buffer not on show (also PSRAM), in the
 // middle, turned (gWs21RotDeg; or a quarter turn, gPanelRot) and with the Knomi's soft rim (knomi_rim.h), then shows
-// it. The two cores share the copy: core 0 does the top half while core 1 does the bottom.
+// it. All on the game's core, as the panel's refill (Ws21Panel::begin()).
 class Ws21Canvas : public Arduino_Canvas {
 public:
   Ws21Canvas(Ws21Panel *out) : Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, out), panel(out) {}
@@ -293,9 +284,6 @@ public:
     if (!panel->frontBuffer()) return false;
     knomiRimBegin(LCD_WIDTH);
     ws21SetRotation(WS21_ROT_DEG);
-    go = xSemaphoreCreateBinary();
-    done = xSemaphoreCreateBinary();
-    if (go && done) xTaskCreatePinnedToCore(helper, "ws21flush", 4096, this, 5, nullptr, 0);
     return true;
   }
 
@@ -303,27 +291,13 @@ public:
     pressOverlay();
     uint16_t *fb = panel->backBuffer();
     if (!fb) return;
-    workFb = fb;
-    const bool shared = go && done;
-    if (shared) xSemaphoreGive(go);  // core 0: the top half
-    copyRows(fb, shared ? LCD_HEIGHT / 2 : 0, LCD_HEIGHT);
-    if (shared) xSemaphoreTake(done, portMAX_DELAY);
-    // (no cache write-back here: present() does it)
-    panel->present(fb);
+    copyRows(fb, 0, LCD_HEIGHT);
+    panel->present(fb);  // (it writes the cache back first)
   }
 
   uint16_t *panelBuffer() { return panel->frontBuffer(); }  // the console's SHOT: the whole 480x480 panel
 
 private:
-  static void helper(void *arg) {
-    Ws21Canvas *c = (Ws21Canvas *)arg;
-    for (;;) {
-      xSemaphoreTake(c->go, portMAX_DELAY);
-      c->copyRows(c->workFb, 0, LCD_HEIGHT / 2);
-      xSemaphoreGive(c->done);
-    }
-  }
-
   // canvas rows ya..yb-1 into fb
   void copyRows(uint16_t *fb, int ya, int yb) {
     if (gWs21RotDeg) {
@@ -355,7 +329,7 @@ private:
   // Turned: each pixel of the panel's middle takes the canvas pixel nearest to the point turned back onto it. The rim
   // is round, so its darkening is the panel pixel's own; whether a need bar's label lifts it is the canvas pixel's.
   // In 32 x 32 tiles: a tile's pixels come from a small turned square of the canvas that stays in the cache, where a
-  // whole row's come from a long diagonal that's gone again by the next row (2x faster).
+  // whole row's come from a long diagonal that's gone again by the next row (much faster).
   void turnRows(uint16_t *fb, int ya, int yb) {
     const int32_t c = gWs21RotC, s = gWs21RotS;
     const int T = 32;
@@ -392,8 +366,7 @@ private:
     }
   }
 
-  SemaphoreHandle_t go = nullptr, done = nullptr;
-  uint16_t *volatile workFb = nullptr;
+
   // near the edge: darkened by the rim, unless a need bar's label is over the shadow there (its 2 x 2 cell)
   static inline uint16_t edge(uint16_t c, const uint8_t *rim, int x, int y) {
     return gKnomiLiftOn && knomiLifted(x >> 1, y >> 1) ? c : knomiRimPixel(c, rim[x]);
