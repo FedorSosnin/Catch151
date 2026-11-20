@@ -13,6 +13,7 @@
 #include <esp_heap_caps.h>
 #include <esp_lcd_panel_rgb.h>
 #include <esp_lcd_panel_ops.h>
+#include <esp_cache.h>
 #include <SensorQMI8658.hpp>
 #include "ws21_exio.h"  // the IO expander: the panel's reset and CS, the touch's reset
 #define KNOMI_RIM_ROWS LCD_HEIGHT  // the rim is made for the 466 canvas, 1:1 (below)
@@ -141,6 +142,9 @@ public:
                                      LCD_G3, LCD_G4, LCD_G5, LCD_R0, LCD_R1, LCD_R2, LCD_R3, LCD_R4 };
     for (int i = 0; i < 16; i++) c.data_gpio_nums[i] = DATA[i];
     c.flags.fb_in_psram = 1;
+    // after each band is copied out, its cache lines are dropped: the refill (27 MB/s) would otherwise push the game's
+    // own data out of the 32 KB cache all the time. So a frame buffer must be written back before it's shown (present())
+    c.flags.bb_invalidate_cache = 1;
     if (esp_lcd_new_rgb_panel(&c, &handle) != ESP_OK) {
       handle = nullptr;
       return false;
@@ -155,7 +159,10 @@ public:
     fbs[0] = (uint16_t *)f0;
     fbs[1] = (uint16_t *)f1;
     if (!fbs[0] || !fbs[1]) return false;
-    for (uint16_t *f : fbs) memset(f, 0, (size_t)PANEL_SIZE * PANEL_SIZE * 2);  // the border is black, and stays so
+    for (uint16_t *f : fbs) {  // the border is black, and stays so
+      memset(f, 0, FB_BYTES);
+      esp_cache_msync(f, FB_BYTES, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+    }
     return true;
   }
 
@@ -172,12 +179,15 @@ public:
   }
   // shows fb from the next refresh on (no copy: esp_lcd switches buffers when given one of its own)
   void present(uint16_t *fb) {
+    esp_cache_msync(fb, FB_BYTES, ESP_CACHE_MSYNC_FLAG_DIR_C2M);  // out to PSRAM (the refill drops what it reads)
     esp_lcd_panel_draw_bitmap(handle, 0, 0, PANEL_SIZE, PANEL_SIZE, fb);
     askedAt = frames;  // (read after the switch was asked for: the next refresh to start reads the new one)
     shown = fb == fbs[1];
     pending = true;
   }
   uint16_t *frontBuffer() const { return fbs[shown]; }
+  // the pixel clock, from the next refresh on (the console's PCLK, to find the fastest one that doesn't glitch)
+  bool setPclk(uint32_t hz) { return handle && esp_lcd_rgb_panel_set_pclk(handle, hz) == ESP_OK; }
 
   void setBrightness(uint8_t v) {
     if (!blReady) blReady = ledcAttach(LCD_BL, LCD_BL_PWM_HZ, 8);
@@ -192,6 +202,7 @@ public:
   void draw24bitRGBBitmap(int16_t, int16_t, uint8_t *, int16_t, int16_t) override {}
 
 private:
+  static constexpr size_t FB_BYTES = (size_t)PANEL_SIZE * PANEL_SIZE * 2;
   // the RGB driver's interrupt, each time it has sent a whole buffer: from then on it reads the one last presented
   static bool IRAM_ATTR frameDone(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t *, void *ctx) {
     ((Ws21Panel *)ctx)->frames++;

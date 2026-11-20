@@ -1020,6 +1020,14 @@ void handleSerial() {
     gBtnSimUntil = millis() + line.substring(4).toInt();
     Serial.println("DONE");
     return;
+#ifdef BOARD_WS21
+  } else if (line.startsWith("PCLK ")) {  // the panel's pixel clock in MHz (testing): until the next start
+    float mhz = line.substring(5).toFloat();
+    bool ok = mhz >= 4 && mhz <= 24 && panel->setPclk((uint32_t)(mhz * 1e6f));
+    Serial.printf("pclk %.1f MHz %s\n", mhz, ok ? "ok" : "refused");
+    Serial.println("DONE");
+    return;
+#endif
   } else if (line == "PERF") {  // cost of the flush to the panel
     uint32_t t0 = micros();
     for (int i = 0; i < 10; i++) gfx->flush();

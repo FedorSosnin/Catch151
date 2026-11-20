@@ -33,8 +33,9 @@
 #define LCD_R3 18
 #define LCD_R4 17
 // timings, as Waveshare's demo: 18 MHz, about 66 frames a second
-#define LCD_PCLK_HZ 16000000  // as Waveshare's Arduino demo (18 in the IDF one): 58 refreshes a second, and less
-                               // PSRAM bandwidth for them, so the picture drifts less when the game is busy
+#define LCD_PCLK_HZ 12000000  // 44 refreshes a second (Waveshare's demos: 16 and 18). Each refresh reads the whole frame
+                               // buffer out of PSRAM; at 16 MHz the refill couldn't keep up and bands of lines showed
+                               // out of place (2026-11-20). The console's PCLK tries others
 #define LCD_PCLK_NEG 0
 #define LCD_HSYNC_POL 1  // (1: idle high, esp_lcd's default, which the demo keeps)
 #define LCD_HSYNC_PW 8
