@@ -146,7 +146,8 @@ public:
     delay(120);
     bus->batchOperation(WS21_INIT_OPS, sizeof(WS21_INIT_OPS));
     // The core the refill runs on (its interrupt goes where the panel is made): the console's REFILLCORE, 1 (the
-    // game's) unless set. On the game's core it takes about a quarter of that core's time (bring-up, 2026-11-20)
+    // game's) unless set. On the other core the game's core gets about 7% more done, but the game's PSRAM work then
+    // holds up the refill (bring-up, 2026-11-20)
     Preferences p;
     if (p.begin("ws21", true)) {
       refillCore = p.getUChar("rc", 1) ? 1 : 0;
@@ -214,7 +215,7 @@ public:
     // Made on the game's core (unless REFILLCORE says otherwise), so its refill interrupt runs there too: then the
     // refill (each band copied out of PSRAM) and the game's own heavy PSRAM work never run at the same moment. With
     // the refill on the other core and flush() shared by both, they did, the refill fell behind and the streaks came
-    // back (2026-11-20; flush() then also left the cache dirty, which it no longer does).
+    // back (2026-11-20, twice: the second time with flush() copying by DMA and leaving the cache clean).
     esp_lcd_panel_handle_t h = nullptr;
     if (esp_lcd_new_rgb_panel(&c, &h) != ESP_OK) return;
     esp_lcd_rgb_panel_event_callbacks_t cb = {};
@@ -313,15 +314,17 @@ static IRAM_ATTR bool ws21DmaDone(async_memcpy_handle_t, async_memcpy_event_t *,
 
 // The 466x466 canvas in PSRAM. flush() makes the panel's rows from it a band at a time in internal RAM: in the middle,
 // turned (gWs21RotDeg) and with the Knomi's soft rim (knomi_rim.h). Each band goes out to the frame buffer not on show
-// by DMA while the next one is made, then that buffer is shown. The game's core makes every other band and a task on
-// the other core the rest (gWs21Split: the console's SPLIT), each with its own DMA.
+// by DMA while the next one is made, then that buffer is shown. All on the game's core, where the panel's refill also
+// runs. The console's SPLIT 1 has a task on the other core make every other band (each core with its own DMA): 135 ms
+// a frame turned and blended instead of 160, but the glitch lines came back (Fedor, 2026-11-20). Two cores reading
+// PSRAM at once hold up the refill. So it stays off.
 //
 // Why DMA (bring-up, 2026-11-20): the CPU writing the frame buffer through the cache read every line of it in first
 // and wrote it back after, and then each line had to be flushed: 68 ms a frame just to copy, 138 ms turned. The DMA
 // writes PSRAM straight, while the CPU goes on to the next band, and leaves nothing dirty in the cache for the
 // panel's refill to wait on. Turned, each pixel is still about 50 instructions and a wait on PSRAM: 84 ms a frame on
 // one core.
-inline bool gWs21Split = true;
+inline bool gWs21Split = false;
 class Ws21Canvas : public Arduino_Canvas {
 public:
   Ws21Canvas(Ws21Panel *out) : Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, out), panel(out) {}
@@ -332,10 +335,7 @@ public:
     if (!panel->frontBuffer()) return false;
     knomiRimBegin(LCD_WIDTH);
     ws21SetRotation(WS21_ROT_DEG);
-    for (auto &b : bands) {  // whole panel rows: the 7 px of border either side stay black
-      b = (uint16_t *)heap_caps_aligned_calloc(64, 1, BAND_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-      if (!b) return false;
-    }
+    if (!allocBands(0)) return false;
     for (Side &d : side) {
       async_memcpy_config_t mc = ASYNC_MEMCPY_DEFAULT_CONFIG();
       mc.backlog = 4;
@@ -358,7 +358,7 @@ public:
     uint16_t *fb = panel->backBuffer();
     if (!fb) return;
     const int64_t t1 = esp_timer_get_time();
-    const bool split = gWs21Split && worker;
+    const bool split = gWs21Split && worker && allocBands(1);
     curFb = fb;
     if (split) xSemaphoreGive(go);
     int64_t waited = doBands(0, fb, split ? 2 : 1, 0);
@@ -391,7 +391,7 @@ public:
   }
 
 private:
-  static constexpr int BAND = 8;
+  static constexpr int BAND = 16;  // (8 was 9 ms a frame slower: more of the canvas read twice, band to band)
   static constexpr size_t BAND_BYTES = (size_t)BAND * PANEL_SIZE * 2;  // (a multiple of 64, as the DMA to PSRAM wants)
   // each core's own: its DMA and the counts of its copies
   struct Side {
@@ -402,6 +402,15 @@ private:
   };
   Side side[2];
   uint16_t *bands[4] = { nullptr, nullptr, nullptr, nullptr };  // internal RAM: two for each side
+  // side k's two band buffers, made the first time they're needed (the other core's only with SPLIT): whole panel
+  // rows, so the 7 px of border either side stay black
+  bool allocBands(int k) {
+    for (int i = 2 * k; i < 2 * k + 2; i++) {
+      if (!bands[i]) bands[i] = (uint16_t *)heap_caps_aligned_calloc(64, 1, BAND_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+      if (!bands[i]) return false;
+    }
+    return true;
+  }
   TaskHandle_t worker = nullptr;
   SemaphoreHandle_t go = nullptr, back = nullptr;
   uint16_t *volatile curFb = nullptr;

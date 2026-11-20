@@ -860,8 +860,10 @@ PowerCtx powerCtx(uint32_t now) {
   // V2: asleep, only the home is dim; a menu opened over it (the radial menu too) is in full colour (Fedor). Left
   // alone it still dims, as any screen does
   if (v2RadialOpen || !onMainScreen()) c.sleeping = false;
-#ifdef BOARD_HOST
-  if (!c.sleeping) c.idleMs = 0;  // a desktop window has no panel to protect: only the pet's sleep dims it
+#if defined(BOARD_HOST) || defined(BOARD_WS21)
+  // a desktop window has no panel to protect: only the pet's sleep dims it. The Waveshare 2.1 likewise (Fedor: "We
+  // should turn that on ONLY when we put our pokemon to sleep"); the Knomi still dims when left alone
+  if (!c.sleeping) c.idleMs = 0;
 #endif
   // a battle waits for you (it no longer ends by itself): left alone long enough to dim, it is
   // drawn at the slower rates like any other screen

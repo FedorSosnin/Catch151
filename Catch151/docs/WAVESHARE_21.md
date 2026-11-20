@@ -162,13 +162,13 @@ What the code uses:
   (`TL021WVC02`), but its gamma, VCOM and inversion settings differ. It goes over a 9-bit software SPI on GPIO
   1 and 2, with the CS and the panel's reset on the expander (`Ws21InitBus`).
 - **Canvas:** `Ws21Canvas` makes the panel's rows from the 466 canvas a band of 8 at a time in internal RAM: in the
-  middle, turned, and with the rim. Each band goes to the frame buffer by DMA while the next one is made. The game's
-  core makes every other band and a task on the other core the rest. The CPU writing PSRAM through the cache was the
-  slowest part of a frame.
+  middle, turned, and with the rim. Each band goes to the frame buffer by DMA while the next one is made, all on the
+  game's core. The CPU writing PSRAM through the cache was the slowest part of a frame.
 - **Turned 45°:** the board's USB-C ports point out at 45°, so the picture is turned 45° clockwise to put one of them
   straight down (`WS21_ROT_DEG`). Each panel pixel blends the four canvas pixels round its point (`WS21_SMOOTH`).
   Without the blend, the game's pixel art comes out dotted and its dithering in zigzags at that angle.
 - **Auto-rotate:** in quarter turns from that 45°, as the board is held.
+- **Dimming:** only while the pet sleeps, as on computers (Fedor). The Knomi still dims when left alone.
 - **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas and turned with
   the picture. A small task on the other core reads it every 8 ms while a finger is down and queues each press and
   lift, so a quick tap isn't lost while a frame is drawn.
@@ -195,14 +195,16 @@ Not done yet, on purpose:
   refill. Sprites are read through a flash map instead (`flashpak.h`).
 - **Tearing:** one frame buffer. Now two, swapped between refreshes.
 - **Speed:** almost everything here waits on PSRAM. The game draws a frame in about 70 ms. Copying it to the panel
-  by CPU took 68 ms (138 ms turned and blended): the CPU reads each frame-buffer line in before writing it. By DMA,
-  on both cores, it takes 30 ms (65 ms turned and blended). A whole frame, turned and blended, went from 205 ms to
-  135 ms; unturned it is about 100 ms.
+  by CPU took 68 ms (138 ms turned and blended): the CPU reads each frame-buffer line in before writing it. By DMA
+  it takes about 40 ms (90 ms turned and blended). A whole frame, turned and blended, went from 205 ms to about
+  160 ms; unturned it is about 110 ms. On both cores the copy took 65 ms and a frame 135 ms, but the glitch lines
+  came back (`SPLIT`).
 - **Taps:** the game read the touch once a frame. A tap that came and went within a 200 ms frame was lost. A touch
   task now queues every press and lift.
-- **The refill's core:** on the game's core it never runs at the same moment as the game's own PSRAM work. On the
-  other core it frees the game's core (about 7% faster). An early try with the refill on the other core and a frame
-  copy that left the cache dirty brought the streaks back; with the DMA copy it is being tried again (`REFILLCORE`).
+- **The rule:** only one core may read PSRAM hard at a time, and it must be the core the refill runs on. The refill
+  copies each band of the frame out of PSRAM in time for the panel; when the other core reads PSRAM at the same
+  moment, it falls behind and lines show along the panel's rows (at 45° to the picture). Both times the refill or
+  part of the frame copy went to the other core, the lines came back.
 - **The buzzer:** each effect beeps its rhythm, a beep a note (`audio.cpp`). A tap is a 4 ms click.
 
 Console commands for testing (115200 baud on the "UART" port; none of them is saved unless it says so):
@@ -216,7 +218,7 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `PCLK n` | The pixel clock in MHz. |
 | `PCLKEDGE 0` / `PCLKEDGE 1` | Data on the rising or falling edge. |
 | `REFILLCORE 0` / `REFILLCORE 1` | The core the panel's refill runs on. Saved; used from the next start. |
-| `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both. |
+| `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both (faster, but the lines come back). |
 | `LCD` | Refreshes since the last `LCD`, and the longest gap between two. |
 | `HOLD n` | The game stops for n seconds; only the panel's refill runs. |
 | `WIFIOFF` | Wi-Fi off until the next start. |
