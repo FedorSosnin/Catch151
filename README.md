@@ -28,46 +28,6 @@
 
 **[Minigame Leaderboard](#minigame-leaderboard)**: each minigame's best, live from copies of the game everywhere, with the gamer tag that set it and the day.
 
-## What's in it
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **A world that walks with you.** Your Pokémon walks toward you while its home slides by: grass and flowers stream past, the hills sway, clouds drift and birds fly over. Five hand-drawn zones, the Field, Forest, Beach, Cave and Mansion, and outdoors the light goes from day to dusk to night.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Choose your partner.** Bulbasaur, Charmander, Squirtle and Pikachu walk up to meet you. Later, choose any first form you've caught, shinies included.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Battle wild Pokémon.** Turn-based fights with each Pokémon's own moves from Red and Blue, learned as it levels up, in the scene of the zone you're hunting.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Catch them.** Throw a Poké Ball at the Pokémon running back and forth: it hits, drops to the ground and shakes, one, two, three...
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Climb Knomi Tower.** Walk the pier out to the tower's islet and take your Pokémon and two friends from your Pokédex up eight floors of type guardians, with HP carrying over from fight to fight. At the top waits the Legend, and then Mewtwo: beat them both for a Master Ball, every time you do.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Ultra Balls and Master Balls.** Every battle you win fills two bars, which pop up after each fight to show how close you are: an Ultra Ball every 25, which triples your catch chance, and a Master Ball every 100, which always catches.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **The Repel.** Ten minutes of mini games earn a Repel. Spray it from the backpack and weaker wild Pokémon stay away for 3 minutes, so the ones you're hunting turn up.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Fill the Pokédex.** All 151, with their shiny forms, each caught with 1 to 3 stars. Every entry turns round to show its Pokémon from all sides. **[View the Pokédex](https://fedorsosnin.github.io/Catch151/sprites/)**: all of them, regular and shiny, in every view.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, the newest mini game: a board of berries and candy to swap and line up. Your Pokémon runs in to watch from the corners. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett, who evolves into Dugtrio. Roll the ball into the tall grass (at night, a cave) and a wild Pokémon that lives there jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Eight mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing, Pinball and BerryMatch, on cartridges in a Game Boy, four a page. **Play Again!** at the end.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **A trophy room.** All 27 medals as things in one room: badges in a case (Knomi Tower's too), statues, cups, a golden cartridge for holding a high score, a shiny gem, a gleam sweeping over the ones you've won. Tap a group for its shelf, then a medal for how to earn it.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 32 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Settings, Medals, Stats and the Pokédex.
-
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Everywhere, in 8 languages.** The Knomi, Mac, Windows and the web, in English, Spanish, French, German, Italian, Portuguese, Japanese and Korean. Updates install themselves, and your Pokémon is kept.
-
 ## On your computer
 
 The Mac and Windows apps and the browser game, as they open: in the Poké Ball ring, with the CRT screen on. **CRT Screen** in the apps' menu, or the **CRT** button under the browser game, turns it off for the Knomi's own look.
@@ -136,6 +96,46 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Buddies visit** | **Battle, trade or play** | **Games for two** |
 | ![Say goodbye? Goodbye or Stay together](Catch151/docs/images/v2/goodbye.png) | ![Release GENGAR? It goes back to the wild](Catch151/docs/images/v2/release.png) | ![Settings: the clock, set automatically, Sound and Music each on a slider from 0 to 3, the language, and Start Over](Catch151/docs/images/v2/settings.png) |
 | **One day, a goodbye** | **Let it go** | **Settings** |
+
+## What's in it
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **A world that walks with you.** Your Pokémon walks toward you while its home slides by: grass and flowers stream past, the hills sway, clouds drift and birds fly over. Five hand-drawn zones, the Field, Forest, Beach, Cave and Mansion, and outdoors the light goes from day to dusk to night.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Choose your partner.** Bulbasaur, Charmander, Squirtle and Pikachu walk up to meet you. Later, choose any first form you've caught, shinies included.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Battle wild Pokémon.** Turn-based fights with each Pokémon's own moves from Red and Blue, learned as it levels up, in the scene of the zone you're hunting.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Catch them.** Throw a Poké Ball at the Pokémon running back and forth: it hits, drops to the ground and shakes, one, two, three...
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Climb Knomi Tower.** Walk the pier out to the tower's islet and take your Pokémon and two friends from your Pokédex up eight floors of type guardians, with HP carrying over from fight to fight. At the top waits the Legend, and then Mewtwo: beat them both for a Master Ball, every time you do.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Ultra Balls and Master Balls.** Every battle you win fills two bars, which pop up after each fight to show how close you are: an Ultra Ball every 25, which triples your catch chance, and a Master Ball every 100, which always catches.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **The Repel.** Ten minutes of mini games earn a Repel. Spray it from the backpack and weaker wild Pokémon stay away for 3 minutes, so the ones you're hunting turn up.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Fill the Pokédex.** All 151, with their shiny forms, each caught with 1 to 3 stars. Every entry turns round to show its Pokémon from all sides. **[View the Pokédex](https://fedorsosnin.github.io/Catch151/sprites/)**: all of them, regular and shiny, in every view.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, the newest mini game: a board of berries and candy to swap and line up. Your Pokémon runs in to watch from the corners. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett, who evolves into Dugtrio. Roll the ball into the tall grass (at night, a cave) and a wild Pokémon that lives there jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Eight mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing, Pinball and BerryMatch, on cartridges in a Game Boy, four a page. **Play Again!** at the end.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **A trophy room.** All 27 medals as things in one room: badges in a case (Knomi Tower's too), statues, cups, a golden cartridge for holding a high score, a shiny gem, a gleam sweeping over the ones you've won. Tap a group for its shelf, then a medal for how to earn it.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 32 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Settings, Medals, Stats and the Pokédex.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Everywhere, in 8 languages.** The Knomi, Mac, Windows and the web, in English, Spanish, French, German, Italian, Portuguese, Japanese and Korean. Updates install themselves, and your Pokémon is kept.
 
 ## New: BerryMatch
 
