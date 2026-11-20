@@ -81,8 +81,28 @@ static uint32_t rtcUtc() {
 #include <SensorPCF85063.hpp>
 static SensorPCF85063 hwRtc;
 static bool hwRtcOk = false;
+// A fresh board's chip runs on whatever date it left the factory with (this one said January 2026): taken as the
+// time, the first save got that date, and when network time came, the months between counted as time away (Fedor's
+// Pikachu was Lv.100 on its first day). So the chip's time counts only once the game has written it: it marks its
+// spare RAM byte then. The chip's own flag that its clock stopped (a flat backup cell) also rules it out.
+#define PCF_ADDR 0x51
+#define PCF_RAM 0x03      // its one byte of RAM
+#define PCF_SECONDS 0x04  // bit 7: the clock stopped since it was last set
+#define PCF_OURS 0xC5     // in the RAM byte: the time is the game's
+static int pcfReg(uint8_t r) {
+  Wire.beginTransmission(PCF_ADDR);
+  Wire.write(r);
+  if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)PCF_ADDR, (uint8_t)1) != 1) return -1;
+  return Wire.read();
+}
 static uint32_t hwRtcRead() {
   if (!hwRtcOk) return 0;
+  const int ram = pcfReg(PCF_RAM), sec = pcfReg(PCF_SECONDS);
+  if (ram != PCF_OURS || sec < 0 || (sec & 0x80)) {
+    Serial.printf("clock: the PCF85063's time isn't the game's (RAM %02X, seconds %02X): not used\n", ram & 0xFF,
+                  sec & 0xFF);
+    return 0;
+  }
   RTC_DateTime t = hwRtc.getDateTime();
   if (t.getYear() < 2025 || t.getYear() > 2120) return 0;  // never set, or lost
   struct tm tmv = {};
@@ -100,6 +120,10 @@ static void hwRtcWrite(uint32_t utc) {
   struct tm tmv;
   gmtime_r(&tt, &tmv);
   hwRtc.setDateTime(RTC_DateTime(tmv.tm_year + 1900, tmv.tm_mon + 1, tmv.tm_mday, tmv.tm_hour, tmv.tm_min, tmv.tm_sec));
+  Wire.beginTransmission(PCF_ADDR);  // (setting the time clears the stopped flag) and it's the game's from now on
+  Wire.write(PCF_RAM);
+  Wire.write(PCF_OURS);
+  Wire.endTransmission();
 }
 #endif
 
@@ -120,15 +144,21 @@ uint32_t rtcEpoch() {
   uint32_t u = rtcUtc();
   return u ? u + offsetAt(u) : 0;
 }
-void rtcSetEpoch(uint32_t e) {  // local: back to UTC (twice, for a day that changes to or from summer time)
+static void setLocal(uint32_t e) {  // local: back to UTC (twice, for a day that changes to or from summer time)
   uint32_t u = e - offsetAt(e);
   baseUtc = e - offsetAt(u);
   baseMs = millis();
   fromNet = false;
+}
+void rtcSetEpoch(uint32_t e) {
+  setLocal(e);
 #ifdef BOARD_WS21
   hwRtcWrite(baseUtc);
 #endif
 }
+#ifdef BOARD_WS21
+void rtcSetSeed(uint32_t e) { setLocal(e); }
+#endif
 bool clockFromNetwork() { return fromNet; }
 uint32_t clockUtc() { return fromNet ? rtcUtc() : 0; }
 uint32_t clockGapMin() { return 0; }  // millis() runs through light sleep: no gaps

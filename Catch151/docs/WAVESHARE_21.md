@@ -180,6 +180,10 @@ What the code uses:
 - **IMU:** SensorLib's `SensorQMI8658`, accelerometer only, ±2 g at 62.5 Hz. Its axes are a quarter turn from the
   panel's (`WS21_ACC_MAP`), found from Fedor's video.
 - **Clock:** the Knomi's clock (Wi-Fi time, time zones), plus SensorLib's `SensorPCF85063` to keep UTC across restarts.
+  The chip's time counts only once the game has set it (a mark in its RAM byte) and its clock hasn't stopped since.
+  A fresh board's chip ran on a leftover factory date (January 2026): taken as the time, the first save got it, and
+  the months until network time counted as time away (a Lv.100 Pikachu on its first day). Until it's set, the game
+  starts from its last saved time, as the Knomi does.
 - **Battery:** `analogReadMilliVolts()` on GPIO 4, × 3 / 0.9945 (Waveshare's measured correction), and the LiPo curve
   in `batcurve.h`.
 - **Serial:** UART0 through the CH343, as on the Knomi (`CDCOnBoot=default`). Use the "UART" port.

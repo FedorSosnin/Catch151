@@ -615,7 +615,7 @@ void setup() {
     uint32_t seed = 1767225600UL;             // truly blank RTC
     uint32_t seen = pet.savedEpoch();         // uses the NVS that pet already has open
     if (seen > seed) seed = seen;
-    rtcSetEpoch(seed);
+    rtcSetSeed(seed);
     e = rtcEpoch();
     Serial.printf("RTC has no time: seeded to %u%s\n", seed,
                   seen > 1767225600UL ? " (from the last saved time)" : "");
