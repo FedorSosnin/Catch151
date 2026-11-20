@@ -1036,6 +1036,11 @@ void handleSerial() {
     gfx->flush();
     Serial.println("DONE");
     return;
+  } else if (line.startsWith("SMOOTH ")) {  // turned: 1 blends between pixels, 0 takes the nearest (testing)
+    gWs21Smooth = line.substring(7).toInt() != 0;
+    gfx->flush();
+    Serial.println("DONE");
+    return;
   } else if (line.startsWith("PCLKEDGE ")) {  // 1: data out on PCLK's falling edge (bring-up: streaks along the rows)
     panel->setPclkEdge(line.substring(9).toInt() != 0);
     Serial.println("DONE");

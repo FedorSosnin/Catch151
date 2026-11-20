@@ -78,6 +78,7 @@
 
 // QMI8658 accelerometer and gyro. TODO(bring-up): its axes against the panel's; this keeps them as they come.
 #define IMU_I2C_ADDR 0x6B
+#define WS21_SMOOTH 1    // turned, the picture blended between pixels (no dotted lines), not the nearest pixel
 #define WS21_ROT_DEG 45  // the picture turned clockwise on the panel, in degrees (ws21_hal.h): 45 puts a USB-C port
                          // straight down. 0: as the panel is, the plain and fastest copy
 // The QMI8658's axes are a quarter turn round from the screen's: the sensor's +Y is the screen's +X, its +X the

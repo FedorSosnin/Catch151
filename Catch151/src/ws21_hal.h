@@ -30,6 +30,10 @@
 // we rotate the screen 45* clockwise?"). 0 is a plain copy; any other angle samples the canvas per panel pixel (the
 // nearest one). Touches and tilt turn with it.
 inline int16_t gWs21RotDeg = 0;
+// Turned, each panel pixel blends the four canvas pixels round its point (smooth), or takes the nearest one (sharp
+// but pixel art's lines come out dotted and its dithering in zigzags at 45 degrees: Fedor saw them as streaks).
+// The console's SMOOTH switches it
+inline bool gWs21Smooth = WS21_SMOOTH;
 inline int32_t gWs21RotC = 65536, gWs21RotS = 0;  // its cosine and sine, 16.16
 inline void ws21SetRotation(int deg) {
   deg %= 360;
@@ -357,13 +361,32 @@ private:
           const int32_t X2 = 2 * xa + 1 - LCD_WIDTH, Y2 = 2 * y + 1 - LCD_HEIGHT;
           int32_t fu = ((X2 * c + Y2 * s) >> 1) + ((LCD_WIDTH / 2) << 16);
           int32_t fv = ((Y2 * c - X2 * s) >> 1) + ((LCD_HEIGHT / 2) << 16);
-          for (int x = xa; x < xb; x++, fu += c, fv -= s) {
-            int u = fu >> 16, v = fv >> 16;
-            if ((unsigned)u >= LCD_WIDTH) u = u < 0 ? 0 : LCD_WIDTH - 1;
-            if ((unsigned)v >= LCD_HEIGHT) v = v < 0 ? 0 : LCD_HEIGHT - 1;
-            uint16_t px = _framebuffer[v * LCD_WIDTH + u];
-            if ((x < i0 || x >= i1) && !(gKnomiLiftOn && knomiLifted(u >> 1, v >> 1))) px = knomiRimPixel(px, rim[x]);
-            row[x] = px;
+          if (gWs21Smooth) {  // the point's four canvas pixels, weighted by how near it is to each (in 32nds)
+            fu -= 32768;  // (from the nearest pixel's centre to the top-left one's)
+            fv -= 32768;
+            for (int x = xa; x < xb; x++, fu += c, fv -= s) {
+              int u = fu >> 16, v = fv >> 16;
+              const uint32_t wu = (fu >> 11) & 31, wv = (fv >> 11) & 31;
+              if (u < 0) u = 0;
+              if (v < 0) v = 0;
+              const int u1 = u + 1 < LCD_WIDTH ? u + 1 : u, v1 = v + 1 < LCD_HEIGHT ? v + 1 : v;
+              if (u >= LCD_WIDTH) u = LCD_WIDTH - 1;
+              if (v >= LCD_HEIGHT) v = LCD_HEIGHT - 1;
+              const uint16_t *r0 = _framebuffer + v * LCD_WIDTH, *r1 = _framebuffer + v1 * LCD_WIDTH;
+              const uint32_t top = mix(spread(r0[u]), spread(r0[u1]), wu), bot = mix(spread(r1[u]), spread(r1[u1]), wu);
+              uint16_t px = pack(mix(top, bot, wv));
+              if ((x < i0 || x >= i1) && !(gKnomiLiftOn && knomiLifted(u >> 1, v >> 1))) px = knomiRimPixel(px, rim[x]);
+              row[x] = px;
+            }
+          } else {
+            for (int x = xa; x < xb; x++, fu += c, fv -= s) {
+              int u = fu >> 16, v = fv >> 16;
+              if ((unsigned)u >= LCD_WIDTH) u = u < 0 ? 0 : LCD_WIDTH - 1;
+              if ((unsigned)v >= LCD_HEIGHT) v = v < 0 ? 0 : LCD_HEIGHT - 1;
+              uint16_t px = _framebuffer[v * LCD_WIDTH + u];
+              if ((x < i0 || x >= i1) && !(gKnomiLiftOn && knomiLifted(u >> 1, v >> 1))) px = knomiRimPixel(px, rim[x]);
+              row[x] = px;
+            }
           }
         }
       }
@@ -372,6 +395,10 @@ private:
     }
   }
   uint16_t *band = nullptr;  // internal RAM
+  // RGB565 spread out (green above, red and blue below, 5 spare bits over each) so the three blend in one multiply
+  static inline uint32_t spread(uint16_t c) { return (c | (uint32_t)c << 16) & 0x07E0F81Fu; }
+  static inline uint16_t pack(uint32_t x) { return (uint16_t)(x | x >> 16); }
+  static inline uint32_t mix(uint32_t a, uint32_t b, uint32_t w) { return ((a * (32 - w) + b * w) >> 5) & 0x07E0F81Fu; }
 
   static inline uint16_t edge(uint16_t c, const uint8_t *rim, int x, int y) {
     return gKnomiLiftOn && knomiLifted(x >> 1, y >> 1) ? c : knomiRimPixel(c, rim[x]);
