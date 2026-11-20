@@ -1,0 +1,1599 @@
+#include "pet.h"
+#include "battle.h"
+#include "tower.h"
+#include "zones.h"
+#include "minigames.h"
+#include "dex.h"
+#include "audio.h"
+
+void Pet::begin() {
+  prefs.begin(SAVE_NS, false);
+  if (!prefs.getBool("init", false)) {
+    prefs.putBool("init", true);
+    newEgg();
+  } else {
+    load();
+  }
+  bootSeen = prefs.getUInt("seen", 0);
+  bootLife = lifeMin;
+  lastTick = millis();
+}
+
+void Pet::newEgg() {
+  ceremony = CER_NONE;
+  neglectTicks = 0;
+  weight = 0;
+  speciesId = -1;
+  prevSpeciesId = -1;
+  eggTarget = pickEggSpecies();  // hidden species based on rarity and pokedex
+  starterPick = (registeredCount() == 0);  // first game: the player picks the starter
+  eggPick = !starterPick && lastEnd != CER_RUNAWAY;  // after a runaway the egg is decided by the draw
+  // shiny roll: 1/4 after a good goodbye; otherwise 1/48 base, better with high streak/bond
+  int shinyBase = SHINY_AFTER_GOODBYE;
+  if (lastEnd != CER_FAREWELL && lastEnd != CER_RELEASE) {
+    shinyBase = 48 - careBonus();
+    if (shinyBase < 8) shinyBase = 8;
+  }
+  eggShiny = (random(shinyBase) == 0);
+  // V2 (Fedor): no egg and no shiny roll. The four starters until a goodbye has been offered, then any base form
+  // in the Pokedex, regular or shiny: a Pokemon is shiny only when you pick a shiny form you own
+  starterPick = !pickOk || eggChoiceCount() == 0;
+  eggPick = !starterPick;
+  eggShiny = false;
+  eggStars = 0;  // picking a form sets its band; a drawn egg rolls 90-110
+  eggTaps = 0;
+  fullness = 80;
+  joy = 80;
+  energy = 80;
+  hygiene = 100;
+  poops = 0;
+  ageMinutes = 0;
+  careMistakes = 0;
+  mistakeCooldown = 0;
+  sleeping = false;
+  save();
+}
+
+// offline progression: time passed even while it was off, but with
+// mercy: bars drop with a floor of 15 (it comes back hungry, not dead),
+// with no neglect or runaways while away
+static uint8_t dropTo(uint8_t v, uint8_t d, uint8_t fl) {
+  if (v <= fl) return v;
+  return (v - fl > d) ? v - d : fl;
+}
+
+void Pet::setClock(uint32_t nowEpoch) {
+  lastSeenEpoch = nowEpoch;
+  advanceDay();
+  if (nowEpoch) save();  // saved right away: a power cut doesn't lose the reference
+}
+
+void Pet::noteTime(uint32_t nowEpoch) {
+  if (!nowEpoch) return;
+  lastSeenEpoch = nowEpoch;
+  advanceDay();
+}
+
+// The day follows the clock's, with three guards, so setting the clock (the time screen, the computer's)
+// can't hand out days: it never goes back; a new one needs DAY_MIN_LIVED minutes lived since the last
+// began; and it skips ahead several only if the game lived through them. On network time the day is
+// taken to begin at midnight, so starting it at 2 pm doesn't push tomorrow's candies to 2 am.
+void Pet::advanceDay() {
+  if (!lastSeenEpoch) return;
+  uint32_t d = lastSeenEpoch / 86400;
+  if (d <= gameDay) return;
+  bool first = gameDay == 0;
+  if (!first) {
+    uint32_t lived = lifeMin - dayLife;
+    if (lived < DAY_MIN_LIVED) return;
+    uint32_t most = gameDay + 1 + (lived - DAY_MIN_LIVED) / 1440;
+    if (d > most) d = most;
+  }
+  bool clockDay = d == lastSeenEpoch / 86400;  // not held back: the clock's own day
+  gameDay = d;
+  if (!metDay && !isEgg() && !starterPick && !eggPick) {  // V2: the day it came, as near as its age tells
+    uint32_t back = ageMinutes / 1440;
+    metDay = back < d ? d - back : 1;
+  }
+  dayLife = lifeMin - (clockDay && (first || clockTrusted) ? (lastSeenEpoch % 86400) / 60 : 0);
+  pendingSave = true;
+}
+
+void Pet::syncClock(uint32_t nowEpoch) {
+  uint32_t seen = prefs.getUInt("seen", 0);
+  lastSeenEpoch = nowEpoch;
+  if (nowEpoch == 0) return;
+  applyAway((seen && nowEpoch > seen) ? (nowEpoch - seen) / 60 : 0);
+}
+
+void Pet::trustedTime(uint32_t utc, uint32_t localNow, bool measure) {
+  if (utc < CLOCK_SANE_UTC) return;
+  if (localNow) lastSeenEpoch = localNow;
+  // minutes since the last trusted time, against those the game lived meanwhile (ticks, time away). A
+  // save from before this was counted measures once from the local time it was saved at.
+  uint32_t real = 0, lived = 0;
+  if (refUtc) {
+    real = utc > refUtc ? (utc - refUtc) / 60 : 0;
+    lived = lifeMin - refLife;
+  } else {
+    real = (bootSeen && localNow > bootSeen) ? (localNow - bootSeen) / 60 : 0;
+    lived = lifeMin - bootLife;
+  }
+  applyAway(measure && real > lived ? real - lived : 0);
+  refUtc = utc;  // a game ahead of it (a minute of drift) starts over from here: nothing is taken back
+  refLife = lifeMin;
+  save();
+}
+
+void Pet::awayMinutes(uint32_t mins) {
+  if (mins) applyAway(mins);
+}
+
+void Pet::applyAway(uint32_t mins) {
+  lifeMin += mins;  // lived, even while it waits for a starter or says goodbye
+  if (mins < 2 || ceremony != CER_NONE || starterPick || eggPick) {
+    advanceDay();
+    save();  // first time, no time to apply, or still choosing what to raise
+    return;
+  }
+  if (mins > AWAY_CAP_MIN) mins = AWAY_CAP_MIN;
+
+  for (uint32_t i = 0; i < mins; i++) {
+    ageMinutes++;
+    if (isEgg()) {
+      if (ageMinutes >= 3) hatch();  // hatches while you were away
+      continue;
+    }
+    if (sleeping) {  // rest: drops slowly with a floor, same as live
+      energy = clamp100(energy + 6);
+      if (ageMinutes % 2 == 0) {
+        fullness = dropTo(fullness, 1, 30);
+        joy = dropTo(joy, 1, 35);
+      }
+      if (ageMinutes % 3 == 0) hygiene = dropTo(hygiene, 1, 45);
+      careMinute(true);
+      continue;
+    }
+    fullness = dropTo(fullness, 2, 15);
+    energy = dropTo(energy, 1, 15);
+    hygiene = dropTo(hygiene, 1, 15);
+    joy = dropTo(joy, 1, 15);
+    careMinute(false);
+  }
+  if (!isEgg()) {
+    if (!sleeping) {  // no pooping while sleeping
+      uint8_t p = poops + mins / 240;
+      poops = p > 3 ? 3 : p;
+    }
+    // evolution is NOT applied offline: it is left ready and the user triggers it
+    // by tapping the critter when it returns (so they see the transformation)
+  }
+  Serial.printf("offline: %u min applied (lv.%u)\n", mins, level());
+  advanceDay();
+  save();
+}
+
+void Pet::update(uint32_t nowMs) {
+  // end of ceremony: the creature leaves and a new egg remains
+  if (ceremony != CER_NONE && !timeLeft(ceremonyUntil)) {
+    newEgg();
+    return;
+  }
+  if (isEgg() && !starterPick && !eggPick && ceremony == CER_NONE) {  // V2 has no egg: an older version's hatches now
+    hatch();
+    return;
+  }
+  while (nowMs - lastTick >= PET_TICK_MS) {
+    lastTick += PET_TICK_MS;
+    lifeMin++;  // even while choosing or saying goodbye: the trainer's time
+    tick();
+    advanceDay();
+  }
+}
+
+// Good care forges defense: every GOOD_CARE_MIN minutes of it = +1 DEF. Sleep counts (needs dip
+// overnight by design, and waking it starts the grace again); awake, a need under 40 is forgiven for
+// CARE_GRACE_MIN minutes, about the time to notice and feed it, and then the streak starts over.
+void Pet::careMinute(bool asleep) {
+  if (asleep || lowestStat() >= 40) lowTicks = 0;
+  else if (lowTicks <= CARE_GRACE_MIN) lowTicks++;
+  if (lowTicks > CARE_GRACE_MIN) {
+    goodTicks = 0;
+    return;
+  }
+  if (++goodTicks >= GOOD_CARE_MIN) {
+    goodTicks = 0;
+    if (trDef < 100) trDef++;
+  }
+}
+
+void Pet::tick() {
+  if (ceremony != CER_NONE) return;  // time stops during the goodbye
+  if (eggPick) return;      // same as when picking the starter: the egg has no species yet
+  if (starterPick) return;  // the game doesn't start until a starter is picked: if
+                            // time ran here, the egg would hatch on its own at
+                            // 3 min with the drawn species and the player's
+                            // choice would be lost
+  ageMinutes++;
+
+  if (isEgg()) {
+    if (ageMinutes >= 3) hatch();  // if you don't touch it, it hatches on its own after 3 min
+    return;
+  }
+  if (!pickOk && canFarewellNow()) {  // V2: its goodbye is offered from now on: the next Pokemon comes from the Pokedex
+    pickOk = true;
+    save();
+  }
+
+  // sleep is rest: energy recovers and needs drop MUCH
+  // slower than awake and with a floor (it wakes up wanting some cuddles, not at
+  // zero, no neglect or runaways). awake: food -2/min, hyg/joy -1/min.
+  // Weight still burns, and the good-care streak keeps counting.
+  if (sleeping) {
+    energy = clamp100(energy + 6);
+    if (weight > 0 && ageMinutes % (2 * WGT_BURN_MIN) == 0) weight--;
+    if (ageMinutes % 2 == 0) {                 // ~4x slower than awake
+      fullness = dropTo(fullness, 1, 30);
+      joy = dropTo(joy, 1, 35);
+    }
+    if (ageMinutes % 3 == 0) hygiene = dropTo(hygiene, 1, 45);
+    careMinute(true);
+    checkMedals();  // can still cross a level by age while sleeping
+    if (++ticksSinceSave >= 5) pendingSave = true;
+    return;
+  }
+
+  if (ageMinutes % MINUTES_PER_LEVEL == 0 && ageMinutes / MINUTES_PER_LEVEL < LEVEL_MAX) sfxPlay(SFX_LEVEL);  // leveled up (awake)
+
+  fullness = clamp100(fullness - 2);
+  // with company (Party Boost) energy drops a quarter slower: three minutes in four
+  bool tires = !partyBoost || ageMinutes % PARTY_ENERGY_SKIP_MIN != 0;
+  if (tires) energy = clamp100(energy - 1);
+  if (fullness > 40 && poops < 3 && random(100) < 15) poops++;
+
+  hygiene = clamp100(hygiene - 1 - 4 * poops);
+  // overweight makes it lazy: energy drops twice as fast
+  if (weight > 50 && tires) energy = clamp100(energy - 1);
+  if (weight > 0 && ageMinutes % WGT_BURN_MIN == 0) weight--;
+
+  careMinute(false);
+
+  int dJoy = -1;
+  if (fullness < 30) dJoy -= 2;
+  if (hygiene < 30) dJoy -= 2;
+  joy = clamp100(joy + dJoy);
+
+  // Neglect: leaving a stat on the floor counts as a care
+  // mistake (with a cooldown so the same neglect isn't counted every minute)
+  if (mistakeCooldown > 0) mistakeCooldown--;
+  if (lowestStat() <= 10 && mistakeCooldown == 0) {
+    careMistakes++;
+    mistakeCooldown = 60;
+    if (bond > 1) bond--;  // neglect cools the bond, but without wiping it out:
+                           // at -3 every 30 min it lost far more than could be
+                           // gained in a whole day and the bond got stuck
+  }
+
+  checkMedals();  // evolution is triggered by the user (canEvolveNow + tap), not the tick
+
+  // total abandonment: with EVERYTHING at zero for an hour it is ready to run away;
+  // it does NOT leave on its own, the user triggers it with the button (sad ending, witnessed)
+  if (fullness == 0 && joy == 0 && energy == 0 && hygiene == 0) {
+    if (neglectTicks < RUNAWAY_TICKS) neglectTicks++;
+  } else {
+    neglectTicks = 0;  // a single act of care saves it
+  }
+
+  // full cycle (final form + 7 days): the farewell does NOT fire on its own; it is
+  // ready (canFarewellNow) and the user triggers it with the button, so they see it
+
+  // periodic autosave: do NOT write to flash here (runs inside the loop,
+  // while animating); just flag it and let the loop flush it when dimming
+  if (++ticksSinceSave >= 5) pendingSave = true;
+}
+
+// flushes the pending periodic save (called by the loop at a moment with no
+// animation so the write stall to flash isn't visible)
+void Pet::flushSave() {
+  if (pendingSave) save();
+}
+
+// are there unregistered members left in this base's evolution line?
+bool Pet::lineHasUnregistered(int16_t base) const {
+  int16_t cur = base;
+  for (int guard = 0; cur >= 1 && cur <= 151 && guard < 6; guard++) {
+    if (!isRegistered(cur)) return true;
+    if (cur == DEX_EEVEE) {
+      for (int16_t b = 134; b <= 136; b++)
+        if (!isRegistered(b)) return true;
+      return false;
+    }
+    cur = DEX_TBL[cur].evolvesTo;
+  }
+  return false;
+}
+
+uint8_t Pet::eggRarity() const {
+  return (eggTarget >= 1 && eggTarget <= 151) ? DEX_TBL[eggTarget].rarity : R_COMMON;
+}
+
+// picks the egg species: rarity roll (improved by a full goodbye,
+// penalized by a runaway) and bias toward incomplete lines
+int16_t Pet::pickEggSpecies() {
+  // first game: classic starter
+  if (registeredCount() == 0) {
+    return CLASSIC_DEX[random(NUM_CLASSIC_DEX)];
+  }
+
+  uint8_t tier = R_COMMON;
+  if (lastEnd != CER_RUNAWAY) {
+    bool blessed = (lastEnd == CER_FAREWELL);
+    int rare = (blessed ? 45 : 27) + careBonus();
+    int leg = (registeredCount() >= 25) ? (blessed ? 10 : 3) + careBonus() / 3 : 0;
+    int r = random(100);
+    if (r < leg) tier = R_LEGENDARY;
+    else if (r < leg + rare) tier = R_RARE;
+  }
+
+  // tier candidates with an incomplete line; if none, drop a tier;
+  // if the tier's pokedex is complete, any of the tier will do
+  for (int pass = 0; pass < 2; pass++) {
+    for (int t = tier; t >= R_COMMON; t--) {
+      int16_t cand[80];
+      int n = 0;
+      for (int16_t d = 1; d <= 151 && n < 80; d++) {
+        if (DEX_TBL[d].rarity != t) continue;
+        if (pass == 0 && !lineHasUnregistered(d)) continue;
+        cand[n++] = d;
+      }
+      if (n > 0) return cand[random(n)];
+    }
+  }
+  return CLASSIC_DEX[random(NUM_CLASSIC_DEX)];  // unreachable, just in case
+}
+
+bool Pet::chooseEgg(int16_t dex, bool shinyForm) {
+  if (!eggPick || !eggChoice(dex, shinyForm)) return false;
+  eggTarget = dex;
+  if (shinyForm) eggShiny = true;  // otherwise the roll from newEgg() stays: a surprise
+  eggStars = starsOf(dex, shinyForm);  // a 3-star form hatches a 3-star Pokemon
+  eggPick = false;
+  hatch();  // V2: no egg, it's yours at once (and shiny only if picked: newEgg() rolls none)
+  return true;
+  save();
+  return true;
+}
+
+uint8_t Pet::fightPays() {
+  uint8_t earned = 0;
+  if (++masterBar >= MASTER_FIGHTS) {
+    masterBar = 0;
+    if (masterBalls < MASTER_MAX) masterBalls++;
+    earned |= 1;
+  }
+  if (++ultraBar >= ULTRA_FIGHTS) {
+    ultraBar = 0;
+    if (ultraBalls < ULTRA_MAX) ultraBalls++;
+    earned |= 2;
+  }
+  pendingSave = true;  // (the fight's own result saves it at once)
+  return earned;
+}
+bool Pet::useUltraBall() {
+  if (!ultraBalls) return false;
+  ultraBalls--;
+  pendingSave = true;
+  return true;
+}
+bool Pet::useMasterBall() {
+  if (!masterBalls) return false;
+  masterBalls--;
+  pendingSave = true;
+  return true;
+}
+
+bool Pet::repelPlay(uint32_t ms) {
+  uint32_t t = repelMs + ms, sec = repelPlaySec + t / 1000;
+  repelMs = t % 1000;
+  bool earned = false;
+  for (; sec >= REPEL_PLAY_S; sec -= REPEL_PLAY_S) {
+    if (repelHeld < REPEL_MAX) repelHeld++;
+    earned = true;
+  }
+  repelPlaySec = (uint16_t)sec;
+  if (earned) pendingSave = true;
+  return earned;
+}
+bool Pet::useRepel() {
+  if (!repelHeld || repelOn()) return false;
+  repelHeld--;
+  repelUntil = lifeMin + REPEL_MIN;
+  save();
+  return true;
+}
+// a species' strength: its base stats added up
+static int dexPower(int16_t d) { return DEX_TBL[d].bHp + DEX_TBL[d].bAtk + DEX_TBL[d].bDef + DEX_TBL[d].bSpe; }
+bool Pet::repelKeepsAway(int16_t dex) const {
+  return repelOn() && speciesId >= 1 && dexPower(dex) < dexPower(speciesId);
+}
+bool Pet::zoneComplete(uint8_t zone) const { return zoneCaught(zone) >= zoneSize(zone); }
+
+void Pet::chooseStarter(int16_t dex, bool shinyForm) {
+  eggTarget = dex;
+  eggShiny = shinyForm && hasForm(dex, true);
+  eggStars = hasForm(dex, eggShiny) ? starsOf(dex, eggShiny) : 0;  // one you have: its stars, as a pick's
+  starterPick = eggPick = false;
+  hatch();
+}
+
+int16_t Pet::registeredAt(int idx) const {
+  for (int16_t d = 1; d <= 151; d++)
+    if (isRegistered(d) && idx-- == 0) return d;
+  return 0;
+}
+
+bool Pet::eggChoice(int16_t dex, bool shinyForm) const {
+  return hasForm(dex, shinyForm) && DEX_TBL[dex].rarity != R_EVO;
+}
+
+int16_t Pet::eggChoiceAt(int idx, bool &shinyForm) const {
+  for (int16_t d = 1; d <= 151; d++)
+    for (int f = 0; f < 2; f++)
+      if (eggChoice(d, f) && idx-- == 0) {
+        shinyForm = f;
+        return d;
+      }
+  return 0;
+}
+
+uint16_t Pet::eggChoiceCount() const {
+  uint16_t n = 0;
+  for (int16_t d = 1; d <= 151; d++) n += eggChoice(d, false) + eggChoice(d, true);
+  return n;
+}
+
+static void setDexBit(uint8_t *bits, int16_t dex, bool on) {
+  uint8_t m = 1 << ((dex - 1) & 7);
+  if (on) bits[(dex - 1) >> 3] |= m;
+  else bits[(dex - 1) >> 3] &= ~m;
+}
+
+uint8_t Pet::starsOf(int16_t dex, bool shinyForm) const {
+  if (dex < 1 || dex > 151) return 0;
+  int i = (dex - 1) * 2 + (shinyForm ? 1 : 0);
+  return (dexStars[i >> 2] >> ((i & 3) * 2)) & 3;
+}
+
+void Pet::setStars(int16_t dex, bool shinyForm, uint8_t stars) {
+  if (dex < 1 || dex > 151) return;
+  int i = (dex - 1) * 2 + (shinyForm ? 1 : 0), sh = (i & 3) * 2;
+  dexStars[i >> 2] = (uint8_t)((dexStars[i >> 2] & ~(3 << sh)) | ((stars & 3) << sh));
+}
+
+uint8_t Pet::starsFromGenes(int atk, int def, int spe) {
+  int avg = (atk + def + spe + 1) / 3;  // rounded
+  return avg <= GENE_BAND_1 ? 1 : avg <= GENE_BAND_2 ? 2 : 3;
+}
+
+uint8_t Pet::rollStars() {
+  int r = random(100);
+  return r < STAR_PCT_3 ? 3 : r < STAR_PCT_3 + STAR_PCT_2 ? 2 : 1;
+}
+
+// one form into the Pokedex; true if this form is new. One you already have keeps the higher stars.
+bool Pet::addForm(int16_t dex, bool shinyForm, uint8_t stars) {
+  if (dex < 1 || dex > 151) return false;
+  if (stars < 1 || stars > 3) stars = rollStars();
+  if (hasForm(dex, shinyForm)) {
+    if (stars > starsOf(dex, shinyForm)) setStars(dex, shinyForm, stars);
+    return false;
+  }
+  setStars(dex, shinyForm, stars);
+  bool had = isRegistered(dex);
+  setDexBit(dexReg, dex, true);
+  if (shinyForm) {
+    setDexBit(dexShinyReg, dex, true);
+    if (!had) setDexBit(dexShinyOnly, dex, true);  // only the shiny one so far
+  } else {
+    setDexBit(dexShinyOnly, dex, false);
+  }
+  return true;
+}
+
+// one form out of the Pokedex: the species stays while the other form is there
+void Pet::removeForm(int16_t dex, bool shinyForm) {
+  if (!hasForm(dex, shinyForm)) return;
+  setStars(dex, shinyForm, 0);
+  bool other = hasForm(dex, !shinyForm);
+  if (shinyForm) setDexBit(dexShinyReg, dex, false);
+  setDexBit(dexShinyOnly, dex, other && !shinyForm);
+  if (!other) setDexBit(dexReg, dex, false);
+}
+
+uint16_t Pet::formCount() const {
+  uint16_t n = 0;
+  for (int16_t d = 1; d <= 151; d++) n += hasForm(d, false) + hasForm(d, true);
+  return n;
+}
+
+int16_t Pet::formAt(int idx, bool &shinyForm) const {
+  for (int16_t d = 1; d <= 151; d++)
+    for (int f = 0; f < 2; f++)
+      if (hasForm(d, f) && idx-- == 0) {
+        shinyForm = f;
+        return d;
+      }
+  return 0;
+}
+
+void Pet::registerSpecies(int16_t dex) { addForm(dex, shiny, petStars()); }  // the one you raised: its own stars
+
+// streak and bond improve the egg draw (0..~14)
+int Pet::careBonus() const {
+  int s = streak > 30 ? 30 : streak;
+  return s / 3 + bond / 25;
+}
+
+// first care of the day: advances the streak and strengthens the bond
+void Pet::registerCare() {
+  if (isEgg() || ceremony != CER_NONE) return;
+  uint32_t d = today();
+  if (d == 0 || d == lastCareDay) return;  // no clock, or already counted today
+  if (lastCareDay == 0 || d == lastCareDay + 1) {
+    streak++;
+  } else {
+    streak = 1;        // there was a gap of days
+    lastMilestone = 0;
+  }
+  lastCareDay = d;
+  bondToday = 0;
+  if (streak > bestStreak) bestStreak = streak;
+  bond = clamp100(bond + 4);
+  uint16_t ms = (streak >= 100) ? 100 : (streak >= 30) ? 30
+              : (streak >= 7)   ? 7   : (streak >= 3)  ? 3 : 0;
+  if (ms > lastMilestone) {
+    lastMilestone = ms;
+    milestoneUntil = millis() + CELEBRATE_MS;
+  }
+  checkMedals();
+  save();
+}
+
+void Pet::addBond(uint8_t amt) {
+  if (bondToday >= 20) return;  // daily cap: the bond can't be farmed
+  bond = clamp100(bond + amt);
+  bondToday += amt;
+}
+
+void Pet::checkMedals() {
+  if (isEgg()) return;
+  uint32_t before = medals | trainerMedals;
+  if (level() >= 10) medals |= MED_LV10;
+  if (level() >= 25) medals |= MED_LV25;
+  if (level() >= 50) medals |= MED_LV50;
+  if (berryKnown) medals |= MED_BERRY;
+  if (streak >= 7) medals |= MED_STREAK7;
+  if (bond >= 100) medals |= MED_BOND;
+  if (DEX_TBL[speciesId].evolvesTo == 0) medals |= MED_FINAL;
+  if (weight <= WGT_FIT && level() >= 5 && careMistakes == 0) medals |= MED_FIT;
+  bool anyShiny = shiny;
+  for (uint8_t b : dexShinyReg) anyShiny |= b != 0;
+  uint16_t caught = registeredCount();
+  if (anyShiny) trainerMedals |= MED_SHINY;
+  if (caught >= 10) trainerMedals |= MED_DEX10;
+  if (caught >= 50) trainerMedals |= MED_DEX50;
+  if (caught >= 100) trainerMedals |= MED_DEX100;
+  if (caught >= 151) trainerMedals |= MED_DEX151;
+  if (level() >= LEVEL_MAX) trainerMedals |= MED_LV100;
+  if (level() >= LEVEL_MAX && !counted100) {  // each Pokemon counts once
+    counted100 = true;
+    lv100Count++;
+    save();
+  }
+  if (lv100Count >= 3) trainerMedals |= MED_LV100_3;
+  if (lv100Count >= 5) trainerMedals |= MED_LV100_5;
+  if (lv100Count >= 10) trainerMedals |= MED_LV100_10;
+  if (buddyPeak >= 1) trainerMedals |= MED_BUDDY;
+  if (buddyPeak + 1 >= PARTY_SIZE) trainerMedals |= MED_PARTY;
+  for (uint8_t z = 0; z < ZONE_COUNT; z++)
+    if (zoneCaught(z) == zoneSize(z)) trainerMedals |= 1UL << (MED_FIRST_ZONE + z);
+  uint32_t gained = (medals | trainerMedals) & ~before;
+  if (gained) {
+    for (uint32_t m = gained; m; m &= (m - 1)) totalMedals++;
+    newMedal = gained;
+    medalUntil = millis() + CELEBRATE_MS;
+    if (!sleeping) sfxPlay(SFX_MEDAL);
+    save();
+  }
+}
+
+void Pet::buddiesOnScreen(uint8_t n) {
+  if (n <= buddyPeak) return;
+  buddyPeak = n;
+  checkMedals();
+}
+
+void Pet::rename(const char *name) {
+  strncpy(nick, name, sizeof(nick) - 1);
+  nick[sizeof(nick) - 1] = 0;
+  save();
+}
+
+static uint16_t calcStat(uint8_t base, uint8_t gene, uint16_t lvl, uint8_t tr) {
+  return (uint16_t)base * gene / 100 + lvl + tr;
+}
+
+uint16_t Pet::atkStat() const {
+  return isEgg() ? 0 : calcStat(DEX_TBL[speciesId].bAtk, geneAtk, level(), trAtk);
+}
+uint16_t Pet::defStat() const {
+  return isEgg() ? 0 : calcStat(DEX_TBL[speciesId].bDef, geneDef, level(), trDef);
+}
+uint16_t Pet::speStat() const {
+  return isEgg() ? 0 : calcStat(DEX_TBL[speciesId].bSpe, geneSpe, level(), trSpe);
+}
+
+uint16_t Pet::registeredCount() const {
+  uint16_t n = 0;
+  for (int i = 1; i <= 151; i++)
+    if (isRegistered(i)) n++;
+  return n;
+}
+
+// final form that has completed its cycle (7 days): ready to say goodbye. The
+// goodbye is triggered by the user with the button (it doesn't fire on its own, so they see it)
+bool Pet::canFarewellNow() const {
+  return !isEgg() && !sleeping && ceremony == CER_NONE &&
+         DEX_TBL[speciesId].evolvesTo == 0 && ageMinutes >= FAREWELL_AGE_MIN;
+}
+
+// total abandonment for 1h: ready to run away. The user triggers it with the
+// button (sad ending); caring for it for a single tick saves it (neglectTicks resets)
+bool Pet::canRunawayNow() const {
+  return !isEgg() && !sleeping && ceremony == CER_NONE && neglectTicks >= RUNAWAY_TICKS;
+}
+
+void Pet::startFarewell() {
+  if (isEgg() || ceremony != CER_NONE) return;
+  pickOk = true;  // V2: a goodbye said was a goodbye offered
+  lastEnd = CER_FAREWELL;
+  ceremony = CER_FAREWELL;
+  ceremonyUntil = millis() + CEREMONY_MS;
+  heartUntil = ceremonyUntil;  // hearts throughout the goodbye
+  sfxPlay(SFX_BYE);
+  save();
+}
+
+void Pet::startRunaway() {
+  if (isEgg() || ceremony != CER_NONE) return;
+  lastEnd = CER_RUNAWAY;
+  ceremony = CER_RUNAWAY;
+  ceremonyUntil = millis() + CEREMONY_MS;
+  sfxPlay(SFX_BYE);
+  save();
+}
+
+void Pet::rescue() {
+  if (isEgg() || ceremony != CER_NONE) return;
+  caress();
+  feed();
+  clean();
+  neglectTicks = 0;
+}
+
+void Pet::release() {
+  if (isEgg() || ceremony != CER_NONE) return;
+  lastEnd = CER_RELEASE;
+  ceremony = CER_RELEASE;
+  ceremonyUntil = millis() + CEREMONY_MS;
+  heartUntil = ceremonyUntil;
+  sfxPlay(SFX_BYE);
+  save();
+}
+
+void Pet::hatch() {
+  speciesId = eggTarget;
+  shiny = eggShiny;
+  metDay = gameDay;  // (0 without a clock yet: advanceDay() sets it)
+  // individual's genes: 90-110% per stat (every raising is unique), or inside the band of the form it
+  // was picked from, so its stars are that form's
+  int lo = eggStars == 1 ? 90 : eggStars == 2 ? GENE_BAND_1 + 1 : eggStars == 3 ? GENE_BAND_2 + 1 : 90;
+  int hi = eggStars == 1 ? GENE_BAND_1 : eggStars == 2 ? GENE_BAND_2 : 110;
+  geneAtk = lo + random(hi - lo + 1);
+  geneDef = lo + random(hi - lo + 1);
+  geneSpe = lo + random(hi - lo + 1);
+  eggStars = 0;
+  trAtk = trDef = trSpe = 0;
+  goodTicks = lowTicks = 0;
+  farewellQuiet = false;
+  battleWins = 0;
+  movesSeen = 1;
+  counted100 = false;
+  evoAskAgain = 0;
+  evoKept = 0;  // V2: a new one is asked about its own evolution
+  berryKnown = false;
+  bond = 0;          // bond and name belong to the individual
+  bondToday = 0;
+  // the medals stay (Fedor: "my care achievements got wiped for this new pokemon and I re-earned the berry achievement.
+  // I think these should only happens once"): the care medals too are earned once and kept, as the trainer's are
+  newMedal = 0;
+  nick[0] = 0;
+  registerSpecies(speciesId);  // raised = registered in the pokedex
+  checkMedals();     // in case it is born already in final form (legendary)
+  sfxPlay(SFX_HATCH);
+  save();
+}
+
+// do the conditions for evolving hold yet? Each neglect delays
+// evolution by 1 level, and it must also be well cared for at that moment
+// (no stat below 40). It does NOT evolve on its own: the user triggers it by
+// tapping the critter (evolve()), so they see the transformation.
+bool Pet::canEvolveNow() const {
+  if (isEgg() || sleeping || ceremony != CER_NONE) return false;
+  const DexEntry &d = DEX_TBL[speciesId];
+  if (d.evolvesTo == 0) return false;
+  return level() >= (uint16_t)d.evolveLevel + careMistakes && lowestStat() >= 40;
+}
+
+void Pet::evolve() {
+  if (!canEvolveNow()) return;
+  const DexEntry &d = DEX_TBL[speciesId];
+  prevSpeciesId = speciesId;
+  int16_t next = d.evolvesTo;
+  if (speciesId == DEX_EEVEE) {
+    // Eevee branch: prefers the evolution still missing from the pokedex
+    int16_t opts[3];
+    int n = 0;
+    for (int16_t b = 134; b <= 136; b++)
+      if (!isRegistered(b)) opts[n++] = b;
+    next = n > 0 ? opts[random(n)] : (int16_t)(134 + random(3));
+  }
+  speciesId = next;
+  registerSpecies(speciesId);
+  sfxPlay(SFX_EVOLVE);
+  evolveUntil = millis() + EVOLVE_ANIM_MS;
+  save();
+}
+
+void Pet::feed() {
+  feedBerry(0);
+}
+
+// every meal adds weight; eating while already full adds more
+void Pet::gainWeight(uint8_t base) {
+  weight = clamp100(weight + base + (fullness >= WGT_FULL_AT ? WGT_OVERFULL : 0));
+}
+
+void Pet::feedBerry(uint8_t color) {
+  if (ceremony != CER_NONE) return;
+  if (isEgg() || sleeping) return;
+  // a berry on a full bar makes a mess: a quarter of hygiene each (Fedor, 2026-11-19: "each berry after the full bar
+  // should bring down the HYGENE by 1/4. That will curb how easy it is to overfeed")
+  if (fullness >= 100) hygiene = hygiene > BERRY_OVERFULL_HYG ? hygiene - BERRY_OVERFULL_HYG : 0;
+  gainWeight(WGT_BERRY);
+  if (lovesBerry(color)) {
+    fullness = clamp100(fullness + 35);
+    joy = clamp100(joy + 10);
+    heartUntil = millis() + HEART_MS;  // "it loves it!"
+    berryKnown = true;                 // discovered: shown on the info card
+    addBond(2);
+  } else {
+    fullness = clamp100(fullness + 25);
+  }
+  eatUntil = millis() + EAT_ANIM_MS;
+  registerCare();
+  save();
+}
+
+void Pet::feedCandy() {
+  if (ceremony != CER_NONE) return;
+  if (isEgg() || sleeping || !canHaveCandy()) return;
+  if (today() != 0 && today() != candyDay) {
+    candyDay = today();
+    candyToday = 0;
+  }
+  candyToday++;
+  gainWeight(WGT_CANDY);  // treats take their toll
+  fullness = clamp100(fullness + 10);
+  joy = clamp100(joy + 12);
+  energy = 100;  // a sugar rush: worth it, being only 2 a day
+  eatUntil = millis() + EAT_ANIM_MS;
+  registerCare();
+  save();
+}
+
+void Pet::exerciseReward(uint8_t score, bool costsFood) {
+  uint8_t v = trSpe + score / 5;  // playing trains speed
+  trSpe = v > 100 ? 100 : v;
+  joy = clamp100(joy + 5 + (score > 15 ? 30 : score * 2));
+  energy = dropTo(energy, 10 + score / 2, 5);
+  if (costsFood) fullness = dropTo(fullness, 5, 5);
+  int burn = (int)weight - score * 2;  // exercise burns weight
+  weight = burn > 0 ? burn : 0;
+  if (score >= 5) heartUntil = millis() + HEART_MS;
+  addBond(2);
+  registerCare();
+}
+
+void Pet::playResult(uint8_t score) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (score > gameHi) gameHi = score;  // new record
+  if (score > boardHi[0]) boardHi[0] = score;  // ...and on the leaderboard
+  exerciseReward(score, false);
+  fullness = clamp100(fullness + 5);   // what falls are berries: catching also feeds
+  save();
+}
+
+void Pet::runResult(uint16_t secs) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (secs > runHi) runHi = secs;
+  if (secs > boardHi[2]) boardHi[2] = secs;
+  exerciseReward(secs / 4 > 255 ? 255 : secs / 4);
+  save();
+}
+
+void Pet::surfResult(uint16_t secs) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (secs > surfHi) surfHi = secs;
+  if (secs > boardHi[4]) boardHi[4] = secs;
+  exerciseReward(secs / 4 > 255 ? 255 : secs / 4);
+  save();
+}
+
+// Reel Fishing: the record, and exercise as the other games give it (50 kg plays like a short game, 300 kg a long one)
+void Pet::fishResult(uint16_t kg10) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (kg10 > fishHi) fishHi = kg10;
+  exerciseReward(kg10 / 200 > 255 ? 255 : kg10 / 200);
+  save();
+}
+
+// Pinball: the record, and exercise as the other games give it (a point for every 400)
+void Pet::pinResult(uint32_t score) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (score > pinHi) pinHi = score;
+  if (score > boardHi[6]) boardHi[6] = score;
+  exerciseReward(score / 400 > 255 ? 255 : score / 400);
+  save();
+}
+
+// BerryMatch: the record, and exercise as the other games give it (a point for every 200: a game scores about 4200
+// with the moves it earns, as a game of Berry Drop does about 20)
+void Pet::matchResult(uint32_t score) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (score > matchHi) matchHi = score;
+  if (score > boardMatch) boardMatch = score;
+  exerciseReward(score / 200 > 255 ? 255 : score / 200);
+  save();
+}
+
+// Reel Fishing's heaviest single fish, with what it was (saved by fishResult(), at the game's end)
+bool Pet::setGamerTag(const char *tag) {
+  char t[GAMER_TAG_LEN + 1];
+  if (!gamerTagClean(tag, t) || gamerTagRude(t)) return false;
+  strcpy(gamerTag, t);
+  tagAsked = true;
+  pendingSave = true;
+  return true;
+}
+
+bool Pet::topScore() {
+  if (trainerMedals & MED_HISCORE) return false;
+  trainerMedals |= MED_HISCORE;  // celebrated as any medal (the trainer's: kept through a goodbye)
+  totalMedals++;
+  newMedal = MED_HISCORE;
+  medalUntil = millis() + CELEBRATE_MS;
+  if (!sleeping) sfxPlay(SFX_MEDAL);
+  pendingSave = true;
+  return true;
+}
+
+void Pet::askedForTag() {
+  if (tagAsked) return;
+  tagAsked = true;
+  pendingSave = true;
+}
+
+bool Pet::boardKind(int16_t dex, uint16_t kg10, bool shiny) {
+  if (dex < 1 || !kg10) return false;
+  for (int i = 0; i < BOARD_FISH_KINDS; i++) {
+    BoardFish &k = boardKinds[i];
+    if (k.dex && k.dex != dex) continue;
+    if (k.dex && kg10 <= k.kg10) return false;
+    k = { dex, kg10, (uint8_t)(shiny ? 1 : 0), 0 };
+    boardKindsUnsent |= 1UL << i;
+    pendingSave = true;
+    return true;
+  }
+  return false;  // (more kinds than places: none, while there are 23)
+}
+
+bool Pet::fishBiggest(uint16_t kg10, int16_t dex, bool shiny) {
+  if (ceremony != CER_NONE || isEgg()) return false;
+  if (kg10 > boardHi[5]) boardHi[5] = kg10, boardFishDex = dex, boardFishShiny = shiny;  // the leaderboard's
+  boardKind(dex, kg10, shiny);  // ...and its kind's
+  if (kg10 <= fishBig) return false;
+  fishBig = kg10, fishBigDex = dex, fishBigShiny = shiny;
+  return true;
+}
+
+void Pet::friendlyBattle(bool won) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  joy = clamp100(joy + (won ? 15 : 8));
+  heartUntil = millis() + HEART_MS;
+  addBond(2);
+  registerCare();
+  save();
+}
+
+void Pet::dungeonResult(uint8_t floor) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (floor > dungeonHi) dungeonHi = floor;
+  if (floor > boardHi[3]) boardHi[3] = floor;
+  exerciseReward(floor > 100 ? 200 : floor * 2);
+  save();
+}
+
+// battle: winning trains more than losing, and losing never does permanent damage
+// a win trains, cheers and bonds; a loss earns nothing, it only tires
+void Pet::towerFightWon(bool petFought) {
+  energy = energy > TOWER_FIGHT_ENERGY ? energy - TOWER_FIGHT_ENERGY : 0;
+  if (petFought && !isEgg() && ceremony == CER_NONE) {
+    uint16_t v = (uint16_t)trAtk + BTL_WIN_TRAIN;
+    trAtk = v > 100 ? 100 : (uint8_t)v;
+    if (battleWins < 65535) battleWins++;
+    joy = clamp100(joy + 10);
+    heartUntil = millis() + HEART_MS;
+    addBond(2);
+    registerCare();
+  }
+  pendingSave = true;
+}
+
+uint8_t Pet::towerFloorWon(uint8_t floor) {
+  if (floor < 1 || floor > TOWER_LEGEND) return 0;
+  uint8_t got = 0;
+  if (floor > towerBest) {  // the first time: a new best
+    towerBest = floor;
+    towerCheer = 0;  // a new best: the cheering starts over
+    got |= 1;
+  }
+  if (floor == TOWER_LEGEND) {  // the Legend beaten: a Master Ball, every time (tower.h)
+    if (masterBalls < MASTER_MAX) masterBalls++, got |= 2;
+    {
+      if (!(trainerMedals & MED_TOWER)) {  // the tower beaten: its badge, celebrated as any medal
+        trainerMedals |= MED_TOWER;
+        totalMedals++;
+        newMedal = MED_TOWER;
+        medalUntil = millis() + CELEBRATE_MS;
+      }
+    }
+  }
+  save();
+  return got;
+}
+
+void Pet::towerLost() {
+  if (towerBest < TOWER_LEGEND && towerCheer < TOWER_CHEER_MAX) towerCheer++;
+  battleResult(false);
+  pendingSave = true;
+}
+
+uint8_t Pet::towerChalDone(uint8_t got) {
+  uint8_t fresh = got & ~towerChal & TOWER_CH_ALL;
+  if (fresh) {
+    towerChal |= fresh;
+    save();
+  }
+  return fresh;
+}
+
+uint8_t Pet::battleResult(bool won) {
+  if (ceremony != CER_NONE || isEgg()) return 0;
+  uint8_t antes = trAtk;
+  if (won) {
+    uint16_t v = (uint16_t)trAtk + BTL_WIN_TRAIN;
+    trAtk = v > 100 ? 100 : (uint8_t)v;
+  }
+  uint8_t gain = trAtk - antes;
+  if (won) {
+    energy = dropTo(energy, BTL_ENERGY_COST, 5);
+  } else {
+    if (energy > BTL_LOSS_ENERGY) energy = BTL_LOSS_ENERGY;
+    // a defeat is not neglect by itself; ignoring the exhausted pet afterwards, if
+    if (mistakeCooldown < BTL_LOSS_GRACE_MIN) mistakeCooldown = BTL_LOSS_GRACE_MIN;
+  }
+  fullness = dropTo(fullness, 5, 5);
+  int burn = (int)weight - 5;  // exercise burns weight
+  weight = burn > 0 ? burn : 0;
+  if (won) {
+    if (battleWins < 65535) battleWins++;
+    joy = clamp100(joy + 10);
+    heartUntil = millis() + HEART_MS;
+  } else {
+    joy = dropTo(joy, 3, 5);
+  }
+  if (won) {
+    addBond(2);
+    registerCare();
+  }
+  save();
+  return gain;
+}
+
+CatchResult Pet::catchWild(int16_t dex, bool shinyForm, uint8_t stars) {
+  if (dex < 1 || dex > 151) return CR_KEPT;
+  if (stars < 1 || stars > 3) stars = rollStars();
+  CatchResult r = !hasForm(dex, shinyForm) ? CR_NEW : stars > starsOf(dex, shinyForm) ? CR_BETTER : CR_KEPT;
+  if (r == CR_KEPT) return r;  // it goes free: nothing changes
+  addForm(dex, shinyForm, stars);
+  checkMedals();  // a zone may be complete now
+  save();
+  return r;
+}
+
+bool Pet::tradeAway(int16_t give, int16_t get, bool giveShiny, bool getShiny, uint8_t getStars) {
+  if (!canTrade(give, giveShiny) || get < 1 || get > 151) return false;
+  if (give == get && giveShiny == getShiny) return false;  // the same both ways: nothing changes hands
+  removeForm(give, giveShiny);
+  bool isNew = addForm(get, getShiny, getStars);
+  checkMedals();
+  save();
+  return isNew;
+}
+
+void Pet::quizResult(uint8_t correct) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  joy = clamp100(joy + 3 + correct * 3);
+  if (correct >= QUIZ_ROUNDS) heartUntil = millis() + HEART_MS;
+  addBond(1);
+  registerCare();
+  save();
+}
+
+// a game with a buddy: fun for both, more for the winner, and the playmate medal
+void Pet::showdownResult(uint8_t mine, uint8_t theirs) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  joy = clamp100(joy + 12 + mine * 3 + (mine > theirs ? 10 : 0));
+  if (mine > theirs) heartUntil = millis() + HEART_MS;
+  addBond(3);
+  registerCare();
+  uint32_t before = trainerMedals;
+  trainerMedals |= MED_PLAYMATE;
+  if (trainerMedals != before) {
+    totalMedals++;
+    newMedal = MED_PLAYMATE;
+    medalUntil = millis() + CELEBRATE_MS;
+    if (!sleeping) sfxPlay(SFX_MEDAL);
+  }
+  save();
+}
+
+bool Pet::visitorDueNow() const {
+  if (isEgg() || sleeping || ceremony != CER_NONE || !lastSeenEpoch) return false;
+  return visitorDue(today(), (lastSeenEpoch / 3600) % 24, visitorDay);
+}
+
+void Pet::visitorArrived(int16_t dex) {
+  visitorDay = today();
+  candyGiftDay = today();  // it brings a candy: a third one today
+  visitDex = dex;
+  visitMin = VISIT_MINUTES;
+  save();
+}
+
+bool Pet::visitorResumable() {
+  if (visitMin && visitorDay != today()) visitMin = 0;  // yesterday's: gone
+  return visitMin && visitDex >= 1 && visitDex <= DEX_COUNT && !isEgg() && !sleeping && ceremony == CER_NONE;
+}
+
+bool Pet::visitorMinute() {
+  if (visitMin) visitMin--;
+  save();
+  return visitMin == 0;
+}
+
+void Pet::visitorLeft() {
+  visitDex = 0;
+  visitMin = 0;
+  if (isEgg() || ceremony != CER_NONE) {
+    save();
+    return;
+  }
+  joy = clamp100(joy + 5);
+  heartUntil = millis() + HEART_MS;
+  addBond(1);
+  save();
+}
+
+int16_t Pet::pickWildSpecies(uint8_t lvl) {
+  // legendaries are the end of the game, as with eggs
+  bool legend = registeredCount() >= WILD_LEGEND_DEX && lvl >= WILD_LEGEND_LVL && random(100) < WILD_LEGEND_PCT;
+  bool preferNew = random(100) < WILD_NEW_PCT;
+  for (int pass = 0; pass < 3; pass++) {
+    int16_t cand[151];
+    int n = 0;
+    for (int16_t d = 1; d <= 151; d++) {
+      uint8_t r = DEX_TBL[d].rarity;
+      if (legend ? r != R_LEGENDARY : r == R_LEGENDARY) continue;
+      if (btlMinLevel(d) > lvl) continue;
+      if (pass < 2 && repelKeepsAway(d)) continue;  // V2: a Repel keeps weaker ones away
+      if (pass == 0 && preferNew && isRegistered(d)) continue;
+      if (pass == 0 && r == R_RARE && random(100) < WILD_RARE_SKIP) continue;  // rares, less often
+      cand[n++] = d;
+    }
+    if (n > 0) return cand[random(n)];
+    legend = false;
+  }
+  return 16;  // unreachable: base forms are always candidates
+}
+
+int Pet::zoneCaught(uint8_t zone) const {
+  int n = 0;
+  for (int16_t d = 1; d <= 151; d++)
+    if (zoneOf(d) == zone && isRegistered(d)) n++;
+  return n;
+}
+
+int16_t Pet::pickZoneSpecies(uint8_t zone, uint8_t lvl) {
+  int16_t legend = ZONE_LEGEND[zone];
+  if (random(1000) < ZONE_LEGEND_PERMIL) return legend;  // any time, but seldom
+  // now and then only the common ones you're missing (V2: most of the time, rares too but less often, as a
+  // Wild Encounter looks for them); otherwise anyone strong enough to be here
+  // V2: a Repel. In a zone not yet complete every one here is as likely; in a complete one, weaker ones stay away
+  // (and if that leaves nobody, the last pass is the usual one)
+  int first = random(100) < ZONE_V2_NEW_PCT ? 0 : 1;
+  bool even = repelOn() && !zoneComplete(zone), strong = repelOn() && !even;
+  if (even) first = 1;
+  for (int pass = first; pass < (strong ? 3 : 2); pass++) {
+    int16_t cand[151];
+    uint8_t w[151];
+    int n = 0, total = 0;
+    for (int16_t d = 1; d <= 151; d++) {
+      if (zoneOf(d) != zone || d == legend || btlMinLevel(d) > lvl) continue;
+      if (pass == 0 && (isRegistered(d) || (zoneIsRare(d) && random(100) < ZONE_V2_RARE_SKIP))) continue;
+      if (strong && pass < 2 && repelKeepsAway(d)) continue;
+      cand[n] = d;
+      w[n] = zoneWeight(d);
+      if (even) w[n] = 1;
+      total += w[n++];
+    }
+    if (n > 0) {
+      int r = random(total);
+      for (int i = 0; i < n; i++)
+        if ((r -= w[i]) < 0) return cand[i];
+    }
+  }
+  return zoneMember(zone, 0);  // unreachable: every zone has first forms
+}
+
+void Pet::play() {
+  if (ceremony != CER_NONE) return;
+  if (isEgg() || sleeping) return;
+  joy = clamp100(joy + 25);
+  energy = clamp100(energy - 10);
+  fullness = clamp100(fullness - 5);
+  heartUntil = millis() + HEART_MS;
+  addBond(2);
+  registerCare();
+  save();
+}
+
+void Pet::toggleLight() {
+  if (ceremony != CER_NONE) return;
+  if (isEgg()) return;
+  sleeping = !sleeping;
+  save();
+}
+
+void Pet::clean() {
+  if (ceremony != CER_NONE) return;
+  poops = 0;
+  hygiene = 100;
+  addBond(1);
+  registerCare();
+  save();
+}
+
+void Pet::caress() {
+  if (ceremony != CER_NONE) return;
+  if (isEgg() || sleeping) return;
+  // petting is always appreciated, but happiness has to be earned: only the first ones count
+  uint32_t now = millis();
+  if (petJoyTaps == 0 || now - petJoyStart >= PET_JOY_WINDOW_MS) {
+    petJoyStart = now;
+    petJoyTaps = 0;
+  }
+  if (petJoyTaps < PET_JOY_TAPS) {
+    petJoyTaps++;
+    joy = clamp100(joy + 5);
+  }
+  heartUntil = millis() + HEART_MS;
+  addBond(1);
+  registerCare();
+}
+
+void Pet::eggTap() {
+  if (!isEgg()) return;
+  if (++eggTaps >= 3) hatch();
+  else save();
+}
+
+PetMood Pet::mood() const {
+  if (sleeping) return MOOD_SLEEPING;
+  if (eating()) return MOOD_EATING;
+  if (lowestStat() < 25) return MOOD_SAD;
+  return MOOD_HAPPY;
+}
+
+void Pet::save() {
+  ticksSinceSave = 0;
+  pendingSave = false;
+  if (noSave) return;
+  prefs.putUChar("full", fullness);
+  prefs.putUChar("joy", joy);
+  prefs.putUChar("ene", energy);
+  prefs.putUChar("hyg", hygiene);
+  prefs.putUChar("poop", poops);
+  prefs.putUChar("wgt", weight);
+  prefs.putUChar("gatk", geneAtk);
+  prefs.putUChar("gdef", geneDef);
+  prefs.putUChar("gspe", geneSpe);
+  prefs.putUChar("tatk", trAtk);
+  prefs.putUChar("tdef", trDef);
+  prefs.putUChar("tspe", trSpe);
+  prefs.putUShort("good", goodTicks);
+  prefs.putUChar("lowt", lowTicks);
+  prefs.putBool("bk", berryKnown);
+  prefs.putBool("shy", shiny);
+  prefs.putBool("eshy", eggShiny);
+  prefs.putBool("stpk", starterPick);
+  prefs.putBool("egpk", eggPick);
+  prefs.putBytes("dexsh", dexShinyReg, sizeof(dexShinyReg));
+  prefs.putBytes("dexsho", dexShinyOnly, sizeof(dexShinyOnly));
+  prefs.putUInt("age", ageMinutes);
+  prefs.putShort("dexn", speciesId);
+  prefs.putShort("eggT2", eggTarget);
+  prefs.putUChar("crack", eggTaps);
+  prefs.putUChar("mist", careMistakes);
+  prefs.putBool("sleep", sleeping);
+  prefs.putUChar("lend", lastEnd);
+  prefs.putBool("fquiet", farewellQuiet);
+  prefs.putBool("pkok", pickOk);
+  prefs.putUChar("mbar", masterBar);
+  prefs.putUChar("mbls", masterBalls);
+  prefs.putUChar("ubar", ultraBar);
+  prefs.putUChar("ubls", ultraBalls);
+  prefs.putUChar("rpl", repelHeld);
+  prefs.putUShort("rpls", repelPlaySec);
+  prefs.putUInt("rplu", repelUntil);
+  prefs.putUChar("twrb", towerBest);
+  prefs.putBool("twrh", towerHowSeen);
+  prefs.putUChar("twrc", towerCheer);
+  prefs.putUChar("twrx", towerChal);
+  prefs.putShort("twrp0", towerPick[0]);
+  prefs.putShort("twrp1", towerPick[1]);
+  prefs.putUChar("twrps", (towerPickShiny[0] ? 1 : 0) | (towerPickShiny[1] ? 2 : 0));
+  prefs.putBytes("hofd", hofDex, sizeof(hofDex));
+  prefs.putUChar("hofs", hofShiny);
+  prefs.putUChar("hofl", hofLevel);
+  prefs.putUInt("hofe", hofEpoch);
+  prefs.putUInt("met", metDay);
+  prefs.putShort("evok", evoKept);
+  if (lastSeenEpoch) prefs.putUInt("seen", lastSeenEpoch);
+  prefs.putUInt("life", lifeMin);
+  prefs.putUInt("gday", gameDay);
+  prefs.putUInt("dlife", dayLife);
+  prefs.putUInt("rutc", refUtc);
+  prefs.putUInt("rlife", refLife);
+  prefs.putBytes("dexreg", dexReg, sizeof(dexReg));
+  prefs.putBytes("dexstr", dexStars, sizeof(dexStars));
+  prefs.putUChar("estar", eggStars);
+  prefs.putUShort("strk", streak);
+  prefs.putUShort("bstrk", bestStreak);
+  prefs.putUInt("cday", lastCareDay);
+  prefs.putUChar("bond", bond);
+  prefs.putUShort("medal", medals);
+  prefs.putUShort("tmedal", totalMedals);
+  prefs.putUShort("trmedal", (uint16_t)trainerMedals);  // the first 16, as older firmware reads them
+  prefs.putUInt("trmed32", trainerMedals);
+  prefs.putUShort("mstone", lastMilestone);
+  prefs.putUShort("ghi", gameHi);
+  prefs.putUShort("rhi", runHi);
+  prefs.putUShort("sfhi", surfHi);
+  prefs.putUShort("fshi", fishHi);
+  prefs.putUShort("fsbg", fishBig);
+  prefs.putShort("fsbd", fishBigDex);
+  prefs.putBool("fsbs", fishBigShiny);
+  prefs.putUInt("pnhi", pinHi);
+  prefs.putUInt("bmhi", matchHi);
+  prefs.putString("gtag", gamerTag);
+  prefs.putBytes("lbhi", boardHi, sizeof(boardHi));
+  prefs.putUInt("lbbm", boardMatch);
+  prefs.putShort("lbfd", boardFishDex);
+  prefs.putBool("lbfs", boardFishShiny);
+  prefs.putBytes("lbkd", boardKinds, sizeof(boardKinds));
+  prefs.putBool("gtak", tagAsked);
+  prefs.putUChar("dhi", dungeonHi);
+  prefs.putUChar("cdyn", candyToday);
+  prefs.putUInt("cdyd", candyDay);
+  prefs.putUInt("cdyg", candyGiftDay);
+  prefs.putUShort("bwin", battleWins);
+  prefs.putUChar("bmov", movesSeen);
+  prefs.putUChar("l100n", lv100Count);
+  prefs.putBool("l100c", counted100);
+  prefs.putUInt("vday", visitorDay);
+  prefs.putShort("vdex", visitDex);
+  prefs.putUChar("vmin", visitMin);
+  prefs.putString("nick", nick);
+}
+
+void Pet::load() {
+  fullness = prefs.getUChar("full", 80);
+  joy = prefs.getUChar("joy", 80);
+  energy = prefs.getUChar("ene", 80);
+  hygiene = prefs.getUChar("hyg", 100);
+  poops = prefs.getUChar("poop", 0);
+  weight = prefs.getUChar("wgt", 0);
+  geneAtk = prefs.getUChar("gatk", 0);
+  geneDef = prefs.getUChar("gdef", 0);
+  geneSpe = prefs.getUChar("gspe", 0);
+  if (geneAtk == 0) {  // pet predating genes: rolled once now
+    geneAtk = 90 + random(21);
+    geneDef = 90 + random(21);
+    geneSpe = 90 + random(21);
+  }
+  trAtk = prefs.getUChar("tatk", 0);
+  trDef = prefs.getUChar("tdef", 0);
+  trSpe = prefs.getUChar("tspe", 0);
+  goodTicks = prefs.getUShort("good", 0);
+  lowTicks = prefs.getUChar("lowt", 0);
+  berryKnown = prefs.getBool("bk", false);
+  shiny = prefs.getBool("shy", false);
+  eggShiny = prefs.getBool("eshy", false);
+  starterPick = prefs.getBool("stpk", false);
+  eggPick = prefs.getBool("egpk", false);
+  prefs.getBytes("dexsh", dexShinyReg, sizeof(dexShinyReg));
+  if (prefs.isKey("dexsho")) prefs.getBytes("dexsho", dexShinyOnly, sizeof(dexShinyOnly));  // older saves: both forms
+  ageMinutes = prefs.getUInt("age", 0);
+  if (prefs.isKey("dexn")) {
+    speciesId = prefs.getShort("dexn", -1);
+    eggTarget = prefs.getShort("eggT2", 4);
+  } else {
+    // migration from the version with flash indices (0-8)
+    static const uint8_t OLD2DEX[9] = { 4, 5, 6, 1, 2, 3, 7, 8, 9 };
+    int8_t old = prefs.getChar("spec", -1);
+    speciesId = (old >= 0 && old < 9) ? OLD2DEX[old] : -1;
+    int8_t oldT = prefs.getChar("eggT", 0);
+    eggTarget = (oldT >= 0 && oldT < 9) ? OLD2DEX[oldT] : 4;
+  }
+  eggTaps = prefs.getUChar("crack", 0);
+  careMistakes = prefs.getUChar("mist", 0);
+  sleeping = prefs.getBool("sleep", false);
+  lastEnd = prefs.getUChar("lend", CER_NONE);
+  farewellQuiet = prefs.getBool("fquiet", false);
+  pickOk = prefs.getBool("pkok", false) || lastEnd == CER_FAREWELL || farewellQuiet;  // older saves: a goodbye said or put off
+  masterBar = prefs.getUChar("mbar", 0);
+  masterBalls = prefs.getUChar("mbls", 0);
+  if (masterBar >= MASTER_FIGHTS) masterBar = 0;
+  ultraBar = prefs.getUChar("ubar", 0);
+  ultraBalls = prefs.getUChar("ubls", 0);
+  if (ultraBar >= ULTRA_FIGHTS) ultraBar = 0;
+  repelHeld = prefs.getUChar("rpl", 0);
+  repelPlaySec = prefs.getUShort("rpls", 0);
+  repelUntil = prefs.getUInt("rplu", 0);
+  // (a save from when a Repel took 20 minutes can hold up to 19:59: what's past the 10 a Repel takes now earns one, the
+  // rest carries on, as repelPlay() would. More than any firmware saved is nonsense, and starts again)
+  if (repelPlaySec >= 1200) repelPlaySec = 0;
+  for (; repelPlaySec >= REPEL_PLAY_S; repelPlaySec -= REPEL_PLAY_S) {
+    if (repelHeld < REPEL_MAX) repelHeld++;
+    pendingSave = true;
+  }
+  towerBest = prefs.getUChar("twrb", 0);
+  if (towerBest > TOWER_LEGEND) towerBest = TOWER_LEGEND;
+  towerHowSeen = prefs.getBool("twrh", false);
+  towerCheer = prefs.getUChar("twrc", 0);
+  if (towerCheer > TOWER_CHEER_MAX) towerCheer = TOWER_CHEER_MAX;
+  towerChal = prefs.getUChar("twrx", 0) & TOWER_CH_ALL;
+  towerPick[0] = prefs.getShort("twrp0", 0);
+  towerPick[1] = prefs.getShort("twrp1", 0);
+  uint8_t tps = prefs.getUChar("twrps", 0);
+  towerPickShiny[0] = tps & 1;
+  towerPickShiny[1] = tps & 2;
+  if (prefs.isKey("hofd")) prefs.getBytes("hofd", hofDex, sizeof(hofDex));
+  hofShiny = prefs.getUChar("hofs", 0);
+  hofLevel = prefs.getUChar("hofl", 0);
+  hofEpoch = prefs.getUInt("hofe", 0);
+  metDay = prefs.getUInt("met", 0);
+  evoKept = prefs.getShort("evok", 0);
+  prefs.getBytes("dexreg", dexReg, sizeof(dexReg));
+  bool hadStars = prefs.isKey("dexstr");
+  if (hadStars) prefs.getBytes("dexstr", dexStars, sizeof(dexStars));
+  eggStars = prefs.getUChar("estar", 0);
+  streak = prefs.getUShort("strk", 0);
+  bestStreak = prefs.getUShort("bstrk", 0);
+  lastCareDay = prefs.getUInt("cday", 0);
+  bond = prefs.getUChar("bond", 0);
+  medals = prefs.getUShort("medal", 0);
+  totalMedals = prefs.getUShort("tmedal", 0);
+  trainerMedals = prefs.isKey("trmed32") ? prefs.getUInt("trmed32", 0) : prefs.getUShort("trmedal", 0);
+  lastMilestone = prefs.getUShort("mstone", 0);
+  gameHi = prefs.getUShort("ghi", 0);
+  runHi = prefs.getUShort("rhi", 0);
+  surfHi = prefs.getUShort("sfhi", 0);
+  fishHi = prefs.getUShort("fshi", 0);
+  fishBig = prefs.getUShort("fsbg", 0);
+  fishBigDex = prefs.getShort("fsbd", 0);
+  fishBigShiny = prefs.getBool("fsbs", false);
+  pinHi = prefs.getUInt("pnhi", 0);
+  matchHi = prefs.getUInt("bmhi", 0);
+  {
+    char t[16] = "";
+    prefs.getString("gtag", t, sizeof(t));
+    if (!gamerTagClean(t, gamerTag)) gamerTag[0] = 0;
+  }
+  tagAsked = prefs.getBool("gtak", false);
+  if (prefs.getBytes("lbhi", boardHi, sizeof(boardHi)) != sizeof(boardHi))
+    memset(boardHi, 0, sizeof(boardHi));  // (a save from before 2.2.10 has none: the board starts from zero)
+  boardMatch = prefs.getUInt("lbbm", 0);
+  boardFishDex = prefs.getShort("lbfd", 0);
+  boardFishShiny = prefs.getBool("lbfs", false);
+  if (prefs.getBytes("lbkd", boardKinds, sizeof(boardKinds)) != sizeof(boardKinds)) {
+    memset(boardKinds, 0, sizeof(boardKinds));  // (a save from before 2.2.11: its biggest fish since the board started over)
+    if (boardHi[5]) boardKind(boardFishDex, (uint16_t)boardHi[5], boardFishShiny);
+  }
+  boardKindsUnsent = 0;
+  dungeonHi = prefs.getUChar("dhi", 0);
+  candyToday = prefs.getUChar("cdyn", 0);
+  candyDay = prefs.getUInt("cdyd", 0);
+  candyGiftDay = prefs.getUInt("cdyg", 0);
+  battleWins = prefs.getUShort("bwin", 0);
+  movesSeen = prefs.getUChar("bmov", 1);
+  lv100Count = prefs.getUChar("l100n", 0);
+  counted100 = prefs.getBool("l100c", false);
+  // from before the count: the Level 100 medal means one got there. If it isn't this one, count it
+  if (!prefs.isKey("l100n") && (trainerMedals & MED_LV100) && level() < LEVEL_MAX) lv100Count = 1;
+  // V2: care medals earned once and kept (2.1.0). A save from before lost them to each new Pokemon (Fedor: "I already
+  // got that badge before, I dont need to get it again"); the ones the trainer's records still prove come back
+  // quietly, so they aren't won a second time
+  if (bestStreak >= 7) medals |= MED_STREAK7;
+  if ((trainerMedals & MED_LV100) || lv100Count) medals |= MED_LV10 | MED_LV25 | MED_LV50;
+  lifeMin = prefs.getUInt("life", 0);
+  gameDay = prefs.getUInt("gday", 0);  // older saves: 0, and the first clock sets today without a wait
+  if (!metDay && gameDay && !isEgg() && !starterPick && !eggPick) {  // V2: a save from before: the day it came, by its age
+    uint32_t back = ageMinutes / 1440;
+    metDay = back < gameDay ? gameDay - back : 1;
+  }
+  dayLife = prefs.getUInt("dlife", 0);
+  refUtc = prefs.getUInt("rutc", 0);
+  refLife = prefs.getUInt("rlife", 0);
+  visitorDay = prefs.getUInt("vday", 0);
+  visitDex = prefs.getShort("vdex", 0);
+  visitMin = prefs.getUChar("vmin", 0);
+  prefs.getString("nick", nick, sizeof(nick));
+  // seed: the current pet counts as raised (old saves)
+  if (speciesId >= 1) registerSpecies(speciesId);
+  // from before the stars: every form you have is rated once, the current Pokemon's by its genes (just
+  // above). Only added: nothing else changes, and later loads keep these
+  if (!hadStars) {
+    for (int16_t d = 1; d <= 151; d++)
+      for (int f = 0; f < 2; f++)
+        if (hasForm(d, f) && !starsOf(d, f)) setStars(d, f, rollStars());
+    pendingSave = true;
+  }
+}
+
+// ----- the save's storage name (savename.h): V2's own, and a save from before the rename carried over -----
+static const char *gSaveNs = SAVE_NS_NEW;
+const char *saveNs() { return gSaveNs; }
+
+#if defined(ARDUINO_ARCH_ESP32) && !defined(BOARD_HOST)
+#include <nvs.h>
+#include <vector>
+#define SAVE_MOVED_NS "pkgsave"  // where it says the save has been carried over (starting over doesn't clear it)
+static bool saveCopyEntry(nvs_handle_t from, nvs_handle_t to, const char *k, nvs_type_t t) {
+  switch (t) {
+    case NVS_TYPE_U8: { uint8_t v; return nvs_get_u8(from, k, &v) == ESP_OK && nvs_set_u8(to, k, v) == ESP_OK; }
+    case NVS_TYPE_I8: { int8_t v; return nvs_get_i8(from, k, &v) == ESP_OK && nvs_set_i8(to, k, v) == ESP_OK; }
+    case NVS_TYPE_U16: { uint16_t v; return nvs_get_u16(from, k, &v) == ESP_OK && nvs_set_u16(to, k, v) == ESP_OK; }
+    case NVS_TYPE_I16: { int16_t v; return nvs_get_i16(from, k, &v) == ESP_OK && nvs_set_i16(to, k, v) == ESP_OK; }
+    case NVS_TYPE_U32: { uint32_t v; return nvs_get_u32(from, k, &v) == ESP_OK && nvs_set_u32(to, k, v) == ESP_OK; }
+    case NVS_TYPE_I32: { int32_t v; return nvs_get_i32(from, k, &v) == ESP_OK && nvs_set_i32(to, k, v) == ESP_OK; }
+    case NVS_TYPE_U64: { uint64_t v; return nvs_get_u64(from, k, &v) == ESP_OK && nvs_set_u64(to, k, v) == ESP_OK; }
+    case NVS_TYPE_I64: { int64_t v; return nvs_get_i64(from, k, &v) == ESP_OK && nvs_set_i64(to, k, v) == ESP_OK; }
+    case NVS_TYPE_STR: {
+      size_t n = 0;
+      if (nvs_get_str(from, k, nullptr, &n) != ESP_OK) return false;
+      std::vector<char> b(n ? n : 1);
+      return nvs_get_str(from, k, b.data(), &n) == ESP_OK && nvs_set_str(to, k, b.data()) == ESP_OK;
+    }
+    case NVS_TYPE_BLOB: {
+      size_t n = 0;
+      if (nvs_get_blob(from, k, nullptr, &n) != ESP_OK) return false;
+      std::vector<uint8_t> b(n ? n : 1);
+      return nvs_get_blob(from, k, b.data(), &n) == ESP_OK && nvs_set_blob(to, k, b.data(), n) == ESP_OK;
+    }
+    default: return true;  // (nothing else is ever written)
+  }
+}
+// A board: every entry of the old namespace is copied into the new one, once (the old stays as it was, so 1.51
+// still finds its save). If it can't all be copied (the NVS too full), this run keeps the old one, and the next
+// start tries again.
+void saveMigrate() {
+  nvs_handle_t mark, from, to;
+  if (nvs_open(SAVE_MOVED_NS, NVS_READWRITE, &mark) != ESP_OK) return;
+  uint8_t moved = 0;
+  if (nvs_get_u8(mark, "moved", &moved) == ESP_OK && moved) {
+    nvs_close(mark);
+    return;
+  }
+  size_t n = 0;
+  bool any = nvs_open(SAVE_NS_OLD, NVS_READONLY, &from) == ESP_OK;
+  if (any && (nvs_get_used_entry_count(from, &n) != ESP_OK || n == 0)) {
+    nvs_close(from);
+    any = false;
+  }
+  if (!any) {  // nothing to carry over: a new game
+    nvs_set_u8(mark, "moved", 1);
+    nvs_commit(mark);
+    nvs_close(mark);
+    return;
+  }
+  struct Entry { char key[NVS_KEY_NAME_MAX_SIZE]; nvs_type_t type; };
+  std::vector<Entry> list;  // its keys first: the NVS isn't changed while it's being walked through
+  nvs_iterator_t it = nullptr;
+  for (esp_err_t e = nvs_entry_find(NVS_DEFAULT_PART_NAME, SAVE_NS_OLD, NVS_TYPE_ANY, &it); e == ESP_OK; e = nvs_entry_next(&it)) {
+    nvs_entry_info_t info;
+    if (nvs_entry_info(it, &info) != ESP_OK) continue;
+    Entry en;
+    strlcpy(en.key, info.key, sizeof(en.key));
+    en.type = info.type;
+    list.push_back(en);
+  }
+  nvs_release_iterator(it);
+  // (available_entries, not free_entries: that one counts the page the NVS keeps empty for itself)
+  nvs_stats_t st;
+  bool ok = !list.empty() && nvs_get_stats(NULL, &st) == ESP_OK && st.available_entries > n + 8 &&
+            nvs_open(SAVE_NS_NEW, NVS_READWRITE, &to) == ESP_OK;
+  int copied = 0;
+  if (ok) {
+    for (const Entry &en : list) {
+      if (!saveCopyEntry(from, to, en.key, en.type)) {
+        ok = false;
+        break;
+      }
+      copied++;
+    }
+    ok = ok && nvs_commit(to) == ESP_OK;
+    if (!ok) {  // half a copy: gone again, so it doesn't hold the room the old save needs to go on being saved
+      nvs_erase_all(to);
+      nvs_commit(to);
+    }
+    nvs_close(to);
+  }
+  nvs_close(from);
+  if (ok) {
+    nvs_set_u8(mark, "moved", 1);
+    nvs_commit(mark);
+  } else {
+    gSaveNs = SAVE_NS_OLD;
+  }
+  nvs_close(mark);
+  Serial.printf("save: %s %d of %u entries to \"%s\"\n", ok ? "carried" : "could not carry", copied, (unsigned)list.size(), SAVE_NS_NEW);
+}
+#elif defined(BOARD_HOST)
+void hostPrefsCarryOver(const char *from, const char *to);  // (host_prefs.cpp)
+// A computer and the web: while the save folder has no file under the new name, the old file is read as the new
+// one, and the next save writes it under the new name; the old file stays as it was.
+void saveMigrate() { hostPrefsCarryOver(SAVE_NS_OLD, SAVE_NS_NEW); }
+#else
+void saveMigrate() {}  // (the logic tests: nothing to carry over)
+#endif
+
+void saveForgetOld() {
+  if (!strcmp(gSaveNs, SAVE_NS_OLD)) return;  // (the one in use: cleared already)
+  Preferences p;
+  p.begin(SAVE_NS_OLD, false);
+  p.clear();
+  p.end();
+}

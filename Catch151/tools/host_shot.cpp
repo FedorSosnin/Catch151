@@ -1,0 +1,97 @@
+// A headless run of the host build for screenshots and checks: no window, a script of steps, PPM files out.
+//   clang++ -std=c++17 -O2 -I host tools/host_shot.cpp build/host/libpokehost.a -framework CoreFoundation -o build/host_shot
+//   build/host_shot <resources> <save dir> <script>
+// Script lines: WAIT ms | SER <console line> | TAP x y | SWIPE x0 y0 x1 y1 | TAPQ x y (no wait after) | HOVER x y (-1 -1: off) |
+//               DOWN x y, then UP x y (a finger held there: WAIT between for how long) | SHOT file.ppm |
+//               REC n ms prefix (n frames ms apart, prefix-000.ppm on: a moving picture) |
+//               TYPE text (typed on a computer's keyboard, as hostTypeKey()) | KEY n (one key: 8 Backspace, 13 Enter, 27 Escape) |
+//               ARROW L|R|U|D (an arrow key pressed and let go) | SPACE (the Space bar: the Knomi's button)
+// Run it with POKEMACGOCHI_BUDDY_PORT set to a test port, as every test copy is, so it never meets a real Knomi.
+#include "host.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <vector>
+
+static void run(int ms) {
+  for (int t = 0; t < ms; t += 16) {
+    hostTick();
+    usleep(16000);
+  }
+}
+
+static void shot(std::vector<uint8_t> &px, const char *path) {
+  hostFrameRGBA(px.data());
+  FILE *o = fopen(path, "wb");
+  if (!o) { perror(path); return; }
+  fprintf(o, "P6\n%d %d\n255\n", HOST_CANVAS_SIZE, HOST_CANVAS_SIZE);
+  for (size_t i = 0; i < px.size(); i += 4) fwrite(&px[i], 1, 3, o);
+  fclose(o);
+}
+
+int main(int argc, char **argv) {
+  if (argc < 4) { fprintf(stderr, "usage: host_shot <resources> <save dir> <script>\n"); return 1; }
+  hostInit(argv[1], argv[2]);
+  run(800);
+  FILE *f = fopen(argv[3], "r");
+  if (!f) { perror(argv[3]); return 1; }
+  char line[512];
+  std::vector<uint8_t> px(HOST_CANVAS_SIZE * HOST_CANVAS_SIZE * 4);
+  while (fgets(line, sizeof(line), f)) {
+    line[strcspn(line, "\r\n")] = 0;
+    int a, b, c, d;
+    char path[400];
+    if (sscanf(line, "WAIT %d", &a) == 1) run(a);
+    else if (!strncmp(line, "SER ", 4)) { hostSerialPush(line + 4); run(120); }
+    else if (!strncmp(line, "TYPE ", 5)) {
+      for (const char *p = line + 5; *p; p++) { hostTypeKey((unsigned char)*p); run(40); }
+      run(200);
+    } else if (sscanf(line, "KEY %d", &a) == 1) { hostTypeKey(a); run(200); }
+    else if (!strncmp(line, "ARROW ", 6)) {
+      char k = line[6];
+      hostTiltKeys(k == 'L', k == 'R');
+      hostArrowKeys(k == 'U', k == 'D');
+      run(80);
+      hostTiltKeys(false, false);
+      hostArrowKeys(false, false);
+      run(200);
+    } else if (!strcmp(line, "SPACE")) {
+      hostButton(true);
+      run(80);
+      hostButton(false);
+      run(200);
+    }
+    else if (sscanf(line, "TAP %d %d", &a, &b) == 2) {
+      hostPointer(a, b, true); run(120);
+      hostPointer(a, b, false); run(400);
+    } else if (sscanf(line, "TAPQ %d %d", &a, &b) == 2) {  // a tap, and on at once (to catch what follows it)
+      hostPointer(a, b, true); run(60);
+      hostPointer(a, b, false); run(20);
+    } else if (sscanf(line, "DOWN %d %d", &a, &b) == 2) {  // a finger down and staying (a hold)
+      hostPointer(a, b, true); run(16);
+    } else if (sscanf(line, "UP %d %d", &a, &b) == 2) {
+      hostPointer(a, b, false); run(400);
+    } else if (sscanf(line, "HOVER %d %d", &a, &b) == 2) {  // the mouse over the screen, no button (a computer's hover)
+      hostPointerHoverAt(a, b); run(200);
+    } else if (sscanf(line, "SWIPE %d %d %d %d", &a, &b, &c, &d) == 4) {
+      hostPointer(a, b, true); run(60);
+      for (int k = 1; k <= 8; k++) { hostPointer(a + (c - a) * k / 8, b + (d - b) * k / 8, true); run(30); }
+      hostPointer(c, d, false); run(400);
+    } else if (sscanf(line, "SHOT %399s", path) == 1) {
+      run(60);
+      shot(px, path);
+      printf("shot %s\n", path);
+    } else if (sscanf(line, "REC %d %d %399s", &a, &b, path) == 3) {  // n frames, ms apart: path-000.ppm, path-001.ppm...
+      for (int k = 0; k < a; k++) {
+        run(b);
+        char name[420];
+        snprintf(name, sizeof(name), "%s-%03d.ppm", path, k);
+        shot(px, name);
+      }
+      printf("rec %s x%d\n", path, a);
+    }
+  }
+  hostFlushSave();
+  return 0;
+}

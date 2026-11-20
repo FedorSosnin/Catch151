@@ -5,14 +5,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+# everything is in Catch151/ (the sketch folder: Catch151.ino), so every step runs from there
+defaults:
+  run:
+    working-directory: Catch151
+
 jobs:
   firmware:
     name: Compile firmware
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: PokeKnomiGochi  # arduino-cli requires the folder to be named like the sketch
 
       - name: Install arduino-cli
         uses: arduino/setup-arduino-cli@v2
@@ -36,7 +39,7 @@ jobs:
           --fqbn "esp32:esp32:esp32s3:CDCOnBoot=default,FlashSize=16M,PSRAM=opi,PartitionScheme=app3M_fat9M_16MB"
           --build-property "compiler.cpp.extra_flags=-DBOARD_KNOMI_V2"
           --build-property "compiler.c.extra_flags=-DBOARD_KNOMI_V2"
-          PokeKnomiGochi
+          .
 
   generated:
     name: Generated headers up to date
@@ -102,7 +105,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: PokeWinGochi
-          path: build/win/PokeWinGochi.exe
+          path: Catch151/build/win/PokeWinGochi.exe
+
+  relay:
+    name: Relay's leaderboard (node --test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test relay/test/*.test.mjs
 
   i18n:
     name: i18n format-specifier consistency

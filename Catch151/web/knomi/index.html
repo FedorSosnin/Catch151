@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catch 151 for Knomi: install or update</title>
+<meta name="description" content="Install Catch 151 on a BTT Knomi V2, or update it, from Chrome or Edge with a USB cable. Updating keeps your Pokémon.">
+<link rel="icon" type="image/png" sizes="16x16" href="brand/catch151-icon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/catch151-icon-32.png">
+<link rel="apple-touch-icon" href="brand/catch151-icon-180.png">
+<!-- The Knomi's web installer (ESP Web Tools, manifest.json) and where Knomis download their Wi-Fi updates
+     (update.json, firmware/). The same button installs and updates. Dark, as the soundtrack, the Dex and the
+     leaderboard are; the photo is docs/images/v2/knomi-on-stand.gif as a video (a fifth of the size). -->
+<style>
+  :root { color-scheme:dark; --bg:#1b1b25; --ink:#eeeadb; --muted:#a9a7a0; --accent:#ff7a63; --red:#d8432e; --line:#3a3a48;
+    --card:#262633; --gold:#f0c04a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--ink); line-height:1.6; }
+  .wrap { max-width:720px; margin:0 auto; padding:2rem 16px 4rem; }
+  h1 { margin:0; line-height:0; }
+  h1 img { width:min(480px, 100%); height:auto; image-rendering:pixelated; }
+  .sub { color:var(--muted); margin:.9rem 0 1.4rem; font-size:1.05rem; }
+  .photo { margin:0 0 1.5rem; border-radius:18px; overflow:hidden; border:1px solid var(--line); background:#000; line-height:0; }
+  .photo video { width:100%; height:auto; display:block; }
+  .step { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.4rem 1.2rem; margin:1rem 0; }
+  .step h2 { font-size:1.1rem; margin:0 0 .5rem; display:flex; align-items:center; gap:.55rem; }
+  .step h2 img { width:18px; height:18px; image-rendering:pixelated; }
+  .step p { margin:.6rem 0; }
+  ol { margin:.25rem 0; padding-left:1.25rem; }
+  button { font:inherit; font-weight:700; font-size:1.05rem; padding:.75rem 1.6rem; border-radius:10px; border:0; background:var(--red);
+    color:#fff; cursor:pointer; box-shadow:0 3px 0 #8e2a1d; }
+  button:hover { filter:brightness(1.08); }
+  .go { display:flex; flex-wrap:wrap; align-items:center; gap:.4rem 1rem; margin:.4rem 0 .2rem; }
+  .ver { color:var(--muted); font-size:.9rem; }
+  .ver b { color:var(--gold); }
+  .box { border-left:4px solid var(--accent); padding:.1rem 0 .1rem .8rem; }
+  .box.tip { border-left-color:var(--gold); }
+  .note { font-size:.9rem; color:var(--muted); }
+  a { color:var(--accent); }
+  footer { max-width:720px; margin:0 auto; padding:0 16px 3rem; color:var(--muted); font-size:.9rem; }
+  footer .more { margin:0 0 .6rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><img src="brand/catch151-for-knomi.svg" width="480" height="69" alt="Catch 151 for Knomi"></h1>
+  <p class="sub">A Pokémon tamagotchi for the BTT Knomi V2. Install it or update it from your browser, with nothing to set up.</p>
+
+  <figure class="photo">
+    <video autoplay muted loop playsinline width="1280" height="960" poster="img/knomi-on-stand.jpg"
+      aria-label="Catch 151 on a BTT Knomi V2 in its 3D-printed case, on its magnetic stand on a desk: a Pokémon walking through the Forest">
+      <source src="img/knomi-on-stand.webm" type="video/webm">
+      <source src="img/knomi-on-stand.mp4" type="video/mp4">
+    </video>
+  </figure>
+
+  <div class="step">
+    <h2><img src="img/pokeball.png" alt="">1. Plug in your Knomi</h2>
+    <ol>
+      <li>Use Chrome or Edge on a computer. Other browsers can't talk to USB devices.</li>
+      <li>Connect the Knomi V2 with a USB-C data cable. Charge-only cables won't work.</li>
+    </ol>
+  </div>
+
+  <div class="step">
+    <h2><img src="img/pokeball.png" alt="">2. Install or update</h2>
+    <p>The same button puts Catch 151 on a new Knomi and updates one that already has it.</p>
+    <div class="go">
+      <esp-web-install-button manifest="manifest.json">
+        <button slot="activate">Install or update</button>
+        <span slot="unsupported">This browser can't flash devices. Use Chrome or Edge on a computer.</span>
+        <span slot="not-allowed">The installer needs an HTTPS page.</span>
+      </esp-web-install-button>
+      <span class="ver" id="ver" hidden></span>
+    </div>
+    <p>Pick the USB serial port when asked, usually named CH340 or wchusbserial. It takes a few minutes, so keep the Knomi plugged in.</p>
+    <p class="box"><strong>Updating?</strong> Leave <em>Erase device</em> unticked: your Pokémon, Pokédex and Wi-Fi stay. Ticking it deletes the game and the saved Wi-Fi.</p>
+    <p class="box tip"><strong>It won't connect, or the install doesn't start?</strong> Hold down the Knomi's button (its BOOT button) while you click <em>Install or update</em> and pick the port, and keep holding it until the install starts.</p>
+  </div>
+
+  <div class="step">
+    <h2><img src="img/pokeball.png" alt="">3. Play</h2>
+    <p>Choose your starter: tap the one you want and it's yours. For the clock, swipe down, then swipe left and tap <em>Change Wi-Fi</em>.</p>
+    <p>Once it's on Wi-Fi, the Knomi installs new versions by itself. You only need this page again to update a Knomi that isn't on Wi-Fi.</p>
+    <p class="note">This replaces the printer-status firmware on the Knomi. The <a href="https://github.com/FedorSosnin/Catch151#going-back-to-the-stock-firmware">README</a> explains how to go back, and how to fix a port that doesn't show up.</p>
+  </div>
+</div>
+<footer>
+  <p class="more">More Catch 151: <a href="https://catch151.3dprintsos.com">Play in your browser</a> · <a href="sprites/">The Catch 151 Dex</a> ·
+    <a href="music/">The soundtrack</a> · <a href="leaderboard/">The leaderboard</a> · <a href="https://github.com/FedorSosnin/Catch151">GitHub</a></p>
+  <p>Unofficial, non-commercial fan project, not affiliated with Nintendo, Game Freak or The Pokémon Company.</p>
+</footer>
+<script>
+// the version the button installs: the one Knomis on Wi-Fi are offered (tools/build_knomi_web.sh writes both)
+fetch('update.json', { cache: 'no-store' }).then((r) => r.json()).then((u) => {
+  const v = document.getElementById('ver');
+  v.innerHTML = 'Installs version <b></b>';
+  v.querySelector('b').textContent = u.version;
+  v.hidden = false;
+}).catch(() => {});
+</script>
+<script type="module" crossorigin="anonymous"
+        integrity="sha384-9XfyvAabgkISlB/Xb3OpshGKpZx0TOt5Mmu78SeiNU3so/p4o2s9m66vy6Utdnom"
+        src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js"></script>
+</body>
+</html>
