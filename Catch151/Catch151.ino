@@ -506,7 +506,12 @@ bool wasPressed = false;
 // the CST9217 signals on the INT pin when there is touch data; we use it to avoid
 // reading the I2C bus while the chip is asleep (that read hung for ~1s)
 volatile bool gTouchIrq = false;
-void IRAM_ATTR touchIsr() { gTouchIrq = true; }
+void IRAM_ATTR touchIsr() {
+  gTouchIrq = true;
+#ifdef BOARD_WS21
+  gWs21TouchEdge = true;  // (its touch task reads the chip: ws21_hal.h)
+#endif
+}
 uint32_t lastRender = 0;
 uint32_t sdEpoch = 0;  // +1 every time the SD is reloaded (thumbnails change)
 // AMOLED protection: dimmed on inactivity
@@ -648,6 +653,9 @@ void ensureMon() {
 static bool v2Sliding();  // V2: a menu's page sliding (slide_v2.h, with the scene)
 // loop timing, for lag reports: the slowest pass since the last HEALTH line, and its parts
 static uint32_t loopNetMs = 0, loopDrawMs = 0, loopMaxMs = 0, loopSlowCount = 0;
+#ifdef BOARD_WS21
+static uint32_t gProfRenders = 0, gProfRenderMs = 0, gProfFrom = 0;  // the console's FPS
+#endif
 
 void loopTiming(uint32_t start) {
   uint32_t total = millis() - start;
@@ -832,6 +840,10 @@ void loop() {
     uint32_t drawT = millis();
     drewFrame = render();
     loopDrawMs = millis() - drawT;
+#ifdef BOARD_WS21
+    gProfRenders++;
+    gProfRenderMs += loopDrawMs;
+#endif
   }
   loopTiming(loopStart);
   // yields the CPU on passes that don't draw: without this the loop spins at full speed
@@ -1036,8 +1048,8 @@ void handleSerial() {
     gfx->flush();
     Serial.println("DONE");
     return;
-  } else if (line.startsWith("SMOOTH ")) {  // turned: 1 blends between pixels, 0 takes the nearest (testing)
-    gWs21Smooth = line.substring(7).toInt() != 0;
+  } else if (line.startsWith("SMOOTH ")) {  // turned: 1 blends between pixels, 2 only across the 2 px grid, 0 nearest
+    gWs21Smooth = (uint8_t)constrain(line.substring(7).toInt(), 0, 2);
     gfx->flush();
     Serial.println("DONE");
     return;
@@ -1054,6 +1066,27 @@ void handleSerial() {
   } else if (line.startsWith("HOLD ")) {  // the game stops for n seconds: only the panel's refill runs (bring-up)
     uint32_t until = millis() + (uint32_t)line.substring(5).toInt() * 1000;
     while ((int32_t)(until - millis()) > 0) delay(20);
+    Serial.println("DONE");
+    return;
+  } else if (line == "FPS") {  // frames drawn since the last FPS, and their time; flush()'s share of it
+    uint32_t now = millis(), span = now - gProfFrom;
+    Serial.printf("fps=%.1f render=%.1f ms over %lu ms\n", gProfRenders * 1000.f / (span ? span : 1),
+                  gProfRenders ? (float)gProfRenderMs / gProfRenders : 0.f, (unsigned long)span);
+    gfx->profPrint();
+    gProfRenders = gProfRenderMs = 0;
+    gProfFrom = now;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("SPLIT ")) {  // 1: the other core makes half of each frame (testing)
+    gWs21Split = line.substring(6).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("REFILLCORE ")) {  // the core the panel's refill runs on, 0 or 1: from the next start
+    Preferences p;
+    p.begin("ws21", false);
+    p.putUChar("rc", line.substring(11).toInt() ? 1 : 0);
+    p.end();
+    Serial.printf("refill core %d from the next start (now %d)\n", line.substring(11).toInt() ? 1 : 0, panel->refillCore);
     Serial.println("DONE");
     return;
   } else if (line == "WIFIOFF") {  // Wi-Fi off until the next start (bring-up: does the radio upset the panel?)

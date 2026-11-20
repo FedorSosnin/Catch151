@@ -145,24 +145,35 @@ bash tools/build_ws21.sh     # compile only: build-ws21/Catch151.ino.bin
 | `src/pin_config.h` | A WS21 block, before the Knomi's. |
 | `Catch151.ino` | Includes `ws21_hal.h`, builds the panel objects, and the touch address. |
 | `src/rtcbat.cpp` | The PCF85063 keeps the time across restarts. The battery is read from the ADC. |
-| `src/audio.cpp` | Sound through an added MAX98357A (`WS21_AUDIO_I2S`). Silent until it's turned on. |
+| `src/audio.cpp` | The buzzer beeps the effects. Sound through an added MAX98357A once `WS21_AUDIO_I2S` is on. |
 | `src/ota_update.cpp` | Wi-Fi updates are off. The update site carries the Knomi's firmware, which would not drive this screen. |
-| `src/autorot.h` | Starts at rotation 0. |
+| `src/autorot.h` | The quarter turn stays 0: the picture turns in `ws21_hal.h` instead (45° plus quarter turns). |
 | `src/knomi_rim.h` | Its row tables can be sized for the 466 canvas. The Knomi's build is unchanged. |
 | `tools/build_ws21.sh` | Compile only. Output in `build-ws21/` (git ignores it). |
 | `tools/ws21_flash.sh` | Builds, packs the sprites and flashes a board. The port must be given. |
 
 What the code uses:
 
-- **Panel:** Arduino_GFX's `Arduino_ESP32RGBPanel` and `Arduino_RGB_Display`: the ESP32's RGB peripheral, frame
-  buffer in PSRAM, and a 10-line bounce buffer in internal RAM, as Waveshare's demo has.
+- **Panel:** esp_lcd's RGB panel, driven directly (`Ws21Panel`). Two frame buffers in PSRAM: the next frame goes
+  into the one not on show, which takes over at the start of the next refresh, so nothing tears. Bounce buffers of
+  20 lines in internal RAM feed the panel. 12 MHz pixel clock (44 Hz). Data changes on the **falling** edge of the
+  pixel clock: on the rising edge, as in Waveshare's demo, this panel showed streaks along the rows.
 - **Panel setup:** Waveshare's own command list, copied from their demo. Arduino_GFX has one for a similar 2.1" panel
   (`TL021WVC02`), but its gamma, VCOM and inversion settings differ. It goes over a 9-bit software SPI on GPIO
   1 and 2, with the CS and the panel's reset on the expander (`Ws21InitBus`).
-- **Canvas:** `Ws21Canvas` copies the 466 canvas into the middle of the 480 frame buffer, with the rotation and the
-  rim. At rotation 0 the middle of each row is one `memcpy`.
-- **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas.
-- **IMU:** SensorLib's `SensorQMI8658`, accelerometer only, ±2 g at 62.5 Hz.
+- **Canvas:** `Ws21Canvas` makes the panel's rows from the 466 canvas a band of 8 at a time in internal RAM: in the
+  middle, turned, and with the rim. Each band goes to the frame buffer by DMA while the next one is made. The game's
+  core makes every other band and a task on the other core the rest. The CPU writing PSRAM through the cache was the
+  slowest part of a frame.
+- **Turned 45°:** the board's USB-C ports point out at 45°, so the picture is turned 45° clockwise to put one of them
+  straight down (`WS21_ROT_DEG`). Each panel pixel blends the four canvas pixels round its point (`WS21_SMOOTH`).
+  Without the blend, the game's pixel art comes out dotted and its dithering in zigzags at that angle.
+- **Auto-rotate:** in quarter turns from that 45°, as the board is held.
+- **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas and turned with
+  the picture. A small task on the other core reads it every 8 ms while a finger is down and queues each press and
+  lift, so a quick tap isn't lost while a frame is drawn.
+- **IMU:** SensorLib's `SensorQMI8658`, accelerometer only, ±2 g at 62.5 Hz. Its axes are a quarter turn from the
+  panel's (`WS21_ACC_MAP`), found from Fedor's video.
 - **Clock:** the Knomi's clock (Wi-Fi time, time zones), plus SensorLib's `SensorPCF85063` to keep UTC across restarts.
 - **Battery:** `analogReadMilliVolts()` on GPIO 4, × 3 / 0.9945 (Waveshare's measured correction), and the LiPo curve
   in `batcurve.h`.
@@ -173,13 +184,43 @@ written at 0x610000. The microSD slot isn't needed.
 
 Not done yet, on purpose:
 
-- **Tearing.** The canvas is copied into the frame buffer while the panel shows it. If that shows, use two frame
-  buffers and swap on vsync (Waveshare's Arduino demo uses two). Arduino_GFX's class has one; the swap needs a few
-  lines of esp_lcd.
 - **Light sleep.** The board can't tell whether USB is in, so the code acts as if it always is: no light sleep, and
   no low-battery shutdown. The RGB panel also needs care before light sleep, because it stops scanning out.
 - **Wi-Fi updates.** They need their own channel (`web/ws21/`, a manifest of its own) before they can be turned on.
-- **The buzzer.** It could beep for alerts when there's no speaker. Not wired into the game.
+
+### What bring-up found (2026-11-20)
+
+- **Streaks along the rows:** the pixel clock's edge. The panel wants data on the falling edge (`LCD_PCLK_NEG`).
+- **The picture jumping:** reading sprites with `esp_partition_read()` stops the cache, and with it the panel's
+  refill. Sprites are read through a flash map instead (`flashpak.h`).
+- **Tearing:** one frame buffer. Now two, swapped between refreshes.
+- **Speed:** almost everything here waits on PSRAM. The game draws a frame in about 70 ms. Copying it to the panel
+  by CPU took 68 ms (138 ms turned and blended): the CPU reads each frame-buffer line in before writing it. By DMA,
+  on both cores, it takes 30 ms (65 ms turned and blended). A whole frame, turned and blended, went from 205 ms to
+  135 ms; unturned it is about 100 ms.
+- **Taps:** the game read the touch once a frame. A tap that came and went within a 200 ms frame was lost. A touch
+  task now queues every press and lift.
+- **The refill's core:** on the game's core it never runs at the same moment as the game's own PSRAM work. On the
+  other core it frees the game's core (about 7% faster). An early try with the refill on the other core and a frame
+  copy that left the cache dirty brought the streaks back; with the DMA copy it is being tried again (`REFILLCORE`).
+- **The buzzer:** each effect beeps its rhythm, a beep a note (`audio.cpp`). A tap is a 4 ms click.
+
+Console commands for testing (115200 baud on the "UART" port; none of them is saved unless it says so):
+
+| Command | What it does |
+|---|---|
+| `FPS` | Frames drawn since the last `FPS`, their time, and the frame copy's parts. |
+| `PERF` | The frame copy's cost, 10 in a row. |
+| `ROTDEG n` | Turns the picture n degrees clockwise. |
+| `SMOOTH 0` / `SMOOTH 1` / `SMOOTH 2` | Turned: nearest pixel, blended, or blended only across the 2 px grid. |
+| `PCLK n` | The pixel clock in MHz. |
+| `PCLKEDGE 0` / `PCLKEDGE 1` | Data on the rising or falling edge. |
+| `REFILLCORE 0` / `REFILLCORE 1` | The core the panel's refill runs on. Saved; used from the next start. |
+| `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both. |
+| `LCD` | Refreshes since the last `LCD`, and the longest gap between two. |
+| `HOLD n` | The game stops for n seconds; only the panel's refill runs. |
+| `WIFIOFF` | Wi-Fi off until the next start. |
+| `SHOT` | The whole 480 × 480 frame buffer, as RGB565. |
 
 ## Sound
 
@@ -190,9 +231,9 @@ speaker, so nobody has needed them on a board yet.
 ### The buzzer can't replace a speaker
 
 The buzzer hangs off expander line EXIO8, through a transistor. No ESP32 pin reaches it, so PWM can't drive it.
-Waveshare's own code only turns it on and off, and it sounds at one fixed pitch when on. So the game could beep in
-rhythms with it (an alert, a low battery), but it can't play notes, jingles or music. For real sound you need a
-speaker and an amplifier.
+Waveshare's own code only turns it on and off, and it sounds at one fixed pitch when on. Without a speaker the game
+beeps each effect's rhythm on it, one beep a note, and a tap is a click. It can't play notes, jingles or music. For
+real sound you need a speaker and an amplifier.
 
 ### DS Lite speakers
 

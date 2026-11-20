@@ -16,9 +16,9 @@ void audioSetIdle(bool) {}
 #elif defined(BOARD_WS21) && !defined(WS21_AUDIO_I2S)
 // The Waveshare 2.1 without a speaker: its own buzzer (Fedor: "what about the onboard buzzer, can we use that for audio
 // and clicks?"). It's an active one on the IO expander: on or off, one pitch, no volume. So a tap is a click (a 4 ms
-// pulse), and every other effect beeps the rhythm of its notes, each note a short beep. It follows the Sound switch
-// and is quiet while your Pokemon sleeps. It plays in its own task (each switch is an I2C write), so the game never
-// waits on it.
+// pulse), and every other effect beeps the rhythm of its notes, each note a beep. No tune can be played on it. It
+// follows the Sound switch and is quiet while your Pokemon sleeps. It plays in its own task (each switch is an I2C
+// write), so the game never waits on it.
 #include <Arduino.h>
 #include <Preferences.h>
 #include "sfx_notes.h"
@@ -48,8 +48,10 @@ static void buzzerTask(void *) {
           vTaskDelay(pdMS_TO_TICKS(ms));
           continue;
         }
-        uint16_t on = ms / 3 < 8 ? 8 : ms / 3 > 45 ? 45 : ms / 3;  // a beep a third of the note, 8 to 45 ms...
-        buzz(on, ms - on < 30 ? 30 : ms - on);                    // ...and at least 30 ms apart, to hear each one
+        // a beep as long as the note, less a short gap so two notes in a row stay two (a third of the note, 45 ms at
+        // most, sounded clipped: Fedor, "The buzzer almost cuts out at the end of tones")
+        uint16_t on = ms > 33 ? ms - 25 : 8;
+        buzz(on, ms - on < 25 ? 25 : ms - on);
       }
     }
     gPlaying = false;
@@ -62,7 +64,8 @@ void audioBegin() {
   gOn = p.getBool("snd", true);
   p.end();
   gQ = xQueueCreate(4, sizeof(uint8_t));
-  if (gQ) xTaskCreatePinnedToCore(buzzerTask, "buzzer", 3072, nullptr, 2, nullptr, 0);
+  // (above the half frame made on that core, ws21_hal.h: a beep ends on time)
+  if (gQ) xTaskCreatePinnedToCore(buzzerTask, "buzzer", 3072, nullptr, 4, nullptr, 0);
 }
 void sfxPlay(uint8_t id) {
   if (gQ && gOn && !gSleeping) xQueueSend(gQ, &id, 0);  // dropped if four are waiting already
