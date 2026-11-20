@@ -85,7 +85,7 @@ The Mac and Windows apps and the browser game, as they open: in the Poké Ball r
 
 <p align="center"><a href="https://fedorsosnin.github.io/Catch151/leaderboard/"><img src="https://catch151-relay.fedor-dd0.workers.dev/board.svg" width="760" alt="The leaderboard, live: each minigame's best score with the gamer tag that set it and the day"></a></p>
 
-The best score in each of the minigames, not the whole game: live from copies of Catch 151 everywhere, with the gamer tag that set it and the day. Each game's [top 10](https://fedorsosnin.github.io/Catch151/leaderboard/) is on its own page, with the record for each of Reel Fishing's 23 kinds of fish: catch them all to fill the list. You make your gamer tag after your first game and change it from its label in the Games menu; the best score in any game earns the **High Score** medal, a golden cartridge.
+The best score in each of the minigames, not the whole game: live from copies of Catch 151 everywhere, with the gamer tag that set it and the day. Each game's [top 10](https://fedorsosnin.github.io/Catch151/leaderboard/) is on its own page, with the record for each of Reel Fishing's 23 kinds of fish: catch them all to fill the list. You make your gamer tag after your first game and change it from its label in the Games menu; the best score in any game earns the **High Score** medal, a golden cartridge. The game shows the board too: swipe right from the Games menu's first page for a page for each game, drawn like an old Game Boy title screen in its greens, with the best three and **Tap to play**.
 
 ## On the Knomi
 

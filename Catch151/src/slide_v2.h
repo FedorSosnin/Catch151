@@ -60,7 +60,7 @@ static V2PageKey v2PageKeyNow() {
     return { 5, (int16_t)galleryPage, DEX_PAGES, PAGE_ARROW_Y, V2_SLIDE_DEX_Y };
   }
   if (gamesMenuOpen)  // the cartridges, inside the Game Boy's screen: its sign, power light and page line stay
-    return { 52, (int16_t)v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, V2_SLIDE_CHROME_Y, 0, V2_GB_X0, V2_GB_Y0, V2_GB_X1 };
+    return { 52, (int16_t)v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, V2_SLIDE_CHROME_Y, 0, V2_GB_X0, V2_GB_Y0, V2_GB_X1 };  // (the leaderboard's pages too)
   if (gameOpen || dungeonOpen || runOpen || surfOpen || battleOpen || quizOpen) return k;
   if (zoneScreen == ZS_PICK) return { 50, (int16_t)v2IslePage, 2, V2_PAGE_ARROW_Y, V2_SLIDE_TRAVEL_Y, V2_SLIDE_ARROW_R };  // Knomi Island, then Knomi Tower's islet
   if (zoneScreen == ZS_TOWER) {  // Knomi Tower (tower_v2.h): picking two friends, the Pokedex's grid

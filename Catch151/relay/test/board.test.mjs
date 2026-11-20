@@ -2,9 +2,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf, GAMES } from '../src/board.js';
+import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf, GAMES, BM_BOARD, BOARD_ALL, BOARD_GAMES, boardAsk, boardReply } from '../src/board.js';
 import { CART } from '../src/board_art.js';
-import { boardPublic, fishReport, FISH, liveSince } from '../src/index.js';
+import { boardPublic, fishReport, FISH, liveSince, Lobby } from '../src/index.js';
 
 const HERE = new URL('.', import.meta.url).pathname;
 
@@ -174,4 +174,89 @@ test('the count of players: only connections heard from in the last two minutes 
   assert.ok(liveSince(0, now - 5_000, now));             // just connected, or just sent something
   assert.ok(!liveSince(now - 180_000, now - 300_000, now));  // Wi-Fi gone, the connection not closed yet
   assert.ok(!liveSince(0, 0, now));
+});
+
+// a BM_BOARD as src/buddy.h boardFrom() reads it
+function readBoard(b) {
+  const v = new DataView(b), u = new Uint8Array(b);
+  const n = v.getUint8(21), tagAt = [34, 38, 46], scoreAt = [14, 26, 30];
+  const str = (o) => String.fromCharCode(...u.slice(o, o + 4));
+  return {
+    type: v.getUint8(5), from: v.getUint32(6, true), to: v.getUint32(10, true), game: v.getUint8(18), n,
+    top: [...Array(n)].map((_, i) => ({ score: v.getUint32(scoreAt[i], true), tag: str(tagAt[i]), mon: u[50 + 2 * i], day: u[51 + 2 * i] })),
+    dex: v.getInt16(22, true), shiny: u[25],
+  };
+}
+
+test('the board on the devices: the games with a board are the ones the leaderboard shows', () => {
+  assert.equal(BM_BOARD, 19);
+  const h = readFileSync(HERE + '../../src/buddy.h', 'utf8');
+  assert.ok(h.includes('static_assert(BM_BOARD == 19'));
+  assert.deepEqual(BOARD_GAMES.filter((g) => g !== 5), Object.keys(GAMES).map(Number));
+});
+
+test('a device asking for the board: one game or all of them, never the relay itself', () => {
+  assert.deepEqual(boardAsk(msg(BM_BOARD, { from: 77, kind: BOARD_ALL })), { from: 77, kind: BOARD_ALL });
+  assert.deepEqual(boardAsk(msg(BM_BOARD, { from: 77, kind: 5 })), { from: 77, kind: 5 });
+  assert.equal(boardAsk(msg(BM_BOARD, { from: 77, kind: 1 })), null);  // Who's That? has no board
+  assert.equal(boardAsk(msg(BM_BOARD, { from: 0 })), null);
+  assert.equal(boardAsk(msg(BM_BOARD, { from: RELAY_ID })), null);
+  assert.equal(boardAsk(msg(BM_SCORE, { from: 77 })), null);
+});
+
+test('a game\'s best three, as a device reads them: scores past 16 bits, short and rude tags, days, the fish', () => {
+  const top = [
+    { tag: 'PIKA', score: 1234567, day: '2026-11-17' },
+    { tag: 'AB', score: 70000, day: '2026-01-02' },
+    { tag: 'FUCK', score: 5, day: '2026-12-31' },
+    { tag: 'XTRA', score: 1, day: '2026-12-31' },  // a fourth: not sent
+  ];
+  const r = readBoard(boardReply(42, 6, top));
+  assert.equal(r.type, BM_BOARD);
+  assert.equal(r.from, RELAY_ID);
+  assert.equal(r.to, 42);
+  assert.equal(r.game, 6);
+  assert.deepEqual(r.top, [
+    { score: 1234567, tag: 'PIKA', mon: 11, day: 17 },
+    { score: 70000, tag: 'AB  ', mon: 1, day: 2 },
+    { score: 5, tag: '****', mon: 12, day: 31 },
+  ]);
+  assert.equal(readBoard(boardReply(42, 3, [])).n, 0);  // nobody yet
+  assert.equal(readBoard(boardReply(42, 0, [{ tag: '', score: 9, day: '2026-11-19' }])).top[0].tag, '----');
+  const f = readBoard(boardReply(42, 5, [{ tag: '3DPS', score: 2486, dex: 131, shiny: true, day: '2026-11-17' }]));
+  assert.deepEqual([f.dex, f.shiny, f.top[0].score], [131, 1, 2486]);
+});
+
+test('the relay answers a device\'s ask with each game\'s best three, to it alone', async () => {
+  globalThis.WebSocketRequestResponsePair ??= class {};
+  const store = new Map();
+  const ctx = {
+    storage: { get: async (k) => store.get(k), put: async (k, v) => { store.set(k, v); } },
+    setWebSocketAutoResponse() {},
+    getWebSockets: () => [],
+  };
+  const lobby = new Lobby(ctx);
+  const sent = [];
+  const ws = {
+    a: { groups: ['4:1.2.3.4'], tokens: 16, at: Date.now() },
+    deserializeAttachment() { return this.a; },
+    serializeAttachment(a) { this.a = a; },
+    send(d) { sent.push(d); },
+  };
+  await lobby.webSocketMessage(ws, msg(BM_SCORE, { from: 1, session: 43825, kind: 6, nick: 'PIKA' }));
+  await lobby.webSocketMessage(ws, msg(BM_SCORE, { from: 2, session: 8075, kind: 6, nick: 'TESS' }));
+  await lobby.webSocketMessage(ws, msg(17, { from: 3, dex: 131, shiny: 1, hp: 2486, nick: '3DPS' }));
+  sent.length = 0;
+  await lobby.webSocketMessage(ws, msg(BM_BOARD, { from: 7, kind: BOARD_ALL }));
+  const got = sent.map(readBoard);
+  assert.deepEqual(got.map((r) => r.game), BOARD_GAMES);
+  assert.ok(got.every((r) => r.to === 7 && r.from === RELAY_ID));
+  const pin = got.find((r) => r.game === 6);
+  assert.deepEqual(pin.top.map((e) => [e.tag, e.score]), [['PIKA', 43825], ['TESS', 8075]]);
+  const fish = got.find((r) => r.game === 5);
+  assert.deepEqual([fish.n, fish.dex, fish.shiny, fish.top[0].score, fish.top[0].tag], [1, 131, 1, 2486, '3DPS']);
+  assert.equal(got.find((r) => r.game === 0).n, 0);
+  sent.length = 0;
+  await lobby.webSocketMessage(ws, msg(BM_BOARD, { from: 7, kind: 6 }));
+  assert.deepEqual(sent.map(readBoard).map((r) => r.game), [6]);  // one game asked: that one
 });

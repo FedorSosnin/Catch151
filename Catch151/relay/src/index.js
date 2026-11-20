@@ -30,9 +30,10 @@
 //   https://<relay>/board.svg
 //
 // It keeps the scores, the tags, the days and a hash of each device's id (one entry a device), nothing
-// about who or where.
+// about who or where. A device's Games menu shows each game's best three on its leaderboard pages: it asks (a BM_BOARD,
+// to the relay alone) and the relay answers each game in a BM_BOARD of its own, to it alone (board.js boardReply()).
 
-import { BM_SCORE, GAMES, SEASON, seasonOf, scoreReport, boardAdd, recordAdd, boardSvg, tagOf, idHash, tagShown, topReply } from './board.js';
+import { BM_SCORE, GAMES, SEASON, seasonOf, scoreReport, boardAdd, recordAdd, boardSvg, tagOf, idHash, tagShown, topReply, BM_BOARD, BOARD_ALL, BOARD_GAMES, boardAsk, boardReply } from './board.js';
 
 const MSG_SIZE = 65;
 const MAX_PER_GROUP = 16;  // a home has a few devices: more is someone filling a group on purpose
@@ -259,6 +260,16 @@ export class Lobby {
       if (boardAdd(list, { id: s.id, tag: s.tag, score: s.score, day: new Date().toISOString().slice(0, 10) }))
         await this.ctx.storage.put('scores' + SEASON, scores);
       if (list[0].id === s.id) this.tellTop(ws, new DataView(data).getUint32(6, true), s.game, s.score);
+      return;
+    }
+    if (type === BM_BOARD) {  // a device asking for the board: each game's best three, to it alone; never passed on
+      const ask = boardAsk(data, MSG_SIZE);
+      if (!ask) return;
+      const { scores, fishTop } = await this.board();
+      for (const g of BOARD_GAMES) {
+        if (ask.kind !== BOARD_ALL && ask.kind !== g) continue;
+        try { ws.send(boardReply(ask.from, g, g === 5 ? fishTop : scores[g] || [])); } catch (e) {}
+      }
       return;
     }
     for (const o of this.others(ws, a.groups)) {

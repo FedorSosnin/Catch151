@@ -1973,29 +1973,39 @@ static bool v2TagChipHit(int16_t x, int16_t y) {
   v2TagChipBox(x0, w);
   return x >= x0 - 16 && x < x0 + w + 16 && y >= V2_TAG_CHIP_Y - 12 && y < V2_TAG_CHIP_Y + 30;
 }
+// The leaderboard (2.2.15, leaderboard_v2.h): a page a game to the left of the cartridges, in the cartridges' order
+// running on to the left (Fedor: "add our leaderboard in a section to the left of the games"): v2GamesPage -1 is Berry
+// Drop's, next to the Games, -2 Who's That?'s, on to -8, BerryMatch's. The pages all in a row, for the side buttons,
+// a swipe and the slide: v2GamesAt() (0 BerryMatch's leaderboard page .. 7 Berry Drop's, then the cartridges' pages)
+#define V2_LB_PAGES V2_CARTS
+#define V2_GAMES_ALL (V2_LB_PAGES + V2_CART_PAGES)
+static int v2GamesAt() { return v2GamesPage + V2_LB_PAGES; }
+static void v2LbHint();  // (leaderboard_v2.h: LEADERBOARDS down the first page's left edge)
 static void v2GamesTv() {
   v2GbBack(T(S_GAMES));
   v2TagChip();
   if (v2GamesPage >= V2_CART_PAGES) v2GamesPage = V2_CART_PAGES - 1;
+  if (v2GamesPage == 0) v2LbHint();
   for (int k = 0, c = v2GamesPage * V2_CARTS_PAGE; k < v2CartsOn(v2GamesPage); k++, c++)
     v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[c]), gameLabel(V2_CART_GAME[c]), V2_CART_COL[c]);
-  drawPageArrows(v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
+  drawPageArrows(v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y);
   v2PageOf(V2_CART_PAGES, v2GamesPage, 400);
   v2CloseX();
 }
 // the Games menu's page arrow under a tap: -1 back, 1 on, 0 neither (or one not shown)
-static int v2GamesArrowAt(int16_t x, int16_t y) { return pageArrowAt(x, y, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y); }
+static int v2GamesArrowAt(int16_t x, int16_t y) { return pageArrowAt(x, y, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y); }
 // turns the Games menu's page (a swipe or an arrow): false if there's no page that way
 static bool v2GamesTurn(int d) {
   int p = v2GamesPage + d;
-  if (p < 0 || p >= V2_CART_PAGES) return false;
+  if (p < -V2_LB_PAGES || p >= V2_CART_PAGES) return false;
   v2GamesPage = p;
   return true;
 }
-// the Games menu turned to the page with game g on it (its number, as V2_CART_GAME has them), for a game's end
+// the Games menu turned to the page with game g on it (its number, as V2_CART_GAME has them), for a game's end: its
+// cartridge's page, or its leaderboard page if it was started from there (to see the new score)
 void v2GamesShow(int g) {
   for (int c = 0; c < V2_CARTS; c++)
-    if (V2_CART_GAME[c] == g) v2GamesPage = c / V2_CARTS_PAGE;
+    if (V2_CART_GAME[c] == g) v2GamesPage = v2GamesPage < 0 ? -1 - c : c / V2_CARTS_PAGE;
 }
 static void v2PlayTv() {
   v2GbBack(T(S_PLAY_TOGETHER));
@@ -2016,6 +2026,7 @@ static int v2CartAt(int16_t x, int16_t y, const int16_t (*xy)[2], int n) {
   return -1;
 }
 static int v2GameAt(int16_t x, int16_t y) {  // V1's game number, on this page
+  if (v2GamesPage < 0) return -1;  // (a leaderboard page: leaderboard_v2.h v2LbPlayAt())
   int k = v2CartAt(x, y, V2_CART_XY, v2CartsOn(v2GamesPage));
   return k < 0 ? -1 : V2_CART_GAME[v2GamesPage * V2_CARTS_PAGE + k];
 }

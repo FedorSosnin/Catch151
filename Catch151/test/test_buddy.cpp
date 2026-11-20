@@ -303,3 +303,97 @@ TEST(buddy, a_score_is_taken_only_from_the_relay) {
   CHECK_EQ(out.session, (uint32_t)48250);
   CHECK_EQ((int)out.kind, 6);
 }
+
+// the leaderboard's best three, as the relay sends them (relay/src/board.js boardReply())
+static BuddyMsg boardMsg(uint8_t game, uint8_t n) {
+  BuddyMsg m;
+  buddyInit(m, BM_BOARD, BUDDY_RELAY_ID, 0x99, 43825);
+  m.kind = game;
+  m.ack = 1;
+  m.move = n;
+  uint32_t s2 = 8075, s3 = 123456;
+  m.hp = s2 & 0xFFFF, m.atk = s2 >> 16, m.def = s3 & 0xFFFF, m.spe = s3 >> 16;
+  memcpy(m.nick, "PIKATES ", 8);
+  memcpy(m.reg, "----", 4);
+  const uint8_t md[6] = { 11, 17, 11, 20, 1, 2 };
+  memcpy(m.reg + 4, md, 6);
+  return m;
+}
+
+TEST(buddy, the_board_is_taken_only_from_the_relay) {
+  BuddyMsg m = boardMsg(6, 3), out;
+  CHECK(buddyParse((const uint8_t *)&m, sizeof(m), out));
+  m.from = 0x1234;  // a buddy can't send one
+  CHECK(!buddyParse((const uint8_t *)&m, sizeof(m), out));
+}
+
+TEST(buddy, the_board_reads_three_scores_tags_and_days) {
+  BuddyMsg m = boardMsg(6, 3), out;
+  CHECK(buddyParse((const uint8_t *)&m, sizeof(m), out));
+  BoardTop b;
+  CHECK(boardFrom(out, b));
+  CHECK_EQ((int)b.n, 3);
+  CHECK_EQ(b.score[0], (uint32_t)43825);
+  CHECK_EQ(b.score[1], (uint32_t)8075);
+  CHECK_EQ(b.score[2], (uint32_t)123456);  // (past 16 bits: both halves)
+  CHECK(!strcmp(b.tag[0], "PIKA") && !strcmp(b.tag[1], "TES") && !strcmp(b.tag[2], "----"));  // a short tag's spaces trimmed
+  CHECK_EQ((int)b.mon[1], 11);
+  CHECK_EQ((int)b.day[1], 20);
+  CHECK_EQ((int)b.fishDex, 0);
+}
+
+TEST(buddy, the_board_keeps_only_what_it_was_sent) {
+  BuddyMsg m = boardMsg(0, 1);
+  BoardTop b;
+  CHECK(boardFrom(m, b));
+  CHECK_EQ((int)b.n, 1);
+  CHECK(!b.tag[1][0] && !b.score[1]);
+  m = boardMsg(3, 0);
+  CHECK(boardFrom(m, b));
+  CHECK_EQ((int)b.n, 0);  // nobody yet
+}
+
+TEST(buddy, the_board_names_reel_fishings_first_fish) {
+  BuddyMsg m = boardMsg(5, 2);
+  m.dex = 131, m.shiny = 1;
+  BoardTop b;
+  CHECK(boardFrom(m, b));
+  CHECK_EQ((int)b.fishDex, 131);
+  CHECK(b.fishShiny);
+  m.dex = 0;
+  CHECK(!boardFrom(m, b));  // a fish that can't be
+}
+
+TEST(buddy, the_board_refuses_what_cant_be) {
+  BoardTop b, keep;
+  memset(&keep, 0, sizeof(keep));
+  keep.n = 2;
+  b = keep;
+  BuddyMsg m = boardMsg(1, 3);
+  CHECK(!boardFrom(m, b));  // Who's That? keeps no score
+  m = boardMsg(9, 3);
+  CHECK(!boardFrom(m, b));  // no such game
+  m = boardMsg(6, 4);
+  CHECK(!boardFrom(m, b));  // more than three
+  m = boardMsg(6, 3);
+  m.reg[4] = 13;
+  CHECK(!boardFrom(m, b));  // no 13th month
+  m = boardMsg(6, 3);
+  m.session = BOARD_MAX_SCORE + 1;
+  CHECK(!boardFrom(m, b));
+  m = boardMsg(6, 3);
+  m.reg[1] = 7;
+  CHECK(!boardFrom(m, b));  // a tag that won't print
+  CHECK_EQ((int)b.n, 2);    // and what it had is kept
+}
+
+TEST(buddy, asking_for_the_board) {
+  BuddyMsg m;
+  boardAskMsg(m, 0x1234);
+  CHECK_EQ((int)m.type, (int)BM_BOARD);
+  CHECK_EQ((int)m.kind, BOARD_ALL);
+  CHECK_EQ(m.to, (uint32_t)0);
+  CHECK_EQ((int)m.turn, BOARD_SEASON);
+  BuddyMsg out;
+  CHECK(!buddyParse((const uint8_t *)&m, sizeof(m), out));  // a buddy that hears one passes it over
+}

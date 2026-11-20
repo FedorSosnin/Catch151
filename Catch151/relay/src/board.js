@@ -93,6 +93,54 @@ export function topReply(to, game, score) {
   return b;
 }
 
+// ----- the board on the devices (2.2.15): the Games menu's leaderboard pages show each game's best three. A device asks
+// (a BM_BOARD from it, to the relay alone: kind = one game, or BOARD_ALL) when its Games menu opens; the relay answers
+// each game in a BM_BOARD of its own (src/buddy.h boardFrom() reads it)
+export const BM_BOARD = 19;  // src/buddy.h
+export const BOARD_ALL = 0xff;
+export const BOARD_TOP = 3;   // the best three a game
+export const BOARD_GAMES = [0, 2, 3, 4, FISH_GAME, 6, 7];  // the games with a board, as the Games menu numbers them
+// a device asking for the board ({ from, kind }), or null if it isn't one
+export function boardAsk(data, MSG_SIZE = 65) {
+  if (!(data instanceof ArrayBuffer) || data.byteLength !== MSG_SIZE) return null;
+  const v = new DataView(data);
+  if (v.getUint8(5) !== BM_BOARD) return null;
+  const from = v.getUint32(6, true), kind = v.getUint8(18);
+  if (!from || from === RELAY_ID || (kind !== BOARD_ALL && !BOARD_GAMES.includes(kind))) return null;
+  return { from, kind };
+}
+// the answer for one game: BM_BOARD from RELAY_ID to the device, its best three ({ tag, score, day, dex?, shiny? }, best
+// first) as the board shows them. session = the first's score, offsets 26 and 30 the second's and third's (32 bits
+// each), move = how many, 34 the first two tags, 46 the third's, 50.. each one's month and day; Reel Fishing's first
+// fish at 22 (its kind) and 25 (shiny)
+export function boardReply(to, game, top) {
+  const b = new ArrayBuffer(65), v = new DataView(b);
+  [0x50, 0x4b, 0x47, 0x31].forEach((c, i) => v.setUint8(i, c));  // "PKG1"
+  v.setUint8(4, 1);  // BUDDY_VER
+  v.setUint8(5, BM_BOARD);
+  v.setUint32(6, RELAY_ID, true);
+  v.setUint32(10, to, true);
+  v.setUint8(18, game);
+  v.setUint8(19, 1);  // ack: a reply
+  v.setUint8(20, SEASON);
+  const list = top.slice(0, BOARD_TOP);
+  v.setUint8(21, list.length);
+  const at = [14, 26, 30], tagAt = [34, 38, 46];
+  list.forEach((e, i) => {
+    v.setUint32(at[i], e.score, true);
+    const t = tagShown(e.tag).padEnd(4, ' ').slice(0, 4);
+    for (let k = 0; k < 4; k++) v.setUint8(tagAt[i] + k, t.charCodeAt(k) & 0x7f);
+    const [, mm, dd] = String(e.day).split('-');
+    v.setUint8(50 + 2 * i, +mm || 1);
+    v.setUint8(51 + 2 * i, +dd || 1);
+  });
+  if (game === FISH_GAME && list.length) {
+    v.setInt16(22, list[0].dex, true);
+    v.setUint8(25, list[0].shiny ? 1 : 0);
+  }
+  return b;
+}
+
 // adds an entry ({ id, score, tag, day, ... }) to a top ten, best first: a device's own entry takes its new tag
 // whatever the score, and the new score and day only when it's higher. Returns whether anything changed
 export function boardAdd(list, e) {

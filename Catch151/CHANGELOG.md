@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **The leaderboard in the Games menu:** swipe right from the Games' first page (or press its new left arrow) for a leaderboard page for each game, in the cartridges' order: Berry Drop's first, then Who's That?'s, on to BerryMatch's. Each is drawn like an old Game Boy title screen in the screen's own greens: the game's name, its cartridge picture in a Pokémon Red and Blue style box, its best (the high score, the longest run or ride, the deepest floor, the biggest fish and its kind) with a crown before the gamer tag that set it and the day, then the second and third. Your own tag is lit up. **Tap to play** starts that game, and when it ends you come back to its page to see where you stand. The best three come live from the online leaderboard whenever the Games menu opens (and each minute while a page is up); with no connection the page says so. Who's That? keeps no score, so its page says it's just for fun. On the Games' first page, **LEADERBOARDS** runs down the green screen's left edge behind the cartridges, pointing the way.
+
 ## [2.2.14] - 2026-11-19
 
 - **A cleaner leaderboard:** the cartridges on the leaderboard picture are cut out along their own outline, without the Game Boy's green screen showing in the corner each cartridge has cut off. BerryMatch has its row.

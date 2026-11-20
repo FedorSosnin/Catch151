@@ -44,6 +44,7 @@
 #include "src/fishing.h"
 #include "src/pinball.h"   // Pinball: its rules and physics (drawn by pinball_v2.h)
 #include "src/berrymatch.h"  // BerryMatch: its rules (drawn by berrymatch_v2.h)
+#include "src/leaderboard.h"  // the leaderboard on the devices: its pages' rules (drawn by leaderboard_v2.h)
 #include "src/dungeon.h"
 #include "src/zones.h"
 #include "src/zones_art.h"
@@ -159,6 +160,11 @@ void openKeyboard();          // (the console's KEYBOARD opens it)
 uint32_t v2KbScreenKey();     // what the open keyboard shows (menus_v2.h)
 void openTagKeyboard(bool fromGames);  // the gamer tag's keyboard (menus_v2.h)
 void scoreReport(uint8_t g);  // a game's best to the relay, for the leaderboard
+BoardTop gBoard[LB_GAMES];    // V2: the leaderboard's best three of each game, from the relay (boardAsk())
+bool gBoardHave = false;      // ...once any has come
+uint32_t gBoardAskT = 0;      // ...when it was last asked for
+void boardAsk(bool force);    // ...asks for it (and the console's BOARDTEST fakes it)
+void boardTest();
 char nameBuf[12] = "";
 uint8_t nameLen = 0;
 int cardNameBottom = 84;      // where the card's name (and the species under a nickname) ends: tapping above renames
@@ -1179,6 +1185,13 @@ void handleSerial() {
 #endif
   } else if (line == "GAMES") {
     openGamesMenu();
+    Serial.println("DONE");
+  } else if (line.startsWith("LANG ") && pet.noSave) {  // V2: the language, 0..7 as i18n.h numbers them (testing)
+    setLang((Lang)(atoi(line.c_str() + 5) % LANG_COUNT));
+    applyLangFont();
+    Serial.println("DONE");
+  } else if (line == "BOARDTEST") {  // V2: the leaderboard as the relay sent it on 2026-11-19, through the same messages (testing)
+    boardTest();
     Serial.println("DONE");
   } else if (line == "PARTY") {  // the Party Boost screen (testing)
     partyOpen = true;
@@ -2814,6 +2827,7 @@ void openGamesMenu() {
   gameGlimpsesPaint();
   gamesMenuOpen = true;
   introCard = -1;
+  boardAsk(false);  // V2: the leaderboard's pages, fresh
 }
 
 // the game under a tap: its window or its name under it, or -1
@@ -3035,7 +3049,7 @@ void gamesMenuTap(int16_t x, int16_t y) {
   }
   int adx = pageArrowDx(V2_PAGE_ARROW_Y);  // where an arrow isn't (the first page's left, the last's right): nothing
   if (pageArrowHit(x, y, CX - adx, V2_PAGE_ARROW_Y) || pageArrowHit(x, y, CX + adx, V2_PAGE_ARROW_Y)) return;
-  int g = gameAt(x, y);
+  int g = v2GamesPage < 0 ? v2LbPlayAt(x, y) : gameAt(x, y);  // V2: a cartridge, or a leaderboard page's play line
   // a tap on the screen between the cartridges does nothing (four a page leave room round them, where a page
   // arrow may not be): the X, or a tap off the screen, closes it
   if (g < 0 && x >= V2_GB_X0 && x < V2_GB_X1 && y >= V2_GB_Y0 && y < V2_GB_Y1) return;
@@ -3081,7 +3095,8 @@ void drawTile(const uint16_t *art, int cx, int cy, int r, uint16_t col) {
 
 void renderGamesMenu() {
   if (pet.sleeping || pet.ceremony) { gamesMenuOpen = false; return; }  // left alone it stays open
-  v2GamesTv();  // V2: the old TV with its five cartridges
+  if (v2GamesPage < 0) v2LbPage();  // V2: a leaderboard page (leaderboard_v2.h)
+  else v2GamesTv();  // V2: the Game Boy with its cartridges
   gfx->flush();
   return;
 }
@@ -4813,6 +4828,49 @@ void scoreReport(uint8_t g) {
   m.turn = BOARD_SEASON;  // the mark the relay takes it by (buddy.h)
   strncpy(m.nick, pet.gamerTag, sizeof(m.nick) - 1);
   buddyNetReport(m);
+}
+// V2: the leaderboard's best three of each game, for the Games menu's leaderboard pages (leaderboard_v2.h): asked of
+// the relay when the menu opens, when the relay is reached anew, and each minute while a leaderboard page is on
+// screen (not twice in 2 s unless forced); the relay answers each game in a BM_BOARD (buddyHandle()). Nothing goes when
+// it isn't connected
+void boardAsk(bool force) {
+  if (!force && gBoardAskT && millis() - gBoardAskT < 2000) return;
+  gBoardAskT = millis();
+  BuddyMsg m;
+  boardAskMsg(m, buddyNetId());
+  buddyNetReport(m);
+}
+// the console's BOARDTEST: the board as the relay sent it on 2026-11-19, built as relay/src/board.js boardReply()
+// builds its messages and taken through buddyParse() and buddyHandle(), as the relay's are
+void boardTest() {
+  struct E { const char *tag; uint32_t score; uint8_t mon, day; };
+  struct G { uint8_t game; uint8_t n; E e[3]; int16_t dex; uint8_t shiny; };
+  static const G B[] = {
+    { 0, 3, { { "BCUT", 50, 11, 19 }, { "TESS", 49, 11, 19 }, { "3DPS", 1, 11, 19 } }, 0, 0 },
+    { 2, 2, { { "TESS", 60, 11, 19 }, { "3DPS", 28, 11, 19 } }, 0, 0 },
+    { 3, 1, { { "PIKA", 9, 11, 19 } }, 0, 0 },
+    { 4, 2, { { "PIKA", 31, 11, 18 }, { "3DPS", 26, 11, 19 } }, 0, 0 },
+    { 5, 2, { { "3DPS", 2485, 11, 17 }, { "KLTZ", 1446, 11, 17 } }, 131, 1 },
+    { 6, 2, { { "PIKA", 43825, 11, 17 }, { "TESS", 8075, 11, 20 } }, 0, 0 },
+    { 7, 2, { { "PIKA", 4150, 11, 20 }, { "TESS", 3170, 11, 20 } }, 0, 0 },
+  };
+  for (const G &b : B) {
+    BuddyMsg m;
+    buddyInit(m, BM_BOARD, BUDDY_RELAY_ID, buddyNetId(), b.e[0].score);
+    m.kind = b.game, m.ack = 1, m.turn = BOARD_SEASON, m.move = b.n, m.dex = b.dex, m.shiny = b.shiny;
+    uint8_t *raw = (uint8_t *)&m;
+    static const uint8_t AT[3] = { 14, 26, 30 }, TAG_AT[3] = { 34, 38, 46 };
+    for (int i = 0; i < b.n; i++) {
+      memcpy(raw + AT[i], &b.e[i].score, 4);
+      char t[5];
+      snprintf(t, sizeof(t), "%-4s", b.e[i].tag);
+      memcpy(raw + TAG_AT[i], t, 4);
+      raw[50 + 2 * i] = b.e[i].mon;
+      raw[51 + 2 * i] = b.e[i].day;
+    }
+    BuddyMsg in;
+    if (buddyParse(raw, sizeof(m), in)) buddyHandle(in, millis());
+  }
 }
 void scoreReportAll() {
   static const uint8_t G[] = { 0, 2, 3, 4, 6, GAME_MATCH };
@@ -6808,6 +6866,14 @@ void tradeClose(bool notify) {
 }
 
 void buddyHandle(const BuddyMsg &m, uint32_t now) {
+  if (m.type == BM_BOARD) {  // V2: the relay's answer (buddyParse lets only its own through): a game's best three
+    BoardTop b;
+    if (boardFrom(m, b)) {
+      gBoard[m.kind] = b;
+      gBoardHave = true;
+    }
+    return;
+  }
   if (m.type == BM_SCORE) {  // V2: the relay's answer (buddyParse lets only its own through): one of your bests is the
     if (pet.topScore()) {    // first on the leaderboard, so the golden cartridge, once (celebrated as any medal)
       wakeUI();
@@ -6980,7 +7046,10 @@ void buddyTick(uint32_t now) {
     }
     BuddyMsg m;
     for (int i = 0; i < 8 && buddyNetPoll(m); i++) buddyHandle(m, now);
-    if (buddyNetRelayFresh()) scoreReportAll();  // the relay keeps the leaderboard: each game's best, and the heaviest fish
+    if (buddyNetRelayFresh()) {
+      scoreReportAll();  // the relay keeps the leaderboard: each game's best, and the heaviest fish
+      boardAsk(true);    // ...and sends its best three of each back, for the Games menu's leaderboard pages
+    }
     fishKindsTick(now);                           // ...and each kind of fish's
     buddyReadyTick(now);
   }
@@ -8987,8 +9056,14 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       v2TagChipBox(x0, w);
       return pressSet(t, x0 - 2, V2_TAG_CHIP_Y - 2, w + 4, 26, pet.gamerTag[0] ? pet.gamerTag : "____");
     }
+    if (v2GamesPage < 0) {  // V2: a leaderboard page: its play line, the side buttons and the X
+      int px, pw;
+      lbPlayBox(px, pw);
+      if (lbOnPlay(x, y)) return pressSet(t, px - 6, LB_PLAY_Y - 6, pw + 12, 26, gameLabel(V2_CART_GAME[-1 - v2GamesPage]));
+      return v2PressNav(x, y, t, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, true);
+    }
     int g = gameAt(x, y);
-    if (g < 0) return v2PressNav(x, y, t, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, true);  // V2: its page arrows and X
+    if (g < 0) return v2PressNav(x, y, t, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, true);  // V2: its page arrows and X
     if (g < 0) return false;
     int k = v2CartOfGame(g);  // V2: round the cartridge
     return pressSet(t, V2_CART_XY[k][0] - 5, V2_CART_XY[k][1] - 5, 115, 140, gameLabel(g));

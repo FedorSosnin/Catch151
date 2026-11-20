@@ -146,6 +146,10 @@ enum StrId : STRID_BASE {
   S_PIN_RAMP, S_PIN_WIN_FMT,
   S_GAME_MATCH, S_HOW_MATCH, S_HOW_MATCH_KEYS,  // BerryMatch (berrymatch.h): its name and how-to cards
   S_BM_MOVES_FMT, S_BM_SHUFFLE, S_BM_LAST,      // ...in play: the moves left, no swap left so the board shuffles, the last move
+  // the leaderboard's pages in the Games menu (leaderboard_v2.h): the sign, the hint down the Games' edge, what each best
+  // is, Dungeon Crawler's floor, the play line (touch, keys), Who's That?'s page, no connection, nobody yet, a shiny fish
+  S_LEADERBOARD, S_LEADERBOARDS, S_LB_HI_SCORE, S_LB_LONGEST_RUN, S_LB_LONGEST_RIDE, S_LB_DEEPEST, S_LB_BIGGEST_FISH,
+  S_LB_FLOOR_FMT, S_LB_PLAY, S_LB_PLAY_KEYS, S_LB_FUN, S_LB_NAME_ALL, S_LB_NO_SCORES, S_LB_OFFLINE, S_LB_NONE, S_LB_SHINY_FMT,
   STR_COUNT
 };
 

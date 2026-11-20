@@ -42,10 +42,13 @@ enum BuddyType : uint8_t {
                                    // menu numbers them, session = the score, nick = the gamer tag); the leaderboard.
                                    // From the relay (from = BUDDY_RELAY_ID), to the one that sent it: it's the first
                                    // of its game's ten (the high score's medal)
+  BM_BOARD,                        // the leaderboard's best three of a game, for the Games menu's leaderboard pages
+                                   // (2.2.15): asked of the relay alone, never of a buddy; answered by the relay alone
   BM_END
 };
 static_assert(BM_FISH == 17, "relay/src/index.js reads BM_FISH as 17");
 static_assert(BM_SCORE == 18, "relay/src/index.js reads BM_SCORE as 18");
+static_assert(BM_BOARD == 19, "relay/src/board.js reads BM_BOARD as 19");
 #define BUDDY_RELAY_ID 0xFFFFFFFFu  // the relay, when it answers a BM_SCORE (relay/src/board.js RELAY_ID)
 // the leaderboard's mark on a BM_SCORE or BM_FISH (in turn): a best made since the board started over (2.2.10; Fedor:
 // the first scores "were made during testing when the games were still evolving"). The relay takes only these
@@ -90,7 +93,7 @@ inline bool buddyParse(const uint8_t *buf, size_t len, BuddyMsg &m) {
   if (len != sizeof(BuddyMsg)) return false;
   memcpy(&m, buf, sizeof(BuddyMsg));
   if (memcmp(m.magic, "PKG1", 4) != 0 || m.ver != BUDDY_VER) return false;
-  if (m.type < BM_HELLO || m.type >= BM_END || m.type == BM_FISH || (m.type == BM_SCORE && m.from != BUDDY_RELAY_ID) || m.from == 0) return false;
+  if (m.type < BM_HELLO || m.type >= BM_END || m.type == BM_FISH || ((m.type == BM_SCORE || m.type == BM_BOARD) && m.from != BUDDY_RELAY_ID) || m.from == 0) return false;
   if (m.type == BM_HELLO || m.type == BM_FIGHTER || m.type == BM_OFFER || m.type == BM_CONFIRM) {
     if (!buddyDexOk(m.dex)) return false;
   }
@@ -115,6 +118,58 @@ inline bool buddyParse(const uint8_t *buf, size_t len, BuddyMsg &m) {
     }
   }
   m.shiny = m.shiny ? 1 : 0;
+  return true;
+}
+
+// ----- the leaderboard's best three (BM_BOARD, 2.2.15), for the Games menu's leaderboard pages -----
+// Asked of the relay alone (buddyNetReport(): kind = one game, or BOARD_ALL for all), never of a buddy. The relay
+// answers each game in a BM_BOARD of its own (from = BUDDY_RELAY_ID, to = the one that asked; relay/src/board.js
+// boardReply()): kind = the game as the Games menu numbers them (Reel Fishing's, 5, its biggest fish), move = how many
+// (0..3), session = the first's score, hp and atk = the second's (its low and high halves), def and spe = the third's,
+// nick = the first two tags, reg = the third's tag then each one's month and day, dex and shiny = Reel Fishing's first
+// fish. A tag as the board shows it, four characters (spaces after a shorter one): ---- for none, **** for a rude one
+#define BOARD_ALL 0xFF
+#define BOARD_TOP 3
+#define BOARD_MAX_SCORE 9999999UL  // more than any game's best can be (Pinball's most)
+struct BoardTop {
+  uint8_t n;  // how many (0: nobody yet)
+  uint32_t score[BOARD_TOP];
+  char tag[BOARD_TOP][5];
+  uint8_t mon[BOARD_TOP], day[BOARD_TOP];
+  int16_t fishDex;  // Reel Fishing's first: its kind (0: none)
+  bool fishShiny;
+};
+inline void boardAskMsg(BuddyMsg &m, uint32_t from, uint8_t game = BOARD_ALL) {
+  buddyInit(m, BM_BOARD, from, 0, 0);
+  m.kind = game;
+  m.turn = BOARD_SEASON;
+}
+// a BM_BOARD from the relay (buddyParse() lets only the relay's through) to its game's best three; false (b untouched)
+// if it doesn't make sense
+inline bool boardFrom(const BuddyMsg &m, BoardTop &b) {
+  if (m.type != BM_BOARD || m.kind > 7 || m.kind == 1 || m.move > BOARD_TOP) return false;
+  BoardTop t;
+  memset(&t, 0, sizeof(t));
+  t.n = m.move;
+  const uint32_t sc[BOARD_TOP] = { m.session, (uint32_t)m.hp | (uint32_t)m.atk << 16, (uint32_t)m.def | (uint32_t)m.spe << 16 };
+  for (int i = 0; i < t.n; i++) {
+    const char *s = i < 2 ? m.nick + 4 * i : (const char *)m.reg;
+    for (int k = 0; k < 4 && s[k]; k++) {
+      if (s[k] < 32 || s[k] > 126) return false;
+      t.tag[i][k] = s[k];
+    }
+    for (int k = 3; k >= 0 && t.tag[i][k] == ' '; k--) t.tag[i][k] = 0;
+    t.mon[i] = m.reg[4 + 2 * i];
+    t.day[i] = m.reg[5 + 2 * i];
+    if (t.mon[i] < 1 || t.mon[i] > 12 || t.day[i] < 1 || t.day[i] > 31 || sc[i] > BOARD_MAX_SCORE) return false;
+    t.score[i] = sc[i];
+  }
+  if (m.kind == 5 && t.n) {
+    if (!buddyDexOk(m.dex)) return false;
+    t.fishDex = m.dex;
+    t.fishShiny = m.shiny;
+  }
+  b = t;
   return true;
 }
 

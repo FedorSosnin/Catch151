@@ -121,6 +121,8 @@ static const ExpectedFmt EXPECTED[] = {
   { S_PIN_DIG_FMT, "%s" },
   { S_PIN_WIN_FMT, "%u" },
   { S_BM_MOVES_FMT, "%u" },    // BerryMatch: the moves left
+  { S_LB_FLOOR_FMT, "%u" },    // the leaderboard: Dungeon Crawler's deepest floor (leaderboard.h lbScoreText())
+  { S_LB_SHINY_FMT, "%s" },    // ...and Reel Fishing's first fish, a shiny one (leaderboard_v2.h)
   { S_FISH_SMALL_FMT, "%s" },   // the weigh-in: how big it is for its kind, its name
   { S_FISH_FINE_FMT, "%s" },
   { S_FISH_LARGE_FMT, "%s" },
