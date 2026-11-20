@@ -14,6 +14,8 @@
 #include <esp_lcd_panel_rgb.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_cache.h>
+#include <esp_timer.h>
+#include "soc/lcd_cam_struct.h"
 #include <SensorQMI8658.hpp>
 #include "ws21_exio.h"  // the IO expander: the panel's reset and CS, the touch's reset
 #define KNOMI_RIM_ROWS LCD_HEIGHT  // the rim is made for the 466 canvas, 1:1 (below)
@@ -22,6 +24,27 @@
 // The canvas sits in the middle of the panel, pixel for pixel: 7 px of black all round. The 2 px grid the V2 UI
 // draws on stays sharp, and nothing is scaled (docs/WAVESHARE_21.md, "The screen").
 #define WS21_BORDER ((PANEL_SIZE - LCD_WIDTH) / 2)
+
+// The picture's turn on the panel, clockwise, at any angle (WS21_ROT_DEG in pin_config.h; the console's ROTDEG): the
+// board's USB-C ports point out at 45 degrees, so turning the picture 45 puts one of them straight down (Fedor: "Can
+// we rotate the screen 45* clockwise?"). 0 is a plain copy; any other angle samples the canvas per panel pixel (the
+// nearest one). Touches and tilt turn with it.
+inline int16_t gWs21RotDeg = 0;
+inline int32_t gWs21RotC = 65536, gWs21RotS = 0;  // its cosine and sine, 16.16
+inline void ws21SetRotation(int deg) {
+  deg %= 360;
+  if (deg < 0) deg += 360;
+  gWs21RotDeg = deg;
+  float a = deg * 0.017453293f;
+  gWs21RotC = lroundf(cosf(a) * 65536);
+  gWs21RotS = lroundf(sinf(a) * 65536);
+}
+// the canvas point shown at a canvas-sized point (x, y) of the panel's middle (both 0..465)
+inline void ws21Unturn(int32_t x, int32_t y, int32_t *u, int32_t *v) {
+  int64_t X2 = 2 * x + 1 - LCD_WIDTH, Y2 = 2 * y + 1 - LCD_HEIGHT;  // twice the distance from the centre
+  *u = (int32_t)(((X2 * gWs21RotC + Y2 * gWs21RotS) >> 1) + ((int64_t)(LCD_WIDTH / 2) << 16)) >> 16;
+  *v = (int32_t)(((Y2 * gWs21RotC - X2 * gWs21RotS) >> 1) + ((int64_t)(LCD_HEIGHT / 2) << 16)) >> 16;
+}
 
 // The panel's setup commands go over a 9-bit 3-wire SPI on GPIO 1 and 2, its CS on the expander. begin() also
 // resets the panel (EXIO1), as Waveshare's demo does before its setup.
@@ -145,15 +168,14 @@ public:
     // after each band is copied out, its cache lines are dropped: the refill (27 MB/s) would otherwise push the game's
     // own data out of the 32 KB cache all the time. So a frame buffer must be written back before it's shown (present())
     c.flags.bb_invalidate_cache = 1;
-    if (esp_lcd_new_rgb_panel(&c, &handle) != ESP_OK) {
-      handle = nullptr;
-      return false;
-    }
-    esp_lcd_rgb_panel_event_callbacks_t cb = {};
-    cb.on_frame_buf_complete = frameDone;
-    esp_lcd_rgb_panel_register_event_callbacks(handle, &cb, this);
-    esp_lcd_panel_reset(handle);
-    esp_lcd_panel_init(handle);
+    // Made on core 0, so its refill interrupt runs there: copying each band out of PSRAM takes a good part of a core,
+    // and the game draws on core 1. (The interrupt is set up on the core that makes the panel.)
+    makeCfg = &c;
+    makeDone = xSemaphoreCreateBinary();
+    xTaskCreatePinnedToCore(makeOnCore0, "ws21lcd", 4096, this, 5, nullptr, 0);
+    xSemaphoreTake(makeDone, portMAX_DELAY);
+    vSemaphoreDelete(makeDone);
+    if (!handle) return false;
     void *f0 = nullptr, *f1 = nullptr;
     esp_lcd_rgb_panel_get_frame_buffer(handle, 2, &f0, &f1);
     fbs[0] = (uint16_t *)f0;
@@ -188,6 +210,17 @@ public:
   uint16_t *frontBuffer() const { return fbs[shown]; }
   // the pixel clock, from the next refresh on (the console's PCLK, to find the fastest one that doesn't glitch)
   bool setPclk(uint32_t hz) { return handle && esp_lcd_rgb_panel_set_pclk(handle, hz) == ESP_OK; }
+  // which edge of PCLK the data changes on (the console's PCLKEDGE, bring-up): 1 = falling
+  void setPclkEdge(bool falling) { LCD_CAM.lcd_clock.lcd_ck_out_edge = falling; }
+  // the refills' timing since the last call (the console's LCD): frames sent, and the longest gap between two ends of
+  // a frame, in us (a frame is 1e6 / refresh rate; much more means the refill was held up)
+  void timing(uint32_t *n, uint32_t *maxGap, uint32_t *late) {
+    *n = frames - statFrom;
+    *maxGap = gapMax;
+    *late = gapLate;
+    statFrom = frames;
+    gapMax = gapLate = 0;
+  }
 
   void setBrightness(uint8_t v) {
     if (!blReady) blReady = ledcAttach(LCD_BL, LCD_BL_PWM_HZ, 8);
@@ -203,9 +236,33 @@ public:
 
 private:
   static constexpr size_t FB_BYTES = (size_t)PANEL_SIZE * PANEL_SIZE * 2;
+  static void makeOnCore0(void *arg) {
+    Ws21Panel *p = (Ws21Panel *)arg;
+    if (esp_lcd_new_rgb_panel(p->makeCfg, &p->handle) != ESP_OK) p->handle = nullptr;
+    if (p->handle) {
+      esp_lcd_rgb_panel_event_callbacks_t cb = {};
+      cb.on_frame_buf_complete = frameDone;
+      esp_lcd_rgb_panel_register_event_callbacks(p->handle, &cb, p);
+      esp_lcd_panel_reset(p->handle);
+      esp_lcd_panel_init(p->handle);
+    }
+    xSemaphoreGive(p->makeDone);
+    vTaskDelete(nullptr);
+  }
+  const esp_lcd_rgb_panel_config_t *makeCfg = nullptr;
+  SemaphoreHandle_t makeDone = nullptr;
   // the RGB driver's interrupt, each time it has sent a whole buffer: from then on it reads the one last presented
-  static bool IRAM_ATTR frameDone(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t *, void *ctx) {
-    ((Ws21Panel *)ctx)->frames++;
+  // (not IRAM_ATTR: this core's RGB interrupt isn't IRAM-safe either, and inline it won't link)
+  static bool frameDone(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t *, void *ctx) {
+    Ws21Panel *p = (Ws21Panel *)ctx;
+    p->frames++;
+    int64_t t = esp_timer_get_time();
+    if (p->lastFrameUs) {
+      uint32_t gap = (uint32_t)(t - p->lastFrameUs);
+      if (gap > p->gapMax) p->gapMax = gap;
+      if (gap > 1000000u / 20) p->gapLate++;  // (more than 50 ms: a refill badly held up)
+    }
+    p->lastFrameUs = t;
     return false;
   }
   Ws21InitBus *bus;
@@ -215,14 +272,17 @@ private:
   bool pending = false;
   volatile uint32_t frames = 0;
   uint32_t askedAt = 0;
+  int64_t lastFrameUs = 0;
+  volatile uint32_t gapMax = 0, gapLate = 0;
+  uint32_t statFrom = 0;
   bool blReady = false;
 };
 
 void pressOverlay();  // the sketch's press preview, drawn over every frame
 
 // The 466x466 canvas in PSRAM. flush() copies it into the panel's frame buffer not on show (also PSRAM), in the
-// middle, with the current rotation and the Knomi's soft rim (knomi_rim.h) made for the canvas's own circle, then
-// shows it.
+// middle, turned (gWs21RotDeg; or a quarter turn, gPanelRot) and with the Knomi's soft rim (knomi_rim.h), then shows
+// it. The two cores share the copy: core 0 does the top half while core 1 does the bottom.
 class Ws21Canvas : public Arduino_Canvas {
 public:
   Ws21Canvas(Ws21Panel *out) : Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, out), panel(out) {}
@@ -232,6 +292,10 @@ public:
     if (!Arduino_Canvas::begin(GFX_NOT_DEFINED)) return false;
     if (!panel->frontBuffer()) return false;
     knomiRimBegin(LCD_WIDTH);
+    ws21SetRotation(WS21_ROT_DEG);
+    go = xSemaphoreCreateBinary();
+    done = xSemaphoreCreateBinary();
+    if (go && done) xTaskCreatePinnedToCore(helper, "ws21flush", 4096, this, 5, nullptr, 0);
     return true;
   }
 
@@ -239,9 +303,36 @@ public:
     pressOverlay();
     uint16_t *fb = panel->backBuffer();
     if (!fb) return;
+    workFb = fb;
+    const bool shared = go && done;
+    if (shared) xSemaphoreGive(go);  // core 0: the top half
+    copyRows(fb, shared ? LCD_HEIGHT / 2 : 0, LCD_HEIGHT);
+    if (shared) xSemaphoreTake(done, portMAX_DELAY);
+    // (no cache write-back here: present() does it)
+    panel->present(fb);
+  }
+
+  uint16_t *panelBuffer() { return panel->frontBuffer(); }  // the console's SHOT: the whole 480x480 panel
+
+private:
+  static void helper(void *arg) {
+    Ws21Canvas *c = (Ws21Canvas *)arg;
+    for (;;) {
+      xSemaphoreTake(c->go, portMAX_DELAY);
+      c->copyRows(c->workFb, 0, LCD_HEIGHT / 2);
+      xSemaphoreGive(c->done);
+    }
+  }
+
+  // canvas rows ya..yb-1 into fb
+  void copyRows(uint16_t *fb, int ya, int yb) {
+    if (gWs21RotDeg) {
+      turnRows(fb, ya, yb);
+      return;
+    }
     const RotBlit r = rotBlit(gPanelRot, PANEL_SIZE);
     const int dx = r.dx;
-    for (int y = 0; y < LCD_HEIGHT; y++) {
+    for (int y = ya; y < yb; y++) {
       const uint16_t *src = _framebuffer + y * LCD_WIDTH;
       uint16_t *out = fb + r.base + (y + WS21_BORDER) * r.dy + WS21_BORDER * dx;
       const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
@@ -259,13 +350,50 @@ public:
       for (; x < x1; x++) out[x * dx] = edge(src[x], rim, x, y);
       for (; x < LCD_WIDTH; x++) out[x * dx] = 0;
     }
-    // (no cache write-back: the bounce buffers are filled by the CPU, through the same cache)
-    panel->present(fb);
   }
 
-  uint16_t *panelBuffer() { return panel->frontBuffer(); }  // the console's SHOT: the whole 480x480 panel
+  // Turned: each pixel of the panel's middle takes the canvas pixel nearest to the point turned back onto it. The rim
+  // is round, so its darkening is the panel pixel's own; whether a need bar's label lifts it is the canvas pixel's.
+  // In 32 x 32 tiles: a tile's pixels come from a small turned square of the canvas that stays in the cache, where a
+  // whole row's come from a long diagonal that's gone again by the next row (2x faster).
+  void turnRows(uint16_t *fb, int ya, int yb) {
+    const int32_t c = gWs21RotC, s = gWs21RotS;
+    const int T = 32;
+    for (int ty = ya; ty < yb; ty += T) {
+      const int tyEnd = ty + T < yb ? ty + T : yb;
+      for (int y = ty; y < tyEnd; y++) {  // the black outside the circle, once per row
+        uint16_t *out = fb + (y + WS21_BORDER) * PANEL_SIZE + WS21_BORDER;
+        const int x0 = gKnomiRim ? gKnomiRimX0[y] : 0, x1 = gKnomiRim ? gKnomiRimX1[y] : LCD_WIDTH;
+        for (int x = 0; x < x0; x++) out[x] = 0;
+        for (int x = x1; x < LCD_WIDTH; x++) out[x] = 0;
+      }
+      for (int tx = 0; tx < LCD_WIDTH; tx += T) {
+        const int txEnd = tx + T < LCD_WIDTH ? tx + T : LCD_WIDTH;
+        for (int y = ty; y < tyEnd; y++) {
+          const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
+          const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : LCD_WIDTH;
+          const int i0 = rim ? gKnomiRimI0[y] : 0, i1 = rim ? gKnomiRimI1[y] : LCD_WIDTH;
+          const int xa = tx > x0 ? tx : x0, xb = txEnd < x1 ? txEnd : x1;
+          if (xa >= xb) continue;
+          uint16_t *out = fb + (y + WS21_BORDER) * PANEL_SIZE + WS21_BORDER;
+          const int32_t X2 = 2 * xa + 1 - LCD_WIDTH, Y2 = 2 * y + 1 - LCD_HEIGHT;
+          int32_t fu = ((X2 * c + Y2 * s) >> 1) + ((LCD_WIDTH / 2) << 16);
+          int32_t fv = ((Y2 * c - X2 * s) >> 1) + ((LCD_HEIGHT / 2) << 16);
+          for (int x = xa; x < xb; x++, fu += c, fv -= s) {
+            int u = fu >> 16, v = fv >> 16;
+            if ((unsigned)u >= LCD_WIDTH) u = u < 0 ? 0 : LCD_WIDTH - 1;
+            if ((unsigned)v >= LCD_HEIGHT) v = v < 0 ? 0 : LCD_HEIGHT - 1;
+            uint16_t px = _framebuffer[v * LCD_WIDTH + u];
+            if ((x < i0 || x >= i1) && !(gKnomiLiftOn && knomiLifted(u >> 1, v >> 1))) px = knomiRimPixel(px, rim[x]);
+            out[x] = px;
+          }
+        }
+      }
+    }
+  }
 
-private:
+  SemaphoreHandle_t go = nullptr, done = nullptr;
+  uint16_t *volatile workFb = nullptr;
   // near the edge: darkened by the rim, unless a need bar's label is over the shadow there (its 2 x 2 cell)
   static inline uint16_t edge(uint16_t c, const uint8_t *rim, int x, int y) {
     return gKnomiLiftOn && knomiLifted(x >> 1, y >> 1) ? c : knomiRimPixel(c, rim[x]);
@@ -325,6 +453,7 @@ public:
     rotTouch(gPanelRot, px, py, PANEL_SIZE, &lx, &ly);
     lx -= WS21_BORDER;  // into the canvas in the middle
     ly -= WS21_BORDER;
+    if (gWs21RotDeg) ws21Unturn(lx, ly, &lx, &ly);  // turned back with the picture
     *x = lx < 0 ? 0 : lx >= LCD_WIDTH ? LCD_WIDTH - 1 : lx;
     *y = ly < 0 ? 0 : ly >= LCD_HEIGHT ? LCD_HEIGHT - 1 : ly;
     return 1;
@@ -357,14 +486,25 @@ public:
     return ok;
   }
   bool ready() const { return ok; }
-  bool read(float g[3]) {
-    if (!ok) return false;
+  // gravity in the picture's own axes (+X its right, +Y its down) as it's turned now: tilt in the games
+  bool read(float g[3]) { return readAt(g, gWs21RotC / 65536.0f, gWs21RotS / 65536.0f); }
+  // ...in the axes of the picture at WS21_ROT_DEG: which quarter turn from there is up (autoRotateTick())
+  bool readBase(float g[3]) {
+    static const float c = cosf(WS21_ROT_DEG * 0.017453293f), s = sinf(WS21_ROT_DEG * 0.017453293f);
+    return readAt(g, c, s);
+  }
+  bool readRaw(float a[3]) { return ok && imu.getAccelerometer(a[0], a[1], a[2]); }
+
+private:
+  bool readAt(float g[3], float c, float s) {
     float a[3];
-    if (!imu.getAccelerometer(a[0], a[1], a[2])) return false;
-    WS21_ACC_MAP(a, g);
+    if (!readRaw(a)) return false;
+    WS21_ACC_MAP(a, g);  // the panel's axes (+X right, +Y down as the panel is)
+    const float x = g[0], y = g[1];  // turned as the picture is on the panel
+    g[0] = x * c + y * s;
+    g[1] = y * c - x * s;
     return true;
   }
-private:
   SensorQMI8658 imu;
   bool ok = false;
 };

@@ -33,10 +33,11 @@
 #define LCD_R3 18
 #define LCD_R4 17
 // timings, as Waveshare's demo: 18 MHz, about 66 frames a second
-#define LCD_PCLK_HZ 12000000  // 44 refreshes a second (Waveshare's demos: 16 and 18). Each refresh reads the whole frame
-                               // buffer out of PSRAM; at 16 MHz the refill couldn't keep up and bands of lines showed
-                               // out of place (2026-11-20). The console's PCLK tries others
-#define LCD_PCLK_NEG 0
+#define LCD_PCLK_HZ 12000000  // 44 refreshes a second (Waveshare's demos: 16 and 18): plenty for a game drawing ~7 frames a
+                               // second, and each refresh's copy out of PSRAM takes the CPU less often. The console's
+                               // PCLK tries others
+#define LCD_PCLK_NEG 1  // data out on the falling edge, so the panel reads it steady on the rising one. With 0 (as
+                        // Waveshare's demos) thin streaks ran along the rows at any pixel clock (2026-11-20)
 #define LCD_HSYNC_POL 1  // (1: idle high, esp_lcd's default, which the demo keeps)
 #define LCD_HSYNC_PW 8
 #define LCD_HSYNC_BP 10
@@ -77,6 +78,8 @@
 
 // QMI8658 accelerometer and gyro. TODO(bring-up): its axes against the panel's; this keeps them as they come.
 #define IMU_I2C_ADDR 0x6B
+#define WS21_ROT_DEG 45  // the picture turned clockwise on the panel, in degrees (ws21_hal.h): 45 puts a USB-C port
+                         // straight down. 0: as the panel is, the plain and fastest copy
 #define WS21_ACC_MAP(a, g) ((g)[0] = (a)[0], (g)[1] = (a)[1], (g)[2] = (a)[2])
 
 // PCF85063 clock: 0x51, SensorLib's default

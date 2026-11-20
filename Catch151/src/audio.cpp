@@ -4,7 +4,7 @@
 
 // The Waveshare 2.1 sounds only with an I2S amplifier added (a MAX98357A, docs/WAVESHARE_21.md): its pins in
 // pin_config.h turn it on (WS21_AUDIO_I2S). It plays the same tones as the AMOLED 1.75, without a codec to set up.
-#if defined(BOARD_KNOMI_V2) && !(defined(BOARD_WS21) && defined(WS21_AUDIO_I2S))
+#if defined(BOARD_KNOMI_V2) && !defined(BOARD_WS21)
 // The Knomi V2 has no codec or speaker: the game calls the same and nothing sounds.
 void audioBegin() {}
 void sfxPlay(uint8_t) {}
@@ -12,6 +12,71 @@ void audioSetEnabled(bool) {}
 bool audioEnabled() { return false; }
 void audioSetSleeping(bool) {}
 bool audioBusy() { return false; }
+void audioSetIdle(bool) {}
+#elif defined(BOARD_WS21) && !defined(WS21_AUDIO_I2S)
+// The Waveshare 2.1 without a speaker: its own buzzer (Fedor: "what about the onboard buzzer, can we use that for audio
+// and clicks?"). It's an active one on the IO expander: on or off, one pitch, no volume. So a tap is a click (a 4 ms
+// pulse), and every other effect beeps the rhythm of its notes, each note a short beep. It follows the Sound switch
+// and is quiet while your Pokemon sleeps. It plays in its own task (each switch is an I2C write), so the game never
+// waits on it.
+#include <Arduino.h>
+#include <Preferences.h>
+#include "sfx_notes.h"
+#include "ws21_exio.h"
+static QueueHandle_t gQ = nullptr;
+static volatile bool gOn = true, gSleeping = false, gPlaying = false;
+
+static void buzz(uint16_t on, uint16_t off) {
+  gExio.write(EXIO_BUZZER, true);
+  vTaskDelay(pdMS_TO_TICKS(on));
+  gExio.write(EXIO_BUZZER, false);
+  if (off) vTaskDelay(pdMS_TO_TICKS(off));
+}
+
+static void buzzerTask(void *) {
+  uint8_t id;
+  for (;;) {
+    if (!xQueueReceive(gQ, &id, portMAX_DELAY) || !gOn || gSleeping || !gExio.ready() || id >= SFX_COUNT) continue;
+    gPlaying = true;
+    if (id == SFX_TAP || id == SFX_FISH_REEL || id == SFX_FISH_NIBBLE) {
+      buzz(4, 0);  // a click
+    } else {
+      const SfxDef &d = SFX[id];
+      for (uint8_t i = 0; i < d.len; i++) {
+        uint16_t ms = d.n[i].ms;
+        if (!d.n[i].f) {  // a rest
+          vTaskDelay(pdMS_TO_TICKS(ms));
+          continue;
+        }
+        uint16_t on = ms / 3 < 8 ? 8 : ms / 3 > 45 ? 45 : ms / 3;  // a beep a third of the note, 8 to 45 ms...
+        buzz(on, ms - on < 30 ? 30 : ms - on);                    // ...and at least 30 ms apart, to hear each one
+      }
+    }
+    gPlaying = false;
+  }
+}
+
+void audioBegin() {
+  Preferences p;
+  p.begin(SAVE_NS, true);
+  gOn = p.getBool("snd", true);
+  p.end();
+  gQ = xQueueCreate(4, sizeof(uint8_t));
+  if (gQ) xTaskCreatePinnedToCore(buzzerTask, "buzzer", 3072, nullptr, 2, nullptr, 0);
+}
+void sfxPlay(uint8_t id) {
+  if (gQ && gOn && !gSleeping) xQueueSend(gQ, &id, 0);  // dropped if four are waiting already
+}
+void audioSetEnabled(bool on) {
+  gOn = on;
+  Preferences p;
+  p.begin(SAVE_NS, false);
+  p.putBool("snd", on);
+  p.end();
+}
+bool audioEnabled() { return gOn; }
+void audioSetSleeping(bool sleeping) { gSleeping = sleeping; }
+bool audioBusy() { return gPlaying; }
 void audioSetIdle(bool) {}
 #else
 #include <Arduino.h>

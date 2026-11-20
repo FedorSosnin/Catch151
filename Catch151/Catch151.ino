@@ -699,7 +699,7 @@ void loop() {
   v2KbTyped();      // ...and what's typed on its keyboard, while one of the game's keyboards is open (menus_v2.h)
 #endif
   v2RepelTick(now);  // V2: every second of a minigame played counts toward a Repel
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST) && !defined(BOARD_WS21)
+#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
   autoRotateTick(now);
 #endif
   visitTick(now);
@@ -980,6 +980,10 @@ void handleSerial() {
     float g[3] = {0, 0, 0};
     bool ok = accel.read(g);
     Serial.printf("acc ok=%d x=%.2f y=%.2f z=%.2f\n", ok, g[0], g[1], g[2]);
+#ifdef BOARD_WS21
+    accel.readRaw(g);  // the sensor's own axes, before WS21_ACC_MAP and the turn (to set WS21_ACC_MAP)
+    Serial.printf("acc raw x=%.2f y=%.2f z=%.2f\n", g[0], g[1], g[2]);
+#endif
     Serial.println("DONE");
     return;
   } else if (line == "OTACHECK") {
@@ -1025,6 +1029,31 @@ void handleSerial() {
     float mhz = line.substring(5).toFloat();
     bool ok = mhz >= 4 && mhz <= 24 && panel->setPclk((uint32_t)(mhz * 1e6f));
     Serial.printf("pclk %.1f MHz %s\n", mhz, ok ? "ok" : "refused");
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("ROTDEG ")) {  // the picture's turn on the panel, clockwise degrees (testing)
+    ws21SetRotation(line.substring(7).toInt());
+    gfx->flush();
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("PCLKEDGE ")) {  // 1: data out on PCLK's falling edge (bring-up: streaks along the rows)
+    panel->setPclkEdge(line.substring(9).toInt() != 0);
+    Serial.println("DONE");
+    return;
+  } else if (line == "LCD") {  // the refills since the last LCD: frames, longest gap between two (us), gaps over 50 ms
+    uint32_t n, gap, late;
+    panel->timing(&n, &gap, &late);
+    Serial.printf("lcd frames=%u maxgap=%u late=%u\n", (unsigned)n, (unsigned)gap, (unsigned)late);
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("HOLD ")) {  // the game stops for n seconds: only the panel's refill runs (bring-up)
+    uint32_t until = millis() + (uint32_t)line.substring(5).toInt() * 1000;
+    while ((int32_t)(until - millis()) > 0) delay(20);
+    Serial.println("DONE");
+    return;
+  } else if (line == "WIFIOFF") {  // Wi-Fi off until the next start (bring-up: does the radio upset the panel?)
+    clockPollPause(true);  // (no reconnecting)
+    clockWifiSignOff();
     Serial.println("DONE");
     return;
 #endif
@@ -2689,9 +2718,10 @@ void quitGame() {
 }
 
 // tilt zero: whatever it reads now is "straight"
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST) && !defined(BOARD_WS21)
-// the screen follows gravity, except with a finger on it or when tilting is part of the game (not on the Waveshare 2.1,
-// a handheld with one way up: turned, its flush takes 4 times as long)
+#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
+// the screen follows gravity, except with a finger on it or when tilting is part of the game. On the Waveshare 2.1 in
+// quarter turns from its own (WS21_ROT_DEG: 45, 135, 225, 315; Fedor: "Can we turn auto rotate back on? But in 90*
+// increments from where it is now?"), which all cost the same: any angle but 0 is turned pixel by pixel
 void autoRotateTick(uint32_t now) {
   static uint32_t last = 0;
   static RotFilter filter;
@@ -2702,6 +2732,17 @@ void autoRotateTick(uint32_t now) {
     return;
   }
   float g[3];
+#ifdef BOARD_WS21
+  static uint8_t quarter = 0;  // quarter turns from WS21_ROT_DEG
+  if (!accel.readBase(g)) return;
+  uint8_t rot = quarter;
+  if (filter.update(g[0], g[1], now, &rot)) {
+    quarter = rot;
+    ws21SetRotation(WS21_ROT_DEG + 90 * rot);
+    gfx->flush();  // some screens only redraw on change
+    Serial.printf("screen: %d degrees\n", gWs21RotDeg);
+  }
+#else
   if (!accel.read(g)) return;
   uint8_t rot = gPanelRot;
   if (filter.update(g[0], g[1], now, &rot)) {
@@ -2709,6 +2750,7 @@ void autoRotateTick(uint32_t now) {
     gfx->flush();  // some screens only redraw on change
     Serial.printf("screen: rotation %u\n", rot);
   }
+#endif
 }
 #endif
 

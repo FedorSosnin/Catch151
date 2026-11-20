@@ -2362,9 +2362,13 @@ static int v2KbNext(int L, int code) {
 // Only for fingers (Fedor: "Since mac and PC builds arent meant for touchscreen, lets remove the keyboard zoom from
 // them"): the Knomi and other boards always zoom; on a computer the tap a mouse's types its key at once, and only a
 // finger's (the web game on a phone or a tablet, host_runtime.cpp) zooms in. The Mac and Windows apps never zoom.
+// Not on the Waveshare 2.1 either: its keys are about 4 mm wide, big enough without (Fedor: "it doesnt have to zoom
+// in on this device - its big enough without that zoom. We can keep that on for Knomi builds").
 #ifdef BOARD_HOST
 extern volatile bool gHostFinger;
 static bool v2KbZooms() { return gHostFinger; }
+#elif defined(BOARD_WS21)
+static bool v2KbZooms() { return false; }
 #else
 static bool v2KbZooms() { return true; }
 #endif
