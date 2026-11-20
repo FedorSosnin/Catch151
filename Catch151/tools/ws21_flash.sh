@@ -4,7 +4,8 @@
 #   tools/ws21_flash.sh <port>           build and flash, e.g. tools/ws21_flash.sh /dev/cu.usbmodem5C940812191
 #   tools/ws21_flash.sh --build-only
 # The port is never guessed: a Knomi on the same Mac must not get this firmware. On a Mac the board's CH343 shows up
-# as /dev/cu.usbmodem<serial>1; a Knomi shows up as /dev/cu.wchusbserial*.
+# twice, as /dev/cu.usbmodem<serial>1 and /dev/cu.wchusbserial<serial>1 (the same chip); a Knomi only as
+# /dev/cu.wchusbserial*. So give the usbmodem name: a wchusbserial one is refused, in case it is a Knomi.
 set -e
 cd "${0:A:h}/.."
 if [[ "$1" != "--build-only" && ! -e "$1" ]]; then
