@@ -328,28 +328,32 @@ private:
 
   // Turned: each pixel of the panel's middle takes the canvas pixel nearest to the point turned back onto it. The rim
   // is round, so its darkening is the panel pixel's own; whether a need bar's label lifts it is the canvas pixel's.
-  // In 32 x 32 tiles: a tile's pixels come from a small turned square of the canvas that stays in the cache, where a
-  // whole row's come from a long diagonal that's gone again by the next row (much faster).
+  // A band of rows at a time is made in internal RAM, in 32-pixel tiles (a tile's pixels come from a small turned
+  // square of the canvas that stays in the cache), then copied out to the frame buffer row by row. Written straight
+  // into the frame buffer tile by tile, the turn left the whole cache dirty: each refill of the panel then had to
+  // write it out first, fell behind, and the streaks came back along the rows (2026-11-20).
+  static constexpr int BAND = 16, TILE = 32;
   void turnRows(uint16_t *fb, int ya, int yb) {
+    if (!band) band = (uint16_t *)heap_caps_malloc((size_t)BAND * LCD_WIDTH * 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!band) return;  // (no room: the old frame stays)
     const int32_t c = gWs21RotC, s = gWs21RotS;
-    const int T = 32;
-    for (int ty = ya; ty < yb; ty += T) {
-      const int tyEnd = ty + T < yb ? ty + T : yb;
-      for (int y = ty; y < tyEnd; y++) {  // the black outside the circle, once per row
-        uint16_t *out = fb + (y + WS21_BORDER) * PANEL_SIZE + WS21_BORDER;
+    for (int ty = ya; ty < yb; ty += BAND) {
+      const int tyEnd = ty + BAND < yb ? ty + BAND : yb;
+      for (int y = ty; y < tyEnd; y++) {  // the black outside the circle
+        uint16_t *row = band + (y - ty) * LCD_WIDTH;
         const int x0 = gKnomiRim ? gKnomiRimX0[y] : 0, x1 = gKnomiRim ? gKnomiRimX1[y] : LCD_WIDTH;
-        for (int x = 0; x < x0; x++) out[x] = 0;
-        for (int x = x1; x < LCD_WIDTH; x++) out[x] = 0;
+        if (x0 > 0) memset(row, 0, x0 * 2);
+        if (x1 < LCD_WIDTH) memset(row + x1, 0, (LCD_WIDTH - x1) * 2);
       }
-      for (int tx = 0; tx < LCD_WIDTH; tx += T) {
-        const int txEnd = tx + T < LCD_WIDTH ? tx + T : LCD_WIDTH;
+      for (int tx = 0; tx < LCD_WIDTH; tx += TILE) {
+        const int txEnd = tx + TILE < LCD_WIDTH ? tx + TILE : LCD_WIDTH;
         for (int y = ty; y < tyEnd; y++) {
           const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
           const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : LCD_WIDTH;
           const int i0 = rim ? gKnomiRimI0[y] : 0, i1 = rim ? gKnomiRimI1[y] : LCD_WIDTH;
           const int xa = tx > x0 ? tx : x0, xb = txEnd < x1 ? txEnd : x1;
           if (xa >= xb) continue;
-          uint16_t *out = fb + (y + WS21_BORDER) * PANEL_SIZE + WS21_BORDER;
+          uint16_t *row = band + (y - ty) * LCD_WIDTH;
           const int32_t X2 = 2 * xa + 1 - LCD_WIDTH, Y2 = 2 * y + 1 - LCD_HEIGHT;
           int32_t fu = ((X2 * c + Y2 * s) >> 1) + ((LCD_WIDTH / 2) << 16);
           int32_t fv = ((Y2 * c - X2 * s) >> 1) + ((LCD_HEIGHT / 2) << 16);
@@ -359,15 +363,16 @@ private:
             if ((unsigned)v >= LCD_HEIGHT) v = v < 0 ? 0 : LCD_HEIGHT - 1;
             uint16_t px = _framebuffer[v * LCD_WIDTH + u];
             if ((x < i0 || x >= i1) && !(gKnomiLiftOn && knomiLifted(u >> 1, v >> 1))) px = knomiRimPixel(px, rim[x]);
-            out[x] = px;
+            row[x] = px;
           }
         }
       }
+      for (int y = ty; y < tyEnd; y++)  // out to the frame buffer, a whole row at a time
+        memcpy(fb + (y + WS21_BORDER) * PANEL_SIZE + WS21_BORDER, band + (y - ty) * LCD_WIDTH, LCD_WIDTH * 2);
     }
   }
+  uint16_t *band = nullptr;  // internal RAM
 
-
-  // near the edge: darkened by the rim, unless a need bar's label is over the shadow there (its 2 x 2 cell)
   static inline uint16_t edge(uint16_t c, const uint8_t *rim, int x, int y) {
     return gKnomiLiftOn && knomiLifted(x >> 1, y >> 1) ? c : knomiRimPixel(c, rim[x]);
   }
