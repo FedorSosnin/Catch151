@@ -7,7 +7,7 @@ Wi-Fi updates from the same place.
 ## Contents
 
 - `knomi/index.html`: the page. One button installs and updates.
-- `knomi/img/`: its photo (`docs/images/v2/knomi-gameboys.gif` as WebM and MP4 videos, a fifth of the size, and a still), and the Poké Ball for the steps.
+- `knomi/img/`: its photo (`docs/images/v2/knomi-on-stand.gif`, the Knomi in its case on its stand, as WebM and MP4 videos, a fifth of the size, and a still), and the Poké Ball for the steps.
 - `knomi/brand/`: the CATCH 151 FOR KNOMI sign and the icons, copied from `tools/assets/brand/`.
 - `knomi/manifest.json`: ESP Web Tools' config, pointing at the firmware.
 - `knomi/firmware/`: the firmware, and the sprites packed for the Knomi's flash.

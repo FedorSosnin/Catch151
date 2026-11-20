@@ -17,8 +17,8 @@
 
 | | |
 |:--:|:--:|
-| <img src="Catch151/docs/images/v2/crt-cave.webp" width="404" alt="Catch 151 for Mac with its CRT screen, in its Poké Ball ring: Moltres flying through the Cave as the ground slides by, with Pikachu visiting"> | <img src="Catch151/docs/images/v2/knomi-gameboys.gif" width="360" alt="Catch 151 on a BTT Knomi V2 in its 3D-printed Poké Ball case, on a desk beside two Game Boys: Gengar walking past the haunted Mansion"> |
-| **On your computer**<br><sub>Mac, Windows and the browser, with the CRT screen</sub> | **On the Knomi V2**<br><sub>its real round screen, in a 3D-printed Poké Ball</sub> |
+| <img src="Catch151/docs/images/v2/crt-cave.webp" width="404" alt="Catch 151 for Mac with its CRT screen, in its Poké Ball ring: Moltres flying through the Cave as the ground slides by, with Pikachu visiting"> | <img src="Catch151/docs/images/v2/knomi-on-stand.gif" width="360" alt="Catch 151 on a BTT Knomi V2 in its 3D-printed case, on its magnetic stand on a desk: a Pokémon walking through the Forest"> |
+| **On your computer**<br><sub>Mac, Windows and the browser, with the CRT screen</sub> | **On the Knomi V2**<br><sub>its real round screen, in its own 3D-printed case</sub> |
 
 **No Knomi? [Play it in your browser](https://catch151.3dprintsos.com)** on a computer, phone or tablet, or get the [Mac app](#catch-151-for-mac) or the [Windows app](#catch-151-for-windows). **CRT effect:** each scanline a soft beam, a warm glow, a slightly curved glass for that nostalgia look.
 
@@ -456,20 +456,51 @@ On version 1.30 or older, **Update** could fail while buddies were connected thr
 
 ## 3D-printed case
 
-A Poké Ball case for the Knomi, ready to print in three colors. It's a remix: the front half comes from [Knomi V2 Creality K1 wall holder / table stand](https://www.printables.com/model/850244-knomi-v2-creality-k1-wall-holder-table-stand) by [Nastra](https://www.printables.com/@Nastra_283431) on Printables, and the button and rounded back are new. Both the original and this remix are shared under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): free to print, share and remix with credit, but not to sell. Download [`PokeKnomiGochi-case.3mf`](Catch151/print/PokeKnomiGochi-case.3mf).
+An original case for the Knomi V2, made for Catch 151: a round puck 48.6 mm across and 12.1 mm thick, in Poké Ball colors, with the glass flush with the face. Four magnets in its back hold it on a half-ball stand at 45° on your desk. No screws, and no supports to print.
+
+<p align="center"><img src="Catch151/docs/images/v2/knomi-with-stand.jpg" width="720" alt="The case beside its magnetic half-ball stand"></p>
 
 | | |
 |:--:|:--:|
-| ![The printed case in hand, showing V2's starter screen](Catch151/docs/images/v2/knomi-in-hand.jpg) | ![The printed case on a desk, showing V2's starter screen](Catch151/docs/images/v2/knomi-on-desk.jpg) |
-| **Printed and in hand** | **On the desk** |
-| ![The finished case](Catch151/docs/images/case.png) | ![The parts laid out by color](Catch151/docs/images/case-parts.png) |
-| **Render** | **Parts in their recommended colors** |
+| ![The case in hand, showing the game](Catch151/docs/images/v2/knomi-in-hand.jpg) | ![The case flat on a desk with its USB-C cable in, Pikachu at night on the screen](Catch151/docs/images/v2/knomi-on-desk.jpg) |
+| **In hand** | **Flat on the desk** |
+| ![The case taken apart: bezel, the Knomi, the cup and the stand](Catch151/docs/images/case.png) | ![The parts on the print plate](Catch151/docs/images/case-parts.png) |
+| **The parts** | **Ready to print** |
 
-| Part | Recommended color | Size |
+- **Glass flush with the face:** the Knomi rests on its screen's own lip, and the bezel is exactly as thick as the glass stands above it.
+- **No screws or inserts:** the red bezel twists on about 25° clockwise and locks, with grip ridges round its edge.
+- **A big BOOT key** in the side, right under your fingers (the game uses it, and the web installer sometimes needs it held).
+- **Room for the Wi-Fi antenna:** it sticks flat inside the back, with its cable coiled behind the board.
+- **Magnetic stand:** four 6 × 2 mm magnets in the back hold it on a white half-ball with a 45° flat, cable to the left or to the right.
+
+**Download it from [MakerWorld](https://makerworld.com/en/models/3651088-catch-151-knomi-v2-case-with-magnetic-stand) or [Printables](https://www.printables.com/model/1923425-catch-151-knomi-v2-case-with-magnetic-stand).** You get:
+
+- a 3MF for Bambu Studio, OrcaSlicer and Snapmaker Orca, and one for PrusaSlicer, with every part on its own in its color and the cup's black band already set
+- an STL of each part for any other slicer, already the right way up (for the band, add a change to black at the cup's layer at 6.4 mm, with 0.2 mm layers)
+- a STEP of the whole case, to remix in Fusion 360 or any CAD
+
+MakerWorld also has a print profile ready to send to a Bambu Lab printer, on three plates: the bezel and BOOT key, the cup with its band, and the stand.
+
+| Part | Color | Prints |
 |---|---|---|
-| Front ring and button | Red (`#D41721`) | 55 × 55 × 6 mm |
-| Ball | White (`#FFFFFF`) | 55 × 55 × 29.3 mm |
-| Band | Black (`#111111`) | 53.1 × 55 × 5.3 mm |
+| Bezel | Red | Face down, so the face gets the plate's texture |
+| BOOT key | Red | Flat on its bottom |
+| Cup | White, turning black at the layer at 6.4 mm for the band | Flat back down |
+| Stand | White | Flat face down |
+
+0.2 mm layers, 15% grid infill, 2 walls, no supports, PLA at 220 °C on a textured plate. All four parts fit on one plate. You also need **8 disc magnets, 6 × 2 mm** (4 in the case, 4 in the stand) and a drop of super glue.
+
+I print it with Polymaker, my channel's sponsor: [Panchroma Galaxy PLA](https://shop.polymaker.com/discount/FEDORSOSNIN?redirect=%2Fproducts%2Fgalaxy-pla%3Fref%3Dsuperfiliate-FEDORSOSNIN%26utm_source%3Dsuperfiliate%26utm_medium%3Dinfluencer%26utm_campaign%3DFEDORSOSNIN) in red for the bezel and key and in black for the band, and [Panchroma Matte PLA](https://shop.polymaker.com/discount/FEDORSOSNIN?redirect=%2Fproducts%2Fpanchroma-matte%3Fref%3Dsuperfiliate-FEDORSOSNIN%26utm_source%3Dsuperfiliate%26utm_medium%3Dinfluencer%26utm_campaign%3DFEDORSOSNIN) in Cotton White for the cup and stand. Code **FEDORSOSNIN** takes 15% off your first order. These are affiliate links: buying through them supports the channel and this project at no extra cost to you.
+
+**Putting it together:**
+
+1. Slide the BOOT key in from inside the cup, wings inside.
+2. Coil the antenna cable in the middle of the board's back (not under the two tall black connectors at the sides), and stick the flat antenna to the floor of the cup, across the middle.
+3. Drop the Knomi in, USB-C port into the opening.
+4. Put the bezel on and turn it about 25° clockwise until it stops.
+5. Glue the 4 case magnets in with the same pole facing out. Once they've set, snap a loose magnet onto each one, put a drop of glue in each stand pocket, and press the stand on through a sheet of baking paper, so the stand's magnets go in the right way round.
+
+It's an original design by 3D Print SOS (Fedor Sosnin), shared under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): print it, share it and remix it with credit, but please don't sell it.
 
 ## Going back to the stock firmware
 
@@ -537,7 +568,6 @@ Everything is in the [`Catch151`](Catch151) folder:
 | [`tools/`](Catch151/tools) | The sprite packs and the scripts that make them, the Pokédex data and the release scripts |
 | [`test/`](Catch151/test) | The game-rule tests that run without a board |
 | [`docs/`](Catch151/docs) | How it all works, the charts and the screenshots |
-| [`print/`](Catch151/print) | The 3D-printed case |
 
 ## Catch 151 for Web
 
@@ -610,7 +640,7 @@ To build it yourself, run `windows/build.sh` on a Mac or Linux with [llvm-mingw]
 - **Each sprite's artists**, and what the game changed and added: the [Catch 151 Dex](https://fedorsosnin.github.io/Catch151/sprites/).
 - **Full list:** [`CREDITS.md`](Catch151/CREDITS.md).
 
-The source code is [MIT licensed](LICENSE). The sprites and Pokémon names are not covered by that license and are for **personal, non-commercial use only**. The 3D-printed case is a remix shared under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/); see [`CREDITS.md`](Catch151/CREDITS.md).
+The source code is [MIT licensed](LICENSE). The sprites and Pokémon names are not covered by that license and are for **personal, non-commercial use only**. The 3D-printed case is an original design shared under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/); see [`CREDITS.md`](Catch151/CREDITS.md).
 
 This is an unofficial fan project, not affiliated with or endorsed by Nintendo, Game Freak or The Pokémon Company. Pokémon and all related names are trademarks of their respective owners.
 

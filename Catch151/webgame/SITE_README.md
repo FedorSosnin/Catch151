@@ -77,15 +77,15 @@ You meet players of the browser version, the [Mac and Windows apps](https://gith
 
 ## Want a real one?
 
-<p align="center"><img src="images/knomi-gameboys.gif" alt="Catch 151 on a BTT Knomi V2 in its 3D-printed Poké Ball case, beside two Game Boys: Gengar walking past the haunted Mansion" width="720"></p>
+<p align="center"><img src="images/knomi-on-stand.gif" alt="Catch 151 on a BTT Knomi V2 in its 3D-printed case, on its magnetic stand on a desk: a Pokémon walking through the Forest" width="720"></p>
 
-<p align="center"><img src="images/knomi-in-hand.jpg" alt="Catch 151 running on a BTT Knomi V2 in a 3D-printed Poké Ball case" width="360"> <img src="images/knomi-on-desk.jpg" alt="The Knomi in its Poké Ball case on a desk, showing the starter screen" width="360"></p>
+<p align="center"><img src="images/knomi-in-hand.jpg" alt="Catch 151 running on a BTT Knomi V2 in its 3D-printed case, in hand" width="360"> <img src="images/knomi-on-desk.jpg" alt="The Knomi in its 3D-printed case flat on a desk, Pikachu at night on the screen" width="360"></p>
 
-The same game runs on the **BIGTREETECH Knomi V2**, a little round touchscreen made for 3D printers. Put it in a 3D-printed Poké Ball case and you have a pocket tamagotchi that tilts, buzzes and meets the browser, Mac and Windows players as buddies.
+The same game runs on the **BIGTREETECH Knomi V2**, a little round touchscreen made for 3D printers. Put it in its 3D-printed case and you have a pocket tamagotchi that tilts, buzzes and meets the browser, Mac and Windows players as buddies.
 
 1. **Get a Knomi V2:** [BIGTREETECH Knomi V2](https://www.awin1.com/pclick.php?p=43148197656&a=2034499&m=95665). This is an affiliate link from [deals.3dprintsos.com](https://deals.3dprintsos.com): buying through it supports this project at no extra cost to you.
 2. **Install the game** from your browser with the [web installer](https://fedorsosnin.github.io/Catch151/) (Chrome or Edge, a USB-C data cable). After that it updates itself over Wi-Fi.
-3. **Print the case:** download [`PokeKnomiGochi-case.3mf`](https://github.com/FedorSosnin/Catch151/raw/main/Catch151/print/PokeKnomiGochi-case.3mf), ready to print in red, white and black. It's a remix of [Knomi V2 Creality K1 wall holder / table stand](https://www.printables.com/model/850244-knomi-v2-creality-k1-wall-holder-table-stand) by [Nastra](https://www.printables.com/@Nastra_283431), with a new button and rounded back, shared under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): free to print and remix with credit, not to sell.
+3. **Print the case:** an original design in Poké Ball colors, with the glass flush with the face, a twist-on bezel and a magnetic stand that holds it at 45° on your desk. Download it from [MakerWorld](https://makerworld.com/en/models/3651088-catch-151-knomi-v2-case-with-magnetic-stand) or [Printables](https://www.printables.com/model/1923425-catch-151-knomi-v2-case-with-magnetic-stand): red, white and a black band, no supports. You'll also need 8 disc magnets, 6 × 2 mm. It's shared under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): free to print and remix with credit, not to sell.
 
 More in the [Catch 151 README](https://github.com/FedorSosnin/Catch151#3d-printed-case).
 

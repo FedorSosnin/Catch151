@@ -34,12 +34,7 @@ built from the packs by `tools/make_sprite_gallery.py`.
 
 ## 3D-printed case
 
-| Part | Source |
-|---|---|
-| **Front half** | [Knomi V2 Creality K1 wall holder / table stand](https://www.printables.com/model/850244-knomi-v2-creality-k1-wall-holder-table-stand) by [Nastra](https://www.printables.com/@Nastra_283431) on Printables |
-| **Button and rounded back** | Fedor Sosnin |
-
-The original model is licensed [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/), and this remix is shared under the same license: print, share and remix it with credit, but don't sell it. The changes are the new button and the rounded back.
+The case and its stand are an original design by Fedor Sosnin (3D Print SOS), shared under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): print, share and remix them with credit, but don't sell them. Download them from [MakerWorld](https://makerworld.com/en/models/3651088-catch-151-knomi-v2-case-with-magnetic-stand) or [Printables](https://www.printables.com/model/1923425-catch-151-knomi-v2-case-with-magnetic-stand).
 
 ## Software / hardware
 
