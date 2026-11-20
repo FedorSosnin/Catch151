@@ -509,6 +509,7 @@ volatile bool gTouchIrq = false;
 void IRAM_ATTR touchIsr() {
   gTouchIrq = true;
 #ifdef BOARD_WS21
+  if (!gWs21TouchEdge) gWs21TouchEdgeMs = millis();
   gWs21TouchEdge = true;  // (its touch task reads the chip: ws21_hal.h)
 #endif
 }
@@ -1077,6 +1078,10 @@ void handleSerial() {
     gfx->profPrint();
     gProfRenders = gProfRenderMs = 0;
     gProfFrom = now;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("TOUCHLOG ")) {  // 1: each press and lift logged, with its delays (testing)
+    touch.log = line.substring(9).toInt() != 0;
     Serial.println("DONE");
     return;
   } else if (line.startsWith("SPLIT ")) {  // 1: the other core makes half of each frame (testing)

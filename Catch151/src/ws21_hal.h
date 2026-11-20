@@ -605,7 +605,8 @@ private:
 // a frame is being drawn. Read only by the game's loop, a tap that came and went within one frame (on this board a
 // frame took up to 200 ms) was never seen (Fedor: "the response is sluggish. Unplayable.", 2026-11-20).
 extern volatile bool gTouchIrq;          // the sketch's: a touch to read
-inline volatile bool gWs21TouchEdge = false;  // the INT line fell (the sketch's touchIsr())
+inline volatile bool gWs21TouchEdge = false;  // the INT line fell (the sketch's touchIsr())...
+inline volatile uint32_t gWs21TouchEdgeMs = 0;  // ...at this millis(), the first time since the touch task looked
 class KnomiTouch {
 public:
   void setPins(int, int irq) { intPin = irq; }  // its reset is on the expander (EXIO2)
@@ -622,11 +623,20 @@ public:
     gExio.write(EXIO_TP_RST, false);
     delay(10);
     gExio.write(EXIO_TP_RST, true);
-    delay(50);
-    // auto-sleep off, so the chip always answers over I2C (as Waveshare's demo: 0xFE, DisAutoSleep). TODO(bring-up):
-    // the Knomi's CST816S also sets no gestures and INT on touch and release (0xEC, 0xFA): try those if taps are missed
+    delay(100);  // (50 was too soon for it to take its setup, perhaps: with only 0xFE written, taps went sluggish a
+                 // few seconds after each start, as if it dozed off. The Knomi's CST816S waits 100 ms)
+    // as the Knomi's: no gestures (with double taps on, the chip holds a tap back to see if a second one follows),
+    // INT on touch, on each change and on release, no auto-reset, and no auto-sleep (Waveshare's demo: 0xFE only)
+    writeReg(0xEC, 0x00);
+    writeReg(0xFA, 0x60);
+    writeReg(0xFB, 0x00);
+    writeReg(0xFC, 0x00);
     writeReg(0xFE, 0x01);
+    Serial.printf("touch: EC=%02X FA=%02X FB=%02X FC=%02X FE=%02X\n", readReg(0xEC), readReg(0xFA), readReg(0xFB),
+                  readReg(0xFC), readReg(0xFE));
   }
+  // the console's TOUCHLOG: each press and lift as the chip saw it, and when the game took it
+  bool log = false;
   void setMaxCoordinates(int, int) {}  // fixed: the panel is 480
   void setMirrorXY(bool, bool) {}      // the rotation is handled in getPoint()
 
@@ -656,9 +666,11 @@ public:
       qh = (qh + 1) % QN;
       qn--;
     } else {
-      e = { sx, sy, sDown };
+      e = { sx, sy, sDown, 0 };
     }
     portEXIT_CRITICAL(&mux);
+    if (log && e.ms) Serial.printf("touch: %s read by the game %lu ms after the chip showed it\n", e.down ? "press" : "lift",
+                                   (unsigned long)(millis() - e.ms));
     if (!e.down) return 0;
     *x = e.x;
     *y = e.y;
@@ -666,7 +678,7 @@ public:
   }
 
 private:
-  struct Ev { int16_t x, y; bool down; };
+  struct Ev { int16_t x, y; bool down; uint32_t ms; };
   static constexpr int QN = 8;
 
   static void samplerTask(void *arg) {
@@ -674,6 +686,7 @@ private:
     for (;;) {
       vTaskDelay(pdMS_TO_TICKS(8));
       if (!gWs21TouchEdge && !gTouchIrq && !t->sDown && !(t->intPin >= 0 && digitalRead(t->intPin) == LOW)) continue;
+      if (gWs21TouchEdge) t->edgeMs = gWs21TouchEdgeMs;
       gWs21TouchEdge = false;
       int16_t x = 0, y = 0;
       const bool down = t->readChip(&x, &y);
@@ -685,13 +698,17 @@ private:
           t->qh = (t->qh + 2) % QN;
           t->qn -= 2;
         }
-        t->q[(t->qh + t->qn) % QN] = { x, y, down };
+        t->q[(t->qh + t->qn) % QN] = { x, y, down, millis() ? millis() : 1 };
         t->qn++;
       }
       t->sDown = down;
       if (down) t->sx = x, t->sy = y;
       portEXIT_CRITICAL(&t->mux);
       if (changed) gTouchIrq = true;  // (handleTouch() reads when told to, or while a finger is down)
+      if (changed && t->log) {
+        Serial.printf("touch: chip shows %s at %lu, %lu ms after its INT\n", down ? "press" : "lift",
+                      (unsigned long)millis(), (unsigned long)(millis() - t->edgeMs));
+      }
     }
   }
 
@@ -718,9 +735,16 @@ private:
     wire->write(v);
     wire->endTransmission();
   }
+  int readReg(uint8_t r) {
+    wire->beginTransmission(addr);
+    wire->write(r);
+    if (wire->endTransmission(false) != 0 || wire->requestFrom(addr, (uint8_t)1) != 1) return -1;
+    return wire->read();
+  }
   TwoWire *wire = nullptr;
   uint8_t addr = TOUCH_I2C_ADDR;
   int intPin = -1;
+  uint32_t edgeMs = 0;
   TaskHandle_t sampler = nullptr;
   portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
   Ev q[QN];

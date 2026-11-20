@@ -171,7 +171,9 @@ What the code uses:
 - **Dimming:** only while the pet sleeps, as on computers (Fedor). The Knomi still dims when left alone.
 - **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas and turned with
   the picture. A small task on the other core reads it every 8 ms while a finger is down and queues each press and
-  lift, so a quick tap isn't lost while a frame is drawn.
+  lift, so a quick tap isn't lost while a frame is drawn. The chip gets the Knomi's setup: no gestures (a double-tap
+  check holds taps back), INT on touch, change and release, no auto-reset, no auto-sleep. Waveshare's demo only turns
+  auto-sleep off; with just that, taps went sluggish a few seconds after each start (Fedor).
 - **IMU:** SensorLib's `SensorQMI8658`, accelerometer only, ±2 g at 62.5 Hz. Its axes are a quarter turn from the
   panel's (`WS21_ACC_MAP`), found from Fedor's video.
 - **Clock:** the Knomi's clock (Wi-Fi time, time zones), plus SensorLib's `SensorPCF85063` to keep UTC across restarts.
@@ -218,6 +220,7 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `PCLK n` | The pixel clock in MHz. |
 | `PCLKEDGE 0` / `PCLKEDGE 1` | Data on the rising or falling edge. |
 | `REFILLCORE 0` / `REFILLCORE 1` | The core the panel's refill runs on. Saved; used from the next start. |
+| `TOUCHLOG 1` | Each press and lift, with how long the chip and the game took to see it. |
 | `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both (faster, but the lines come back). |
 | `LCD` | Refreshes since the last `LCD`, and the longest gap between two. |
 | `HOLD n` | The game stops for n seconds; only the panel's refill runs. |
