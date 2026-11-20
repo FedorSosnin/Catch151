@@ -1565,7 +1565,8 @@ static void v2ZoneBack(uint8_t zone) {
 #define V2_LBL_H 42
 #define V2_GB_KEY 0x3A000000
 #define V2_GB_LED_X 31  // the power light, on the bezel left of the screen
-#define V2_GB_LED_Y 214
+#define V2_GB_LED_Y 172  // (above the page arrow, its glow too: the Games' first page has a left arrow since the leaderboard, and
+                         // it hid the light, Fedor: "lets move it up above it so it can been seen". The arrow's rim reaches 198)
 static void v2PaintGb(int) {
   const uint16_t body = sc565(0xCDC9C2), bodyL = sc565(0xE2DED8), bodyD = sc565(0xA39E97), ink = sc565(0x1B1B25);
   gfx->fillScreen(body);
