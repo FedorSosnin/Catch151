@@ -83,8 +83,7 @@ bool autoUpdate = true;
 // ST7701S over 16-bit RGB; its setup commands go once over a 3-wire SPI whose CS and reset are on the TCA9554 IO
 // expander (ws21_hal.h)
 Ws21InitBus *bus = new Ws21InitBus();
-Ws21Panel *panel = new Ws21Panel(PANEL_SIZE, PANEL_SIZE, ws21RgbPanel(), 0 /*rotation*/, false /*auto flush*/, bus,
-                                 GFX_NOT_DEFINED /*reset: on the expander*/, WS21_INIT_OPS, sizeof(WS21_INIT_OPS));
+Ws21Panel *panel = new Ws21Panel(bus);  // two frame buffers, swapped between refreshes
 Ws21Canvas *gfx = new Ws21Canvas(panel);
 
 KnomiTouch touch;
@@ -700,7 +699,7 @@ void loop() {
   v2KbTyped();      // ...and what's typed on its keyboard, while one of the game's keyboards is open (menus_v2.h)
 #endif
   v2RepelTick(now);  // V2: every second of a minigame played counts toward a Repel
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
+#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST) && !defined(BOARD_WS21)
   autoRotateTick(now);
 #endif
   visitTick(now);
@@ -2682,8 +2681,9 @@ void quitGame() {
 }
 
 // tilt zero: whatever it reads now is "straight"
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
-// the screen follows gravity, except with a finger on it or when tilting is part of the game
+#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST) && !defined(BOARD_WS21)
+// the screen follows gravity, except with a finger on it or when tilting is part of the game (not on the Waveshare 2.1,
+// a handheld with one way up: turned, its flush takes 4 times as long)
 void autoRotateTick(uint32_t now) {
   static uint32_t last = 0;
   static RotFilter filter;

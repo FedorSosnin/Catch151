@@ -54,11 +54,20 @@ public:
 private:
   struct Entry { char name[16]; uint32_t off, raw, comp; };
   PakFile inflate(const Entry &e) {
-    uint8_t *src = (uint8_t *)ps_malloc(e.comp);
     uint8_t *dst = (uint8_t *)ps_malloc(e.raw);
     // ~11 KB of state: on the heap, doesn't fit on the loop stack
     tinfl_decompressor *d = (tinfl_decompressor *)ps_malloc(sizeof(tinfl_decompressor));
+#ifdef BOARD_WS21
+    // Mapped, not read: a read stops the cache for each chunk, and with it the refill of the RGB panel's bounce
+    // buffers, so the picture jumps. Through the map it's ordinary memory reads (and no copy in PSRAM).
+    esp_partition_mmap_handle_t map = 0;
+    const void *mapped = nullptr;
+    bool ok = dst && d && esp_partition_mmap(part, e.off, e.comp, ESP_PARTITION_MMAP_DATA, &mapped, &map) == ESP_OK;
+    const uint8_t *src = (const uint8_t *)mapped;
+#else
+    uint8_t *src = (uint8_t *)ps_malloc(e.comp);
     bool ok = src && dst && d && esp_partition_read(part, e.off, src, e.comp) == ESP_OK;
+#endif
     if (ok) {
       tinfl_init(d);
       size_t in = e.comp, out = e.raw;
@@ -66,7 +75,11 @@ private:
                                          TINFL_FLAG_PARSE_ZLIB_HEADER | TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
       ok = st == TINFL_STATUS_DONE && out == e.raw;
     }
+#ifdef BOARD_WS21
+    if (mapped) esp_partition_munmap(map);
+#else
     free(src);
+#endif
     free(d);
     if (!ok) { free(dst); return PakFile(); }
     return PakFile(dst, e.raw);

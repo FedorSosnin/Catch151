@@ -33,7 +33,8 @@
 #define LCD_R3 18
 #define LCD_R4 17
 // timings, as Waveshare's demo: 18 MHz, about 66 frames a second
-#define LCD_PCLK_HZ 18000000
+#define LCD_PCLK_HZ 16000000  // as Waveshare's Arduino demo (18 in the IDF one): 58 refreshes a second, and less
+                               // PSRAM bandwidth for them, so the picture drifts less when the game is busy
 #define LCD_PCLK_NEG 0
 #define LCD_HSYNC_POL 1  // (1: idle high, esp_lcd's default, which the demo keeps)
 #define LCD_HSYNC_PW 8
@@ -43,7 +44,8 @@
 #define LCD_VSYNC_PW 3
 #define LCD_VSYNC_BP 8
 #define LCD_VSYNC_FP 8
-#define LCD_BOUNCE_PX (10 * PANEL_SIZE)  // the demo's bounce buffer: 10 lines in internal RAM
+#define LCD_BOUNCE_PX (20 * PANEL_SIZE)  // bounce buffers: 20 lines each in internal RAM (2 x 19 KB; the demo has 10),
+                                         // so a short stall of PSRAM (a flash read, a busy frame) doesn't show
 
 // the panel's setup commands: 3-wire SPI (9-bit) on GPIO 1 and 2, its CS on the expander. GPIO 1 and 2 are also
 // the microSD's CMD and CLK; the game doesn't use the card

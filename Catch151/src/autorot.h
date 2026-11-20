@@ -12,7 +12,8 @@
 #ifdef BOARD_HOST
 inline uint8_t gPanelRot = 0;  // a window doesn't rotate
 #elif defined(BOARD_WS21)
-inline uint8_t gPanelRot = 0;  // TODO(bring-up): the way up in Fedor's case (rotation 0 is also the cheapest flush)
+inline uint8_t gPanelRot = 0;  // fixed, no turning with gravity: a handheld with one way up (turned, the flush takes 4
+                               // times as long: 350 ms, not 86). The console's ROT still turns it, for testing
 #else
 inline uint8_t gPanelRot = 1;  // at boot: in the right hand, with the cable on the left
 #endif

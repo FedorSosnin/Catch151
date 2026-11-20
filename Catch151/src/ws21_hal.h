@@ -3,14 +3,16 @@
 // board. To the game it is a Knomi (BOARD_KNOMI_V2 is also set): the canvas stays 466x466 and touches come in canvas
 // coordinates. docs/WAVESHARE_21.md has the board, the pins and the bring-up plan.
 //
-// UNTESTED: written before the boards arrived. It compiles; nothing here has driven a real panel yet. Each guess is
-// marked TODO(bring-up).
+// First run on a board on 2026-11-20: it boots, the panel lights and all its I2C parts answer. What is still to be
+// checked on the board is marked TODO(bring-up).
 #include <Arduino.h>
 #include <Wire.h>
 #include "Arduino_GFX_Library.h"
 #include "pin_config.h"
 #include "autorot.h"
 #include <esp_heap_caps.h>
+#include <esp_lcd_panel_rgb.h>
+#include <esp_lcd_panel_ops.h>
 #include <SensorQMI8658.hpp>
 #include "ws21_exio.h"  // the IO expander: the panel's reset and CS, the touch's reset
 #define KNOMI_RIM_ROWS LCD_HEIGHT  // the rim is made for the 466 canvas, 1:1 (below)
@@ -96,39 +98,120 @@ static const uint8_t WS21_INIT_OPS[] = {
     WRITE_COMMAND_8, 0x29,
     END_WRITE};
 
-// The RGB bus: 16 data lines (RGB565), with the timings and the bounce buffer from Waveshare's demo (pin_config.h).
-// The bounce buffer copies each band of lines from PSRAM to internal RAM before it goes out, so the game's own PSRAM
-// traffic is less likely to make the picture drift.
-static Arduino_ESP32RGBPanel *ws21RgbPanel() {
-  return new Arduino_ESP32RGBPanel(
-    LCD_DE, LCD_VSYNC, LCD_HSYNC, LCD_PCLK,
-    LCD_R0, LCD_R1, LCD_R2, LCD_R3, LCD_R4,
-    LCD_G0, LCD_G1, LCD_G2, LCD_G3, LCD_G4, LCD_G5,
-    LCD_B0, LCD_B1, LCD_B2, LCD_B3, LCD_B4,
-    LCD_HSYNC_POL, LCD_HSYNC_FP, LCD_HSYNC_PW, LCD_HSYNC_BP,
-    LCD_VSYNC_POL, LCD_VSYNC_FP, LCD_VSYNC_PW, LCD_VSYNC_BP,
-    LCD_PCLK_NEG, LCD_PCLK_HZ, false /*little endian*/, 0 /*DE idle low*/, 0 /*PCLK idle low*/, LCD_BOUNCE_PX);
-}
-
-// The panel, with the backlight the game sets (0 off .. 255 full) as PWM on LCD_BL (a MOSFET: high = on)
-class Ws21Panel : public Arduino_RGB_Display {
+// The panel: the ST7701S's setup over the 3-wire bus, then the ESP32-S3's RGB peripheral, reading out two frame
+// buffers in PSRAM in turn. The game's next frame goes into the one not on show, which takes over at the start of
+// the next refresh: nothing is ever shown half drawn (with one buffer it tore). Arduino_GFX's RGB panel keeps one
+// buffer and can't be told otherwise, so this talks to esp_lcd itself. The timings are Waveshare's (pin_config.h).
+// The bounce buffers copy each band of lines from PSRAM to internal RAM before it goes out, so the game's own PSRAM
+// traffic is less likely to make the picture drift. The backlight is PWM on LCD_BL (a MOSFET: high = on).
+class Ws21Panel : public Arduino_G {
 public:
-  using Arduino_RGB_Display::Arduino_RGB_Display;
+  explicit Ws21Panel(Ws21InitBus *b) : Arduino_G(PANEL_SIZE, PANEL_SIZE), bus(b) {}
+
+  bool begin(int32_t = GFX_NOT_DEFINED) override {
+    if (handle) return true;
+    if (!bus->begin()) return false;
+    bus->sendCommand(0x01);  // a software reset after the expander's, as Arduino_GFX's RGB display does
+    delay(120);
+    bus->batchOperation(WS21_INIT_OPS, sizeof(WS21_INIT_OPS));
+    esp_lcd_rgb_panel_config_t c = {};
+    c.clk_src = LCD_CLK_SRC_DEFAULT;
+    c.timings.pclk_hz = LCD_PCLK_HZ;
+    c.timings.h_res = c.timings.v_res = PANEL_SIZE;
+    c.timings.hsync_pulse_width = LCD_HSYNC_PW;
+    c.timings.hsync_back_porch = LCD_HSYNC_BP;
+    c.timings.hsync_front_porch = LCD_HSYNC_FP;
+    c.timings.vsync_pulse_width = LCD_VSYNC_PW;
+    c.timings.vsync_back_porch = LCD_VSYNC_BP;
+    c.timings.vsync_front_porch = LCD_VSYNC_FP;
+    c.timings.flags.hsync_idle_low = LCD_HSYNC_POL == 0;
+    c.timings.flags.vsync_idle_low = LCD_VSYNC_POL == 0;
+    c.timings.flags.pclk_active_neg = LCD_PCLK_NEG;
+    c.data_width = 16;
+    c.bits_per_pixel = 16;
+    c.num_fbs = 2;
+    c.bounce_buffer_size_px = LCD_BOUNCE_PX;
+    c.dma_burst_size = 64;
+    c.hsync_gpio_num = LCD_HSYNC;
+    c.vsync_gpio_num = LCD_VSYNC;
+    c.de_gpio_num = LCD_DE;
+    c.pclk_gpio_num = LCD_PCLK;
+    c.disp_gpio_num = -1;
+    static const int8_t DATA[16] = { LCD_B0, LCD_B1, LCD_B2, LCD_B3, LCD_B4, LCD_G0, LCD_G1, LCD_G2,
+                                     LCD_G3, LCD_G4, LCD_G5, LCD_R0, LCD_R1, LCD_R2, LCD_R3, LCD_R4 };
+    for (int i = 0; i < 16; i++) c.data_gpio_nums[i] = DATA[i];
+    c.flags.fb_in_psram = 1;
+    if (esp_lcd_new_rgb_panel(&c, &handle) != ESP_OK) {
+      handle = nullptr;
+      return false;
+    }
+    esp_lcd_rgb_panel_event_callbacks_t cb = {};
+    cb.on_frame_buf_complete = frameDone;
+    esp_lcd_rgb_panel_register_event_callbacks(handle, &cb, this);
+    esp_lcd_panel_reset(handle);
+    esp_lcd_panel_init(handle);
+    void *f0 = nullptr, *f1 = nullptr;
+    esp_lcd_rgb_panel_get_frame_buffer(handle, 2, &f0, &f1);
+    fbs[0] = (uint16_t *)f0;
+    fbs[1] = (uint16_t *)f1;
+    if (!fbs[0] || !fbs[1]) return false;
+    for (uint16_t *f : fbs) memset(f, 0, (size_t)PANEL_SIZE * PANEL_SIZE * 2);  // the border is black, and stays so
+    return true;
+  }
+
+  // The buffer to draw the next frame into: the one not on show. Right after a swap the old one may still be read out
+  // until the refresh that was using it ends, so it waits for that (a frame is 17 ms; the game rarely asks that soon).
+  uint16_t *backBuffer() {
+    if (!fbs[0]) return nullptr;
+    if (pending) {
+      uint32_t t0 = millis();
+      while (frames == askedAt && millis() - t0 < 50) vTaskDelay(1);
+      pending = false;
+    }
+    return fbs[!shown];
+  }
+  // shows fb from the next refresh on (no copy: esp_lcd switches buffers when given one of its own)
+  void present(uint16_t *fb) {
+    esp_lcd_panel_draw_bitmap(handle, 0, 0, PANEL_SIZE, PANEL_SIZE, fb);
+    askedAt = frames;  // (read after the switch was asked for: the next refresh to start reads the new one)
+    shown = fb == fbs[1];
+    pending = true;
+  }
+  uint16_t *frontBuffer() const { return fbs[shown]; }
+
   void setBrightness(uint8_t v) {
     if (!blReady) blReady = ledcAttach(LCD_BL, LCD_BL_PWM_HZ, 8);
     if (blReady) ledcWrite(LCD_BL, v);  // TODO(bring-up): no flicker at low levels (the IDF demo uses 5 kHz)
   }
+
+  // (the canvas draws into the frame buffers itself: nothing comes through these)
+  void drawBitmap(int16_t, int16_t, uint8_t *, int16_t, int16_t, uint16_t, uint16_t) override {}
+  void drawIndexedBitmap(int16_t, int16_t, uint8_t *, uint16_t *, int16_t, int16_t, int16_t) override {}
+  void draw3bitRGBBitmap(int16_t, int16_t, uint8_t *, int16_t, int16_t) override {}
+  void draw16bitRGBBitmap(int16_t, int16_t, uint16_t *, int16_t, int16_t) override {}
+  void draw24bitRGBBitmap(int16_t, int16_t, uint8_t *, int16_t, int16_t) override {}
+
 private:
+  // the RGB driver's interrupt, each time it has sent a whole buffer: from then on it reads the one last presented
+  static bool IRAM_ATTR frameDone(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t *, void *ctx) {
+    ((Ws21Panel *)ctx)->frames++;
+    return false;
+  }
+  Ws21InitBus *bus;
+  esp_lcd_panel_handle_t handle = nullptr;
+  uint16_t *fbs[2] = { nullptr, nullptr };
+  bool shown = 0;  // which one is on show
+  bool pending = false;
+  volatile uint32_t frames = 0;
+  uint32_t askedAt = 0;
   bool blReady = false;
 };
 
 void pressOverlay();  // the sketch's press preview, drawn over every frame
 
-// The 466x466 canvas in PSRAM. flush() copies it into the panel's frame buffer (also PSRAM, which the RGB peripheral
-// reads out by itself all the time), in the middle, with the current rotation and the Knomi's soft rim
-// (knomi_rim.h) made for the canvas's own circle.
-// TODO(bring-up): this writes into the frame buffer while it is being shown. If that tears, use two frame buffers
-// (esp_lcd's num_fbs = 2, swapped on vsync), as Waveshare's Arduino demo does.
+// The 466x466 canvas in PSRAM. flush() copies it into the panel's frame buffer not on show (also PSRAM), in the
+// middle, with the current rotation and the Knomi's soft rim (knomi_rim.h) made for the canvas's own circle, then
+// shows it.
 class Ws21Canvas : public Arduino_Canvas {
 public:
   Ws21Canvas(Ws21Panel *out) : Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, out), panel(out) {}
@@ -136,16 +219,14 @@ public:
   // the RGB panel keeps its own pixel clock (LCD_PCLK_HZ): the speed the sketch asks for is the Knomi's SPI's
   bool begin(int32_t = GFX_NOT_DEFINED) override {
     if (!Arduino_Canvas::begin(GFX_NOT_DEFINED)) return false;
-    fb = panel->getFramebuffer();
-    if (!fb) return false;
-    memset(fb, 0, (size_t)PANEL_SIZE * PANEL_SIZE * 2);  // the border is black, and stays so
-    panel->flush(true);
+    if (!panel->frontBuffer()) return false;
     knomiRimBegin(LCD_WIDTH);
     return true;
   }
 
   void flush(bool = false) override {
     pressOverlay();
+    uint16_t *fb = panel->backBuffer();
     if (!fb) return;
     const RotBlit r = rotBlit(gPanelRot, PANEL_SIZE);
     const int dx = r.dx;
@@ -167,10 +248,11 @@ public:
       for (; x < x1; x++) out[x * dx] = edge(src[x], rim, x, y);
       for (; x < LCD_WIDTH; x++) out[x * dx] = 0;
     }
-    panel->flush(true);  // out of the CPU's cache into PSRAM, where the panel reads it
+    // (no cache write-back: the bounce buffers are filled by the CPU, through the same cache)
+    panel->present(fb);
   }
 
-  uint16_t *panelBuffer() { return fb; }  // the console's SHOT: the whole 480x480 panel
+  uint16_t *panelBuffer() { return panel->frontBuffer(); }  // the console's SHOT: the whole 480x480 panel
 
 private:
   // near the edge: darkened by the rim, unless a need bar's label is over the shadow there (its 2 x 2 cell)
@@ -178,7 +260,6 @@ private:
     return gKnomiLiftOn && knomiLifted(x >> 1, y >> 1) ? c : knomiRimPixel(c, rim[x]);
   }
   Ws21Panel *panel;
-  uint16_t *fb = nullptr;
 };
 
 // CST820 touch by registers, with the interface handleTouch() uses (the same as KnomiTouch on the Knomi). The CST820
