@@ -313,7 +313,8 @@ static IRAM_ATTR bool ws21DmaDone(async_memcpy_handle_t, async_memcpy_event_t *,
 }
 
 // The 466x466 canvas in PSRAM. flush() makes the panel's rows from it a band at a time in internal RAM: in the middle,
-// turned (gWs21RotDeg) and with the Knomi's soft rim (knomi_rim.h). Each band goes out to the frame buffer not on show
+// straight or turned (gWs21RotDeg) and with the Knomi's soft rim (knomi_rim.h). Straight or upside down, the canvas
+// also comes in by DMA (straightBands()). Each band goes out to the frame buffer not on show
 // by DMA while the next one is made, then that buffer is shown. All on the game's core, where the panel's refill also
 // runs. The console's SPLIT 1 has a task on the other core make every other band (each core with its own DMA): 135 ms
 // a frame turned and blended instead of 160, but the glitch lines came back (Fedor, 2026-11-20). Two cores reading
@@ -336,7 +337,9 @@ public:
     knomiRimBegin(LCD_WIDTH);
     ws21SetRotation(WS21_ROT_DEG);
     if (!allocBands(0)) return false;
-    for (Side &d : side) {
+    for (auto &r : raws) r = (uint16_t *)heap_caps_aligned_calloc(64, 1, RAW_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+    for (Side *dp : { &side[0], &side[1], &in }) {
+      Side &d = *dp;
       async_memcpy_config_t mc = ASYNC_MEMCPY_DEFAULT_CONFIG();
       mc.backlog = 4;
       mc.dma_burst_size = 32;  // (the frame buffers start on 32-byte lines; 64-byte bursts want 64-byte starts)
@@ -358,10 +361,11 @@ public:
     uint16_t *fb = panel->backBuffer();
     if (!fb) return;
     const int64_t t1 = esp_timer_get_time();
-    const bool split = gWs21Split && worker && allocBands(1);
+    const bool straight = (gWs21RotDeg == 0 || gWs21RotDeg == 180) && raws[0] && raws[1];
+    const bool split = !straight && gWs21Split && worker && allocBands(1);
     curFb = fb;
     if (split) xSemaphoreGive(go);
-    int64_t waited = doBands(0, fb, split ? 2 : 1, 0);
+    int64_t waited = straight ? straightBands(fb, gWs21RotDeg == 180) : doBands(0, fb, split ? 2 : 1, 0);
     const int64_t t2 = esp_timer_get_time();
     if (split && xSemaphoreTake(back, pdMS_TO_TICKS(300)) != pdTRUE) {
       Serial.println("ws21: the other core's half of the frame didn't come back; one core from now on");
@@ -391,8 +395,12 @@ public:
   }
 
 private:
-  static constexpr int BAND = 16;  // (8 was 9 ms a frame slower: more of the canvas read twice, band to band)
+  // 8 rows, so the straight copy's two in-buffers fit in internal RAM as well (turned, 16 was 9 ms a frame quicker:
+  // less of the canvas read twice, band to band)
+  static constexpr int BAND = 8;
   static constexpr size_t BAND_BYTES = (size_t)BAND * PANEL_SIZE * 2;  // (a multiple of 64, as the DMA to PSRAM wants)
+  static constexpr size_t RAW_BYTES = (size_t)BAND * LCD_WIDTH * 2 + 64;  // a band of the canvas, from a 32-byte line
+  static constexpr size_t CANVAS_BYTES = (size_t)LCD_WIDTH * LCD_HEIGHT * 2;
   // each core's own: its DMA and the counts of its copies
   struct Side {
     async_memcpy_handle_t dma = nullptr;
@@ -401,6 +409,8 @@ private:
     uint32_t ticket[2] = { 0, 0 };  // the count each of its two band buffers' last copy finishes at
   };
   Side side[2];
+  Side in;  // the straight copy's DMA from the canvas
+  uint16_t *raws[2] = { nullptr, nullptr };  // internal RAM: the canvas's bands as they come in
   uint16_t *bands[4] = { nullptr, nullptr, nullptr, nullptr };  // internal RAM: two for each side
   // side k's two band buffers, made the first time they're needed (the other core's only with SPLIT): whole panel
   // rows, so the 7 px of border either side stay black
@@ -442,6 +452,50 @@ private:
     return waited + waitDma(d, d.issued);
   }
 
+  // Straight (0 degrees, or upside down: flip): the canvas comes in by DMA too, a band at a time into internal RAM,
+  // while the band before is made and the one before that goes out. So the CPU never waits on PSRAM: it only shades
+  // the rim and puts each row in its place. (By the CPU, reading the canvas took 42 ms a frame, 33 this way.)
+  int64_t straightBands(uint16_t *fb, bool flip) {
+    Side &d = side[0];
+    // what the game left of the canvas in the cache goes out to PSRAM first, where the DMA reads it
+    esp_cache_msync(_framebuffer, CANVAS_BYTES, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+    const int nb = (LCD_HEIGHT + BAND - 1) / BAND;
+    uint32_t inT[2] = { 0, 0 };
+    size_t inOff[2] = { 0, 0 };
+    int64_t waited = 0;
+    inT[0] = fetch(0, flip, raws[0], &inOff[0]);
+    for (int i = 0; i < nb; i++) {
+      const int y0 = i * BAND, n = LCD_HEIGHT - y0 < BAND ? LCD_HEIGHT - y0 : BAND;
+      waited += waitDma(in, inT[i & 1]);  // this band is in
+      if (i + 1 < nb) inT[(i + 1) & 1] = fetch(i + 1, flip, raws[(i + 1) & 1], &inOff[(i + 1) & 1]);  // the next comes
+      uint16_t *buf = bands[i & 1];
+      waited += waitDma(d, d.ticket[i & 1]);  // the band before last, from this buffer, is out
+      const uint16_t *src = (const uint16_t *)((const uint8_t *)raws[i & 1] + inOff[i & 1]);
+      for (int r = 0; r < n; r++)
+        straightRow(buf + r * PANEL_SIZE + WS21_BORDER, src + (flip ? n - 1 - r : r) * LCD_WIDTH, y0 + r, flip);
+      d.ticket[i & 1] = send(d, fb + (size_t)(WS21_BORDER + y0) * PANEL_SIZE, buf, (size_t)n * PANEL_SIZE * 2);
+    }
+    return waited + waitDma(d, d.issued);
+  }
+  // the canvas rows panel band i shows (upside down: flip) into raw, from the 32-byte line they start in (the DMA wants
+  // whole lines): *off is where the first of them starts in raw. Returns the count to wait for
+  uint32_t fetch(int i, bool flip, uint16_t *raw, size_t *off) {
+    const int p0 = i * BAND, n = LCD_HEIGHT - p0 < BAND ? LCD_HEIGHT - p0 : BAND;  // (the panel's rows)
+    const int y0 = flip ? LCD_HEIGHT - p0 - n : p0;
+    const uintptr_t a = (uintptr_t)(_framebuffer + y0 * LCD_WIDTH), b = (uintptr_t)(_framebuffer + (y0 + n) * LCD_WIDTH);
+    const uintptr_t a0 = a & ~(uintptr_t)31, b0 = (b + 31) & ~(uintptr_t)31;
+    *off = a - a0;
+    if (in.dma) {
+      if (esp_async_memcpy(in.dma, raw, (void *)a0, b0 - a0, ws21DmaDone, (void *)&in.done) == ESP_OK) return ++in.issued;
+      Serial.printf("ws21: DMA from the canvas refused (%p, %u bytes), the CPU reads it from now on\n", (void *)a0,
+                    (unsigned)(b0 - a0));
+      waitDma(in, in.issued);
+      in.dma = nullptr;
+    }
+    memcpy((uint8_t *)raw + *off, (const void *)a, b - a);
+    return in.issued;
+  }
+
   // a band out to the frame buffer: by DMA, or by the CPU if that's refused (then written back from the cache at
   // once, since present() drops the cache's copy). Returns the count to wait for.
   uint32_t send(Side &d, uint16_t *to, uint16_t *from, size_t bytes) {
@@ -470,21 +524,81 @@ private:
     return esp_timer_get_time() - t0;
   }
 
+  // the panel's row y (of the canvas-sized middle) into o, from the canvas row it shows (src): straight, or upside
+  // down (flip: src is canvas row 465 - y, read right to left). The black outside the circle, the rim's shading
+  void straightRow(uint16_t *o, const uint16_t *src, int y, bool flip = false) {
+    const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
+    const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : LCD_WIDTH;
+    const int i0 = rim ? gKnomiRimI0[y] : 0, i1 = rim ? gKnomiRimI1[y] : LCD_WIDTH;
+    if (x0 > 0) memset(o, 0, x0 * 2);
+    if (x1 < LCD_WIDTH) memset(o + x1, 0, (LCD_WIDTH - x1) * 2);
+    if (!flip) {
+      for (int x = x0; x < i0; x++) o[x] = edge(src[x], rim, x, y);
+      memcpy(o + i0, src + i0, (size_t)(i1 - i0) * 2);
+      for (int x = i1; x < x1; x++) o[x] = edge(src[x], rim, x, y);
+      return;
+    }
+    const int cy = LCD_HEIGHT - 1 - y;  // (the rim is the panel pixel's; a label's lift, the canvas pixel's)
+    for (int x = x0; x < x1; x++) {
+      const int cx = LCD_WIDTH - 1 - x;
+      uint16_t c = src[cx];
+      if ((x < i0 || x >= i1) && rim && !(gKnomiLiftOn && knomiLifted(cx >> 1, cy >> 1))) c = knomiRimPixel(c, rim[x]);
+      o[x] = c;
+    }
+  }
+
+  // A quarter turn either way (q 1: 90 degrees clockwise, 3: 270): each panel row is a canvas column. Each canvas
+  // row gives the band's rows their pixel in one column, so each canvas line is read once a band
+  void quarterBand(uint16_t *out, int y0, int n, int q) {
+    const uint16_t *cv = _framebuffer;
+    for (int x = 0; x < LCD_WIDTH; x++) {
+      if (q == 1) {  // panel (x, y) shows canvas (y, 465 - x)
+        const uint16_t *src = cv + (LCD_HEIGHT - 1 - x) * LCD_WIDTH + y0;
+        for (int r = 0; r < n; r++) out[r * PANEL_SIZE + x] = src[r];
+      } else {  // panel (x, y) shows canvas (465 - y, x)
+        const uint16_t *src = cv + x * LCD_WIDTH + (LCD_WIDTH - 1 - y0);
+        for (int r = 0; r < n; r++) out[r * PANEL_SIZE + x] = src[-r];
+      }
+    }
+    for (int r = 0; r < n; r++) {  // the black outside the circle, the rim's shading
+      const int y = y0 + r;
+      uint16_t *o = out + r * PANEL_SIZE;
+      const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
+      if (!rim) continue;
+      const int x0 = gKnomiRimX0[y], x1 = gKnomiRimX1[y], i0 = gKnomiRimI0[y], i1 = gKnomiRimI1[y];
+      if (x0 > 0) memset(o, 0, x0 * 2);
+      if (x1 < LCD_WIDTH) memset(o + x1, 0, (LCD_WIDTH - x1) * 2);
+      for (int x = x0; x < x1; x++) {
+        if (x == i0) x = i1 > x ? i1 : x;
+        if (x >= x1) break;
+        const int cx = q == 1 ? y : LCD_WIDTH - 1 - y, cy = q == 1 ? LCD_HEIGHT - 1 - x : x;
+        if (!(gKnomiLiftOn && knomiLifted(cx >> 1, cy >> 1))) o[x] = knomiRimPixel(o[x], rim[x]);
+      }
+    }
+  }
+
   // canvas rows y0..y0+n-1 into out (each 466 px, the row's part in the panel's middle; rows PANEL_SIZE apart)
   void makeBand(uint16_t *out, int y0, int n) {
+    if (gWs21RotDeg == 90 || gWs21RotDeg == 270) {
+      quarterBand(out, y0, n, gWs21RotDeg / 90);
+      return;
+    }
+    if (gWs21RotDeg == 180) {
+      for (int r = 0; r < n; r++)
+        straightRow(out + r * PANEL_SIZE, _framebuffer + (LCD_HEIGHT - 1 - y0 - r) * LCD_WIDTH, y0 + r, true);
+      return;
+    }
     for (int r = 0; r < n; r++) {  // the black outside the circle; unturned, the whole row
       const int y = y0 + r;
       uint16_t *o = out + r * PANEL_SIZE;
       const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
       const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : LCD_WIDTH;
+      if (!gWs21RotDeg) {
+        straightRow(o, _framebuffer + y * LCD_WIDTH, y);
+        continue;
+      }
       if (x0 > 0) memset(o, 0, x0 * 2);
       if (x1 < LCD_WIDTH) memset(o + x1, 0, (LCD_WIDTH - x1) * 2);
-      if (gWs21RotDeg) continue;
-      const int i0 = rim ? gKnomiRimI0[y] : 0, i1 = rim ? gKnomiRimI1[y] : LCD_WIDTH;
-      const uint16_t *src = _framebuffer + y * LCD_WIDTH;
-      for (int x = x0; x < i0; x++) o[x] = edge(src[x], rim, x, y);
-      memcpy(o + i0, src + i0, (size_t)(i1 - i0) * 2);
-      for (int x = i1; x < x1; x++) o[x] = edge(src[x], rim, x, y);
     }
     if (!gWs21RotDeg) return;
     // Turned: each panel pixel takes the canvas point turned back onto it, blended from its four pixels (smooth) or
@@ -492,7 +606,7 @@ private:
     // it is the canvas pixel's. In tiles 32 wide, so the canvas lines a tile reads (a small turned square) stay in
     // the cache from one of its rows to the next. Each tile row in up to three runs: the rim, the middle (no
     // darkening, and nothing near the canvas's edge, so nothing to check per pixel), the rim.
-    const uint8_t sm = gWs21Smooth;
+    const uint8_t sm = gWs21RotDeg % 90 ? gWs21Smooth : 0;  // (a quarter turn lands on whole pixels: nothing to blend)
     for (int tx = 0; tx < LCD_WIDTH; tx += TILE) {
       const int te = tx + TILE < LCD_WIDTH ? tx + TILE : LCD_WIDTH;
       for (int r = 0; r < n; r++) {

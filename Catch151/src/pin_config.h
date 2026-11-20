@@ -78,9 +78,10 @@
 
 // QMI8658 accelerometer and gyro. TODO(bring-up): its axes against the panel's; this keeps them as they come.
 #define IMU_I2C_ADDR 0x6B
-#define WS21_SMOOTH 1    // turned, the picture blended between pixels (no dotted lines), not the nearest pixel
-#define WS21_ROT_DEG 45  // the picture turned clockwise on the panel, in degrees (ws21_hal.h): 45 puts a USB-C port
-                         // straight down. 0: as the panel is, the plain and fastest copy
+#define WS21_SMOOTH 1    // turned (not by quarter turns), the picture blended between pixels, not the nearest pixel
+#define WS21_ROT_DEG 0   // the picture turned clockwise on the panel, in degrees (ws21_hal.h). 45 puts a USB-C port
+                         // straight down, but a frame then took 164 ms against the 100 the game is made for, and
+                         // everything played slower than on the Knomi: Fedor chose 0, "Knomi speed" (2026-11-20)
 // The QMI8658's axes are a quarter turn round from the screen's: the sensor's +Y is the screen's +X, its +X the
 // screen's -Y. Found from Fedor's video (2026-11-20): held with the cable to the left it read up as (0.58, -0.70);
 // with the sensor taken as it is, and then mirrored, the picture settled the wrong way round each time.

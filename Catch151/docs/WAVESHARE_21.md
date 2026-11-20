@@ -164,10 +164,13 @@ What the code uses:
 - **Canvas:** `Ws21Canvas` makes the panel's rows from the 466 canvas a band of 8 at a time in internal RAM: in the
   middle, turned, and with the rim. Each band goes to the frame buffer by DMA while the next one is made, all on the
   game's core. The CPU writing PSRAM through the cache was the slowest part of a frame.
-- **Turned 45°:** the board's USB-C ports point out at 45°, so the picture is turned 45° clockwise to put one of them
-  straight down (`WS21_ROT_DEG`). Each panel pixel blends the four canvas pixels round its point (`WS21_SMOOTH`).
-  Without the blend, the game's pixel art comes out dotted and its dithering in zigzags at that angle.
-- **Auto-rotate:** in quarter turns from that 45°, as the board is held.
+- **Straight:** the picture sits as the panel does (`WS21_ROT_DEG` 0), so the USB-C ports point out at 45°: the case
+  handles that. Turned 45°, one port pointed straight down, but a frame took 164 ms against the 100 the game is made
+  for, and everything played slower than on the Knomi; Fedor chose speed. Any angle still works (`ROTDEG`): each
+  panel pixel then blends the four canvas pixels round its point (`WS21_SMOOTH`); without the blend, pixel art
+  comes out dotted and its dithering in zigzags.
+- **Auto-rotate:** in quarter turns, as the board is held. Each copies whole pixels, with no blending: upside down
+  the same way as straight (120 ms a frame), sideways a canvas column per panel row (140 ms).
 - **Dimming:** only while the pet sleeps, as on computers (Fedor). The Knomi still dims when left alone.
 - **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas and turned with
   the picture. A small task on the other core reads it every 8 ms while a finger is down and queues each press and
@@ -196,11 +199,12 @@ Not done yet, on purpose:
 - **The picture jumping:** reading sprites with `esp_partition_read()` stops the cache, and with it the panel's
   refill. Sprites are read through a flash map instead (`flashpak.h`).
 - **Tearing:** one frame buffer. Now two, swapped between refreshes.
-- **Speed:** almost everything here waits on PSRAM. The game draws a frame in about 70 ms. Copying it to the panel
-  by CPU took 68 ms (138 ms turned and blended): the CPU reads each frame-buffer line in before writing it. By DMA
-  it takes about 40 ms (90 ms turned and blended). A whole frame, turned and blended, went from 205 ms to about
-  160 ms; unturned it is about 110 ms. On both cores the copy took 65 ms and a frame 135 ms, but the glitch lines
-  came back (`SPLIT`).
+- **Speed:** almost everything here waits on PSRAM. The game draws a frame in about 75 ms. Copying it to the panel
+  by CPU took 68 ms (138 ms turned 45° and blended): the CPU reads each frame-buffer line in before writing it.
+  Straight, the canvas now comes in by DMA and goes out by DMA, a band at a time through internal RAM, and the CPU
+  only shades the rim: 33 ms. A whole frame is about 110 ms (205 ms turned 45° at first, 164 by DMA). On both cores
+  the turned copy took 65 ms, but the glitch lines came back (`SPLIT`). The refill, on the game's core, still takes
+  about a quarter of that core.
 - **Taps:** the game read the touch once a frame. A tap that came and went within a 200 ms frame was lost. A touch
   task now queues every press and lift.
 - **The rule:** only one core may read PSRAM hard at a time, and it must be the core the refill runs on. The refill
