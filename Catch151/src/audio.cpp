@@ -4,9 +4,13 @@
 
 // The Waveshare 2.1 sounds through an amplifier added by hand (docs/WAVESHARE_21.md): a PAM8302A fed a 1-bit stream
 // (WS21_AUDIO_PDM) or a MAX98357A fed I2S (WS21_AUDIO_I2S), in pin_config.h. It plays the same tones as the AMOLED
-// 1.75, without a codec to set up. Without either, its buzzer beeps them.
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_WS21)
-// The Knomi V2 has no codec or speaker: the game calls the same and nothing sounds.
+// 1.75, without a codec to set up. Without either it's silent, as the Knomi, unless WS21_BUZZER beeps them on its buzzer.
+#if defined(BOARD_WS21) && (defined(WS21_AUDIO_I2S) || defined(WS21_AUDIO_PDM))
+#define WS21_AMP 1
+#endif
+#if defined(BOARD_KNOMI_V2) && !defined(WS21_AMP) && !(defined(BOARD_WS21) && defined(WS21_BUZZER))
+// The Knomi V2 has no codec or speaker (nor the Waveshare 2.1 without an amplifier): the game calls the same and
+// nothing sounds.
 void audioBegin() {}
 void sfxPlay(uint8_t) {}
 void audioSetEnabled(bool) {}
@@ -14,7 +18,7 @@ bool audioEnabled() { return false; }
 void audioSetSleeping(bool) {}
 bool audioBusy() { return false; }
 void audioSetIdle(bool) {}
-#elif defined(BOARD_WS21) && !defined(WS21_AUDIO_I2S) && !defined(WS21_AUDIO_PDM)
+#elif defined(BOARD_WS21) && !defined(WS21_AMP)
 // The Waveshare 2.1 without a speaker: its own buzzer (Fedor: "what about the onboard buzzer, can we use that for audio
 // and clicks?"). It's an active one on the IO expander: on or off, one pitch, no volume. So a tap is a click (a 4 ms
 // pulse), and every other effect beeps the rhythm of its notes, each note a beep. No tune can be played on it. It

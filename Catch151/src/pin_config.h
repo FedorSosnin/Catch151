@@ -102,8 +102,10 @@
 // BOOT button
 #define KNOMI_BTN_PIN 0
 
-// Sound. With no amplifier, the board's own buzzer beeps the effects (audio.cpp). With one added by hand, uncomment
-// its line (docs/WAVESHARE_21.md, "Sound"):
+// Sound. With no amplifier the game is silent, as on the Knomi. WS21_BUZZER beeps the effects on the board's buzzer
+// instead, but it's one high pitch, on or off (Fedor: "Its not a good sound. Very high pitch and abrupt"), so it's off.
+// With an amplifier added by hand, uncomment its line (docs/WAVESHARE_21.md, "Sound"):
+// #define WS21_BUZZER
 // - WS21_AUDIO_PDM: a PAM8302A on the 12-pin connector, Fedor's choice (2026-11-20). GPIO 19 sends the sound as a
 //   1-bit stream (the I2S in PDM mode, with no clock line), a resistor and a capacitor smooth it into the amplifier's
 //   A+, and GPIO 20 is the amplifier's SD (high plays). The "USB" port then only charges.

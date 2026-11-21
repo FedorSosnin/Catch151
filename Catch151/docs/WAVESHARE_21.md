@@ -145,7 +145,7 @@ bash tools/build_ws21.sh     # compile only: build-ws21/Catch151.ino.bin
 | `src/pin_config.h` | A WS21 block, before the Knomi's. |
 | `Catch151.ino` | Includes `ws21_hal.h`, builds the panel objects, and the touch address. |
 | `src/rtcbat.cpp` | The PCF85063 keeps the time across restarts. The battery is read from the ADC. |
-| `src/audio.cpp` | The buzzer beeps the effects. Sound through an added PAM8302A (`WS21_AUDIO_PDM`) or MAX98357A (`WS21_AUDIO_I2S`). |
+| `src/audio.cpp` | Sound through an added PAM8302A (`WS21_AUDIO_PDM`) or MAX98357A (`WS21_AUDIO_I2S`); else silent, or the buzzer (`WS21_BUZZER`). |
 | `src/ota_update.cpp` | Wi-Fi updates are off. The update site carries the Knomi's firmware, which would not drive this screen. |
 | `src/autorot.h` | The quarter turn stays 0: the picture turns in `ws21_hal.h` instead (45° plus quarter turns). |
 | `src/knomi_rim.h` | Its row tables can be sized for the 466 canvas. The Knomi's build is unchanged. |
@@ -216,7 +216,9 @@ Not done yet, on purpose:
   copies each band of the frame out of PSRAM in time for the panel; when the other core reads PSRAM at the same
   moment, it falls behind and lines show along the panel's rows (at 45° to the picture). Both times the refill or
   part of the frame copy went to the other core, the lines came back.
-- **The buzzer:** each effect beeps its rhythm, a beep a note (`audio.cpp`). A tap is a 4 ms click.
+- **The buzzer:** it can beep each effect's rhythm, a beep a note, and click for taps (`WS21_BUZZER`). It's off:
+  one high pitch, switched hard on and off, sounds harsh (Fedor). Without an amplifier the game is silent, as on
+  the Knomi.
 
 Console commands for testing (115200 baud on the "UART" port; none of them is saved unless it says so):
 
@@ -247,9 +249,9 @@ speaker, so nobody has needed them on a board yet.
 ### The buzzer can't replace a speaker
 
 The buzzer hangs off expander line EXIO8, through a transistor. No ESP32 pin reaches it, so PWM can't drive it.
-Waveshare's own code only turns it on and off, and it sounds at one fixed pitch when on. Without a speaker the game
-beeps each effect's rhythm on it, one beep a note, and a tap is a click. It can't play notes, jingles or music. For
-real sound you need a speaker and an amplifier.
+Waveshare's own code only turns it on and off, and it sounds at one fixed pitch when on. `WS21_BUZZER` beeps each
+effect's rhythm on it, one beep a note, and a tap is a click; it's off, as it sounds harsh. It can't play notes,
+jingles or music. For real sound you need a speaker and an amplifier.
 
 ### DS Lite speakers
 
