@@ -1063,7 +1063,37 @@ void handleSerial() {
   } else if (line == "LCD") {  // the refills since the last LCD: frames, longest gap between two (us), gaps over 50 ms
     uint32_t n, gap, late;
     panel->timing(&n, &gap, &late);
-    Serial.printf("lcd frames=%u maxgap=%u late=%u\n", (unsigned)n, (unsigned)gap, (unsigned)late);
+    uint32_t miss, odd;
+    bool found;
+    panel->eofStats(&miss, &odd, &found);
+    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s\n", (unsigned)n, (unsigned)gap,
+                  (unsigned)late, (unsigned)miss, (unsigned)odd, !found ? "none" : panel->eofFix ? "on" : "off");
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("EOFFIX ")) {  // 0: the driver's lost-refill-signal fault left as it is (testing)
+    panel->eofFix = line.substring(7).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("STALL ")) {  // "STALL us n": n hold-ups of the interrupts, as a flash write does (testing)
+    int sp = line.indexOf(' ', 6);
+    uint32_t us = line.substring(6, sp).toInt(), n = sp > 0 ? line.substring(sp + 1).toInt() : 1;
+    for (uint32_t i = 0; i < n; i++) {
+      portDISABLE_INTERRUPTS();
+      esp_rom_delay_us(us);
+      portENABLE_INTERRUPTS();
+      delay(37 + (esp_random() & 15));  // (not in step with the refresh)
+    }
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("NVSTEST ")) {  // "NVSTEST n": n flash writes to a scratch area, not the save (testing)
+    Preferences t;
+    if (t.begin("ws21t", false)) {
+      uint32_t n = line.substring(8).toInt(), t0 = millis();
+      for (uint32_t i = 0; i < n; i++) t.putUInt("n", i);
+      t.clear();
+      t.end();
+      Serial.printf("nvstest %u writes in %u ms\n", (unsigned)n, (unsigned)(millis() - t0));
+    }
     Serial.println("DONE");
     return;
   } else if (line.startsWith("HOLD ")) {  // the game stops for n seconds: only the panel's refill runs (bring-up)

@@ -219,6 +219,16 @@ Not done yet, on purpose:
 - **The buzzer:** it can beep each effect's rhythm, a beep a note, and click for taps (`WS21_BUZZER`). It's off:
   one high pitch, switched hard on and off, sounds harsh (Fedor). Without an amplifier the game is silent, as on
   the Knomi.
+- **Overnight, the picture 20 lines up, with streaks (2026-11-21):** a fault in the screen driver (IDF 5.5.4).
+  The driver refills its two bounce buffers in turn and picks which one by counting "buffer sent" signals. A flash
+  write (each save) holds up interrupts. If that lasts more than one buffer (0.9 ms), two signals arrive as one and
+  the count is off by one. From then on every refill goes into the buffer being sent: the picture is a buffer
+  late, and streaks show where a refill loses the race. Nothing reset the count, so it stayed until another save
+  happened to put it back. Espressif fixed it later (the count goes to 0 when the DMA restarts at each refresh).
+  `Ws21Panel::frameStart()` does the same from the refresh's callback. Tested on the bench board: with the fix
+  off, stalls left every refresh wrong (137 of 137); with it on, each fault was gone by the next refresh, after
+  stalls and after 400 real flash writes alike. A save can still show streaks for a refresh or two (the screen
+  can't be refilled while the flash is written), but they no longer stay.
 
 Console commands for testing (115200 baud on the "UART" port; none of them is saved unless it says so):
 
@@ -235,7 +245,10 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `PDMCHECK` | With `WS21_AUDIO_PDM`: GPIO 19 read back, to see the sound stream runs. |
 | `TOUCHLOG 1` | Each press and lift, with how long the chip and the game took to see it. |
 | `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both (faster, but the lines come back). |
-| `LCD` | Refreshes since the last `LCD`, and the longest gap between two. |
+| `LCD` | Refreshes since the last `LCD`, the longest gap between two, refreshes with a lost refill signal (`eofmiss`) and refreshes refilled out of step (`eofodd`). |
+| `EOFFIX 0` / `EOFFIX 1` | The fix for lost refill signals off or on (on at start). |
+| `STALL us n` | Holds up the interrupts n times for us microseconds, as a flash write does. |
+| `NVSTEST n` | n real flash writes, to a scratch area (`ws21t`), not the save. |
 | `HOLD n` | The game stops for n seconds; only the panel's refill runs. |
 | `WIFIOFF` | Wi-Fi off until the next start. |
 | `SHOT` | The whole 480 × 480 frame buffer, as RGB565. |

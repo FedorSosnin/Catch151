@@ -223,7 +223,9 @@ public:
     if (esp_lcd_new_rgb_panel(&c, &h) != ESP_OK) return;
     esp_lcd_rgb_panel_event_callbacks_t cb = {};
     cb.on_frame_buf_complete = frameDone;
+    cb.on_vsync = frameStart;
     esp_lcd_rgb_panel_register_event_callbacks(h, &cb, this);
+    findEofCount(h);
     esp_lcd_panel_reset(h);
     esp_lcd_panel_init(h);
     handle = h;
@@ -263,6 +265,15 @@ public:
     statFrom = frames;
     gapMax = gapLate = 0;
   }
+  // Refreshes since the last call where a refill signal was lost (eofMiss), and where the refill was then out of
+  // step (eofOdd: the picture 20 lines up, with streaks). With the fix on, each is put right at the next refresh.
+  void eofStats(uint32_t *miss, uint32_t *odd, bool *found) {
+    *miss = eofMiss;
+    *odd = eofOdd;
+    *found = eofCount != nullptr;
+    eofMiss = eofOdd = 0;
+  }
+  volatile bool eofFix = true;  // the console's EOFFIX (testing): 0 leaves the driver as it is
 
   void setBrightness(uint8_t v) {
     if (!blReady) blReady = ledcAttach(LCD_BL, LCD_BL_PWM_HZ, 8);
@@ -293,6 +304,45 @@ private:
     p->lastFrameUs = t;
     return false;
   }
+
+  // The driver's fault, put right here (2026-11-21: overnight, the picture 20 lines up, with streaks).
+  // The driver refills its two bounce buffers in turn. It picks which one by counting the DMA's "buffer sent"
+  // signals: even = the first, odd = the second. A flash write (the save) holds up interrupts. If it lasts more
+  // than one buffer (0.9 ms), two signals arrive as one and the count is off by one. From then on, each refill goes
+  // into the buffer being sent, not the one just sent. The picture is a buffer (20 lines) late, and streaks show
+  // wherever a refill loses the race. The driver restarts the DMA from the first buffer at every refresh, but in
+  // IDF 5.5.4 it never resets the count, so it stays wrong until another hold-up happens to put it back.
+  // Espressif's fix (IDF master): the count goes to 0 at that restart. This callback runs just before it, in the
+  // same interrupt, and does the same.
+  static bool frameStart(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t *, void *ctx) {
+    Ws21Panel *p = (Ws21Panel *)ctx;
+    volatile size_t *c = p->eofCount;
+    if (!c) return false;
+    size_t n = *c;
+    if (n - p->eofLast != EOFS_PER_FRAME) p->eofMiss++;
+    if (n & 1) p->eofOdd++;  // the next refresh would refill the wrong buffer
+    if (p->eofFix) n = 0, *c = 0;
+    p->eofLast = n;
+    return false;
+  }
+  // Finds the driver's count. The driver's state is private, so it is found by what sits after it: the number of
+  // signals a frame should have, then the callbacks and ctx just registered. Not found (another IDF), nothing changes.
+  void findEofCount(esp_lcd_panel_handle_t h) {
+    const uint32_t *w = (const uint32_t *)h;
+    for (int i = 1; i < 256; i++) {
+      if (w[i] == EOFS_PER_FRAME && w[i + 1] == 0 && w[i + 2] == (uint32_t)(uintptr_t)frameDone &&
+          w[i + 3] == (uint32_t)(uintptr_t)frameStart && w[i + 4] == 0 && w[i + 5] == (uint32_t)(uintptr_t)this) {
+        eofLast = w[i - 1];
+        eofCount = (volatile size_t *)&w[i - 1];
+        return;
+      }
+    }
+    Serial.println("ws21: the driver's refill count wasn't found: no fix for lost refill signals");
+  }
+  static constexpr uint32_t EOFS_PER_FRAME = (uint32_t)PANEL_SIZE * PANEL_SIZE / LCD_BOUNCE_PX;
+  volatile size_t *eofCount = nullptr;
+  size_t eofLast = 0;
+  volatile uint32_t eofMiss = 0, eofOdd = 0;
   Ws21InitBus *bus;
   esp_lcd_panel_handle_t handle = nullptr;
   uint16_t *fbs[2] = { nullptr, nullptr };
