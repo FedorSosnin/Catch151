@@ -102,13 +102,24 @@
 // BOOT button
 #define KNOMI_BTN_PIN 0
 
-// Sound: a MAX98357A I2S amplifier added by hand, on the microSD slot's lines (the game uses no card; GPIO 1 and 2
-// only set up the panel at boot): docs/WAVESHARE_21.md, "Sound". Off until it's wired: uncomment WS21_AUDIO_I2S.
+// Sound. With no amplifier, the board's own buzzer beeps the effects (audio.cpp). With one added by hand, uncomment
+// its line (docs/WAVESHARE_21.md, "Sound"):
+// - WS21_AUDIO_PDM: a PAM8302A on the 12-pin connector, Fedor's choice (2026-11-20). GPIO 19 sends the sound as a
+//   1-bit stream (the I2S in PDM mode, with no clock line), a resistor and a capacitor smooth it into the amplifier's
+//   A+, and GPIO 20 is the amplifier's SD (high plays). The "USB" port then only charges.
+// - WS21_AUDIO_I2S: a MAX98357A on the microSD slot's lines (the game uses no card; GPIO 1 and 2 only set up the
+//   panel at boot).
+// #define WS21_AUDIO_PDM
 // #define WS21_AUDIO_I2S
+#if defined(WS21_AUDIO_PDM)
+#define PDM_DO_IO 19               // 12-pin connector pin 3 -> 1 kOhm -> A+ (10 nF from A+ to GND; A- to GND)
+#define PA 20                      // pin 4 -> SD: high plays, low shuts the amplifier down
+#else
 #define I2S_BCK_IO 2               // microSD CLK -> MAX98357A BCLK
 #define I2S_WS_IO 1                // microSD CMD -> LRC
 #define I2S_DO_IO 42               // microSD DAT0 -> DIN
 #define WS21_AMP_EXIO EXIO_SD_CS   // microSD DAT3 (EXIO4) -> SD: high plays (left channel), low shuts it down
+#endif
 
 #elif defined(BOARD_KNOMI_V2)
 

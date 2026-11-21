@@ -1080,6 +1080,24 @@ void handleSerial() {
     gProfFrom = now;
     Serial.println("DONE");
     return;
+#ifdef WS21_AUDIO_PDM
+  } else if (line == "PDMCHECK") {  // the sound pin read back: a running 1-bit stream flips all the time (bring-up)
+    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[PDM_DO_IO]);
+    int hi = 0, flips = 0, last = -1;
+    for (int i = 0; i < 4000; i++) {
+      int b = (REG_READ(GPIO_IN_REG) >> PDM_DO_IO) & 1;
+      hi += b;
+      if (last >= 0 && b != last) flips++;
+      last = b;
+    }
+    Serial.printf("pdm: %d of 4000 reads high, %d flips; amplifier SD %d\n", hi, flips, digitalRead(PA));
+    Serial.println("DONE");
+    return;
+#endif
+  } else if (line.startsWith("DMAIN ")) {  // 1: the straight copy reads the canvas by DMA (quicker; lines came back)
+    gWs21DmaIn = line.substring(6).toInt() != 0;
+    Serial.println("DONE");
+    return;
   } else if (line.startsWith("TOUCHLOG ")) {  // 1: each press and lift logged, with its delays (testing)
     touch.log = line.substring(9).toInt() != 0;
     Serial.println("DONE");

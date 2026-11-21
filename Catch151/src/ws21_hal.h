@@ -18,6 +18,9 @@
 #include <esp_async_memcpy.h>
 #include <Preferences.h>
 #include "soc/lcd_cam_struct.h"
+#include "soc/gpio_periph.h"  // (the console's PDMCHECK reads the sound pin back)
+#include "soc/io_mux_reg.h"
+#include "soc/gpio_reg.h"
 #include <SensorQMI8658.hpp>
 #include "ws21_exio.h"  // the IO expander: the panel's reset and CS, the touch's reset
 #define KNOMI_RIM_ROWS LCD_HEIGHT  // the rim is made for the 466 canvas, 1:1 (below)
@@ -313,8 +316,8 @@ static IRAM_ATTR bool ws21DmaDone(async_memcpy_handle_t, async_memcpy_event_t *,
 }
 
 // The 466x466 canvas in PSRAM. flush() makes the panel's rows from it a band at a time in internal RAM: in the middle,
-// straight or turned (gWs21RotDeg) and with the Knomi's soft rim (knomi_rim.h). Straight or upside down, the canvas
-// also comes in by DMA (straightBands()). Each band goes out to the frame buffer not on show
+// straight or turned (gWs21RotDeg) and with the Knomi's soft rim (knomi_rim.h). (With DMAIN, straight or upside
+// down, the canvas also comes in by DMA: straightBands().) Each band goes out to the frame buffer not on show
 // by DMA while the next one is made, then that buffer is shown. All on the game's core, where the panel's refill also
 // runs. The console's SPLIT 1 has a task on the other core make every other band (each core with its own DMA): 135 ms
 // a frame turned and blended instead of 160, but the glitch lines came back (Fedor, 2026-11-20). Two cores reading
@@ -326,6 +329,9 @@ static IRAM_ATTR bool ws21DmaDone(async_memcpy_handle_t, async_memcpy_event_t *,
 // panel's refill to wait on. Turned, each pixel is still about 50 instructions and a wait on PSRAM: 84 ms a frame on
 // one core.
 inline bool gWs21Split = false;
+// The straight copy reading the canvas by DMA too (the console's DMAIN 1): 9 ms a frame quicker, but the DMA's PSRAM
+// reads held up the panel's refill like a second core and the glitch lines came back (Fedor, 2026-11-20). Off.
+inline bool gWs21DmaIn = false;
 class Ws21Canvas : public Arduino_Canvas {
 public:
   Ws21Canvas(Ws21Panel *out) : Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, out), panel(out) {}
@@ -337,7 +343,6 @@ public:
     knomiRimBegin(LCD_WIDTH);
     ws21SetRotation(WS21_ROT_DEG);
     if (!allocBands(0)) return false;
-    for (auto &r : raws) r = (uint16_t *)heap_caps_aligned_calloc(64, 1, RAW_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     for (Side *dp : { &side[0], &side[1], &in }) {
       Side &d = *dp;
       async_memcpy_config_t mc = ASYNC_MEMCPY_DEFAULT_CONFIG();
@@ -361,7 +366,7 @@ public:
     uint16_t *fb = panel->backBuffer();
     if (!fb) return;
     const int64_t t1 = esp_timer_get_time();
-    const bool straight = (gWs21RotDeg == 0 || gWs21RotDeg == 180) && raws[0] && raws[1];
+    const bool straight = (gWs21RotDeg == 0 || gWs21RotDeg == 180) && gWs21DmaIn && allocRaws();
     const bool split = !straight && gWs21Split && worker && allocBands(1);
     curFb = fb;
     if (split) xSemaphoreGive(go);
@@ -410,7 +415,14 @@ private:
   };
   Side side[2];
   Side in;  // the straight copy's DMA from the canvas
-  uint16_t *raws[2] = { nullptr, nullptr };  // internal RAM: the canvas's bands as they come in
+  uint16_t *raws[2] = { nullptr, nullptr };  // internal RAM: the canvas's bands as they come in (DMAIN only)
+  bool allocRaws() {
+    for (auto &r : raws) {
+      if (!r) r = (uint16_t *)heap_caps_aligned_calloc(64, 1, RAW_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+      if (!r) return false;
+    }
+    return true;
+  }
   uint16_t *bands[4] = { nullptr, nullptr, nullptr, nullptr };  // internal RAM: two for each side
   // side k's two band buffers, made the first time they're needed (the other core's only with SPLIT): whole panel
   // rows, so the 7 px of border either side stay black
@@ -454,7 +466,8 @@ private:
 
   // Straight (0 degrees, or upside down: flip): the canvas comes in by DMA too, a band at a time into internal RAM,
   // while the band before is made and the one before that goes out. So the CPU never waits on PSRAM: it only shades
-  // the rim and puts each row in its place. (By the CPU, reading the canvas took 42 ms a frame, 33 this way.)
+  // the rim and puts each row in its place. (A frame's copy took 33 ms this way, 38 with the CPU reading the canvas;
+  // but the DMA's reading held up the panel's refill: gWs21DmaIn)
   int64_t straightBands(uint16_t *fb, bool flip) {
     Side &d = side[0];
     // what the game left of the canvas in the cache goes out to PSRAM first, where the DMA reads it

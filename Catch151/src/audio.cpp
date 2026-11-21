@@ -2,8 +2,9 @@
 #include "savename.h"
 #include "pin_config.h"
 
-// The Waveshare 2.1 sounds only with an I2S amplifier added (a MAX98357A, docs/WAVESHARE_21.md): its pins in
-// pin_config.h turn it on (WS21_AUDIO_I2S). It plays the same tones as the AMOLED 1.75, without a codec to set up.
+// The Waveshare 2.1 sounds through an amplifier added by hand (docs/WAVESHARE_21.md): a PAM8302A fed a 1-bit stream
+// (WS21_AUDIO_PDM) or a MAX98357A fed I2S (WS21_AUDIO_I2S), in pin_config.h. It plays the same tones as the AMOLED
+// 1.75, without a codec to set up. Without either, its buzzer beeps them.
 #if defined(BOARD_KNOMI_V2) && !defined(BOARD_WS21)
 // The Knomi V2 has no codec or speaker: the game calls the same and nothing sounds.
 void audioBegin() {}
@@ -13,7 +14,7 @@ bool audioEnabled() { return false; }
 void audioSetSleeping(bool) {}
 bool audioBusy() { return false; }
 void audioSetIdle(bool) {}
-#elif defined(BOARD_WS21) && !defined(WS21_AUDIO_I2S)
+#elif defined(BOARD_WS21) && !defined(WS21_AUDIO_I2S) && !defined(WS21_AUDIO_PDM)
 // The Waveshare 2.1 without a speaker: its own buzzer (Fedor: "what about the onboard buzzer, can we use that for audio
 // and clicks?"). It's an active one on the IO expander: on or off, one pitch, no volume. So a tap is a click (a 4 ms
 // pulse), and every other effect beeps the rhythm of its notes, each note a beep. No tune can be played on it. It
@@ -135,8 +136,8 @@ static void updateAmplifierPower() {
   }
 }
 
-#ifdef WS21_AUDIO_I2S
-static bool es8311Init() { return true; }  // a MAX98357A takes I2S as it comes: there is no codec to set up
+#if defined(WS21_AUDIO_I2S) || defined(WS21_AUDIO_PDM)
+static bool es8311Init() { return true; }  // a MAX98357A or a PAM8302A takes it as it comes: no codec to set up
 #else
 // ---- codec I2C ----
 static bool esW(uint8_t reg, uint8_t val) {
@@ -191,7 +192,7 @@ static bool es8311Init() {
   { uint8_t r = esR(0x31); r &= 0x9F; esW(0x31, r); }  // unmute
   return true;
 }
-#endif  // WS21_AUDIO_I2S
+#endif  // WS21_AUDIO_I2S || WS21_AUDIO_PDM
 
 // ---- square-wave tone synthesizer ----
 static int16_t buf[256 * 2];  // interleaved stereo (L=R)
@@ -248,6 +249,12 @@ void audioBegin() {
   digitalWrite(PA, LOW);   // until we know whether sound is enabled
 #endif
 
+#if defined(WS21_AUDIO_PDM)
+  // the sound as a 1-bit stream on one pin, smoothed by a resistor and a capacitor into the PAM8302A: no clock line
+  // (-1), and both channels, as the effects are written, so each half of the stream carries the same sample
+  i2s.setPinsPdmTx(-1, PDM_DO_IO);
+  if (!i2s.begin(I2S_MODE_PDM_TX, SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO)) {
+#else
 #ifdef WS21_AUDIO_I2S
   i2s.setPins(I2S_BCK_IO, I2S_WS_IO, I2S_DO_IO);  // (no MCLK and no input: the MAX98357A needs neither)
 #else
@@ -255,6 +262,7 @@ void audioBegin() {
 #endif
   if (!i2s.begin(I2S_MODE_STD, SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT,
                  I2S_SLOT_MODE_STEREO, I2S_STD_SLOT_BOTH)) {
+#endif
     Serial.println("I2S begin failed");
     return;
   }

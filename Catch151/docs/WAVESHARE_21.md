@@ -145,7 +145,7 @@ bash tools/build_ws21.sh     # compile only: build-ws21/Catch151.ino.bin
 | `src/pin_config.h` | A WS21 block, before the Knomi's. |
 | `Catch151.ino` | Includes `ws21_hal.h`, builds the panel objects, and the touch address. |
 | `src/rtcbat.cpp` | The PCF85063 keeps the time across restarts. The battery is read from the ADC. |
-| `src/audio.cpp` | The buzzer beeps the effects. Sound through an added MAX98357A once `WS21_AUDIO_I2S` is on. |
+| `src/audio.cpp` | The buzzer beeps the effects. Sound through an added PAM8302A (`WS21_AUDIO_PDM`) or MAX98357A (`WS21_AUDIO_I2S`). |
 | `src/ota_update.cpp` | Wi-Fi updates are off. The update site carries the Knomi's firmware, which would not drive this screen. |
 | `src/autorot.h` | The quarter turn stays 0: the picture turns in `ws21_hal.h` instead (45° plus quarter turns). |
 | `src/knomi_rim.h` | Its row tables can be sized for the 466 canvas. The Knomi's build is unchanged. |
@@ -205,9 +205,10 @@ Not done yet, on purpose:
 - **Tearing:** one frame buffer. Now two, swapped between refreshes.
 - **Speed:** almost everything here waits on PSRAM. The game draws a frame in about 75 ms. Copying it to the panel
   by CPU took 68 ms (138 ms turned 45° and blended): the CPU reads each frame-buffer line in before writing it.
-  Straight, the canvas now comes in by DMA and goes out by DMA, a band at a time through internal RAM, and the CPU
-  only shades the rim: 33 ms. A whole frame is about 110 ms (205 ms turned 45° at first, 164 by DMA). On both cores
-  the turned copy took 65 ms, but the glitch lines came back (`SPLIT`). The refill, on the game's core, still takes
+  Straight, the CPU reads the canvas and the DMA writes the frame buffer, a band at a time through internal RAM:
+  38 ms. A whole frame is about 115 ms (205 ms turned 45° at first, 164 by DMA). Reading the canvas by DMA too
+  saved 9 ms, and on both cores the turned copy took 65 ms, but both brought the glitch lines back (`DMAIN`,
+  `SPLIT`): anything else reading PSRAM hard while the refill runs holds it up. The refill, on the game's core, still takes
   about a quarter of that core.
 - **Taps:** the game read the touch once a frame. A tap that came and went within a 200 ms frame was lost. A touch
   task now queues every press and lift.
@@ -228,6 +229,8 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `PCLK n` | The pixel clock in MHz. |
 | `PCLKEDGE 0` / `PCLKEDGE 1` | Data on the rising or falling edge. |
 | `REFILLCORE 0` / `REFILLCORE 1` | The core the panel's refill runs on. Saved; used from the next start. |
+| `DMAIN 1` | The straight copy reads the canvas by DMA: 9 ms a frame quicker, but the lines come back. |
+| `PDMCHECK` | With `WS21_AUDIO_PDM`: GPIO 19 read back, to see the sound stream runs. |
 | `TOUCHLOG 1` | Each press and lift, with how long the chip and the game took to see it. |
 | `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both (faster, but the lines come back). |
 | `LCD` | Refreshes since the last `LCD`, and the longest gap between two. |
@@ -275,7 +278,29 @@ The MAX98357A is a small I2S amplifier on a breakout board (Adafruit 3006, or th
 The code for it is in place: `audio.cpp` plays the effects through it, with no codec to set up. Uncomment
 `WS21_AUDIO_I2S` in `pin_config.h` once it's wired.
 
-### Wiring: all from the microSD slot (recommended)
+### Wiring: a PAM8302A on the 12-pin plug (Fedor's choice)
+
+Parts: a PAM8302A board (the purple "2.5W Class D Amp" ones), one or two 16 mm 1 W 8 Ω speakers, a 1 kΩ resistor
+and a 10 nF ceramic capacitor (marked "103"). The board's own 12-pin cable carries everything:
+
+| 12-pin plug | Board signal | PAM8302A |
+|---|---|---|
+| 3 | GPIO 19: the sound as a 1-bit stream | through the 1 kΩ to A+; the 10 nF from A+ to Gnd |
+| | | A− to Gnd |
+| 4 | GPIO 20 | SD: high plays, low shuts it down (the game turns it off when idle or asleep) |
+| 6 | 3V3 | Vin |
+| 1 or 5 | GND | Gnd |
+| | | Speaker + and −: one speaker, or two in series (16 Ω, a little quieter) |
+
+- Count the pins from pin 1 on the board's silkscreen, not by wire colour.
+- The resistor and capacitor turn the stream into sound before the amplifier: without them it gets megahertz
+  noise.
+- Start with the board's Vol trimmer turned most of the way down, then turn it up.
+- The "USB" port then only charges: GPIO 19 and 20 are its data lines. Flash and use the console through "UART".
+- Then uncomment `WS21_AUDIO_PDM` in `pin_config.h` and flash. The hatch jingle plays at start-up. `PDMCHECK` on the
+  console reads GPIO 19 back: a running stream flips all the time.
+
+### Wiring: a MAX98357A from the microSD slot
 
 The game doesn't use the microSD card, and the card slot carries three spare GPIOs and a spare expander line.
 A microSD breakout ("sniffer") or a microSD extension ribbon plugged into the slot brings them out, with no
@@ -291,7 +316,7 @@ soldering on the board:
 | VSS | GND | GND |
 | | | Speaker + and −: the two DS Lite speakers in series |
 
-This is what `pin_config.h` is set up for. It keeps both USB ports and the 12-pin connector free.
+`WS21_AUDIO_I2S` in `pin_config.h` is set up for this. It keeps both USB ports and the 12-pin connector free.
 
 - GPIO 1 and 2 also go to the panel's setup lines. The panel only listens while its CS is low, and that's only at
   boot. Sound starts after the panel is set up.
@@ -303,10 +328,6 @@ This is what `pin_config.h` is set up for. It keeps both USB ports and the 12-pi
 - **12-pin connector plus one solder joint.** BCLK on GPIO 19 (pin 3), LRC on GPIO 20 (pin 4), and DIN on GPIO 42,
   soldered at the card slot's DAT0. Uses the included SH1.0 cable. You lose the "USB" port (use the "UART" one), and
   the amplifier has no on/off line: it stays on (2.4 mA).
-- **An analog amplifier on one pin**, such as a PAM8302A (Adafruit 2130). GPIO 19 makes a 1-bit signal (the S3's I2S
-  in PDM mode), a resistor and capacitor smooth it, and the PAM8302A drives the speakers. GPIO 20 can be its
-  shutdown pin. All from the 12-pin connector, and the board has a volume trimmer. The sound is a little rougher,
-  and the code needs a small change (PDM instead of standard I2S).
 
 ## Battery
 
