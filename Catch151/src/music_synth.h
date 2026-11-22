@@ -107,6 +107,7 @@ class MusicPlayer {
     ms_ = 1000.0f / rate;
   }
   uint8_t playing() const { return st_.track; }
+  bool audible() const { return st_.track != MUS_NONE && !st_.done && fade_ > 0.0f; }  // (the Waveshare's amp stays on)
   void fightTempo(float f) { fightTempo_ = f > 0.2f && f < 3.0f ? f : 1.0f; }  // (Reel Fishing, Pinball: musicTempo())
 
   // the track to play: the one playing fades out first (fast: when the sound was switched off)

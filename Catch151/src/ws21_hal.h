@@ -393,16 +393,7 @@ public:
     knomiRimBegin(LCD_WIDTH);
     ws21SetRotation(WS21_ROT_DEG);
     if (!allocBands(0)) return false;
-    for (Side *dp : { &side[0], &side[1], &in }) {
-      Side &d = *dp;
-      async_memcpy_config_t mc = ASYNC_MEMCPY_DEFAULT_CONFIG();
-      mc.backlog = 4;
-      mc.dma_burst_size = 32;  // (the frame buffers start on 32-byte lines; 64-byte bursts want 64-byte starts)
-      if (esp_async_memcpy_install_gdma_ahb(&mc, &d.dma) != ESP_OK) {
-        d.dma = nullptr;
-        Serial.println("ws21: no DMA for the frame copy, the CPU copies it");
-      }
-    }
+    installDma(side[0]);  // (the other core's and the canvas reads' only once SPLIT or DMAIN asks for them)
     go = xSemaphoreCreateBinary();
     back = xSemaphoreCreateBinary();
     // below the touch task (5) and the buzzer (4), so the half frame made there never holds up a tap or a beep
@@ -418,6 +409,8 @@ public:
     const int64_t t1 = esp_timer_get_time();
     const bool straight = (gWs21RotDeg == 0 || gWs21RotDeg == 180) && gWs21DmaIn && allocRaws();
     const bool split = !straight && gWs21Split && worker && allocBands(1);
+    if (straight) installDma(in);
+    if (split) installDma(side[1]);
     curFb = fb;
     if (split) xSemaphoreGive(go);
     int64_t waited = straight ? straightBands(fb, gWs21RotDeg == 180) : doBands(0, fb, split ? 2 : 1, 0);
@@ -462,7 +455,23 @@ private:
     volatile uint32_t done = 0;    // DMA copies finished (its interrupt counts them)
     uint32_t issued = 0;           // ...and asked for
     uint32_t ticket[2] = { 0, 0 };  // the count each of its two band buffers' last copy finishes at
+    bool tried = false;            // its DMA asked for (installDma)
   };
+  // a side's DMA, installed the first time it's needed. Each takes one of the S3's five DMA channel pairs, and with
+  // the amplifier's output (2026-11-22) there was none left for the TLS encryption ("no free gdma channel", HTTPS
+  // failed): so the other core's (SPLIT) and the canvas reads' (DMAIN), both off, no longer take theirs at start-up.
+  // Without one, that side's copy is the CPU's
+  void installDma(Side &d) {
+    if (d.dma || d.tried) return;
+    d.tried = true;
+    async_memcpy_config_t mc = ASYNC_MEMCPY_DEFAULT_CONFIG();
+    mc.backlog = 4;
+    mc.dma_burst_size = 32;  // (the frame buffers start on 32-byte lines; 64-byte bursts want 64-byte starts)
+    if (esp_async_memcpy_install_gdma_ahb(&mc, &d.dma) != ESP_OK) {
+      d.dma = nullptr;
+      Serial.println("ws21: no DMA for the frame copy, the CPU copies it");
+    }
+  }
   Side side[2];
   Side in;  // the straight copy's DMA from the canvas
   uint16_t *raws[2] = { nullptr, nullptr };  // internal RAM: the canvas's bands as they come in (DMAIN only)

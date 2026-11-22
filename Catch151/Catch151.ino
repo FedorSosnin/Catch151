@@ -1124,6 +1124,16 @@ void handleSerial() {
     Serial.println("DONE");
     return;
 #endif
+#if HAS_MUSIC && defined(BOARD_WS21)
+  } else if (line == "AUDIO") {  // the amplifier's mixing: its load on core 0, dropouts, what plays (bring-up)
+    audioReport();
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("AUDIOBENCH ")) {  // 2 s of music track n mixed and timed, nothing played (bring-up)
+    audioBench((uint8_t)line.substring(11).toInt());
+    Serial.println("DONE");
+    return;
+#endif
   } else if (line.startsWith("DMAIN ")) {  // 1: the straight copy reads the canvas by DMA (quicker; lines came back)
     gWs21DmaIn = line.substring(6).toInt() != 0;
     Serial.println("DONE");
@@ -1323,6 +1333,9 @@ void handleSerial() {
 #if HAS_MUSIC
   } else if (line.startsWith("MUSIC")) {  // V2: "MUSIC n" plays track n (music.h) whatever the screen; "MUSIC" alone, the screens'
     v2MusicForce(line.length() > 6 ? line.substring(6).toInt() : -1);
+#ifdef BOARD_WS21
+    audioForceMusic(line.length() > 6);  // (on the board it plays even while the pet sleeps: testing)
+#endif
     Serial.println("DONE");
 #endif
   } else if (line == "GAMES") {

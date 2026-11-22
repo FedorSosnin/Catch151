@@ -40,3 +40,6 @@ bool audioEnabled();
 void audioSetSleeping(bool sleeping);  // asleep: amplifier off
 bool audioBusy();                      // an effect requested at idle may still be playing: don't sleep the CPU
 void audioSetIdle(bool idle);          // no recent use: amplifier off (an effect turns it on for 4 s)
+void audioReport();                    // the Waveshare 2.1 with an amplifier: the console's AUDIO (mixing load, dropouts)
+void audioBench(uint8_t track);        // ...and its AUDIOBENCH n: 2 s of music track n mixed and timed
+void audioForceMusic(bool on);         // ...and its MUSIC n: that track plays even while the pet sleeps (testing)

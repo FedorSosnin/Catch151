@@ -3,8 +3,8 @@
 #include "pin_config.h"
 
 // The Waveshare 2.1 sounds through an amplifier added by hand (docs/WAVESHARE_21.md): a PAM8302A fed a 1-bit stream
-// (WS21_AUDIO_PDM) or a MAX98357A fed I2S (WS21_AUDIO_I2S), in pin_config.h. It plays the same tones as the AMOLED
-// 1.75, without a codec to set up. Without either it's silent, as the Knomi, unless WS21_BUZZER beeps them on its buzzer.
+// (WS21_AUDIO_PDM) or a MAX98357A fed I2S (WS21_AUDIO_I2S), in pin_config.h. It plays the effects, the cries and the
+// music, mixed as on a computer. Without either it's silent, as the Knomi, unless WS21_BUZZER beeps on its buzzer.
 #if defined(BOARD_WS21) && (defined(WS21_AUDIO_I2S) || defined(WS21_AUDIO_PDM))
 #define WS21_AMP 1
 #endif
@@ -86,13 +86,366 @@ bool audioEnabled() { return gOn; }
 void audioSetSleeping(bool sleeping) { gSleeping = sleeping; }
 bool audioBusy() { return gPlaying; }
 void audioSetIdle(bool) {}
+#elif defined(WS21_AMP)
+// The Waveshare 2.1 with an amplifier added by hand (docs/WAVESHARE_21.md, "Sound"; Fedor: "let's add music and sound
+// through that amp"): the effects, the Pokemon's cries and the music, mixed as on a computer (host_audio.cpp) by a task
+// on core 0 that streams to the amplifier without a break. A PAM8302A gets the mix as a 1-bit stream on one pin,
+// smoothed by a resistor and a capacitor (WS21_AUDIO_PDM); a MAX98357A gets it as I2S (WS21_AUDIO_I2S).
+#include <Arduino.h>
+#include <Preferences.h>
+#include <atomic>
+#include <new>
+#include "driver/i2s_std.h"
+#include "driver/i2s_pdm.h"
+#include "soc/usb_serial_jtag_reg.h"
+#include "sfx_notes.h"
+#include "music_synth.h"
+#include "cry.h"
+#ifdef WS21_AMP_EXIO
+#include "ws21_exio.h"
+#endif
+
+#define SAMPLE_RATE 16000  // (a multiple of 100: the 1-bit stream then runs at its fixed 6.144 MHz)
+#define BLOCK 128          // frames mixed at a time (8 ms); 4 of them wait in the DMA, so a tap sounds within ~40 ms
+#define QUEUE_LEN 8
+#define AMP_WAKE_MS 50     // the amplifier just switched on: an effect waits this long (it swallowed short ones)
+
+static i2s_chan_handle_t gTx = nullptr;
+static std::atomic<bool> gOn{true}, gSleeping{false}, gIdle{false}, gBusy{false};
+static std::atomic<bool> gHold{false};          // an effect asked for at idle keeps the amplifier on until gHoldUntil
+static std::atomic<uint32_t> gHoldUntil{0};
+static uint8_t gQueue[QUEUE_LEN];               // the effects: one producer (the game), one consumer (the task)
+static std::atomic<uint32_t> gHead{0}, gTail{0};
+
+// the music: the game says which track its screen wants (musicWant), the task plays it. Silent with the Music switch
+// off and while the pet sleeps (SOUND off leaves it playing)
+static MusicPlayer gMusic;
+static std::atomic<uint8_t> gMusicWant{MUS_NONE};
+static std::atomic<bool> gMusicOn{true};
+static std::atomic<bool> gMusicForced{false};  // the console's MUSIC n: plays while the pet sleeps too (testing)
+static float gDuck = 1.0f;  // the music's level under the effects
+#define DUCK_LEVEL 0.45f    // ...while one plays
+#define DUCK_IN_MS 4.0f
+#define DUCK_OUT_MS 120.0f
+// the settings page's levels, Low, Medium and High (1..3), as on a computer: SOUND's the effects' and the cries'
+// (saved as sndv), MUSIC's the music's (musv)
+static const float LEVEL_GAIN[4] = { 0.0f, 0.3f, 0.55f, 1.0f };
+static std::atomic<uint8_t> gSndLv{3}, gMusLv{3};
+static float gSndGain = 1.0f, gMusGain = 1.0f;  // (the task's, eased toward the levels: no click)
+#define LEVEL_EASE_MS 25.0f
+static std::atomic<float> gFightTempo{1.0f};
+
+// a Pokemon's cry (cry.h): built on the game's core, handed over once the task has taken the last one
+static CryPlayer gVoice;
+static Cry gVoiceNext;
+static std::atomic<bool> gVoiceReady{false};
+
+// the console's AUDIO: how much of core 0 the mixing takes, and how often the DMA ran dry
+static uint32_t gStatFrom = 0, gStatUs = 0, gStatWorstUs = 0;
+static std::atomic<uint32_t> gUnderruns{0};
+static bool gAmpLevel = false;
+static uint32_t gAmpOnAt = 0;
+
+static void saveLevel(const char *key, uint8_t v) {
+  Preferences p;
+  p.begin(SAVE_NS, false);
+  p.putUChar(key, v);
+  p.end();
+}
+
+// the amplifier's on/off line, from the task only
+static void ampSet(bool on) {
+  if (on == gAmpLevel) return;
+  gAmpLevel = on;
+  if (on) gAmpOnAt = millis();
+#ifdef WS21_AMP_EXIO
+  gExio.write(WS21_AMP_EXIO, on);
+#else
+  digitalWrite(PA, on ? HIGH : LOW);
+#endif
+}
+
+// ---- the effects' square waves (as host_audio.cpp) ----
+static const SfxDef *gDef = nullptr;
+static uint8_t gNote = 0;
+static int gDone = 0, gTotal = 0;
+static uint32_t gStep = 0, gAcc = 0;
+static bool gLegato = false;
+#define V2_ATTACK (SAMPLE_RATE * 4 / 1000)
+#define V2_DECAY (SAMPLE_RATE * 6 / 1000)
+
+static void startNote() {
+  const Note &n = gDef->n[gNote];
+  gTotal = SAMPLE_RATE * n.ms / 1000;
+  gDone = 0;
+  gStep = n.f ? (uint32_t)(((uint64_t)n.f << 32) / SAMPLE_RATE) : 0;
+  if (!gLegato || gNote == 0) gAcc = 0;
+}
+
+// an effect's sample with the cry and the music added (playing: an effect sounds, so the music ducks)
+static inline int16_t mix(int16_t s, bool playing) {
+  static const float duckIn = 1.0f - expf(-1000.0f / (DUCK_IN_MS * SAMPLE_RATE));
+  static const float duckOut = 1.0f - expf(-1000.0f / (DUCK_OUT_MS * SAMPLE_RATE));
+  static const float ease = 1.0f - expf(-1000.0f / (LEVEL_EASE_MS * SAMPLE_RATE));
+  float voice = gVoice.sample();
+  gSndGain += (LEVEL_GAIN[gSndLv.load(std::memory_order_relaxed)] - gSndGain) * ease;
+  float target = playing || gVoice.active() ? 1.0f - (1.0f - DUCK_LEVEL) * gSndGain : 1.0f;
+  gDuck += (target - gDuck) * (target < gDuck ? duckIn : duckOut);
+  gMusGain += (LEVEL_GAIN[gMusLv.load(std::memory_order_relaxed)] - gMusGain) * ease;
+  float m = 0;
+  gMusic.render(&m, 1, gDuck * gMusGain);
+  int32_t v = (int32_t)lrintf((s + voice * 32767.0f) * gSndGain + m * 32767.0f);
+  return (int16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
+}
+
+static void IRAM_ATTR noteUnderrun() { gUnderruns.fetch_add(1, std::memory_order_relaxed); }
+static bool IRAM_ATTR onSendQOvf(i2s_chan_handle_t, i2s_event_data_t *, void *) {
+  noteUnderrun();
+  return false;
+}
+
+static void audioTask(void *) {
+  static int16_t out[BLOCK * 2];  // stereo, L = R
+  for (;;) {
+    uint32_t t0 = micros(), now = millis();
+    // the amplifier: on while anything sounds, or awake and in use with SOUND or the music on; off asleep or idle
+    bool queued = gTail.load(std::memory_order_acquire) != gHead.load(std::memory_order_acquire);
+    bool hold = gHold && (int32_t)(gHoldUntil.load() - now) > 0;
+    bool sounding = gDef || queued || gVoice.active() || gVoiceReady.load() || gMusic.audible();
+    ampSet(sounding || (!gSleeping && (hold || ((gOn || gMusicOn) && !gIdle))));
+    bool warm = gAmpLevel && now - gAmpOnAt >= AMP_WAKE_MS;
+    gBusy = sounding || hold;
+
+    bool quiet = !gMusicOn;
+    gMusic.want(quiet || (gSleeping && !gMusicForced) ? (uint8_t)MUS_NONE : gMusicWant.load(std::memory_order_relaxed),
+                quiet);
+    gMusic.fightTempo(gFightTempo.load(std::memory_order_relaxed));
+    if (warm && gVoiceReady.load(std::memory_order_acquire)) {
+      gVoice.start(gVoiceNext);
+      gVoiceReady.store(false, std::memory_order_release);
+    }
+    for (int i = 0; i < BLOCK; i++) {
+      if (!gDef) {
+        uint32_t tail = gTail.load(std::memory_order_relaxed);
+        if (!warm || tail == gHead.load(std::memory_order_acquire)) {
+          out[i * 2] = out[i * 2 + 1] = mix(0, false);
+          continue;
+        }
+        uint8_t id = gQueue[tail % QUEUE_LEN];
+        gDef = &SFX[id];
+        gLegato = sfxLegato(id);
+        gTail.store(tail + 1, std::memory_order_release);
+        gNote = 0;
+        startNote();
+      }
+      int16_t s = 0;
+      if (gStep) {
+        bool first = gNote == 0, last = gNote + 1 >= gDef->len;
+        int32_t amp = 5000;
+        if (gLegato && last) amp -= amp * 45 / 100 * gDone / (gTotal ? gTotal : 1);  // the held one fades to 55%
+        s = (int16_t)((gAcc & 0x80000000u) ? amp : -amp);
+        if ((!gLegato || first) && gDone < V2_ATTACK) s = (int16_t)(s * gDone / V2_ATTACK);
+        else if ((!gLegato || last) && gDone > gTotal - V2_DECAY) s = (int16_t)(s * (gTotal - gDone) / V2_DECAY);
+        gAcc += gStep;
+      }
+      out[i * 2] = out[i * 2 + 1] = mix(s, true);
+      if (++gDone >= gTotal) {
+        if (++gNote >= gDef->len) gDef = nullptr;
+        else startNote();
+      }
+    }
+    uint32_t us = micros() - t0;
+    gStatUs += us;
+    if (us > gStatWorstUs) gStatWorstUs = us;
+    size_t w = 0;
+    i2s_channel_write(gTx, out, sizeof(out), &w, portMAX_DELAY);
+  }
+}
+
+static bool outputStart() {
+  i2s_chan_config_t cc = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+  cc.dma_desc_num = 4;
+  cc.dma_frame_num = BLOCK;
+  cc.auto_clear = true;  // run dry: silence, not the last block again
+  esp_err_t e = i2s_new_channel(&cc, &gTx, nullptr);
+#ifdef WS21_AUDIO_PDM
+  if (e == ESP_OK) {
+    // one data line and no clock line: the stream's density is the sound, the 1 kOhm and 10 nF turn it back into a
+    // voltage for the PAM8302A's A+
+    i2s_pdm_tx_config_t pc = {
+      .clk_cfg = I2S_PDM_TX_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+      .slot_cfg = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
+      .gpio_cfg = {},
+    };
+    pc.clk_cfg.up_sample_fs = SAMPLE_RATE / 100;  // the stream at 128 x 48 kHz whatever the rate (the header's advice)
+    pc.gpio_cfg.clk = I2S_GPIO_UNUSED;
+    pc.gpio_cfg.dout = (gpio_num_t)PDM_DO_IO;
+    pc.gpio_cfg.dout2 = I2S_GPIO_UNUSED;
+    e = i2s_channel_init_pdm_tx_mode(gTx, &pc);
+  }
+#else
+  if (e == ESP_OK) {
+    i2s_std_config_t sc = {
+      .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+      .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
+      .gpio_cfg = {},
+    };
+    sc.gpio_cfg.mclk = I2S_GPIO_UNUSED;  // (the MAX98357A needs no master clock)
+    sc.gpio_cfg.bclk = (gpio_num_t)I2S_BCK_IO;
+    sc.gpio_cfg.ws = (gpio_num_t)I2S_WS_IO;
+    sc.gpio_cfg.dout = (gpio_num_t)I2S_DO_IO;
+    sc.gpio_cfg.din = I2S_GPIO_UNUSED;
+    e = i2s_channel_init_std_mode(gTx, &sc);
+  }
+#endif
+  if (e == ESP_OK) {
+    i2s_event_callbacks_t cb = {};
+    cb.on_send_q_ovf = onSendQOvf;
+    i2s_channel_register_event_callback(gTx, &cb, nullptr);
+    e = i2s_channel_enable(gTx);
+  }
+  if (e != ESP_OK) {
+    Serial.printf("audio: the amplifier's output didn't start (%s): silent\n", esp_err_to_name(e));
+    if (gTx) i2s_del_channel(gTx);
+    gTx = nullptr;
+    return false;
+  }
+  return true;
+}
+
+void audioBegin() {
+#ifdef WS21_AMP_EXIO
+  gExio.write(WS21_AMP_EXIO, false);
+#else
+  // GPIO 19 and 20 are the "USB" port's data lines: the S3's own USB lets go of them (and of its pull-up on 20, which
+  // would hold the amplifier on)
+  CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_USB_PAD_ENABLE | USB_SERIAL_JTAG_DP_PULLUP);
+  pinMode(PA, OUTPUT);
+  digitalWrite(PA, LOW);
+#endif
+  Preferences p;
+  p.begin(SAVE_NS, true);
+  gOn = p.getBool("snd", true);
+  gMusicOn = p.getBool("mus", true);
+  uint8_t sv = p.getUChar("sndv", 3), mv = p.getUChar("musv", 3);
+  p.end();
+  gSndLv = sv >= 1 && sv <= 3 ? sv : 3;
+  gMusLv = mv >= 1 && mv <= 3 ? mv : 3;
+  gSndGain = LEVEL_GAIN[gSndLv];
+  gMusGain = LEVEL_GAIN[gMusLv];
+  gMusic.begin(SAMPLE_RATE);
+  gVoice.begin(SAMPLE_RATE);
+  if (!outputStart()) return;
+  gStatFrom = millis();
+  // core 0, under the touch task (5): the DMA holds 32 ms, so a touch read in between costs nothing
+  xTaskCreatePinnedToCore(audioTask, "audio", 6144, nullptr, 4, nullptr, 0);
+  sfxPlay(SFX_HATCH);  // the start-up jingle: it sounds
+}
+
+void sfxPlay(uint8_t id) {
+  if (!gTx || gSleeping || !gOn || id >= SFX_COUNT) return;
+  if (gIdle) {  // an alert at idle (e.g. "ready to evolve") has to be heard
+    gHoldUntil = millis() + 4000;
+    gHold = true;
+  }
+  uint32_t head = gHead.load(std::memory_order_relaxed);
+  if (head - gTail.load(std::memory_order_acquire) >= QUEUE_LEN) return;  // full: dropped
+  gQueue[head % QUEUE_LEN] = id;
+  gHead.store(head + 1, std::memory_order_release);
+}
+
+void audioSetEnabled(bool on) {
+  gOn = on;
+  Preferences p;
+  p.begin(SAVE_NS, false);
+  p.putBool("snd", on);
+  p.end();
+}
+bool audioEnabled() { return gOn; }
+void audioSetSleeping(bool sleeping) { gSleeping = sleeping; }
+void audioSetIdle(bool idle) { gIdle = idle; }
+bool audioBusy() { return gBusy; }
+
+void voiceSay(int16_t dex, uint8_t mood) {
+  if (!gTx || gSleeping || !gOn || gVoiceReady.load(std::memory_order_acquire)) return;
+  cryBuild(gVoiceNext, dex, mood);
+  gVoiceReady.store(true, std::memory_order_release);
+}
+void musicWant(uint8_t track) { gMusicWant.store(track, std::memory_order_relaxed); }
+void audioForceMusic(bool on) { gMusicForced = on; }
+void musicTempo(float f) { gFightTempo.store(f, std::memory_order_relaxed); }
+bool musicEnabled() { return gMusicOn; }
+void musicSetEnabled(bool on) {
+  gMusicOn = on;
+  Preferences p;
+  p.begin(SAVE_NS, false);
+  p.putBool("mus", on);
+  p.end();
+}
+uint8_t soundVolume() { return gSndLv; }
+void soundSetVolume(uint8_t v) {
+  gSndLv = v < 1 ? 1 : v > 3 ? 3 : v;
+  saveLevel("sndv", gSndLv);
+  if (!gOn) audioSetEnabled(true);
+}
+uint8_t musicVolume() { return gMusLv; }
+void musicSetVolume(uint8_t v) {
+  gMusLv = v < 1 ? 1 : v > 3 ? 3 : v;
+  saveLevel("musv", gMusLv);
+  if (!gMusicOn) musicSetEnabled(true);
+}
+
+// the console's AUDIO: since the last one, how much of core 0 the mixing took, its longest block, and how often the
+// stream ran dry
+void audioReport() {
+  uint32_t now = millis(), span = now - gStatFrom;
+  Serial.printf("audio: %s, %u Hz; mixing %.1f%% of core 0 (longest block %.2f of %.2f ms); ran dry %u times; "
+                "amplifier %s; music %s, track %u%s; sound %s\n",
+                gTx ? "running" : "NOT running", SAMPLE_RATE, span ? gStatUs / 10.0f / span : 0.0f, gStatWorstUs / 1000.0f,
+                BLOCK * 1000.0f / SAMPLE_RATE, (unsigned)gUnderruns.exchange(0), gAmpLevel ? "on" : "off",
+                gMusicOn ? "on" : "off", (unsigned)gMusic.playing(), gMusic.audible() ? " (playing)" : "",
+                gOn ? "on" : "off");
+  gStatUs = gStatWorstUs = 0;
+  gStatFrom = now;
+}
+
+// the console's AUDIOBENCH n: 2 s of track n mixed by a player of its own (not the one playing), timed, so the music's
+// cost on this chip can be seen whatever the pet is doing (asleep, nothing plays). It holds the game for that long
+void audioBench(uint8_t track) {
+  MusicPlayer *mp = new (std::nothrow) MusicPlayer();
+  if (!mp) {
+    Serial.println("bench: no memory");
+    return;
+  }
+  mp->begin(SAMPLE_RATE);
+  mp->want(track);
+  static float b[BLOCK];
+  float peak = 0;
+  double sq = 0;
+  const int blocks = 2 * SAMPLE_RATE / BLOCK;
+  uint32_t worst = 0, t0 = micros();
+  for (int k = 0; k < blocks; k++) {
+    uint32_t t1 = micros();
+    memset(b, 0, sizeof b);
+    mp->render(b, BLOCK, 1.0f);
+    uint32_t us = micros() - t1;
+    if (us > worst) worst = us;
+    for (float v : b) {
+      sq += v * v;
+      if (fabsf(v) > peak) peak = fabsf(v);
+    }
+  }
+  uint32_t us = micros() - t0;
+  Serial.printf("bench: track %u, 2 s of music mixed in %.1f ms (%.1f%% of a core; longest block %.2f of %.2f ms); "
+                "peak %.2f, rms %.3f of full scale\n", (unsigned)track, us / 1000.0f, us / 20000.0f, worst / 1000.0f,
+                BLOCK * 1000.0f / SAMPLE_RATE, peak, sqrt(sq / (blocks * BLOCK)));
+  delete mp;
+}
+
 #else
 #include <Arduino.h>
 #include <Wire.h>
 #include <ESP_I2S.h>
-#ifdef WS21_AMP_EXIO
-#include "ws21_exio.h"  // the Waveshare 2.1's amplifier is turned on and off by an expander line
-#endif
 #include <Preferences.h>
 #include "sfx_notes.h"
 
@@ -132,17 +485,10 @@ static void updateAmplifierPower() {
   if (want != last) {
     last = want;
     if (want == HIGH) gAmpOnAt = millis();
-#ifdef WS21_AMP_EXIO
-    gExio.write(WS21_AMP_EXIO, want == HIGH);
-#else
     digitalWrite(PA, want);
-#endif
   }
 }
 
-#if defined(WS21_AUDIO_I2S) || defined(WS21_AUDIO_PDM)
-static bool es8311Init() { return true; }  // a MAX98357A or a PAM8302A takes it as it comes: no codec to set up
-#else
 // ---- codec I2C ----
 static bool esW(uint8_t reg, uint8_t val) {
   Wire.beginTransmission(ES8311_ADDR);
@@ -196,7 +542,6 @@ static bool es8311Init() {
   { uint8_t r = esR(0x31); r &= 0x9F; esW(0x31, r); }  // unmute
   return true;
 }
-#endif  // WS21_AUDIO_I2S || WS21_AUDIO_PDM
 
 // ---- square-wave tone synthesizer ----
 static int16_t buf[256 * 2];  // interleaved stereo (L=R)
@@ -246,27 +591,12 @@ static void audioTask(void *) {
 
 void audioBegin() {
   // I2S first: starts the MCLK the codec needs to lock on
-#ifdef WS21_AMP_EXIO
-  gExio.write(WS21_AMP_EXIO, false);  // until we know whether sound is enabled
-#else
   pinMode(PA, OUTPUT);
   digitalWrite(PA, LOW);   // until we know whether sound is enabled
-#endif
 
-#if defined(WS21_AUDIO_PDM)
-  // the sound as a 1-bit stream on one pin, smoothed by a resistor and a capacitor into the PAM8302A: no clock line
-  // (-1), and both channels, as the effects are written, so each half of the stream carries the same sample
-  i2s.setPinsPdmTx(-1, PDM_DO_IO);
-  if (!i2s.begin(I2S_MODE_PDM_TX, SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO)) {
-#else
-#ifdef WS21_AUDIO_I2S
-  i2s.setPins(I2S_BCK_IO, I2S_WS_IO, I2S_DO_IO);  // (no MCLK and no input: the MAX98357A needs neither)
-#else
   i2s.setPins(I2S_BCK_IO, I2S_WS_IO, I2S_DO_IO, I2S_DI_IO, I2S_MCK_IO);
-#endif
   if (!i2s.begin(I2S_MODE_STD, SAMPLE_RATE, I2S_DATA_BIT_WIDTH_16BIT,
                  I2S_SLOT_MODE_STEREO, I2S_STD_SLOT_BOTH)) {
-#endif
     Serial.println("I2S begin failed");
     return;
   }

@@ -111,7 +111,9 @@
 //   A+, and GPIO 20 is the amplifier's SD (high plays). The "USB" port then only charges.
 // - WS21_AUDIO_I2S: a MAX98357A on the microSD slot's lines (the game uses no card; GPIO 1 and 2 only set up the
 //   panel at boot).
-// #define WS21_AUDIO_PDM
+// On (2026-11-22, Fedor: "let's add music and sound through that amp"): the PAM8302A on the 12-pin connector. Effects,
+// cries and music, mixed in audio.cpp.
+#define WS21_AUDIO_PDM
 // #define WS21_AUDIO_I2S
 #if defined(WS21_AUDIO_PDM)
 #define PDM_DO_IO 19               // 12-pin connector pin 3 -> 1 kOhm -> A+ (10 nF from A+ to GND; A- to GND)
