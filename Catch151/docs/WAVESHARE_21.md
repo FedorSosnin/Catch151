@@ -156,9 +156,10 @@ What the code uses:
 
 - **Panel:** esp_lcd's RGB panel, driven directly (`Ws21Panel`), with no frame buffer of the driver's. Three
   frames of 466 × 466 in PSRAM: one on show, one waiting for the next refresh, one being drawn, so nothing tears and
-  the game never waits for a refresh. Two bounce buffers of 20 lines in internal RAM feed the panel. Each time one
+  the game never waits for a refresh. Two bounce buffers of 16 lines in internal RAM feed the panel. Each time one
   has gone out, `ws21Fill()` refills it from the frame on show: a plain copy of each row's part inside the circle,
-  with the 7 px border and the corners black. 12 MHz pixel clock (44 Hz). Data changes on the **falling** edge of
+  with the 7 px border and the corners black. The rows come from internal RAM, where the DMA brought them while the
+  band before went out (`Ws21Prefetch`); if they aren't there, the CPU reads them from PSRAM. 12 MHz pixel clock (44 Hz). Data changes on the **falling** edge of
   the pixel clock: on the rising edge, as in Waveshare's demo, this panel showed streaks along the rows.
 - **Panel setup:** Waveshare's own command list, copied from their demo. Arduino_GFX has one for a similar 2.1" panel
   (`TL021WVC02`), but its gamma, VCOM and inversion settings differ. It goes over a 9-bit software SPI on GPIO
@@ -228,9 +229,22 @@ the fix was copying less:
   Bands of 30 lines were tried too: no fewer late refills, and internal RAM fell to 34 KB while TLS connected.
 
 Result, on the bench board: Pinball 67 ms a frame (15 a second, the ball at full speed); the home screen 82 ms
-(115 before). The refill still costs about a third of the game's core (a 20-line band takes about 350 us to copy
-out of PSRAM, 24 of them a refresh). Lower refresh rates help a little more: Pinball about 55 ms at 8 MHz (29 Hz), not yet tried by eye for
-flicker. Copying the bands by DMA instead would free most of that core: the next step.
+(115 before).
+
+- **The refill reading ahead by DMA** (`Ws21Prefetch`). The CPU's copy of a band out of PSRAM took about 350 us
+  of every 900, a third of the game's core. Now each refill has the DMA bring the next band into internal RAM, and
+  the next refill only copies it across: 77 us a band, about 10% of the core. About 96% of bands come that way;
+  the rest (the frame changed in between, or the DMA was late) are read by the CPU as before. Its own channel pair,
+  driven directly: `esp_async_memcpy` writes back the cache over the source by address before every copy. It needs
+  a memory-to-memory trigger taken as `esp_async_memcpy` takes one (without it the DMA never moved), and no owner
+  checks on its descriptors (the transmit ones are never handed back, and a refused mount logged from the refill's
+  interrupt until the watchdog stopped the chip). The bounce buffers went to 16 lines to make room for its 15 KB.
+- **But PSRAM is the limit, not the CPU.** Freeing the core barely moved the frame times at 44 Hz: the home screen
+  79 ms, Pinball 67 (its table's DMA copy then holds up the read-ahead: 38% of bands fell back to the CPU). At
+  29 Hz (`PCLK 8`) there's room: Pinball 49 ms (20 a second) against 55 with the CPU's refill. The refresh rate is
+  the next choice, by eye: flicker.
+- **DMA channels:** the read-ahead takes one more pair (now the panel, the frame copy, the read-ahead, the sound,
+  and one left for TLS). HTTPS with it isn't tested yet. `WS21_REFILL_DMA 0` builds it out.
 
 ### What bring-up found (2026-11-20)
 
@@ -286,7 +300,7 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `PDMGAIN n` | The mix's level on its way out, in tenths (20, x2, the default). |
 | `TOUCHLOG 1` | Each press and lift, with how long the chip and the game took to see it. |
 | `SPLIT 0` / `SPLIT 1` | Turned: the frame made on the game's core alone, or on both. |
-| `LCD` | Refreshes since the last `LCD`, the longest gap between two, refreshes with a lost refill signal (`eofmiss`), refreshes refilled out of step (`eofodd`), and the refill's time a band (`fill`: count, average, longest, in us). |
+| `LCD` | Refreshes since the last `LCD`, the longest gap between two, refreshes with a lost refill signal (`eofmiss`), refreshes refilled out of step (`eofodd`), the refill's time a band (`fill`: count, average, longest, in us), and how many bands came read ahead by the DMA, by the CPU, and with the DMA late. |
 | `EOFFIX 0` / `EOFFIX 1` | The fix for lost refill signals off or on (on at start). |
 | `STALL us n` | Holds up the interrupts n times for us microseconds, as a flash write does. |
 | `NVSTEST n` | n real flash writes, to a scratch area (`ws21t`), not the save. |

@@ -1088,11 +1088,15 @@ void handleSerial() {
     uint32_t miss, odd;
     bool found;
     panel->eofStats(&miss, &odd, &found);
-    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s fill n=%u avg=%u max=%u drop=%u us\n",
+    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s fill n=%u avg=%u max=%u us dma=%s "
+                  "read-ahead %u, cpu %u, dma late %u\n",
                   (unsigned)n, (unsigned)gap, (unsigned)late, (unsigned)miss, (unsigned)odd,
                   !found ? "none" : panel->eofFix ? "on" : "off", (unsigned)gWs21Show.fillN,
-                  (unsigned)(gWs21Show.fillN ? gWs21Show.fillUs / gWs21Show.fillN : 0), (unsigned)gWs21Show.fillMax, 0u);
+                  (unsigned)(gWs21Show.fillN ? gWs21Show.fillUs / gWs21Show.fillN : 0), (unsigned)gWs21Show.fillMax,
+                  gWs21Pre.stage ? "on" : "off", (unsigned)gWs21Pre.hits, (unsigned)gWs21Pre.misses,
+                  (unsigned)gWs21Pre.late);
     gWs21Show.fillUs = gWs21Show.fillN = gWs21Show.fillMax = 0;
+    gWs21Pre.hits = gWs21Pre.misses = gWs21Pre.late = 0;
     Serial.println("DONE");
     return;
   } else if (line.startsWith("EOFFIX ")) {  // 0: the driver's lost-refill-signal fault left as it is (testing)

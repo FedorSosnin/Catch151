@@ -46,10 +46,12 @@
 #define LCD_VSYNC_PW 3
 #define LCD_VSYNC_BP 8
 #define LCD_VSYNC_FP 8
-#define LCD_BOUNCE_PX (20 * PANEL_SIZE)  // bounce buffers: 20 lines each in internal RAM (2 x 19 KB; the demo has 10),
+#define LCD_BOUNCE_PX (16 * PANEL_SIZE)  // bounce buffers: 16 lines each in internal RAM (2 x 15 KB; the demo has 10),
                                          // so a short stall (a flash read, the cache written back: ws21Writeback(),
-                                         // 0.4 ms) doesn't make a refill late. 480 / 20 = 24 a refresh. (30 lines took
-                                         // 19 KB more, and internal RAM fell to 34 KB while TLS connected)
+                                         // 0.4 ms) doesn't make a refill late (a band goes out in 0.73 ms). 480 / 16 =
+                                         // 30 a refresh. The refill's DMA brings the next band into 15 KB more
+                                         // (Ws21Prefetch). (30 lines took 19 KB more, and internal RAM fell to 34 KB
+                                         // while TLS connected)
 
 // the panel's setup commands: 3-wire SPI (9-bit) on GPIO 1 and 2, its CS on the expander. GPIO 1 and 2 are also
 // the microSD's CMD and CLK; the game doesn't use the card

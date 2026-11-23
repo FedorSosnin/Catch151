@@ -17,6 +17,8 @@
 #include "esp32s3/rom/cache.h"  // (Cache_WriteBack_All: ws21Writeback())
 #include <esp_timer.h>
 #include <esp_async_memcpy.h>
+#include "esp_private/gdma.h"       // (the refill's own DMA: Ws21Prefetch)
+#include "esp_private/gdma_link.h"
 #include <Preferences.h>
 #include "soc/lcd_cam_struct.h"
 #include "soc/gpio_periph.h"  // (the console's PDMCHECK reads the sound pin back)
@@ -159,6 +161,150 @@ inline void ws21Drop(const void *p, size_t bytes) {  // (p and bytes on 32-byte 
   esp_cache_msync((void *)p, bytes, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
 }
 
+// Panel rows py0.. (n of them, PANEL_SIZE px each) into out: the 7 px border and the corners outside the circle black,
+// the rest from rows, where frame row y is rows + (y - first) * LCD_WIDTH (the frame itself: first 0; a band the DMA
+// brought into internal RAM: its first row). (The rim's shading is in the frame already: Ws21Canvas::shadeRim().)
+// The panel's refill makes every row this way, and the console's SHOT too.
+static IRAM_ATTR void ws21PanelRows(const uint16_t *rows, int first, uint16_t *out, int py0, int n) {
+  for (int r = 0; r < n; r++, out += PANEL_SIZE) {
+    const int y = py0 + r - WS21_BORDER;
+    if (y < 0 || y >= LCD_HEIGHT) {
+      memset(out, 0, PANEL_SIZE * 2);
+      continue;
+    }
+    const int x0 = gKnomiRim ? gKnomiRimX0[y] : 0, x1 = gKnomiRim ? gKnomiRimX1[y] : LCD_WIDTH;
+    memset(out, 0, (size_t)(WS21_BORDER + x0) * 2);
+    memcpy(out + WS21_BORDER + x0, rows + (y - first) * LCD_WIDTH + x0, (size_t)(x1 - x0) * 2);
+    memset(out + WS21_BORDER + x1, 0, (size_t)(LCD_WIDTH - x1 + WS21_BORDER) * 2);
+  }
+}
+
+// The refill reading ahead by DMA (2026-11-23). Copying a band out of PSRAM with the CPU took about 350 us of every
+// 900, a third of the game's core. So each refill, once its band is made, has the DMA bring the next band's rows
+// into internal RAM (stage); the next refill finds them there and only copies them across, which is quick. If they
+// aren't there (the frame changed in between, or the DMA isn't done), the CPU reads PSRAM as before. Its own channel
+// pair, driven directly: esp_async_memcpy writes back the cache over the source by address first, every time (slow:
+// the whole frame took 17 ms), and the frame on show never has anything in the cache to write back (present()).
+// Done is counted by the DMA's own interrupt (the descriptors' owner bits weren't handed back, and a check on them
+// made every later mount fail, logging from the refill's interrupt until the watchdog stopped the chip). A copy is
+// never started while one is under way, and the refill never waits for one.
+struct Ws21Prefetch {
+  gdma_channel_handle_t tx = nullptr, rx = nullptr;
+  gdma_link_list_handle_t txl = nullptr, rxl = nullptr;
+  uint8_t *stage = nullptr;  // internal RAM
+  size_t stageBytes = 0, extAlign = 32;
+  const uint16_t *src = nullptr;  // what's coming or come: the frame,
+  int py0 = -1;                   // its band (the first panel row; -1 none),
+  int c0 = 0;                     // the band's first frame row,
+  size_t off = 0;                 // where that row starts in stage
+  bool empty = false;             // (only border rows: nothing to bring)
+  volatile uint32_t issued = 0, done = 0;
+  volatile uint32_t hits = 0, misses = 0, late = 0;
+};
+static Ws21Prefetch gWs21Pre;
+static IRAM_ATTR bool ws21PrefetchDone(gdma_channel_handle_t, gdma_event_data_t *, void *) {
+  gWs21Pre.done++;
+  return false;
+}
+
+static bool ws21PrefetchBegin(int bandRows) {
+  Ws21Prefetch &p = gWs21Pre;
+  if (p.tx) return true;
+  gdma_channel_alloc_config_t tc = {};
+  tc.direction = GDMA_CHANNEL_DIRECTION_TX;
+  tc.flags.reserve_sibling = 1;
+  if (gdma_new_ahb_channel(&tc, &p.tx) != ESP_OK) return false;
+  gdma_channel_alloc_config_t rc = {};
+  rc.direction = GDMA_CHANNEL_DIRECTION_RX;
+  rc.sibling_chan = p.tx;
+  if (gdma_new_ahb_channel(&rc, &p.rx) != ESP_OK) {
+    gdma_del_channel(p.tx);
+    p.tx = nullptr;
+    return false;
+  }
+  // a free memory-to-memory trigger, as esp_async_memcpy takes one
+  gdma_trigger_t trig = GDMA_MAKE_TRIGGER(GDMA_TRIG_PERIPH_M2M, 0);
+  uint32_t ids = 0;
+  esp_err_t e = gdma_get_free_m2m_trig_id_mask(p.rx, &ids);
+  if (e == ESP_OK && ids) trig.instance_id = __builtin_ctz(ids);
+  esp_err_t e1 = gdma_connect(p.rx, trig), e2 = gdma_connect(p.tx, trig);
+  gdma_strategy_config_t st = {};
+  st.owner_check = false;
+  st.auto_update_desc = true;
+  st.eof_till_data_popped = true;
+  esp_err_t e3 = gdma_apply_strategy(p.tx, &st), e4 = gdma_apply_strategy(p.rx, &st);
+  gdma_transfer_config_t xc = {};
+  xc.max_data_burst_size = 32;
+  xc.access_ext_mem = true;
+  esp_err_t e5 = gdma_config_transfer(p.tx, &xc), e6 = gdma_config_transfer(p.rx, &xc);
+  Serial.printf("ws21: refill DMA: trigger %d (mask %x, %d), connect %d %d, strategy %d %d, transfer %d %d\n",
+                trig.instance_id, (unsigned)ids, e, e1, e2, e3, e4, e5, e6);
+  size_t ia = 4, ea = 32;
+  gdma_get_alignment_constraints(p.tx, &ia, &ea);
+  p.extAlign = ea < 32 ? 32 : ea;
+  p.stageBytes = (((size_t)bandRows * LCD_WIDTH * 2 + 2 * p.extAlign) + 63) & ~(size_t)63;
+  p.stage = (uint8_t *)heap_caps_aligned_calloc(64, 1, p.stageBytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+  gdma_link_list_config_t lc = {};
+  lc.num_items = p.stageBytes / 4032 + 2;
+  lc.item_alignment = 4;
+  lc.flags.check_owner = 0;
+  gdma_rx_event_callbacks_t cb = {};
+  cb.on_recv_eof = ws21PrefetchDone;
+  if (!p.stage || gdma_new_link_list(&lc, &p.txl) != ESP_OK || gdma_new_link_list(&lc, &p.rxl) != ESP_OK ||
+      gdma_register_rx_event_callbacks(p.rx, &cb, nullptr) != ESP_OK) {
+    Serial.println("ws21: no room for the refill's DMA: the CPU refills");
+    p.stage = nullptr;  // (the channels stay unused)
+    return false;
+  }
+  return true;
+}
+// the DMA's copy of frame f's rows for the band starting at panel row py0 (n rows), into stage
+static void ws21PrefetchKick(const uint16_t *f, int py0, int n) {
+  Ws21Prefetch &p = gWs21Pre;
+  p.py0 = -1;
+  if (!p.stage || !f || p.issued != p.done) return;  // (one still under way: none this time)
+  int c0 = py0 - WS21_BORDER, c1 = py0 + n - WS21_BORDER;
+  c0 = c0 < 0 ? 0 : c0;
+  c1 = c1 > LCD_HEIGHT ? LCD_HEIGHT : c1;
+  p.src = f;
+  p.c0 = c0;
+  p.empty = c1 <= c0;
+  if (p.empty) {
+    p.py0 = py0;
+    return;
+  }
+  const uintptr_t m = p.extAlign - 1;
+  const uintptr_t a = (uintptr_t)(f + c0 * LCD_WIDTH) & ~m, b = ((uintptr_t)(f + c1 * LCD_WIDTH) + m) & ~m;
+  if (b - a > p.stageBytes) return;
+  p.off = (uintptr_t)(f + c0 * LCD_WIDTH) - a;
+  gdma_buffer_mount_config_t tb = {};
+  tb.buffer = (void *)a;
+  tb.buffer_alignment = p.extAlign;
+  tb.length = b - a;
+  tb.flags.mark_eof = 1;
+  tb.flags.mark_final = GDMA_FINAL_LINK_TO_NULL;
+  gdma_buffer_mount_config_t rb = {};
+  rb.buffer = p.stage;
+  rb.buffer_alignment = 4;
+  rb.length = b - a;
+  rb.flags.mark_final = GDMA_FINAL_LINK_TO_NULL;
+  if (gdma_link_mount_buffers(p.txl, 0, &tb, 1, nullptr) != ESP_OK) return;
+  if (gdma_link_mount_buffers(p.rxl, 0, &rb, 1, nullptr) != ESP_OK) return;
+  p.issued++;
+  gdma_start(p.rx, gdma_link_get_head_addr(p.rxl));
+  gdma_start(p.tx, gdma_link_get_head_addr(p.txl));
+  p.py0 = py0;
+}
+// whether the band (f, py0) has come into stage
+static bool ws21PrefetchReady(const uint16_t *f, int py0) {
+  Ws21Prefetch &p = gWs21Pre;
+  if (p.py0 != py0 || p.src != f) return false;
+  if (p.empty) return true;
+  if (p.issued == p.done) return true;
+  p.late++;
+  return false;
+}
+
 // What the refill reads: the frames, and which is on show. Kept outside the panel so the refill can be in IRAM (a
 // static member placed there won't link).
 struct Ws21Show {
@@ -168,44 +314,40 @@ struct Ws21Show {
 };
 static Ws21Show gWs21Show;
 
-// Panel rows py0.. (n of them, PANEL_SIZE px each) into out, from frame f: the 7 px border and the corners outside the
-// circle black. (The rim's shading is in the frame already: Ws21Canvas::shadeRim().) The panel's refill makes every row
-// this way, and the console's SHOT too.
-static IRAM_ATTR void ws21PanelRows(const uint16_t *f, uint16_t *out, int py0, int n) {
-  for (int r = 0; r < n; r++, out += PANEL_SIZE) {
-    const int y = py0 + r - WS21_BORDER;
-    if (y < 0 || y >= LCD_HEIGHT) {
-      memset(out, 0, PANEL_SIZE * 2);
-      continue;
-    }
-    const int x0 = gKnomiRim ? gKnomiRimX0[y] : 0, x1 = gKnomiRim ? gKnomiRimX1[y] : LCD_WIDTH;
-    memset(out, 0, (size_t)(WS21_BORDER + x0) * 2);
-    memcpy(out + WS21_BORDER + x0, f + y * LCD_WIDTH + x0, (size_t)(x1 - x0) * 2);
-    memset(out + WS21_BORDER + x1, 0, (size_t)(LCD_WIDTH - x1 + WS21_BORDER) * 2);
-  }
-}
-
 // A bounce buffer to refill: the next band of the panel's rows (pos on), from the frame on show. A refresh's first
-// band moves on to the frame waiting, if any. The lines read leave the cache afterwards: the refill (about 20 MB/s)
-// would otherwise push the game's own data out of the 32 KB cache all the time. In IRAM, and nothing per pixel:
-// it runs about a thousand times a second (with the rim shaded here, 664 us a band, 70% of the game's core).
+// band moves on to the frame waiting, if any. From what the DMA read ahead if it's there; if not, the CPU reads the
+// frame, and the lines it read leave the cache afterwards (the refill would otherwise push the game's own data out
+// of the 32 KB cache all the time). Then the DMA goes for the next band. In IRAM, and nothing per pixel: it runs
+// over a thousand times a second.
 static IRAM_ATTR bool ws21Fill(esp_lcd_panel_handle_t, void *bb, int pos, int len, void *) {
   Ws21Show &w = gWs21Show;
+  Ws21Prefetch &p = gWs21Pre;
   const int64_t t0 = esp_timer_get_time();
   if (pos == 0) w.show = w.next;
   const uint16_t *f = w.frm[w.show];
   const int py0 = pos / PANEL_SIZE, n = len / (PANEL_SIZE * 2);
-  ws21PanelRows(f, (uint16_t *)bb, py0, n);
-  int c0 = py0 - WS21_BORDER, c1 = py0 + n - WS21_BORDER;
-  c0 = c0 < 0 ? 0 : c0;
-  c1 = c1 > LCD_HEIGHT ? LCD_HEIGHT : c1;
-  if (c1 > c0) {  // (the frame on show has nothing dirty in the cache: present())
-    const uintptr_t a = (uintptr_t)(f + c0 * LCD_WIDTH) & ~(uintptr_t)31;
-    const uintptr_t b = ((uintptr_t)(f + c1 * LCD_WIDTH) + 31) & ~(uintptr_t)31;
-    portENTER_CRITICAL_ISR(&gWs21CacheMux);
-    esp_cache_msync((void *)a, b - a, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-    portEXIT_CRITICAL_ISR(&gWs21CacheMux);
+  if (ws21PrefetchReady(f, py0)) {
+    ws21PanelRows((const uint16_t *)(p.stage + p.off), p.c0, (uint16_t *)bb, py0, n);
+    p.hits++;
+  } else {
+    ws21PanelRows(f, 0, (uint16_t *)bb, py0, n);
+    p.misses++;
+    int c0 = py0 - WS21_BORDER, c1 = py0 + n - WS21_BORDER;
+    c0 = c0 < 0 ? 0 : c0;
+    c1 = c1 > LCD_HEIGHT ? LCD_HEIGHT : c1;
+    if (c1 > c0) {  // (the frame on show has nothing dirty in the cache: present())
+      const uintptr_t a = (uintptr_t)(f + c0 * LCD_WIDTH) & ~(uintptr_t)31;
+      const uintptr_t b = ((uintptr_t)(f + c1 * LCD_WIDTH) + 31) & ~(uintptr_t)31;
+      portENTER_CRITICAL_ISR(&gWs21CacheMux);
+      esp_cache_msync((void *)a, b - a, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+      portEXIT_CRITICAL_ISR(&gWs21CacheMux);
+    }
   }
+  // the next band: this frame's, or the first of the next refresh, from the frame waiting by then
+  int nx = pos + len / 2;
+  const uint16_t *nf = f;
+  if (nx >= PANEL_SIZE * PANEL_SIZE) nx = 0, nf = w.frm[w.next];
+  ws21PrefetchKick(nf, nx / PANEL_SIZE, n);
   const uint32_t us = (uint32_t)(esp_timer_get_time() - t0);
   w.fillUs += us;
   w.fillN++;
@@ -231,6 +373,11 @@ public:
     bus->sendCommand(0x01);  // a software reset after the expander's, as Arduino_GFX's RGB display does
     delay(120);
     bus->batchOperation(WS21_INIT_OPS, sizeof(WS21_INIT_OPS));
+#ifndef WS21_REFILL_DMA
+#define WS21_REFILL_DMA 1
+#endif
+    if (WS21_REFILL_DMA && !ws21PrefetchBegin(LCD_BOUNCE_PX / PANEL_SIZE))
+      Serial.println("ws21: no DMA channel for the refill: the CPU refills");
     for (auto &f : frm) {  // black (calloc), before the refill first reads one
       if (!f) f = ws21FrameAlloc();
       if (!f) return false;
@@ -323,7 +470,7 @@ public:
     presented = f;
   }
   // the panel's rows py0.. from the frame on show (the console's SHOT)
-  void shownRows(uint16_t *out, int py0, int n) { ws21PanelRows(frm[gWs21Show.show], out, py0, n); }
+  void shownRows(uint16_t *out, int py0, int n) { ws21PanelRows(frm[gWs21Show.show], 0, out, py0, n); }
   uint16_t *frontBuffer() const { return frm[gWs21Show.show]; }
   uint16_t *lastPresented() const { return presented; }
   bool isFrame(const uint16_t *f) const { return f == frm[0] || f == frm[1] || f == frm[2]; }
