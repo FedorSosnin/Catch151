@@ -227,8 +227,8 @@ every zone of Knomi Island, one while you explore it and one for its wild battle
 while you wait at the pier ([▶&nbsp;Reel Fishing](https://fedorsosnin.github.io/Catch151/music/#reel-fishing)), and
 [▶&nbsp;On the Line](https://fedorsosnin.github.io/Catch151/music/#on-the-line), which plays at the pace of the fish
 you're reeling in, one tap a beat. Pinball has its own,
-[▶&nbsp;Pinball](https://fedorsosnin.github.io/Catch151/music/#pinball), and Pic Snap a soft swing on tiptoe with a click
-where the shutter goes, [▶&nbsp;Pic Snap](https://fedorsosnin.github.io/Catch151/music/#pic-snap). Pick a zone to hear its two:
+[▶&nbsp;Pinball](https://fedorsosnin.github.io/Catch151/music/#pinball), and Pic Snap a race for the shot, its tune going off in
+bursts of three like a shutter, [▶&nbsp;Pic Snap](https://fedorsosnin.github.io/Catch151/music/#pic-snap). Pick a zone to hear its two:
 
 <table align="center">
 <tr>
@@ -242,7 +242,7 @@ where the shutter goes, [▶&nbsp;Pic Snap](https://fedorsosnin.github.io/Catch1
 
 - **Written as notes.** Each song is a melody, a harmony, a bassline and a drum pattern over its chords, written out in
   [`tools/music/songs.py`](Catch151/tools/music/songs.py), checked bar by bar, and compiled into a few bytes: all 33 fit in
-  about 49 KB.
+  about 51 KB.
 - **Played like the old handhelds.** There are no recordings or samples. A small synthesizer in the game
   ([`src/music_synth.h`](Catch151/src/music_synth.h)) makes every note as it plays, with the four voices those consoles had: two
   pulse waves for the tune and the harmony, a stepped triangle or 4-bit wave for the bass, and noise for the drums.
