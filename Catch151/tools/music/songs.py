@@ -644,25 +644,26 @@ s.form(['I'], ['A', 'B', 'A2', 'B'])
 # photo"): a quick run up into each phrase, a driving beat, the chords stabbed in a 3-3-2 that won't sit still and a
 # bass galloping under it. The shutter is in it: the tune's repeated notes go off in bursts of three, click-click-click,
 # the drums clicking with them (wood) and snapping (a clap) where a phrase ends. In the B part a brass tune climbs
-# over the chords whirring in quick arpeggios, like the lens racing to focus, up to a G7, and bursts back into the
-# start. E-flat major, which no other song is in
-s = add(song('PICSNAP', 'Pic Snap', 160, key=('Eb', 'major'), insts=('lead', 'stab', 'bass'), vols=(13, 8, 15, 10)))
+# over the chords whirring in quick arpeggios, like the lens racing to focus, up to an E7, and bursts back into the
+# start. C major: written in E-flat, then taken down a minor third (Fedor: "Just a hair lower tone would be great. So
+# its not so high pitch"), the tune's top note an E now, not a G
+s = add(song('PICSNAP', 'Pic Snap', 160, key=('C', 'major'), insts=('lead', 'stab', 'bass'), vols=(13, 8, 15, 10)))
 PS_STAB = '16: x . . x . . x . x . . x . . x .'  # 3-3-2, twice a bar
 PS_BASS = '16: R . R R O . R . R . R R 5 . O .'  # galloping
 PS_SNAP = '16: k . h k w w w . x . . . s . s s'  # the shutter: three clicks, the snap, a pick-up back in
 PS_BURST = '16: w w w . w w w . x . . . s s s s'  # ...two bursts with the tune's, at the B part's end
 PS_A = """
-  o5 e-16 f16 g16 b-16 o6 e-8 o5 b-8 o6 e-8 f8 g4 | f8 d8 o5 b-8 o6 d8 f16 f16 f16 r16 d4 |
-  e-8 c8 o5 g8 o6 c8 e-8 d8 c8 o5 b-8 | o6 c4 o5 a-8 o6 c8 e-4 r4 |
-  o5 e-16 f16 g16 b-16 o6 e-8 o5 b-8 o6 e-8 f8 g4 | f8 d8 o5 b-8 o6 d8 f8 g8 f8 d8 |
-  e-8 c8 o5 a-8 o6 c8 d8 o5 b-8 o6 d8 f8 | e-4 o5 b-16 b-16 b-16 r16 o6 e-8 r8 r4 |"""
-PS_CA = 'Eb | Bb | Cm | Ab | Eb | Bb | Ab Bb | Eb'
-s.section('I', 2, 'Eb | Bb', None, PS_STAB, PS_BASS, [DRIVE, PS_SNAP])
+  o5 c16 d16 e16 g16 o6 c8 o5 g8 o6 c8 d8 e4 | d8 o5 b8 g8 b8 o6 d16 d16 d16 r16 o5 b4 |
+  o6 c8 o5 a8 e8 a8 o6 c8 o5 b8 a8 g8 | a4 f8 a8 o6 c4 r4 |
+  o5 c16 d16 e16 g16 o6 c8 o5 g8 o6 c8 d8 e4 | d8 o5 b8 g8 b8 o6 d8 e8 d8 o5 b8 |
+  o6 c8 o5 a8 f8 a8 b8 g8 b8 o6 d8 | c4 o5 g16 g16 g16 r16 o6 c8 r8 r4 |"""
+PS_CA = 'C | G | Am | F | C | G | F G | C'
+s.section('I', 2, 'C | G', None, PS_STAB, PS_BASS, [DRIVE, PS_SNAP])
 s.section('A', 8, PS_CA, PS_A, PS_STAB, PS_BASS, [CRASH] + [DRIVE] * 2 + [PS_SNAP] + [DRIVE] * 3 + [PS_SNAP])
-s.section('B', 8, 'Ab | Bb | G7 | Cm | Ab | Bb | Fm7 | Bb7', """
-  o6 c4. o5 a-8 e-4 a-4 | b-4. o6 d8 f4 d4 | g4. f8 d4 o5 b4 | o6 c8 d8 e-8 d8 c4 o5 g4 |
-  a-8 o6 c8 e-8 f8 e-4 c4 | d8 e-8 f8 e-8 d4 o5 b-4 | o6 c8 o5 a-8 f8 a-8 o6 c8 e-8 f8 e-8 |
-  o5 b-16 b-16 b-16 r16 o6 d16 d16 d16 r16 f4 r4 |""",
+s.section('B', 8, 'F | G | E7 | Am | F | G | Dm7 | G7', """
+  o5 a4. f8 c4 f4 | g4. b8 o6 d4 o5 b4 | o6 e4. d8 o5 b4 g+4 | a8 b8 o6 c8 o5 b8 a4 e4 |
+  f8 a8 o6 c8 d8 c4 o5 a4 | b8 o6 c8 d8 c8 o5 b4 g4 | a8 f8 d8 f8 a8 o6 c8 d8 c8 |
+  o5 g16 g16 g16 r16 b16 b16 b16 r16 o6 d4 r4 |""",
           ARP_UP, PS_BASS, [DRIVE] * 7 + [PS_BURST], insts=('brass', 'pluck', 'bass'), vols=(12, 7, 15, 10))
 s.section('A2', 8, PS_CA, PS_A, 'thirds', PS_BASS, [CRASH] + [DRIVE] * 2 + [PS_SNAP] + [DRIVE] * 3 + [PS_SNAP],
           insts=('lead', 'soft25', 'bass'))
