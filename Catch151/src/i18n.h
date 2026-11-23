@@ -150,6 +150,7 @@ enum StrId : STRID_BASE {
   // is, Dungeon Crawler's floor, the play line (touch, keys), Who's That?'s page, no connection, nobody yet, a shiny fish
   S_LEADERBOARD, S_LEADERBOARDS, S_LB_HI_SCORE, S_LB_LONGEST_RUN, S_LB_LONGEST_RIDE, S_LB_DEEPEST, S_LB_BIGGEST_FISH,
   S_LB_FLOOR_FMT, S_LB_PLAY, S_LB_PLAY_KEYS, S_LB_FUN, S_LB_NAME_ALL, S_LB_NO_SCORES, S_LB_OFFLINE, S_LB_NONE, S_LB_SHINY_FMT,
+  S_SND_EFFECTS, S_MUTE, S_UNMUTE,  // the Sound page (sound_v2.h, not the Knomi): the effects' row, Mute, and Unmute
   STR_COUNT
 };
 

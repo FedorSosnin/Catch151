@@ -606,9 +606,14 @@ static void v2Card() {
 // V1's language pill is defined further down the sketch; the same values here (a different one would warn).
 #define LANG_PILL_Y 296
 #define LANG_PILL_H 30
+#if HAS_MUSIC  // (not the Knomi: no sound button here, the Sound page has it, so the language in the middle)
+#define LANG_PILL_X 185
+#else
 #define LANG_PILL_X 336
+#endif
 #define LANG_PILL_W 96
 static void v2SettingsRows();  // (about_v2.h)
+void drawBigTimeAt(int h24, int m, int size, int y);  // (the sketch)
 // Settings' first page. Its time set (the network's or the computer's): the time, where it comes from, a row each for
 // the sound and the language, START OVER (about_v2.h; the version is on the About page now). Being set by hand (a
 // Knomi without Wi-Fi): V1's controls where they were
@@ -620,10 +625,12 @@ static void v2Clock(const char *langCode) {
   gfx->setTextColor(UI_INK);
   if (locked) {  // network time or the computer's: shown as it runs
     uint32_t e = rtcEpoch();
-    drawBigTime((e / 3600) % 24, (e / 60) % 60);
+    // at 6, with room round it (Fedor: "that clock is too big. It needs padding around the numbers so it doesnt
+    // touch"; at 8 it ran from 16 px under the panel's top to 3 px over the time zone's button)
+    drawBigTimeAt((e / 3600) % 24, (e / 60) % 60, 6, 100);
     v2SettingsRows();
   } else {
-    drawBigTime(clockH, clockM);
+    drawBigTimeAt(clockH, clockM, 6, 120);  // (as the settings page's, in the middle of the room over the buttons)
     static const int16_t KX[4] = { 104, 170, 252, 318 };
     for (int k = 0; k < 4; k++) v2LabelButton(KX[k] + 3, 190 + 3, KX[k] + 55, 190 + 55, k % 2 ? "+" : "-", C565(0x4f, 0x93, 0xc4), UI_WHITE, 4);
     gfx->setTextColor(V2_INK_MUTED);
@@ -633,10 +640,12 @@ static void v2Clock(const char *langCode) {
     setCur(276, 256);
     printT(T(S_MIN));
   }
-  if (!locked) {  // being set: sound, left, and the language, right, both one tap; OK
+  if (!locked) {  // being set: sound, left (the Knomi), and the language, right, both one tap; OK
+#if !HAS_MUSIC
     bool snd = audioEnabled();
     v2LabelButton(37, LANG_PILL_Y + 3, 127, LANG_PILL_Y + LANG_PILL_H - 3, snd ? T(S_SND_ON) : T(S_SND_OFF),
                   snd ? C565(0x58, 0xb8, 0x68) : C565(0x8e, 0x8c, 0x96));
+#endif
     char lp[10];
     snprintf(lp, sizeof(lp), "%s >", langCode);
     v2LabelButton(LANG_PILL_X + 3, LANG_PILL_Y + 3, LANG_PILL_X + LANG_PILL_W - 3, LANG_PILL_Y + LANG_PILL_H - 3, lp,
@@ -663,7 +672,7 @@ static void v2TzPicker() {
   uint32_t utc = clockUtc() ? clockUtc() : rtcEpoch();
   uint32_t l = clockLocalIn(tzPickIdx, utc);
   gfx->setTextColor(UI_INK);
-  drawBigTime((l / 3600) % 24, (l / 60) % 60);
+  drawBigTimeAt((l / 3600) % 24, (l / 60) % 60, 6, 122);  // (as the settings page's, midway to the city)
   const char *city = TIME_ZONES[tzPickIdx].city;
   setSize(4);
   int cs = textW(city, 4) <= 300 ? 4 : 2;  // (an even size: on the Knomi each font pixel lands whole; 3 spread over a pixel and a half, Fedor: crisp as the battles)

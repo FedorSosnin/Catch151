@@ -197,6 +197,7 @@ int16_t wifiKbX = 0, wifiKbY = 0;
 #define KB_W 64
 #define KB_H 52
 bool clockOpen = false;       // time-setting screen (swipe down)
+bool soundOpen = false;       // V2, not the Knomi: with clockOpen, the Sound page instead (sound_v2.h)
 int clockH = 12, clockM = 0;  // time being edited
 bool clockEdited = false;      // set by hand: don't overwrite it with network time
 bool tzPickOpen = false;      // the time zone picker, over the time page (the Knomi's)
@@ -206,10 +207,6 @@ bool clockTzUi = false;       // the time page shows where the time comes from: 
 #else
 bool clockTzUi = true;        // ...Wi-Fi, and the time zone button
 #endif
-#define TZ_BTN_X 83           // the city button
-#define TZ_BTN_Y 234
-#define TZ_BTN_W 300
-#define TZ_BTN_H 40
 #define TZ_CITY_Y 200         // the picker: the city's name, then its UTC offset
 #define TZ_ARROW_Y 214        // ...and the arrows either side
 
@@ -534,6 +531,11 @@ void v2KbTyped();       // ...and the keys typed on it, while a keyboard is open
 void v2HoverOverlay();
 #endif
 static int v2RadialAt(int16_t x, int16_t y);
+#if HAS_MUSIC
+static void v2SoundPage();  // (sound_v2.h)
+static void v2SoundTap(int16_t x, int16_t y);
+static bool v2SoundPress(int16_t x, int16_t y, PressTarget &t);
+#endif
 static void v2RadialLift(int16_t x, int16_t y);
 bool v2ResetSure = false;    // V2: ERASE EVERYTHING was tapped once; the question now asks "Are you sure?"
 uint32_t v2ResetSureT = 0;
@@ -1822,6 +1824,9 @@ void onSwipe(int dir) {
     return;
   }
 #endif
+#if HAS_MUSIC
+  if (clockOpen && soundOpen) return;  // V2: the Sound page is one page
+#endif
   if (clockOpen && wifiSetupState() == WS_OFF) {  // V2: Settings, (the Knomi's Wi-Fi,) About; left advances
     int next = clockPage + (dir > 0 ? -1 : 1);
     if (next >= 0 && next < V2_CLOCK_PAGES) {
@@ -1948,6 +1953,12 @@ void onTap(int16_t x, int16_t y) {
     return;
   }
   if (clockOpen) {
+#if HAS_MUSIC
+    if (soundOpen) {  // V2: the Sound page (sound_v2.h)
+      v2SoundTap(x, y);
+      return;
+    }
+#endif
 #if defined(BOARD_KNOMI_V2)
     if (!tzPickOpen && clockPage == 0 && clockLocked() && x >= V2_RESET_X0 - 3 && x <= V2_RESET_X1 + 3 &&
         y >= V2_RESET_Y0 - 3 && y <= V2_RESET_Y1 + 3) {  // V2: START OVER asks first, on the home screen
@@ -2474,6 +2485,9 @@ static uint32_t screenKey() {
   } else if (clockOpen) {
     h = mixKey(h, clockH * 60 + clockM);
     h = mixKey(h, clockPage);
+#if HAS_MUSIC
+    h = mixKey(h, soundOpen * 1024 + audioEnabled() * 512 + musicEnabled() * 256 + soundVolume() * 16 + musicVolume());
+#endif
     h = mixKey(h, clockLocked() ? rtcEpoch() / 60 : 0);  // a shown clock moves on by the minute
     h = mixKey(h, tzPickOpen * 256 + tzPickIdx + clockTzUi * 65536);
     h = mixKey(h, wifiSetupState());
@@ -5858,6 +5872,7 @@ void openClock() {
   clockLoadNow();
   clockPage = 0;
   tzPickOpen = false;
+  soundOpen = false;
   clockOpen = true;
 }
 
@@ -5889,22 +5904,23 @@ void classicFontEnd(bool cjk) {
   if (cjk) applyLangFont();
 }
 
-// the big h:mm and AM/PM of the time screens (shown in 12-hour format; inside it is still 24)
-void drawBigTime(int h24, int m) {
+// the big h:mm and AM/PM of the time screens (shown in 12-hour format; inside it is still 24). size: the digits'
+// (the ink is 7 rows of it from y down), AM/PM at 4 with their bottoms level
+void drawBigTimeAt(int h24, int m, int size, int y) {
   bool cjk = classicFontBegin();
   char t[8];
   snprintf(t, sizeof(t), "%d:%02d", clock12Hour(h24), m);
   // centred as one group, whatever the digits: "4:27 PM" and "12:05 AM" alike. The widths leave out the
   // blank column after the last letter, so what shows is what's centred
-  {  // V2: sizes 8 and 4, even, so each font pixel lands whole on the Knomi (7 and 3 were soft); their bottoms level
-    int tw = textW(t, 8) - 8, aw = textW("AM", 4) - 4, gap = 12;
+  {  // V2: even sizes, so each font pixel lands whole on the Knomi (7 and 3 were soft)
+    int tw = textW(t, size) - size, aw = textW("AM", 4) - 4, gap = size * 3 / 2;
     int x0 = CX - (tw + gap + aw) / 2;
-    if (t[0] == '1') x0 -= 4;
-    setSize(8);
-    setCur(x0, 100);
+    if (t[0] == '1') x0 -= size / 2;
+    setSize(size);
+    setCur(x0, y);
     printT(t);
     setSize(4);
-    setCur(x0 + tw + gap, 132);
+    setCur(x0 + tw + gap, y + (size - 4) * 8);
     printT(h24 < 12 ? "AM" : "PM");
   }
   classicFontEnd(cjk);
@@ -5963,7 +5979,11 @@ void tzPickerTap(int16_t x, int16_t y) {
 // language pills centered on y; fills the active one
 #define LANG_PILL_Y 296
 #define LANG_PILL_H 30
+#if HAS_MUSIC
+#define LANG_PILL_X 185          // language pill (cycles through LANG_COUNT on tap): in the middle without SND's
+#else
 #define LANG_PILL_X 336          // language pill (cycles through LANG_COUNT on tap)
+#endif
 #define LANG_PILL_W 96
 static const char *const LANG_CODES[LANG_COUNT] = { "ES", "EN", "FR", "DE", "IT", "PT", "JA", "KO" };
 
@@ -6200,6 +6220,13 @@ void renderSettings() {
 #endif
 
 void renderClock() {
+#if HAS_MUSIC
+  if (soundOpen) {  // V2: the Sound page (sound_v2.h)
+    v2SoundPage();
+    gfx->flush();
+    return;
+  }
+#endif
   if (clockPage == V2_ABOUT_PAGE) {  // V2: About, the last page (about_v2.h)
     v2About();
     gfx->flush();
@@ -6244,13 +6271,8 @@ void clockTap(int16_t x, int16_t y) {
     return;
   }
 #endif
-#ifdef BOARD_KNOMI_V2
-  if (clockLocked() && clockTzUi && x >= TZ_BTN_X && x < TZ_BTN_X + TZ_BTN_W && y >= TZ_BTN_Y && y < TZ_BTN_Y + TZ_BTN_H) {
-    sfxPlay(SFX_TAP);
-    tzPickerOpen();
-    return;
-  }
-#endif
+  // (V1's time zone button, y 234-274, is gone: V2 draws it under the time and about_v2.h takes its taps. Its old
+  // place, still asked first until 2026-11-22, took the taps on the Music slider and on half the Knomi's Sound row)
   if (clockPage == 0 && clockLocked()) {  // V2: the time zone, the sound and the language rows (about_v2.h)
     v2SettingsTap(x, y);
     return;
@@ -6264,11 +6286,13 @@ void clockTap(int16_t x, int16_t y) {
     return;
   }
   if (y >= LANG_PILL_Y && y <= LANG_PILL_Y + LANG_PILL_H) {
+#if !HAS_MUSIC  // (elsewhere the Sound page has it)
     if (x >= 34 && x < 130) {                  // sound switch
       audioSetEnabled(!audioEnabled());
       if (audioEnabled()) sfxPlay(SFX_TAP);    // confirms when turned on
       return;
     }
+#endif
     if (x >= LANG_PILL_X && x < LANG_PILL_X + LANG_PILL_W) {  // cycles language
       setLang((Lang)((gLang + 1) % LANG_COUNT));
       applyLangFont();  // the font changes with the language
@@ -9326,6 +9350,9 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2KbLayerNow(), buf));
   }
   if (clockOpen) {
+#if HAS_MUSIC
+    if (soundOpen) return v2SoundPress(x, y, t);  // V2: the Sound page (sound_v2.h)
+#endif
     if (tzPickOpen && clockPage == 0 && closeHit(x, y)) return v2PressNav(x, y, t, 0, 0, 0, true);  // the picker's X
     if (clockPage == V2_ABOUT_PAGE && v2AboutQr) return v2AboutPress(x, y, t);  // V2: a link's QR code: its X
     if (!tzPickOpen && wifiSetupState() == WS_OFF && v2PressNav(x, y, t, clockPage, V2_CLOCK_PAGES, V2_PAGE_ARROW_Y, true)) return true;
@@ -9358,10 +9385,6 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       if (pressIn(x, y, 133, 340, 200, 48)) return pressSet(t, 133, 340, 200, 48, "OK");
       return false;
     }
-    if (clockLocked() && clockTzUi && pressIn(x, y, TZ_BTN_X, TZ_BTN_Y, TZ_BTN_W, TZ_BTN_H)) {
-      int i = clockTzIndex();
-      return pressSet(t, TZ_BTN_X, TZ_BTN_Y, TZ_BTN_W, TZ_BTN_H, TIME_ZONES[i >= 0 ? i : TIME_ZONE_DEFAULT].city);
-    }
 #endif
     if (!clockLocked() && y >= 190 && y <= 248) {
       static const int16_t BX[4] = { 104, 170, 252, 318 };
@@ -9373,7 +9396,9 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       return false;
     }
     if (y >= LANG_PILL_Y && y <= LANG_PILL_Y + LANG_PILL_H) {
+#if !HAS_MUSIC
       if (x >= 34 && x < 130) return pressSet(t, 34, LANG_PILL_Y, 96, LANG_PILL_H, audioEnabled() ? T(S_SND_ON) : T(S_SND_OFF));
+#endif
       if (x >= LANG_PILL_X && x < LANG_PILL_X + LANG_PILL_W) {
         snprintf(buf, sizeof(buf), "%s >", LANG_CODES[gLang]);
         return pressSet(t, LANG_PILL_X, LANG_PILL_Y, LANG_PILL_W, LANG_PILL_H, buf);

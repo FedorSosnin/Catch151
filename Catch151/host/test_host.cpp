@@ -970,8 +970,29 @@ static void testGame() {
     hostPointer(233, 240, false);
     runTicks(200);
     CHECK(v2RadialOpen);
-    tapAt(88, 206);  // the Pokedex, on the left
+    tapAt(88, 206);  // the Pokedex, on the left (up left, where the ring is in five)
     CHECK(galleryOpen && !v2RadialOpen && galleryPage == 0);
+    {  // the ring in five (not the Knomi): its speaker, down left, opens the Sound page (sound_v2.h); its X closes it
+      extern bool soundOpen;
+      galleryOpen = false;
+      runTicks(300);
+      hostPointer(233, 240, true);
+      runTicks(700);
+      hostPointer(233, 240, false);
+      runTicks(200);
+      CHECK(v2RadialOpen);
+      tapAt(136, 330);
+      CHECK(clockOpen && soundOpen && !v2RadialOpen);
+      tapAt(233, 422);
+      CHECK(!clockOpen);
+      runTicks(300);
+      hostPointer(233, 240, true);  // ...and the Pokedex again, for what follows
+      runTicks(700);
+      hostPointer(233, 240, false);
+      runTicks(200);
+      tapAt(88, 206);
+      CHECK(galleryOpen && galleryPage == 0);
+    }
     swipe(360, 230, 110, 230);  // right to left: the next page
     CHECK(galleryOpen && galleryPage == 1);
     galleryOpen = false;
@@ -1072,6 +1093,31 @@ static void testGame() {
       CHECK(bBallT != t0);
       closeBattle();
       runTicks(200);
+      // the Sound page (Fedor: "One slider for music, and one for other sounds. Along with a mute button that turns both
+      // off quickly"): its sliders and Mute (the ring's speaker opens it: tested with the ring, above)
+      {
+        extern bool clockOpen, soundOpen;
+        bool snd = audioEnabled(), mus = musicEnabled();
+        clockOpen = soundOpen = true;
+        runTicks(300);
+        tapAt(212, 202);  // the Effects slider's 0: off
+        CHECK(!audioEnabled());
+        tapAt(308, 202);  // ...its 2: on, at 2
+        CHECK(audioEnabled() && soundVolume() == 2);
+        tapAt(260, 142);  // the Music slider's 1
+        CHECK(musicEnabled() && musicVolume() == 1);
+        tapAt(233, 289);  // Mute: both off
+        CHECK(!audioEnabled() && !musicEnabled());
+        tapAt(233, 289);  // Unmute: both back, each at its level
+        CHECK(audioEnabled() && musicEnabled() && soundVolume() == 2 && musicVolume() == 1);
+        tapAt(233, 422);  // its X
+        CHECK(!clockOpen);
+        soundSetVolume(3);
+        musicSetVolume(3);
+        audioSetEnabled(snd);
+        musicSetEnabled(mus);
+        runTicks(200);
+      }
       // Settings, tidied, and About (Fedor: "an about page with my logo on it ... a way to get to the repo but also my
       // youtube channel"): the Sound and Language rows; the next page is About; its links open in the browser, and
       // with nothing to open them the link's QR code shows (as on the Knomi), a tap puts it away; the X closes
@@ -1083,15 +1129,8 @@ static void testGame() {
         clockOpen = true;
         clockPage = 0;
         runTicks(300);
-        bool snd = audioEnabled();
-        tapAt(212, 208);  // the Sound row's slider (a computer's): its 0, off
-        CHECK(!audioEnabled());
-        tapAt(308, 208);  // ...its 2
-        CHECK(audioEnabled() && soundVolume() == 2);
-        soundSetVolume(3);
-        audioSetEnabled(snd);
         Lang was = gLang;
-        tapAt(290, 280);  // the Language row's button: the next language
+        tapAt(290, 238);  // the Language row's button, the only row (the sound has its own page): the next language
         CHECK(gLang == (Lang)((was + 1) % LANG_COUNT));
         setLang(was);
         applyLangFont();

@@ -12,7 +12,8 @@ bool hostOpenUrl(const char *url);  // a computer, the web: in the browser (fals
 #endif
 
 // ----- the settings page: the time, where it comes from (the Knomi: its time zone, a tap to change it), then a row
-// each for the sound (a switch) and the language (its own name, a tap for the next), START OVER under the panel -----
+// each for the sound (a switch: the Knomi only, the rest have the Sound page) and the language (its own name, a tap for
+// the next), START OVER under the panel -----
 // each language by its own name, in its own letters
 static const char *const V2_LANG_NAMES[LANG_COUNT] = { "Espa\244ol", "English", "Fran\207ais", "Deutsch", "Italiano",
                                                        "Portugu\210s", "日本語", "한국어" };
@@ -21,10 +22,9 @@ static const char *const V2_LANG_NAMES[LANG_COUNT] = { "Espa\244ol", "English", 
 #define V2_SET_LINE_Y 204    // a line between the time and the rows
 #define V2_SET_ROW_X0 92     // the rows: a tap anywhere on one is its control's
 #define V2_SET_ROW_X1 374
-#if HAS_MUSIC  // a computer and the web: a row more, for the music, the rows closer and no line over them
-#define V2_SND_Y 190         // the Sound row: its switch's top (72 x 36)
-#define V2_MUS_Y 232         // the Music row: its switch's
-#define V2_LANG_Y 274        // the Language row: its button's top
+#if HAS_MUSIC  // not the Knomi: the sound has its own page (sound_v2.h, the ring's speaker), so the language is the
+               // only row (Fedor: "this screen is a mess"; until 2026-11-22 a slider each for the sound and the music)
+#define V2_LANG_Y 220        // the Language row: its button's top
 #else
 #define V2_SND_Y 214         // the Sound row: its switch's top (72 x 36)
 #define V2_LANG_Y 262        // the Language row: its button's top
@@ -46,7 +46,7 @@ static void v2SetTzRect(int &x0, int &x1, char *b, int n) {  // as wide as the c
 }
 #endif
 #if HAS_MUSIC
-// ----- a level slider (a computer and the web: SOUND's, all of it, and the music's): a track with four notches, 0 off,
+// ----- a level slider (the Sound page's, sound_v2.h: the music's and the effects'): a track with four notches, 0 off,
 // then 1, 2 and 3, and a knob showing its number (Fedor: "Maybe a slider with 4 notches. From 0 to 3"). A tap or a
 // click on a notch moves it there. Off, it comes back on at the level it had
 #define V2_SL_X0 212   // the first notch (0); each 48 further
@@ -109,15 +109,9 @@ static void v2SettingsRows() {
 #endif
     printT(T(S_SET_AUTO));
   }
-#if !HAS_MUSIC
   gfx->fillRect(V2_SET_ROW_X0 + 2, V2_SET_LINE_Y, V2_SET_ROW_X1 - V2_SET_ROW_X0 - 4, 2, C565(0xd8, 0xd2, 0xbd));
-#endif
+#if !HAS_MUSIC  // (the Knomi: a switch; elsewhere the Sound page)
   v2SetLabel(T(S_SOUND), V2_SND_Y);
-#if HAS_MUSIC
-  v2Slider(V2_SND_Y, audioEnabled() ? soundVolume() : 0);
-  v2SetLabel(T(S_MUSIC), V2_MUS_Y);
-  v2Slider(V2_MUS_Y, musicEnabled() ? musicVolume() : 0);
-#else
   {
     V2_HOVER(V2_SND_SW_X, V2_SND_Y, 72, V2_SET_ROW_H);
     v2Switch(V2_SND_SW_X, V2_SND_Y, audioEnabled());
@@ -145,22 +139,7 @@ static void v2SettingsTap(int16_t x, int16_t y) {
     return;
   }
 #endif
-#if HAS_MUSIC
-  if (v2InRow(x, y, V2_SND_Y)) {  // (the tap sounds at the level it sets)
-    int k = v2SliderAt(x);
-    if (k == 0) audioSetEnabled(false);
-    else if (k > 0) soundSetVolume((uint8_t)k);
-    if (k >= 0 && audioEnabled()) sfxPlay(SFX_TAP);
-    return;
-  }
-  if (v2InRow(x, y, V2_MUS_Y)) {
-    int k = v2SliderAt(x);
-    if (k == 0) musicSetEnabled(false);
-    else if (k > 0) musicSetVolume((uint8_t)k);
-    if (k >= 0) sfxPlay(SFX_TAP);
-    return;
-  }
-#else
+#if !HAS_MUSIC
   if (v2InRow(x, y, V2_SND_Y)) {
     audioSetEnabled(!audioEnabled());
     if (audioEnabled()) sfxPlay(SFX_TAP);  // confirms when turned on
@@ -183,10 +162,7 @@ static bool v2SettingsPress(int16_t x, int16_t y, PressTarget &t) {
     return x >= x0 - 6 && x <= x1 + 6 && v2PressSet(t, x0, V2_SET_TZ_Y0, x1 - x0, V2_SET_TZ_Y1 - V2_SET_TZ_Y0, b);
   }
 #endif
-#if HAS_MUSIC
-  if (v2InRow(x, y, V2_SND_Y)) return v2SliderPress(x, V2_SND_Y, t);
-  if (v2InRow(x, y, V2_MUS_Y)) return v2SliderPress(x, V2_MUS_Y, t);
-#else
+#if !HAS_MUSIC
   if (v2InRow(x, y, V2_SND_Y)) return v2PressSet(t, V2_SND_SW_X, V2_SND_Y, 72, V2_SET_ROW_H, T(S_SOUND));
 #endif
   if (v2InRow(x, y, V2_LANG_Y)) {

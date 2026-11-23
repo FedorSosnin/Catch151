@@ -262,7 +262,8 @@ The game's effects are square-wave notes from 196 to 3136 Hz (`sfx_notes.h`), Ga
 wired (`WS21_AUDIO_PDM`, on since 2026-11-22), this board also plays the music and the Pokémon's cries (`HAS_MUSIC`),
 as the computers do. `audio.cpp` mixes everything at 16 kHz in a task on core 0: effects and cries at the Sound
 level, the music at the Music level, ducked while an effect plays (the same code as `host/host_audio.cpp`). The
-settings page shows the computers' two sliders. The task owns the amplifier's on/off line. The amp is on while
+hold menu has a fifth item, Sound, as on the computers (`sound_v2.h`): a slider for the music, one for the effects and
+cries, and Mute. The task owns the amplifier's on/off line. The amp is on while
 anything sounds, and while the board is in use with either slider above 0. It's off while the pet sleeps and once
 the screen dims with nothing playing. The DMA holds 4 blocks of 8 ms, so a tap sounds within about 40 ms. The
 console's `AUDIO` shows how much of core 0 the mixing takes and whether the stream ever ran dry. Measured on the bench

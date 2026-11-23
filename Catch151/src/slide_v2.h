@@ -78,6 +78,9 @@ static V2PageKey v2PageKeyNow() {
   }
   if (kbOpen) return k;
   if (clockOpen) {
+#if HAS_MUSIC
+    if (soundOpen) return k;  // (the Sound page: one page)
+#endif
     WifiSetupState ws = wifiSetupState();
     if (ws == WS_LIST) return { 6, wifiListPage, (int16_t)((wifiSetupNetCount() + V2_SLIDE_WIFI_ROWS - 1) / V2_SLIDE_WIFI_ROWS), V2_PAGE_ARROW_Y };
     if (ws != WS_OFF) return k;

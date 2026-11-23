@@ -154,6 +154,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "SIN CONEXION",
     "AUN SIN RECORD",
     "%s SHINY",
+    "Efectos",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "Silenciar",
+    "Activar sonido",
   },
   // ---------------- EN ----------------
   {
@@ -302,6 +305,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "NOT CONNECTED",
     "NO SCORE YET",
     "SHINY %s",
+    "Effects",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "Mute",
+    "Unmute",
   },
   // ---------------- FR ----------------
   {
@@ -450,6 +456,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "PAS CONNECTE",
     "PAS ENCORE DE SCORE",
     "%s SHINY",
+    "Effets",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "Couper le son",
+    "Remettre le son",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -603,6 +612,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "NICHT VERBUNDEN",
     "NOCH KEIN REKORD",
     "SHINY %s",
+    "Effekte",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "Stumm",
+    "Ton an",
   },
   // ---------------- IT ----------------
   {
@@ -751,6 +763,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "NON CONNESSO",
     "ANCORA NESSUN RECORD",
     "%s SHINY",
+    "Effetti",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "Muto",
+    "Riattiva audio",
   },
   // ---------------- PT ----------------
   {
@@ -899,6 +914,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "SEM CONEXAO",
     "AINDA SEM RECORDE",
     "%s SHINY",
+    "Efeitos",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "Silenciar",
+    "Ativar som",
   },
   // ---------------- JA ----------------
   {
@@ -1070,6 +1088,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "つながって いないよ",
     "まだ きろくは ないよ",
     "いろちがいの %s",
+    "こうかおん",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "ミュート",
+    "ミュートかいじょ",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -1223,6 +1244,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "연결 안 됨",
     "아직 기록 없음",
     "이로치 %s",
+    "효과음",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
+    "음소거",
+    "음소거 해제",
   },
 };
 

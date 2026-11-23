@@ -7,10 +7,19 @@
 // Pokemon to pull up the menu, it eventually goes away after a couple seconds"; it went at 8 s). Held on still in the
 // middle, the release question comes at 3 s, as before. The ring is see-through, as the icons' band is (Fedor),
 // so while it's open the home leaves out what it would show through: the header, the band, the icons, the pill.
+//
+// Where there's sound (not the Knomi: HAS_MUSIC) the ring is in five, a fifth of a turn each, Settings still on top:
+// Medals up right, Stats down right, Sound down left (a speaker: the Sound page, sound_v2.h; Fedor: "lets add a new
+// button to the menu ... Lets call it Sound with a speaker icon") and the Pokedex up left.
 
 #define V2_RAD_IN 86    // the ring, from the screen's centre
 #define V2_RAD_OUT 204
 #define V2_RAD_GAP 7    // between two sections, along the diagonals: |dx| and |dy| this close
+#if HAS_MUSIC
+#define V2_RAD_N 5      // ...in five (the gaps 5 px either side of the lines between them, their soft edge 3 more)
+#else
+#define V2_RAD_N 4
+#endif
 
 // its icons, as the home's: 18 x 18, drawn at 4x (Fedor: "make the four icons ... larger"; they were 3x, which on
 // the Knomi spreads each pixel over a pixel and a half)
@@ -95,6 +104,31 @@ static const char *const SPR_V2_RAD_DEX[18] = {
   "..................",
 };
 
+#if V2_RAD_N == 5
+// a speaker in the gear's silver, its sound in white
+static const char *const SPR_V2_RAD_SOUND[18] = {
+  "..................",
+  "........kk........",
+  ".......ksk........",
+  "......kssk...w....",
+  ".....ksssk....w...",
+  "....kssssk.....w..",
+  "kkkkkssssk.w...w..",
+  "kwwssssssk..w..w..",
+  "kssssssssk..w..w..",
+  "kSSSSSSSSk..w..w..",
+  "kSSSSSSSSk..w..w..",
+  "kkkkkSSSSk.w...w..",
+  "....kSSSSk.....w..",
+  ".....kSSSk....w...",
+  "......kSSk...w....",
+  ".......kSk........",
+  "........kk........",
+  "..................",
+};
+static void v2SoundOpen();  // (sound_v2.h)
+#endif
+
 static bool v2RadialSticky = false;  // let go in the middle: open for a tap
 static uint32_t v2RadialT = 0;       // when it opened, or was let go in the middle
 
@@ -109,14 +143,48 @@ static void v2RadialClose() {
   v2RadialOpen = v2RadialSticky = false;
   v2RadialHover = -1;
 }
-// the section at (x, y): 0 up, 1 right, 2 down, 3 left; -1 in the middle or outside (a little past its edge counts)
+// the section of a point (fx, fy) from the centre: in four, 0 up, 1 right, 2 down, 3 left; in five, 0 up, then round
+// clockwise (1 up right, 2 down right, 3 down left, 4 up left)
+static int v2RadialSection(int fx, int fy) {
+#if V2_RAD_N == 5
+  float a = atan2f((float)fy, (float)fx) * 57.29578f + 126.0f;  // 0 on the line left of the top one
+  if (a < 0) a += 360.0f;
+  int s = (int)(a / 72.0f);
+  return s > 4 ? 4 : s;
+#else
+  return abs(fy) > abs(fx) ? (fy < 0 ? 0 : 2) : (fx > 0 ? 1 : 3);
+#endif
+}
+#if V2_RAD_N == 5
+// in five: how far (fx, fy) is from the nearest line between two sections (they run out from the centre at -126,
+// -54, 18, 90 and 162 degrees)
+static float v2RadialLineDist(int fx, int fy) {
+  static const float LC[5] = { -0.5878f, 0.5878f, 0.9511f, 0.0f, -0.9511f };
+  static const float LS[5] = { -0.8090f, -0.8090f, 0.3090f, 1.0f, 0.3090f };
+  float best = 1e9f;
+  for (int i = 0; i < 5; i++) {
+    if (fx * LC[i] + fy * LS[i] <= 0) continue;  // (the line's own side of the centre)
+    float d = fabsf(fx * LS[i] - fy * LC[i]);
+    if (d < best) best = d;
+  }
+  return best;
+}
+#endif
+// the section at (x, y); -1 in the middle or outside (a little past its edge counts)
 static int v2RadialAt(int16_t x, int16_t y) {
   int fx = x - CX, fy = y - CY, r2 = fx * fx + fy * fy;
   if (r2 < V2_RAD_IN * V2_RAD_IN || r2 > (V2_RAD_OUT + 16) * (V2_RAD_OUT + 16)) return -1;
-  return abs(fy) > abs(fx) ? (fy < 0 ? 0 : 2) : (fx > 0 ? 1 : 3);
+  return v2RadialSection(fx, fy);
 }
 // what each opens: the page its swipe on home opened (V2 has none there: this ring is the way to them)
 static void v2RadialPick(int s) {
+#if V2_RAD_N == 5
+  if (s == 3) {  // Sound (not the Knomi)
+    v2SoundOpen();
+    return;
+  }
+  if (s == 4) s = 3;  // (the Pokedex, up left)
+#endif
   if (s == 0) {  // Settings: the swipe down's
     openClock();
   } else if (s == 1) {  // Medals: the swipe left's
@@ -173,11 +241,16 @@ static void v2RadialCells() {
   v2CellsBuild(gRadCells, (CX - rr) & ~1, (CY - rr) & ~1, CX + rr, CY + rr, [&](int x, int y) {
     int fx = x + 1 - CX, fy = y + 1 - CY, r2 = fx * fx + fy * fy;
     if (r2 < (ri - 3) * (ri - 3) || r2 > rr * rr) return -1;
+#if V2_RAD_N == 5
+    float d = v2RadialLineDist(fx, fy);
+    if (d < 5.0f) return -1;  // the gaps between them
+    bool rim = r2 < ri * ri || r2 > ro * ro || d < 8.0f;
+#else
     int d = abs(abs(fx) - abs(fy));
     if (d < V2_RAD_GAP) return -1;  // the gaps between them
-    int s = abs(fy) > abs(fx) ? (fy < 0 ? 0 : 2) : (fx > 0 ? 1 : 3);
     bool rim = r2 < ri * ri || r2 > ro * ro || d < V2_RAD_GAP + 4;
-    return s * 2 + rim;
+#endif
+    return v2RadialSection(fx, fy) * 2 + rim;
   });
 }
 // The ring over the dimmed home, see-through as the icons' band is (Fedor: "the same color as the area behind the
@@ -216,8 +289,16 @@ static void v2RadialDraw() {
       }
     v2LutRun(row + x, V2_W - x, dim);
   }
+#if V2_RAD_N == 5  // (each icon and its word inside its section and the ring: worked out on their corners)
+  v2RadialItem(SPR_V2_RAD_GEAR, CX, 72, T(S_SETTINGS), 114);
+  v2RadialItem(SPR_V2_RAD_MEDAL, 376, 187, T(S_RAD_MEDALS), 229);
+  v2RadialItem(SPR_V2_RAD_STATS, 330, 330, T(S_RAD_STATS), 372);
+  v2RadialItem(SPR_V2_RAD_SOUND, 136, 330, T(S_SOUND), 372);
+  v2RadialItem(SPR_V2_RAD_DEX, 90, 187, T(S_DEX_TITLE), 229);
+#else
   v2RadialItem(SPR_V2_RAD_GEAR, CX, 72, T(S_SETTINGS), 114);  // (72 px icons: their corners inside the ring's edge)
   v2RadialItem(SPR_V2_RAD_MEDAL, 378, 206, T(S_RAD_MEDALS), 250);
   v2RadialItem(SPR_V2_RAD_STATS, CX, 390, T(S_RAD_STATS), 334);
   v2RadialItem(SPR_V2_RAD_DEX, 88, 206, T(S_DEX_TITLE), 250);
+#endif
 }

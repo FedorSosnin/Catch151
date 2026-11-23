@@ -767,7 +767,7 @@ static void v2FadeText(int x, int y, const char *s, int d, uint16_t col, int a) 
 }
 
 // The big clock, asleep: h:mm big and AM/PM small beside it, their bottoms level, as the clock screen's
-// (drawBigTime()) but smaller, in white on a dark shadow so it reads on the dimmed night. Drawn after the icons, so a
+// (drawBigTimeAt()) but smaller, in white on a dark shadow so it reads on the dimmed night. Drawn after the icons, so a
 // poop under it never covers the time. Each minute it moves a pixel or two round a small loop, so an AMOLED panel
 // isn't holding the same bright pixels all night
 static void v2SleepClockDraw() {
@@ -2301,6 +2301,7 @@ static void v2DrawPoops(int n, bool party) {
 #include "repel_v2.h"    // the Repel
 #include "radial_v2.h"   // the radial menu: a hold on the Pokemon
 #include "about_v2.h"    // Settings' first page's rows, and the About page with the coin
+#include "sound_v2.h"    // the Sound page (not the Knomi): the ring's speaker
 #include "tower_v2.h"    // Knomi Tower: Travel's second page and the climb
 #include "fishing_v2.h"  // Reel Fishing: MOCKUPS only (FISHMOCK n)
 #include "pinball_v2.h"  // Pinball, drawn
