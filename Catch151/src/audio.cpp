@@ -146,6 +146,19 @@ static std::atomic<uint32_t> gUnderruns{0};
 static bool gAmpLevel = false;
 static uint32_t gAmpOnAt = 0;
 
+// the mix's level on its way out, in tenths. The PAM8302A gets the 1-bit stream unsmoothed (no resistor or capacitor,
+// Fedor: "a TON of static"): the static comes from the stream's own high frequencies, whatever it carries, so a louder
+// mix plays over it and the trimmer can come down. x2 keeps the loudest music (peaks 0.25) clear of the stream's limit
+#ifdef WS21_AUDIO_PDM
+static std::atomic<uint8_t> gOutGain10{20};
+// the stream's shape: 1, Espressif's DAC line mode (made for an analog filter or amplifier: one channel, the clock
+// divided down from 160 MHz almost evenly, so less jitter, and twice the level); 0, the codec mode of the first build
+// (two channels on one line, for a microphone-style chip that reads it with a clock). The console's PDMMODE swaps them
+static std::atomic<uint8_t> gPdmMode{1}, gPdmWant{1};
+#else
+static std::atomic<uint8_t> gOutGain10{10};
+#endif
+
 static void saveLevel(const char *key, uint8_t v) {
   Preferences p;
   p.begin(SAVE_NS, false);
@@ -194,7 +207,8 @@ static inline int16_t mix(int16_t s, bool playing) {
   gMusGain += (LEVEL_GAIN[gMusLv.load(std::memory_order_relaxed)] - gMusGain) * ease;
   float m = 0;
   gMusic.render(&m, 1, gDuck * gMusGain);
-  int32_t v = (int32_t)lrintf((s + voice * 32767.0f) * gSndGain + m * 32767.0f);
+  int32_t v = (int32_t)lrintf(((s + voice * 32767.0f) * gSndGain + m * 32767.0f) *
+                              (gOutGain10.load(std::memory_order_relaxed) * 0.1f));
   return (int16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
 }
 
@@ -204,9 +218,54 @@ static bool IRAM_ATTR onSendQOvf(i2s_chan_handle_t, i2s_event_data_t *, void *) 
   return false;
 }
 
+#ifdef WS21_AUDIO_PDM
+// the stream's clock and slots for each shape (PDMMODE)
+static void pdmConfig(uint8_t mode, i2s_pdm_tx_clk_config_t &clk, i2s_pdm_tx_slot_config_t &slot) {
+  if (mode == 1) {
+    // Espressif's set for DAC use ("relatively high SNR"): the stream at 128 x 48 kHz, MCLK 160 MHz / 2.003
+    i2s_pdm_tx_clk_config_t c = I2S_PDM_TX_CLK_DAC_DEFAULT_CONFIG(SAMPLE_RATE);
+    i2s_pdm_tx_slot_config_t s = I2S_PDM_TX_SLOT_DAC_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO);
+    clk = c;
+    slot = s;
+  } else {
+    i2s_pdm_tx_clk_config_t c = I2S_PDM_TX_CLK_DEFAULT_CONFIG(SAMPLE_RATE);
+    c.up_sample_fs = SAMPLE_RATE / 100;  // the stream at 128 x 48 kHz whatever the rate (the header's advice)
+    i2s_pdm_tx_slot_config_t s = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO);
+    clk = c;
+    slot = s;
+  }
+}
+
+// PDMMODE, from the task (it alone writes to the channel): the channel stopped, reshaped and started again
+static void pdmReshape() {
+  uint8_t mode = gPdmWant.load(std::memory_order_relaxed);
+  i2s_pdm_tx_clk_config_t clk;
+  i2s_pdm_tx_slot_config_t slot;
+  pdmConfig(mode, clk, slot);
+  i2s_channel_disable(gTx);
+  esp_err_t e = i2s_channel_reconfig_pdm_tx_clock(gTx, &clk);
+  if (e == ESP_OK) e = i2s_channel_reconfig_pdm_tx_slot(gTx, &slot);
+  if (e == ESP_OK) gPdmMode = mode;
+  else gPdmWant = gPdmMode.load();  // (the clock may have changed: the old shape's set again)
+  if (e != ESP_OK) {
+    pdmConfig(gPdmMode, clk, slot);
+    i2s_channel_reconfig_pdm_tx_clock(gTx, &clk);
+    i2s_channel_reconfig_pdm_tx_slot(gTx, &slot);
+  }
+  i2s_channel_enable(gTx);
+  Serial.printf("audio: stream %s%s\n", gPdmMode ? "DAC" : "codec", e == ESP_OK ? "" : " (the change failed)");
+}
+#endif
+
 static void audioTask(void *) {
-  static int16_t out[BLOCK * 2];  // stereo, L = R
+  static int16_t out[BLOCK * 2];  // stereo, L = R; or mono (the DAC shape), the first half
   for (;;) {
+#ifdef WS21_AUDIO_PDM
+    if (gPdmWant.load(std::memory_order_relaxed) != gPdmMode.load(std::memory_order_relaxed)) pdmReshape();
+    const bool mono = gPdmMode.load(std::memory_order_relaxed) == 1;
+#else
+    const bool mono = false;
+#endif
     uint32_t t0 = micros(), now = millis();
     // the amplifier: on while anything sounds, or awake and in use with SOUND or the music on; off asleep or idle
     bool queued = gTail.load(std::memory_order_acquire) != gHead.load(std::memory_order_acquire);
@@ -228,7 +287,9 @@ static void audioTask(void *) {
       if (!gDef) {
         uint32_t tail = gTail.load(std::memory_order_relaxed);
         if (!warm || tail == gHead.load(std::memory_order_acquire)) {
-          out[i * 2] = out[i * 2 + 1] = mix(0, false);
+          int16_t v = mix(0, false);
+          if (mono) out[i] = v;
+          else out[i * 2] = out[i * 2 + 1] = v;
           continue;
         }
         uint8_t id = gQueue[tail % QUEUE_LEN];
@@ -248,7 +309,9 @@ static void audioTask(void *) {
         else if ((!gLegato || last) && gDone > gTotal - V2_DECAY) s = (int16_t)(s * (gTotal - gDone) / V2_DECAY);
         gAcc += gStep;
       }
-      out[i * 2] = out[i * 2 + 1] = mix(s, true);
+      int16_t v = mix(s, true);
+      if (mono) out[i] = v;
+      else out[i * 2] = out[i * 2 + 1] = v;
       if (++gDone >= gTotal) {
         if (++gNote >= gDef->len) gDef = nullptr;
         else startNote();
@@ -258,7 +321,7 @@ static void audioTask(void *) {
     gStatUs += us;
     if (us > gStatWorstUs) gStatWorstUs = us;
     size_t w = 0;
-    i2s_channel_write(gTx, out, sizeof(out), &w, portMAX_DELAY);
+    i2s_channel_write(gTx, out, mono ? sizeof(out) / 2 : sizeof(out), &w, portMAX_DELAY);
   }
 }
 
@@ -272,12 +335,8 @@ static bool outputStart() {
   if (e == ESP_OK) {
     // one data line and no clock line: the stream's density is the sound. It goes straight into the PAM8302A's A+
     // (through its 10 kOhm volume trimmer); the amplifier and the speaker smooth it
-    i2s_pdm_tx_config_t pc = {
-      .clk_cfg = I2S_PDM_TX_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
-      .slot_cfg = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
-      .gpio_cfg = {},
-    };
-    pc.clk_cfg.up_sample_fs = SAMPLE_RATE / 100;  // the stream at 128 x 48 kHz whatever the rate (the header's advice)
+    i2s_pdm_tx_config_t pc = {};
+    pdmConfig(gPdmMode, pc.clk_cfg, pc.slot_cfg);
     pc.gpio_cfg.clk = I2S_GPIO_UNUSED;
     pc.gpio_cfg.dout = (gpio_num_t)PDM_DO_IO;
     pc.gpio_cfg.dout2 = I2S_GPIO_UNUSED;
@@ -405,8 +464,19 @@ void audioReport() {
                 BLOCK * 1000.0f / SAMPLE_RATE, (unsigned)gUnderruns.exchange(0), gAmpLevel ? "on" : "off",
                 gMusicOn ? "on" : "off", (unsigned)gMusic.playing(), gMusic.audible() ? " (playing)" : "",
                 gOn ? "on" : "off");
+#ifdef WS21_AUDIO_PDM
+  Serial.printf("audio: stream %s, level x%.1f\n", gPdmMode ? "DAC" : "codec", gOutGain10 * 0.1f);
+#endif
   gStatUs = gStatWorstUs = 0;
   gStatFrom = now;
+}
+
+// the console's PDMMODE n and PDMGAIN n (-1: left as is). The shape changes in the task, between two blocks
+void audioPdm(int mode, int gain10) {
+  if (gain10 >= 1 && gain10 <= 60) gOutGain10 = (uint8_t)gain10;
+#ifdef WS21_AUDIO_PDM
+  if (mode == 0 || mode == 1) gPdmWant = (uint8_t)mode;
+#endif
 }
 
 // the console's AUDIOBENCH n: 2 s of track n mixed by a player of its own (not the one playing), timed, so the music's

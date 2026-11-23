@@ -1136,6 +1136,14 @@ void handleSerial() {
     audioBench((uint8_t)line.substring(11).toInt());
     Serial.println("DONE");
     return;
+  } else if (line.startsWith("PDMMODE ")) {  // the sound stream's shape: 1 DAC (made for an amplifier), 0 codec (the
+    audioPdm(line.substring(8).toInt(), -1);  // first build): compared by ear for the static (Fedor, 2026-11-22)
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("PDMGAIN ")) {  // the mix's level on its way out, in tenths (20 = x2): louder sound over
+    audioPdm(-1, line.substring(8).toInt());  // the same static, so the trimmer can come down
+    Serial.println("DONE");
+    return;
 #endif
   } else if (line.startsWith("DMAIN ")) {  // 1: the straight copy reads the canvas by DMA (quicker; lines came back)
     gWs21DmaIn = line.substring(6).toInt() != 0;
