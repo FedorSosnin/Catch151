@@ -37,6 +37,7 @@ struct V2PageKey {
   int16_t stillR = 0;  // and, if not 0, the X (at CX, V2_CLOSE_Y) in a circle this big doesn't, as a side button
   int16_t mx0 = 0, my0 = 0, mx1 = V2_W;  // on a room, only what's in this box moves (from my0 down to still); what's
                                          // outside it is the new page's, still (the Games menu: its Game Boy's screen)
+  uint8_t round = 0;  // 1: the pages go round (the Games' own pages): both side buttons, and the short way round
 };
 static V2PageKey v2PageKeyNow() {
   V2PageKey k = { 0, 0, 0, V2_PAGE_ARROW_Y };
@@ -60,7 +61,9 @@ static V2PageKey v2PageKeyNow() {
     return { 5, (int16_t)galleryPage, DEX_PAGES, PAGE_ARROW_Y, V2_SLIDE_DEX_Y };
   }
   if (gamesMenuOpen)  // the cartridges, inside the Game Boy's screen: its sign, power light and page line stay
-    return { 52, (int16_t)v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, V2_SLIDE_CHROME_Y, 0, V2_GB_X0, V2_GB_Y0, V2_GB_X1 };  // (the leaderboard's pages too)
+    return v2GamesPage < 0  // a game's own page (its leaderboard), round the games; the cartridges' pages
+               ? V2PageKey{ 53, (int16_t)(-1 - v2GamesPage), V2_LB_PAGES, V2_PAGE_ARROW_Y, V2_SLIDE_CHROME_Y, 0, V2_GB_X0, V2_GB_Y0, V2_GB_X1, 1 }
+               : V2PageKey{ 52, (int16_t)v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, V2_SLIDE_CHROME_Y, 0, V2_GB_X0, V2_GB_Y0, V2_GB_X1 };
   if (gameOpen || dungeonOpen || runOpen || surfOpen || battleOpen || quizOpen) return k;
   if (zoneScreen == ZS_PICK) return { 50, (int16_t)v2IslePage, 2, V2_PAGE_ARROW_Y, V2_SLIDE_TRAVEL_Y, V2_SLIDE_ARROW_R };  // Knomi Island, then Knomi Tower's islet
   if (zoneScreen == ZS_TOWER) {  // Knomi Tower (tower_v2.h): picking two friends, the Pokedex's grid
@@ -119,7 +122,7 @@ static bool v2SlideOnArrow(const V2PageKey &k, int x, int y) {
   if (dy * dy > V2_SLIDE_ARROW_R * V2_SLIDE_ARROW_R) return false;
   int dx = pageArrowDx(k.arrowY);
   for (int side = -1; side <= 1; side += 2) {
-    if (side < 0 ? k.page <= 0 : k.page >= k.pages - 1) continue;
+    if (!k.round && (side < 0 ? k.page <= 0 : k.page >= k.pages - 1)) continue;
     int ex = x - (CX + side * dx);
     if (ex * ex + dy * dy <= V2_SLIDE_ARROW_R * V2_SLIDE_ARROW_R) return true;
   }
@@ -149,7 +152,7 @@ static void v2SlidePrepare(const V2PageKey &from, const V2PageKey &to) {
       const V2PageKey &k = b ? to : from;
       int dx = pageArrowDx(k.arrowY), r = V2_SLIDE_ARROW_R;
       for (int side = -1; side <= 1; side += 2) {
-        if (side < 0 ? k.page <= 0 : k.page >= k.pages - 1) continue;
+        if (!k.round && (side < 0 ? k.page <= 0 : k.page >= k.pages - 1)) continue;
         int cx = CX + side * dx, above = k.arrowY - r - 1 > 0 ? k.arrowY - r - 1 : 0;  // (from the row above it: a coast
                                                                                      // that runs down stays whole)
         for (int y = k.arrowY - r; y <= k.arrowY + r; y++) {
@@ -241,7 +244,9 @@ static void v2SlideFrame() {
   V2PageKey k = v2PageKeyNow();
   if (k.menu && v2SlideHave && k.menu == v2SlideLast.menu && k.page != v2SlideLast.page) {
     memcpy(v2SlideNew, fb, V2_W * V2_W * sizeof(uint16_t));
-    v2SlideDir = k.page > v2SlideLast.page ? 1 : -1;
+    int d = k.page - v2SlideLast.page;
+    if (k.round && 2 * abs(d) > k.pages) d += d > 0 ? -k.pages : k.pages;  // (round: the last to the first is on)
+    v2SlideDir = d > 0 ? 1 : -1;
     v2SlideTo = k;
     v2SlidePrepare(v2SlideLast, k);
     v2SlideT0 = millis();

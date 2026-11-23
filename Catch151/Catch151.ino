@@ -531,6 +531,7 @@ void v2KbTyped();       // ...and the keys typed on it, while a keyboard is open
 void v2HoverOverlay();
 #endif
 static int v2RadialAt(int16_t x, int16_t y);
+void v2GamesToCarts();  // (menus_v2.h: from a game's page back to the cartridges)
 #if HAS_MUSIC
 static void v2SoundPage();  // (sound_v2.h)
 static void v2SoundTap(int16_t x, int16_t y);
@@ -1341,6 +1342,7 @@ void handleSerial() {
     Serial.println("DONE");
 #endif
   } else if (line == "GAMES") {
+    v2GamesToCarts();  // (opened, it shows the cartridges)
     openGamesMenu();
     Serial.println("DONE");
   } else if (line.startsWith("LANG ") && pet.noSave) {  // V2: the language, 0..7 as i18n.h numbers them (testing)
@@ -2141,6 +2143,7 @@ void onTap(int16_t x, int16_t y) {
         feedMenuUntil = millis() + 6000;
       }
     } else if (i == 1) {
+      v2GamesToCarts();  // V2: opened from home, the cartridges (a game's end opens its own page)
       openGamesMenu();
     } else if (i == 2) {
       openZones();
@@ -3232,13 +3235,29 @@ void gamesMenuTap(int16_t x, int16_t y) {
   }
   int adx = pageArrowDx(V2_PAGE_ARROW_Y);  // where an arrow isn't (the first page's left, the last's right): nothing
   if (pageArrowHit(x, y, CX - adx, V2_PAGE_ARROW_Y) || pageArrowHit(x, y, CX + adx, V2_PAGE_ARROW_Y)) return;
-  int g = v2GamesPage < 0 ? v2LbPlayAt(x, y) : gameAt(x, y);  // V2: a cartridge, or a leaderboard page's play line
-  // a tap on the screen between the cartridges does nothing (four a page leave room round them, where a page
-  // arrow may not be): the X, or a tap off the screen, closes it
-  if (g < 0 && x >= V2_GB_X0 && x < V2_GB_X1 && y >= V2_GB_Y0 && y < V2_GB_Y1) return;
+  bool onScreen = x >= V2_GB_X0 && x < V2_GB_X1 && y >= V2_GB_Y0 && y < V2_GB_Y1;
+  if (v2GamesPage >= 0) {  // V2: the cartridges
+    int c = v2CartIndexAt(x, y);
+    if (c >= 0) {  // its game's own page: its leaderboard, TAP TO PLAY (Fedor: "each game has its own page")
+      sfxPlay(SFX_TAP);
+      v2GamesPage = -1 - c;
+      return;
+    }
+    // a tap on the screen between the cartridges does nothing (four a page leave room round them, where a page
+    // arrow may not be): the X, or a tap off the screen, closes it, with the click every X has (Fedor)
+    if (onScreen) return;
+    sfxPlay(SFX_TAP);
+    gamesMenuOpen = false;
+    return;
+  }
+  int g = v2LbPlayAt(x, y);  // V2: a game's page: its play line plays it
+  if (g < 0) {
+    if (onScreen) return;  // (the rest of its screen is for swiping)
+    sfxPlay(SFX_TAP);  // its X, or a tap off the screen: back to the cartridges
+    v2GamesToCarts();
+    return;
+  }
   gamesMenuOpen = false;
-  if (g < 0) sfxPlay(SFX_TAP);  // V2: its X (or a tap beside the cartridges) closes it with the click every X has (Fedor)
-  if (g < 0) return;  // outside = go back
   sfxPlay(SFX_TAP);
   if (g == 0) startGame();
   else if (g == 1) startQuiz();
@@ -9253,10 +9272,10 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       int px, pw;
       lbPlayBox(px, pw);
       if (lbOnPlay(x, y)) return pressSet(t, px - 6, LB_PLAY_Y - 6, pw + 12, 26, gameLabel(V2_CART_GAME[-1 - v2GamesPage]));
-      return v2PressNav(x, y, t, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, true);
+      return v2GamesPressNav(x, y, t);
     }
     int g = gameAt(x, y);
-    if (g < 0) return v2PressNav(x, y, t, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, true);  // V2: its page arrows and X
+    if (g < 0) return v2GamesPressNav(x, y, t);  // V2: its page arrows and X
     if (g < 0) return false;
     int k = v2CartOfGame(g);  // V2: round the cartridge
     return pressSet(t, V2_CART_XY[k][0] - 5, V2_CART_XY[k][1] - 5, 115, 140, gameLabel(g));

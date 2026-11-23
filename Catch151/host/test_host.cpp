@@ -649,7 +649,9 @@ static void testGame() {
   hostSerialPush("GAMES");
   runTicks(300);
   CHECK(gamesMenuOpen && introCard == -1);
-  tapAt(150, 128);  // Berry Drop's tile (V2: its cartridge, which stops at 166)
+  tapAt(150, 128);  // Berry Drop's tile (V2: its cartridge, which stops at 166): its own page, its leaderboard
+  CHECK(gamesMenuOpen && !gameOpen);
+  tapAt(233, 358);  // TAP TO PLAY
   CHECK(gameOpen && !gamesMenuOpen && introCard == 0);
   runTicks(500);    // landed
   tapAt(233, 240);  // the text
@@ -661,6 +663,7 @@ static void testGame() {
   runTicks(300);
   gameOpen = false;  // (Berry Drop, left: the menu opens over it in this test)
   tapAt(150, 128);
+  tapAt(233, 358);  // (its page's TAP TO PLAY)
   runTicks(500);
   CHECK(gameOpen && introCard == 0);
   hostPointer(233, 380, true);  // a swipe up from the bottom: it would quit a game, here it sends the card
@@ -678,6 +681,7 @@ static void testGame() {
   hostSerialPush("GAMES");
   runTicks(300);
   tapAt(170, 300);  // Rock Hopper's tile (V2: its cartridge, the first page's third, from 118 x 238)
+  tapAt(233, 358);  // (its page's TAP TO PLAY)
   runTicks(500);
   tapAt(233, 335);  // Ready, GO!
   for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);  // until it has ended
@@ -701,6 +705,7 @@ static void testGame() {
     hostSerialPush("GAMES");
     runTicks(300);
     tapAt(170, 300);  // Rock Hopper again
+    tapAt(233, 358);  // (its page's TAP TO PLAY)
     runTicks(500);
     tapAt(233, 335);
     for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);
@@ -708,7 +713,10 @@ static void testGame() {
     CHECK(runOpen && runOverT);
   }
   tapAt(233, 422);  // the X
-  CHECK(!runOpen && gamesMenuOpen);
+  extern int gameAt(int16_t x, int16_t y);
+  CHECK(!runOpen && gamesMenuOpen && gameAt(150, 128) < 0);  // back on its own page, to see where it stands
+  tapAt(233, 422);  // that page's X: the cartridges
+  CHECK(gamesMenuOpen);
   {  // the Games menu's two pages, four cartridges a page (Fedor): the right arrow turns to the second, where
      // Dungeon Crawler, Reel Fishing and Pinball are; Pinball opens under its card, plays (a finger held on the left
      // half raises the left flipper; the button both), and a swipe up quits it (home, as every game's does); the menu
@@ -719,7 +727,8 @@ static void testGame() {
     CHECK(gameAt(150, 128) == 0 && gameAt(300, 300) == 4);  // Berry Drop; PikaSurf
     tapAt(432, 228);  // the right arrow, where every paged screen has it
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == 7);
-    tapAt(170, 300);  // Pinball
+    tapAt(170, 300);  // Pinball: its page
+    tapAt(233, 358);  // TAP TO PLAY
     CHECK(pinOpen && !gamesMenuOpen && introCard == 6);
     runTicks(500);
     tapAt(233, 335);  // Ready, GO!
@@ -753,6 +762,7 @@ static void testGame() {
       extern bool bmOpen;
       extern BmState bm;
       tapAt(300, 300);
+      tapAt(233, 358);  // (its page's TAP TO PLAY)
       CHECK(bmOpen && !gamesMenuOpen && introCard == 7);
       runTicks(500);
       hostButton(true);
@@ -831,6 +841,19 @@ static void testGame() {
     runTicks(50);
     hostPointer(330, sy, false);
     runTicks(300);
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
+    // each game's own page (Fedor: "When you click on a game cartridge, it will take you to its leaderboard page ...
+    // When you are in the leaderboard view, you can go left and right to cycle through each game"): from Berry Drop's,
+    // back is the last game's, BerryMatch's; its X goes back to the cartridges, on BerryMatch's page; on from
+    // BerryMatch's is Berry Drop's again
+    tapAt(150, 128);  // Berry Drop's cartridge: its page
+    CHECK(gamesMenuOpen && gameAt(150, 128) < 0);
+    tapAt(34, 228);  // the left arrow: round to BerryMatch's
+    tapAt(233, 422);  // its X
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 300) == 7);
+    tapAt(300, 300);  // BerryMatch's cartridge: its page
+    tapAt(432, 228);  // the right arrow: round to Berry Drop's
+    tapAt(233, 422);
     CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
     // the press preview only on a hold (Fedor: "on HOLD. But not right away on touch"): a finger that slides onto a
     // cartridge shows nothing and, lifted at once, starts nothing; held still there, it shows; slid off, it goes

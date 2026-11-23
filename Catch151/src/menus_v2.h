@@ -1983,33 +1983,53 @@ static bool v2TagChipHit(int16_t x, int16_t y) {
   v2TagChipBox(x0, w);
   return x >= x0 - 16 && x < x0 + w + 16 && y >= V2_TAG_CHIP_Y - 12 && y < V2_TAG_CHIP_Y + 30;
 }
-// The leaderboard (2.2.15, leaderboard_v2.h): a page a game to the left of the cartridges, in the cartridges' order
-// running on to the left (Fedor: "add our leaderboard in a section to the left of the games"): v2GamesPage -1 is Berry
-// Drop's, next to the Games, -2 Who's That?'s, on to -8, BerryMatch's. The pages all in a row, for the side buttons,
-// a swipe and the slide: v2GamesAt() (0 BerryMatch's leaderboard page .. 7 Berry Drop's, then the cartridges' pages)
+// Each game's own page (leaderboard_v2.h; Fedor, 2026-11-22: "When you click on a game cartridge, it will take you to
+// its leaderboard page. That way each game has its own page. When you are in the leaderboard view, you can go left and
+// right to cycle through each game"): its leaderboard, and TAP TO PLAY. v2GamesPage -1 is the first cartridge's (Berry
+// Drop's), -2 the second's, on to -8 (BerryMatch's). Its side buttons and a swipe go round the games, the last's next
+// the first; its X goes back to the cartridges. (2.2.15 had these pages to the left of the cartridges, in a row.)
 #define V2_LB_PAGES V2_CARTS
-#define V2_GAMES_ALL (V2_LB_PAGES + V2_CART_PAGES)
-static int v2GamesAt() { return v2GamesPage + V2_LB_PAGES; }
-static void v2LbHint();  // (leaderboard_v2.h: LEADERBOARDS down the first page's left edge)
 static void v2GamesTv() {
   v2GbBack(T(S_GAMES));
   v2TagChip();
   if (v2GamesPage >= V2_CART_PAGES) v2GamesPage = V2_CART_PAGES - 1;
-  if (v2GamesPage == 0) v2LbHint();
   for (int k = 0, c = v2GamesPage * V2_CARTS_PAGE; k < v2CartsOn(v2GamesPage); k++, c++)
     v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[c]), gameLabel(V2_CART_GAME[c]), V2_CART_COL[c]);
-  drawPageArrows(v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y);
+  drawPageArrows(v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
   v2PageOf(V2_CART_PAGES, v2GamesPage, 400);
   v2CloseX();
 }
+// the side buttons a Games page shows: a game's page both (round the games), the cartridges' none past the first or last
+static void v2GamesArrows() {
+  if (v2GamesPage < 0) drawPageArrows(1, 3, V2_PAGE_ARROW_Y);
+  else drawPageArrows(v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
+}
 // the Games menu's page arrow under a tap: -1 back, 1 on, 0 neither (or one not shown)
-static int v2GamesArrowAt(int16_t x, int16_t y) { return pageArrowAt(x, y, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y); }
-// turns the Games menu's page (a swipe or an arrow): false if there's no page that way
+static int v2GamesArrowAt(int16_t x, int16_t y) {
+  if (v2GamesPage < 0) return pageArrowAt(x, y, 1, 3, V2_PAGE_ARROW_Y);
+  return pageArrowAt(x, y, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
+}
+// ...and its press preview (the side buttons and the X)
+static bool v2GamesPressNav(int16_t x, int16_t y, PressTarget &t) {
+  if (v2GamesPage < 0) return v2PressNav(x, y, t, 1, 3, V2_PAGE_ARROW_Y, true);
+  return v2PressNav(x, y, t, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, true);
+}
+// turns the Games menu's page (a swipe or an arrow): false if there's no page that way. A game's page goes round the
+// games: on from the last is the first
 static bool v2GamesTurn(int d) {
+  if (v2GamesPage < 0) {
+    int c = (-1 - v2GamesPage + d + V2_LB_PAGES) % V2_LB_PAGES;
+    v2GamesPage = -1 - c;
+    return true;
+  }
   int p = v2GamesPage + d;
-  if (p < -V2_LB_PAGES || p >= V2_CART_PAGES) return false;
+  if (p < 0 || p >= V2_CART_PAGES) return false;
   v2GamesPage = p;
   return true;
+}
+// from a game's page back to the cartridges, on the page with that one on it (its X; the menu opened from home)
+void v2GamesToCarts() {
+  if (v2GamesPage < 0) v2GamesPage = (-1 - v2GamesPage) / V2_CARTS_PAGE;
 }
 // the Games menu turned to the page with game g on it (its number, as V2_CART_GAME has them), for a game's end: its
 // cartridge's page, or its leaderboard page if it was started from there (to see the new score)
@@ -2035,8 +2055,14 @@ static int v2CartAt(int16_t x, int16_t y, const int16_t (*xy)[2], int n) {
     if (x >= xy[k][0] - 5 && x < xy[k][0] + 110 && y >= xy[k][1] - 5 && y < xy[k][1] + 135) return k;
   return -1;
 }
+// the cartridge under a tap on a cartridges page (0 .. V2_CARTS - 1, as V2_CART_GAME has them), or -1: its game's page
+static int v2CartIndexAt(int16_t x, int16_t y) {
+  if (v2GamesPage < 0) return -1;
+  int k = v2CartAt(x, y, V2_CART_XY, v2CartsOn(v2GamesPage));
+  return k < 0 ? -1 : v2GamesPage * V2_CARTS_PAGE + k;
+}
 static int v2GameAt(int16_t x, int16_t y) {  // V1's game number, on this page
-  if (v2GamesPage < 0) return -1;  // (a leaderboard page: leaderboard_v2.h v2LbPlayAt())
+  if (v2GamesPage < 0) return -1;  // (a game's page: leaderboard_v2.h v2LbPlayAt())
   int k = v2CartAt(x, y, V2_CART_XY, v2CartsOn(v2GamesPage));
   return k < 0 ? -1 : V2_CART_GAME[v2GamesPage * V2_CARTS_PAGE + k];
 }
