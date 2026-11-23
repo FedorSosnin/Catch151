@@ -442,6 +442,7 @@ static const Buzz kBuzz[] = {
   {1, {220}, 0xE000},                      // ...snapped
   {5, {40, 50, 40, 50, 140}, 0xB000},      // ...landed
   {1, {25}, 0x5000},                       // ...the weigh-in
+  {1, {15}, 0x6000},                       // Pic Snap: the shutter
 };
 
 static int controllerIndex() {  // the first one connected, or -1

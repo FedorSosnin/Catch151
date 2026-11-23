@@ -147,7 +147,7 @@ inline void boardAskMsg(BuddyMsg &m, uint32_t from, uint8_t game = BOARD_ALL) {
 // a BM_BOARD from the relay (buddyParse() lets only the relay's through) to its game's best three; false (b untouched)
 // if it doesn't make sense
 inline bool boardFrom(const BuddyMsg &m, BoardTop &b) {
-  if (m.type != BM_BOARD || m.kind > 7 || m.kind == 1 || m.move > BOARD_TOP) return false;
+  if (m.type != BM_BOARD || m.kind > 8 || m.kind == 1 || m.move > BOARD_TOP) return false;  // (8: Pic Snap's)
   BoardTop t;
   memset(&t, 0, sizeof(t));
   t.n = m.move;

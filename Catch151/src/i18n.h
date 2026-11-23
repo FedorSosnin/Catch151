@@ -152,6 +152,10 @@ enum StrId : STRID_BASE {
   S_LB_FLOOR_FMT, S_LB_PLAY, S_LB_PLAY_KEYS, S_LB_FUN, S_LB_NAME_ALL, S_LB_NO_SCORES, S_LB_OFFLINE, S_LB_NONE, S_LB_SHINY_FMT,
   S_SND_EFFECTS, S_MUTE, S_UNMUTE,  // the Sound page (sound_v2.h, not the Knomi): the effects' row, Mute, and Unmute
   S_RAD_SETTINGS,  // the ring in five's Settings, down right (radial_v2.h): German and Italian shorter, to fit there
+  S_GAME_SNAP, S_HOW_SNAP, S_HOW_SNAP_KEYS,  // Pic Snap (picsnap.h): its name and how-to cards
+  S_PS_TAP, S_PS_TAP_KEYS, S_PS_AWAY,       // ...in play: the first photo's hint (touch, keys), not snapped in time
+  S_PS_PERFECT, S_PS_GREAT, S_PS_NICE, S_PS_BLURRY, S_PS_OFF,  // ...a print's word: by its points, or what let it down
+  S_PS_FOCUS, S_PS_CENTRE,                  // ...and its two scores
   STR_COUNT
 };
 

@@ -867,6 +867,16 @@ void Pet::matchResult(uint32_t score) {
   save();
 }
 
+// Pic Snap: the record, and exercise as the other games give it (a point for every 40: a good roll of ten photos
+// scores 700 to 900, as many points as a good game of the others)
+void Pet::snapResult(uint16_t score) {
+  if (ceremony != CER_NONE || isEgg()) return;
+  if (score > snapHi) snapHi = score;
+  if (score > boardSnap) boardSnap = score;
+  exerciseReward(score / 40 > 255 ? 255 : score / 40);
+  save();
+}
+
 // Reel Fishing's heaviest single fish, with what it was (saved by fishResult(), at the game's end)
 bool Pet::setGamerTag(const char *tag) {
   char t[GAMER_TAG_LEN + 1];
@@ -1307,9 +1317,11 @@ void Pet::save() {
   prefs.putBool("fsbs", fishBigShiny);
   prefs.putUInt("pnhi", pinHi);
   prefs.putUInt("bmhi", matchHi);
+  prefs.putUShort("pshi", snapHi);
   prefs.putString("gtag", gamerTag);
   prefs.putBytes("lbhi", boardHi, sizeof(boardHi));
   prefs.putUInt("lbbm", boardMatch);
+  prefs.putUShort("lbps", boardSnap);
   prefs.putShort("lbfd", boardFishDex);
   prefs.putBool("lbfs", boardFishShiny);
   prefs.putBytes("lbkd", boardKinds, sizeof(boardKinds));
@@ -1427,6 +1439,7 @@ void Pet::load() {
   fishBigShiny = prefs.getBool("fsbs", false);
   pinHi = prefs.getUInt("pnhi", 0);
   matchHi = prefs.getUInt("bmhi", 0);
+  snapHi = prefs.getUShort("pshi", 0);
   {
     char t[16] = "";
     prefs.getString("gtag", t, sizeof(t));
@@ -1436,6 +1449,7 @@ void Pet::load() {
   if (prefs.getBytes("lbhi", boardHi, sizeof(boardHi)) != sizeof(boardHi))
     memset(boardHi, 0, sizeof(boardHi));  // (a save from before 2.2.10 has none: the board starts from zero)
   boardMatch = prefs.getUInt("lbbm", 0);
+  boardSnap = prefs.getUShort("lbps", 0);
   boardFishDex = prefs.getShort("lbfd", 0);
   boardFishShiny = prefs.getBool("lbfs", false);
   if (prefs.getBytes("lbkd", boardKinds, sizeof(boardKinds)) != sizeof(boardKinds)) {

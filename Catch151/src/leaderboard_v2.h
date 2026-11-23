@@ -2,7 +2,7 @@
 // games ... make each game and current record look like old school games on that green Gameboy screen"; of three
 // mockups, "B is cool! Let's have them appear in order they appear as cartridges", the first with a crown). Each game's
 // own page, opened by a tap on its cartridge (Fedor, 2026-11-22: "That way each game has its own page"; menus_v2.h:
-// v2GamesPage -1 Berry Drop's, on to -8 BerryMatch's; its side buttons go round the games, its X back to them), the
+// v2GamesPage -1 Berry Drop's, on to -9 Pic Snap's; its side buttons go round the games, its X back to them), the
 // Game Boy's screen drawn in four shades of its own green as the old games were: a game's title screen, its name big,
 // its cartridge's picture at 2x in a box as Pokemon Red and Blue drew theirs, the best and what it is, who set it and
 // when (a crown before the tag), the second and third, and TAP TO PLAY, which starts it, as the old title screens'

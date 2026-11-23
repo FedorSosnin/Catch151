@@ -2306,6 +2306,7 @@ static void v2DrawPoops(int n, bool party) {
 #include "fishing_v2.h"  // Reel Fishing: MOCKUPS only (FISHMOCK n)
 #include "pinball_v2.h"  // Pinball, drawn
 #include "berrymatch_v2.h"  // BerryMatch, drawn
+#include "picsnap_v2.h"     // Pic Snap, drawn
 #include "leaderboard_v2.h"  // the leaderboard on the Game Boy: a page a game, left of the cartridges
 #include "slide_v2.h"    // a menu's pages slide as they turn
 #include "music_v2.h"    // the music each screen wants (a computer and the web)

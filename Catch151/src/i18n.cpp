@@ -158,6 +158,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Silenciar",
     "Activar sonido",
     "AJUSTES",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "Pokemon salvajes aparecen en 10 lugares. La camara se mueve y el enfoque va y viene: toca la pantalla para sacar la foto cuando este nitido y en el centro!",
+    "Pokemon salvajes aparecen en 10 lugares. La camara se mueve y el enfoque va y viene: haz clic o pulsa Espacio cuando este nitido y en el centro!",
+    "TOCA PARA LA FOTO!",
+    "CLIC O ESPACIO: FOTO!",
+    "SE ESCAPO!",
+    "PERFECTA!",
+    "GRAN FOTO!",
+    "BUENA FOTO!",
+    "ALGO BORROSA",
+    "DESCENTRADA",
+    "ENFOQUE",
+    "CENTRO",
   },
   // ---------------- EN ----------------
   {
@@ -310,6 +323,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Mute",
     "Unmute",
     "SETTINGS",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "Wild Pokemon show up in 10 places. The camera drifts and its focus comes and goes: tap anywhere to snap when the Pokemon is sharp and in the middle!",
+    "Wild Pokemon show up in 10 places. The camera drifts and its focus comes and goes: click or press Space to snap when it's sharp and in the middle!",
+    "TAP TO SNAP!",
+    "CLICK OR SPACE TO SNAP!",
+    "IT GOT AWAY!",
+    "PERFECT!",
+    "GREAT SHOT!",
+    "NICE SHOT!",
+    "A BIT BLURRY",
+    "OFF CENTER",
+    "FOCUS",
+    "CENTER",
   },
   // ---------------- FR ----------------
   {
@@ -462,6 +488,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Couper le son",
     "Remettre le son",
     "REGLAGES",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "Des Pokemon sauvages surgissent dans 10 lieux. L'appareil bouge et la mise au point va et vient : touche l'ecran quand il est net et au centre !",
+    "Des Pokemon sauvages surgissent dans 10 lieux. L'appareil bouge et la mise au point va et vient : clique ou appuie sur Espace quand il est net et au centre !",
+    "TOUCHE POUR LA PHOTO !",
+    "CLIC OU ESPACE : PHOTO !",
+    "IL S'EST ENFUI !",
+    "PARFAIT !",
+    "SUPER PHOTO !",
+    "JOLIE PHOTO !",
+    "UN PEU FLOU",
+    "PAS CENTRE",
+    "NETTETE",
+    "CENTRE",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -619,6 +658,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Stumm",
     "Ton an",
     "OPTIONEN",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "Wilde Pokemon zeigen sich an 10 Orten. Die Kamera wackelt und die Sch\204rfe kommt und geht: Tippe irgendwo, wenn es scharf und in der Mitte ist!",
+    "Wilde Pokemon zeigen sich an 10 Orten. Die Kamera wackelt und die Sch\204rfe kommt und geht: Klicke oder dr\201cke Leertaste, wenn es scharf und mittig ist!",
+    "TIPPE F\232R EIN FOTO!",
+    "KLICK ODER LEER: FOTO!",
+    "ES IST ENTKOMMEN!",
+    "PERFEKT!",
+    "TOLLES FOTO!",
+    "SCH\231NES FOTO!",
+    "ETWAS UNSCHARF",
+    "NICHT MITTIG",
+    "SCH\216RFE",
+    "MITTE",
   },
   // ---------------- IT ----------------
   {
@@ -771,6 +823,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Muto",
     "Riattiva audio",
     "OPZIONI",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "Pokemon selvatici appaiono in 10 posti. La fotocamera si muove e la messa a fuoco va e viene: tocca lo schermo per scattare quando e nitido e al centro!",
+    "Pokemon selvatici appaiono in 10 posti. La fotocamera si muove e la messa a fuoco va e viene: clicca o premi Spazio quando e nitido e al centro!",
+    "TOCCA PER SCATTARE!",
+    "CLIC O SPAZIO: SCATTA!",
+    "E SCAPPATO!",
+    "PERFETTA!",
+    "GRAN FOTO!",
+    "BELLA FOTO!",
+    "UN PO' SFOCATA",
+    "FUORI CENTRO",
+    "FUOCO",
+    "CENTRO",
   },
   // ---------------- PT ----------------
   {
@@ -923,6 +988,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Silenciar",
     "Ativar som",
     "AJUSTES",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "Pokemon selvagens aparecem em 10 lugares. A camera mexe e o foco vai e vem: toque na tela para tirar a foto quando estiver nitido e no centro!",
+    "Pokemon selvagens aparecem em 10 lugares. A camera mexe e o foco vai e vem: clique ou aperte Espaco quando estiver nitido e no centro!",
+    "TOQUE PARA A FOTO!",
+    "CLIQUE OU ESPACO: FOTO!",
+    "ELE FUGIU!",
+    "PERFEITA!",
+    "OTIMA FOTO!",
+    "BOA FOTO!",
+    "UM POUCO BORRADA",
+    "FORA DO CENTRO",
+    "FOCO",
+    "CENTRO",
   },
   // ---------------- JA ----------------
   {
@@ -1098,6 +1176,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ミュート",
     "ミュートかいじょ",
     "せってい",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "10かしょで やせいの ポケモンが でてくるよ。カメラは ゆれて ピントが あったり ずれたり。くっきり まんなかに きたら どこでも タッチして とろう！",
+    "10かしょで やせいの ポケモンが でてくるよ。カメラは ゆれて ピントが あったり ずれたり。くっきり まんなかに きたら クリックか スペースで とろう！",
+    "タッチで パシャッ！",
+    "クリックか スペースで パシャッ！",
+    "にげられた！",
+    "パーフェクト！",
+    "すごい しゃしん！",
+    "いい しゃしん！",
+    "ちょっと ぼやけた",
+    "まんなかじゃ ない",
+    "ピント",
+    "まんなか",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -1255,6 +1346,19 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "음소거",
     "음소거 해제",
     "설정",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
+    "Pic Snap",
+    "10곳에서 야생 포켓몬이 나타나요. 카메라가 흔들리고 초점이 맞았다 흐려졌다 해요. 선명하고 가운데에 있을 때 아무 데나 눌러 찍으세요!",
+    "10곳에서 야생 포켓몬이 나타나요. 카메라가 흔들리고 초점이 맞았다 흐려졌다 해요. 선명하고 가운데에 있을 때 클릭하거나 스페이스로 찍으세요!",
+    "눌러서 찰칵!",
+    "클릭이나 스페이스로 찰칵!",
+    "도망갔어요!",
+    "완벽해요!",
+    "멋진 사진!",
+    "좋은 사진!",
+    "조금 흐려요",
+    "가운데가 아니에요",
+    "초점",
+    "가운데",
   },
 };
 

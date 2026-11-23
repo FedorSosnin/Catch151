@@ -166,6 +166,7 @@ public:
   bool fishBigShiny = false;
   uint32_t pinHi = 0;      // Pinball's record: the best score
   uint32_t matchHi = 0;    // BerryMatch's record: the best score
+  uint16_t snapHi = 0;     // Pic Snap's record: the best roll (up to 1,000)
   // V2: the gamer tag (gamertag.h): the trainer's, kept through a goodbye, shown with the best scores on the world
   // board. tagAsked: asked for once already, after a first scored game (the Games menu's label changes it after that)
   char gamerTag[GAMER_TAG_LEN + 1] = "";
@@ -180,6 +181,7 @@ public:
   // goes to the relay (marked BOARD_SEASON, buddy.h)
   uint32_t boardHi[7] = {};
   uint32_t boardMatch = 0;  // ...and BerryMatch's (game 7), saved apart: the board's seven are one blob older saves read whole
+  uint16_t boardSnap = 0;   // ...and Pic Snap's (game 8), the same way
   int16_t boardFishDex = 0;
   bool boardFishShiny = false;
   // ...and the heaviest of each kind of fish since then (Fedor: "a record weight for each type of fish caught. That
@@ -194,7 +196,8 @@ public:
   bool hasScore() const {  // a best on the board since it started over: the gamer tag is asked for after the first
     for (int g = 0; g < 7; g++)
       if (boardHi[g]) return true;
-    return boardMatch != 0;  // (BerryMatch's too: the board shows it as game 7)
+    return boardMatch != 0;  // (BerryMatch's too: the board shows it as game 7; not Pic Snap's yet: the relay's board
+                             // doesn't show game 8, so it's no reason to ask)
   }
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;
@@ -227,6 +230,7 @@ public:
   bool fishBiggest(uint16_t kg10, int16_t dex, bool shiny);  // a fish landed: kept if it's the heaviest yet (true)
   void pinResult(uint32_t score);  // Pinball's end: the record and the exercise
   void matchResult(uint32_t score);  // BerryMatch's end: the same
+  void snapResult(uint16_t score);   // Pic Snap's end: the same
   void dungeonResult(uint8_t floor);
   int candiesLeft() const {  // today's candies still to have (the visitor's included)
     int limit = CANDY_PER_DAY + (today() != 0 && candyGiftDay == today() ? 1 : 0);

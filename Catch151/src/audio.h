@@ -30,6 +30,7 @@ enum Sfx : uint8_t {
   SFX_FISH_SNAP,    // the line snaps
   SFX_FISH_LANDED,  // landed: a fanfare
   SFX_FISH_SCALE,   // the weigh-in: tick, tick, ding
+  SFX_SHUTTER,      // Pic Snap: a photo taken, the camera's click-clack
   SFX_COUNT
 };
 
