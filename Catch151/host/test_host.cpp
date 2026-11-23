@@ -39,11 +39,13 @@
 uint8_t hostMusicWanted();  // host_audio.cpp: the track the game wants now (V2's music; 0 with V1)
 
 static int gFails = 0, gChecks = 0;
+static void failState();  // once the game runs: what's open and the touch's state, under a failed check
 #define CHECK(cond)                                                     \
   do {                                                                  \
     gChecks++;                                                          \
     if (!(cond)) {                                                      \
       printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);           \
+      failState();                                                      \
       gFails++;                                                         \
     }                                                                   \
   } while (0)
@@ -563,12 +565,39 @@ extern uint32_t runOverT;
 extern int8_t introCard;
 extern uint32_t lastInteract;
 
+// Under a failed check, once the game runs: what's open, what a touch would meet and the touch's own state, so a
+// check that fails only elsewhere (CI's Linux, never this Mac: 2.2.15) says why from its log
+static bool gGameOn = false;
+static void failState() {
+  if (!gGameOn) return;
+  extern bool v2RadialOpen, galleryOpen, cardOpen, cardAch, clockOpen, soundOpen, kbOpen, battleOpen, screenOff,
+      swallowGesture, holdFired, wasPressed, pressOn;
+  extern int galleryPage;
+  extern uint8_t cardPage, dimStage, choiceKind;
+  extern uint32_t confirmUntil, feedMenuUntil, tStart;
+  extern int16_t tX0, tY0, tXl, tYl;
+  extern ZoneScreen zoneScreen;
+  extern Pet pet;
+  extern bool homeModal(), introUp();
+  extern int partyOthers();
+  printf("  | at %u ms: ring %d gallery %d/%d card %d/%d%s clock %d sound %d games %d kb %d battle %d zone %d intro %d\n",
+         (unsigned)millis(), v2RadialOpen, galleryOpen, galleryPage, cardOpen, cardPage, cardAch ? " (medals)" : "",
+         clockOpen, soundOpen, gamesMenuOpen, kbOpen, battleOpen, (int)zoneScreen, introUp());
+  printf("  | dim %u off %d swallow %d held %d down %d press %d; touch (%d,%d) to (%d,%d) %u ms ago; interacted %u ms ago\n",
+         dimStage, screenOff, swallowGesture, holdFired, wasPressed, pressOn, tX0, tY0, tXl, tYl,
+         (unsigned)(millis() - tStart), (unsigned)(millis() - lastInteract));
+  printf("  | confirm %d choice %u feed %d modal %d (medal %d milestone %d evolve %d) ceremony %d sleeping %d others %d\n",
+         confirmUntil != 0, choiceKind, feedMenuUntil != 0, homeModal(), pet.showMedal(), pet.showMilestone(),
+         pet.wantEvolveButton(), (int)pet.ceremony, pet.sleeping, partyOthers());
+}
+
 static void testGame() {
   std::string res = tempDir(), save = tempDir(), cwd = getcwd(nullptr, 0);
   CHECK(symlink((cwd + "/../tools/sdcard/mons").c_str(), (res + "/mons").c_str()) == 0);
   CHECK(symlink((cwd + "/fonts").c_str(), (res + "/fonts").c_str()) == 0);
   std::string saveSub = save + "/a/b";  // also creates the intermediate folders
   hostInit(res.c_str(), saveSub.c_str());
+  gGameOn = true;
   CHECK(!readFile(saveSub + "/" SAVE_NS_NEW ".prefs").empty());
 
   runTicks(200);
@@ -729,7 +758,20 @@ static void testGame() {
     tapAt(432, 228);  // the right arrow, where every paged screen has it
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == 7);
     tapAt(170, 300);  // Pinball: its page
-    tapAt(233, 358);  // TAP TO PLAY
+    // a swipe across its screen turns the page and plays nothing; back on Pinball's, a tap anywhere on the screen
+    // plays it (Fedor: "you should be able to click anywhere on that screen to launch the game. Not just the tiny
+    // button at the bottom")
+    extern bool bmOpen;
+    for (int dir = -1; dir <= 1; dir += 2) {  // right to left: on to BerryMatch's; left to right: back
+      for (int i = 0; i <= 6; i++) {
+        hostPointer(233 - dir * (125 - 250 * i / 6), 200, true);
+        runTicks(30);
+      }
+      hostPointer(233 + dir * 125, 200, false);
+      runTicks(400);
+      CHECK(gamesMenuOpen && !pinOpen && !bmOpen && gameAt(150, 128) < 0);
+    }
+    tapAt(233, 200);  // the middle of its screen, its cartridge's picture
     CHECK(pinOpen && !gamesMenuOpen && introCard == 6);
     runTicks(500);
     tapAt(233, 335);  // Ready, GO!
@@ -854,6 +896,16 @@ static void testGame() {
       for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
       CHECK(ps.phase == PSP_PRINT);
       runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      // at its foot, in gold, the seconds to the next photo (Fedor: "I just want people to be ready for the next one")
+      extern ScaledCanvas *gfx;
+      auto goldFoot = [&]() {
+        const uint16_t *fb = gfx->getFramebuffer();
+        int n = 0;
+        for (int y = 410; y < 434; y++)
+          for (int x = 100; x < 366; x++) n += fb[y * 466 + x] == 0xF606;  // (0xF2C230)
+        return n;
+      };
+      CHECK(goldFoot() > 20);
       tapAt(233, 233);  // on to the next place
       for (int i = 0; i < 60 && ps.phase != PSP_AIM; i++) runTicks(50);
       CHECK(ps.shot == 1 && ps.phase == PSP_AIM);
@@ -862,6 +914,7 @@ static void testGame() {
       ps.shot = PS_SHOTS - 1;  // (the rest of the roll skipped: this was its last photo)
       for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
       runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      CHECK(ps.phase == PSP_PRINT && goldFoot() == 0);  // the last photo's: no next one, the roll comes
       tapAt(233, 233);
       runTicks(200);
       CHECK(ps.phase == PSP_END && !psOverT);  // the roll
@@ -1031,6 +1084,11 @@ static void testGame() {
     CHECK(!gamesMenuOpen);
     CHECK(anySound(HOST_AUDIO_RATE / 10));
     musicSetEnabled(true);
+    // any medal the Pokemon is due (Final Form: it was set fully evolved), earned and seen now: otherwise the minute's
+    // tick earns it wherever that falls, and its banner takes the home's next tap. On CI's Linux, whose 5 ms sleeps are
+    // exact, it fell on the ring's second hold below: no ring, the tap opened the medal's page (the Mac oversleeps)
+    pet.checkMedals();
+    pet.endCelebration();
     // no swipes on home (Fedor: "Making the hold menu the main navigation there"): a quick swipe each way
     // opens nothing; the ring opens the pages, where a swipe still turns them
     extern bool galleryOpen, clockOpen, v2RadialOpen;
@@ -1264,9 +1322,11 @@ static void testGame() {
             if (!rows(f, a, 0, 377) && !rows(f, b, 0, 377)) return true;
           return false;
         };
+        extern int8_t achDetail, achGroup;
         cardOpen = true;
         cardAch = false;
         cardPage = 2;
+        achDetail = achGroup = -1;  // (no medal's card left from before: its swipes would step through its group)
         runTicks(400);
         std::vector<uint16_t> from = grab();
         hostPointer(436, 228, true);  // the side button (tapAt() would wait past the slide)
@@ -1555,6 +1615,9 @@ static void testKeyboard() {
   uint32_t board[7];
   memcpy(board, pet.boardHi, sizeof(board));
   memset(pet.boardHi, 0, sizeof(pet.boardHi));
+  const uint32_t boardMatch0 = pet.boardMatch;  // (BerryMatch's and Pic Snap's bests count too: an earlier roll here
+  const uint16_t boardSnap0 = pet.boardSnap;    // left one, so none until this part is done)
+  pet.boardMatch = pet.boardSnap = 0;
   pet.gameHi = 40;  // an all-time record from before the leaderboard started over doesn't count
   gameEndToMenu(0);  // no score on the board yet: just the menu
   CHECK(gamesMenuOpen && !kbOpen);
@@ -1590,6 +1653,8 @@ static void testKeyboard() {
   CHECK(!kbOpen && gamesMenuOpen && !strcmp(pet.gamerTag, "YYYY"));
   gamesMenuOpen = false;
   memcpy(pet.boardHi, board, sizeof(board));
+  pet.boardMatch = boardMatch0;
+  pet.boardSnap = boardSnap0;
 
   // a mouse's taps (the Mac and Windows apps, the web on a computer; Fedor: "remove the keyboard zoom from them"):
   // a letter on the whole keyboard is typed at once, and it never zooms

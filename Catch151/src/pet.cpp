@@ -804,7 +804,9 @@ void Pet::feedCandy() {
 
 void Pet::exerciseReward(uint8_t score, bool costsFood) {
   uint8_t v = trSpe + score / 5;  // playing trains speed
-  trSpe = v > 100 ? 100 : v;
+  if (v > 100) v = 100;
+  speGain = v > trSpe ? v - trSpe : 0;  // shown on the game's result (none once training is full)
+  trSpe = v;
   joy = clamp100(joy + 5 + (score > 15 ? 30 : score * 2));
   energy = dropTo(energy, 10 + score / 2, 5);
   if (costsFood) fullness = dropTo(fullness, 5, 5);
@@ -816,6 +818,7 @@ void Pet::exerciseReward(uint8_t score, bool costsFood) {
 }
 
 void Pet::playResult(uint8_t score) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (score > gameHi) gameHi = score;  // new record
   if (score > boardHi[0]) boardHi[0] = score;  // ...and on the leaderboard
@@ -825,6 +828,7 @@ void Pet::playResult(uint8_t score) {
 }
 
 void Pet::runResult(uint16_t secs) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (secs > runHi) runHi = secs;
   if (secs > boardHi[2]) boardHi[2] = secs;
@@ -833,6 +837,7 @@ void Pet::runResult(uint16_t secs) {
 }
 
 void Pet::surfResult(uint16_t secs) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (secs > surfHi) surfHi = secs;
   if (secs > boardHi[4]) boardHi[4] = secs;
@@ -842,6 +847,7 @@ void Pet::surfResult(uint16_t secs) {
 
 // Reel Fishing: the record, and exercise as the other games give it (50 kg plays like a short game, 300 kg a long one)
 void Pet::fishResult(uint16_t kg10) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (kg10 > fishHi) fishHi = kg10;
   exerciseReward(kg10 / 200 > 255 ? 255 : kg10 / 200);
@@ -850,6 +856,7 @@ void Pet::fishResult(uint16_t kg10) {
 
 // Pinball: the record, and exercise as the other games give it (a point for every 400)
 void Pet::pinResult(uint32_t score) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (score > pinHi) pinHi = score;
   if (score > boardHi[6]) boardHi[6] = score;
@@ -860,6 +867,7 @@ void Pet::pinResult(uint32_t score) {
 // BerryMatch: the record, and exercise as the other games give it (a point for every 200: a game scores about 4200
 // with the moves it earns, as a game of Berry Drop does about 20)
 void Pet::matchResult(uint32_t score) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (score > matchHi) matchHi = score;
   if (score > boardMatch) boardMatch = score;
@@ -870,6 +878,7 @@ void Pet::matchResult(uint32_t score) {
 // Pic Snap: the record, and exercise as the other games give it (a point for every 40: a good roll of ten photos
 // scores 700 to 900, as many points as a good game of the others)
 void Pet::snapResult(uint16_t score) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (score > snapHi) snapHi = score;
   if (score > boardSnap) boardSnap = score;
@@ -937,6 +946,7 @@ void Pet::friendlyBattle(bool won) {
 }
 
 void Pet::dungeonResult(uint8_t floor) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   if (floor > dungeonHi) dungeonHi = floor;
   if (floor > boardHi[3]) boardHi[3] = floor;
@@ -1053,6 +1063,7 @@ bool Pet::tradeAway(int16_t give, int16_t get, bool giveShiny, bool getShiny, ui
 }
 
 void Pet::quizResult(uint8_t correct) {
+  speGain = 0;  // until exerciseReward() says otherwise
   if (ceremony != CER_NONE || isEgg()) return;
   joy = clamp100(joy + 3 + correct * 3);
   if (correct >= QUIZ_ROUNDS) heartUntil = millis() + HEART_MS;

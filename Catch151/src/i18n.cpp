@@ -171,6 +171,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "DESCENTRADA",
     "ENFOQUE",
     "CENTRO",
+    "ENTRENO VEL +%u",
+    "PROXIMA FOTO EN %u",
+    "PREPARATE!",
   },
   // ---------------- EN ----------------
   {
@@ -336,6 +339,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "OFF CENTER",
     "FOCUS",
     "CENTER",
+    "SPD TRAINING +%u",
+    "NEXT SHOT IN %u",
+    "GET READY!",
   },
   // ---------------- FR ----------------
   {
@@ -501,6 +507,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "PAS CENTRE",
     "NETTETE",
     "CENTRE",
+    "ENTRAINEMENT VIT +%u",
+    "PROCHAINE DANS %u",
+    "SOIS PRET !",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -671,6 +680,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "NICHT MITTIG",
     "SCH\216RFE",
     "MITTE",
+    "INI-TRAINING +%u",
+    "N\216CHSTES FOTO IN %u",
+    "MACH DICH BEREIT!",
   },
   // ---------------- IT ----------------
   {
@@ -836,6 +848,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "FUORI CENTRO",
     "FUOCO",
     "CENTRO",
+    "ALLENAMENTO VEL +%u",
+    "PROSSIMA FOTO TRA %u",
+    "PREPARATI!",
   },
   // ---------------- PT ----------------
   {
@@ -1001,6 +1016,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "FORA DO CENTRO",
     "FOCO",
     "CENTRO",
+    "TREINO VEL +%u",
+    "PROXIMA FOTO EM %u",
+    "PREPARE-SE!",
   },
   // ---------------- JA ----------------
   {
@@ -1189,6 +1207,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "まんなかじゃ ない",
     "ピント",
     "まんなか",
+    "すばやさの くんれん +%u",
+    "つぎの しゃしんまで %u",
+    "かまえて！",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -1359,6 +1380,9 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "가운데가 아니에요",
     "초점",
     "가운데",
+    "속도 훈련 +%u",
+    "다음 사진까지 %u",
+    "준비해요!",
   },
 };
 

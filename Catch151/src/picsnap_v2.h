@@ -992,6 +992,19 @@ static void psMeter(const char *word, int y, uint8_t pts, uint8_t max) {
   fsSay(b, x0 + w + 24, y, 0xFFFFFF);
 }
 
+// between two photos, at the foot of the print or of IT GOT AWAY!: the seconds till the next place, then GET READY! as it
+// comes (Fedor: "I just want people to be ready for the next one since there is a pause inbetween them"; of three
+// mockups, the countdown). dur: how long that screen stays. None after the last photo: the roll is next
+static void psNextLine(const PsState &s, float t, float dur) {
+  bool loading = s.phase == PSP_LOAD;  // (the next place being made ready: the shot is already the next one's)
+  if (!loading && s.shot >= PS_SHOTS - 1) return;
+  int left = loading ? 0 : (int)ceilf(dur - t);
+  char b[48];
+  if (left > 0) snprintf(b, sizeof(b), T(S_PS_NEXT_FMT), (unsigned)left);
+  else snprintf(b, sizeof(b), "%s", T(S_PS_READY));
+  fsSay(b, CX, 414, 0xF2C230);
+}
+
 // the word on a photo, by its points: the best, or what let it down
 static StrId psVerdict(uint8_t pts, uint8_t focus, uint8_t centre) {
   if (pts >= PS_PERFECT) return S_PS_PERFECT;
@@ -1027,6 +1040,7 @@ static void psDrawPrint(const PsState &s, float t) {
   fsSay(b, CX, 318, pts >= PS_GOOD ? 0xF2C230 : 0xFFFFFF, 4);
   psMeter(T(S_PS_FOCUS), 362, s.focusPts, PS_PTS_FOCUS);
   psMeter(T(S_PS_CENTRE), 386, s.centrePts, PS_PTS_CENTRE);
+  psNextLine(s, t, PS_PRINT_S);
 }
 // the roll at the end: each photo small, its points under it, in rows of 3, 4 and 3
 static void psDrawRoll(const PsState &s) {
@@ -1182,6 +1196,7 @@ static void psDraw(PsState &s, uint32_t now, bool capture, bool keys) {
   if (s.phase == PSP_AWAY || (s.phase == PSP_LOAD && s.shot > 0)) {  // the place as it was left, dimmed
     psPhotoFull(110);
     fsSay(T(S_PS_AWAY), CX, 220, 0xFFFFFF, 3);
+    psNextLine(s, s.t, PS_AWAY_S);
     psShowedPrint = false;
     return;
   }

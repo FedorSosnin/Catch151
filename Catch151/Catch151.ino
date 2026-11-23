@@ -65,7 +65,7 @@
 
 // Firmware version. Bump this number on every release (and manifest.json for
 // the web installer). Shown on the settings screen and over serial at boot.
-#define FW_VERSION "2.2.14"
+#define FW_VERSION "2.2.17"
 
 // the settings page: Wi-Fi, then updates (check / install, and the auto-update switch under it)
 #define SET_WIFI_BTN_Y 178  // change the Wi-Fi
@@ -3332,9 +3332,13 @@ void gamesMenuTap(int16_t x, int16_t y) {
     gamesMenuOpen = false;
     return;
   }
-  int g = v2LbPlayAt(x, y);  // V2: a game's page: its play line plays it
+  // V2: a game's page: a tap anywhere on its screen plays it (Fedor: "you should be able to click anywhere on that
+  // screen to launch the game. Not just the tiny button at the bottom. Its too hard to press on the knomi"). Its play
+  // line acts as it's touched; the rest of the screen on the lift, if the finger didn't move: a swipe there still turns
+  // the page (handleTouch())
+  int g = v2LbPlayAt(x, y), c = -1 - v2GamesPage;
+  if (g < 0 && onScreen && c >= 0 && c < V2_LB_PAGES) g = V2_CART_GAME[c];
   if (g < 0) {
-    if (onScreen) return;  // (the rest of its screen is for swiping)
     sfxPlay(SFX_TAP);  // its X, or a tap off the screen: back to the cartridges
     v2GamesToCarts();
     return;

@@ -2858,7 +2858,9 @@ static void v2GameResult(const char *title, const char *top, const char *big, bo
   v2DimFrame(115);
   char b[40];
   v2Sign(v2Caps(title, b, sizeof(b)), 70);
-  int bs = textW(big, 4) <= 250 ? 4 : 3, h = (top ? 28 : 0) + 8 * bs + 12 + (record ? 26 : 0) + 16;
+  char spd[32] = "";  // under the joy, what the game added to SPD (the stats page counts mini games as SPD training)
+  if (pet.speGain) snprintf(spd, sizeof(spd), T(S_SPD_TRAIN_FMT), pet.speGain);
+  int bs = textW(big, 4) <= 250 ? 4 : 3, h = (top ? 28 : 0) + 8 * bs + 12 + (record ? 26 : 0) + 16 + (spd[0] ? 26 : 0);
   v2Panel(96, 112, 370, V2_AGAIN_Y + V2_AGAIN_H + 16, 12);
   int y = 112 + (V2_AGAIN_Y - 112 - h) / 2;
   setSize(2);
@@ -2884,6 +2886,10 @@ static void v2GameResult(const char *title, const char *top, const char *big, bo
   gfx->setTextColor(C565(0x3c, 0x8a, 0x4c));
   setCur(centerX(joy, 2), y);
   printT(joy);
+  if (spd[0]) {
+    setCur(centerX(spd, 2), y + 26);
+    printT(spd);
+  }
   v2AgainButton(V2_AGAIN_Y);
   v2RepelRowFor(V2_AGAIN_Y);  // the Repel this play counts toward
 }

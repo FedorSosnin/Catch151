@@ -126,6 +126,7 @@ public:
   // genes (90-110%, rolled at hatching) and training (0-100)
   uint8_t geneAtk = 100, geneDef = 100, geneSpe = 100;
   uint8_t trAtk = 0, trDef = 0, trSpe = 0;
+  uint8_t speGain = 0;  // what the last game's end added to trSpe, for its result panel (not saved)
   uint16_t goodTicks = 0;  // well-cared streak, in minutes (asleep too): forges DEF
   uint8_t lowTicks = 0;    // awake minutes in a row with a need under 40 (forgiven up to CARE_GRACE_MIN)
   bool berryKnown = false;  // already discovered its favorite berry
@@ -196,8 +197,8 @@ public:
   bool hasScore() const {  // a best on the board since it started over: the gamer tag is asked for after the first
     for (int g = 0; g < 7; g++)
       if (boardHi[g]) return true;
-    return boardMatch != 0;  // (BerryMatch's too: the board shows it as game 7; not Pic Snap's yet: the relay's board
-                             // doesn't show game 8, so it's no reason to ask)
+    return boardMatch != 0 || boardSnap != 0;  // (BerryMatch's and Pic Snap's too: the board shows them as games 7
+                                                // and 8)
   }
   uint8_t petJoyTaps = 0;  // pets that have counted this hour (not saved)
   uint32_t petJoyStart = 0;
@@ -426,6 +427,7 @@ public:
   void rename(const char *name);
   void buddiesOnScreen(uint8_t n);  // buddies showing right now: MED_BUDDY, MED_PARTY
   bool hasMedal(uint32_t m) const { return (medals | trainerMedals) & m; }
+  void checkMedals();  // any medal now due: earned and celebrated (the minute's tick does it; the host test, at once)
   bool showMedal() const { return timeLeft(medalUntil) > 0; }
   bool showMilestone() const { return timeLeft(milestoneUntil) > 0; }
   uint32_t celebrateLeft() const { return timeLeft(showMedal() ? medalUntil : milestoneUntil); }
@@ -487,7 +489,6 @@ private:
   void applyAway(uint32_t mins);  // time away: the bars drop, it ages, maybe hatches
   void registerCare();   // first care of the day: streak + bond
   void addBond(uint8_t amt);
-  void checkMedals();
   void tick();
   void hatch();
   void registerSpecies(int16_t dex);

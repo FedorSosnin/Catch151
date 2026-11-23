@@ -96,7 +96,8 @@ static int bmShapeDist(int px, int py) {
 // its tint over the sky came out grey-blue, the Oran Berry's and the Rare Candy's own colours, "hard to see on the
 // background"; a wooden table and a berry patch were the others)
 static uint32_t bmHash(int a, int b) {
-  uint32_t h = (uint32_t)(a * 73856093) ^ (uint32_t)(b * 19349663);
+  uint32_t h = (uint32_t)a * 73856093u ^ (uint32_t)b * 19349663u;  // (unsigned: the same lawn, without a signed
+                                                                    // overflow g++ may drop iterations over)
   h ^= h >> 13;
   h *= 0x5bd1e995;
   return h ^ (h >> 15);

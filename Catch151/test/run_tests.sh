@@ -23,7 +23,8 @@ python3 test_tools.py || fail=1
 
 echo
 echo "== host layer (host/: canvas, save, sound and the game without a window) =="
-make --no-print-directory -C ../host test | tail -1 || fail=1
+make --no-print-directory -C ../host test | grep -E "^FAIL |^  \| |^host layer:" || fail=1  # (each failed check with the
+                                                                                         # game's state, then the count)
 
 echo
 if [[ $fail -eq 0 ]]; then

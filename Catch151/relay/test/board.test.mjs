@@ -55,15 +55,19 @@ test('a score message is read, and one past what a game can score is ignored', (
   assert.equal(scoreReport(new ArrayBuffer(64)), null);
   assert.deepEqual(scoreReport(msg(BM_SCORE, { kind: 7, session: 4660, nick: 'ZOE' })), { game: 7, score: 4660, tag: 'ZOE', id: idHash(1234) });  // BerryMatch
   assert.equal(scoreReport(msg(BM_SCORE, { kind: 7, session: 1000000 })), null);  // far past any game of 20 moves
-  assert.equal(scoreReport(msg(BM_SCORE, { kind: 8, session: 50 })), null);       // no such game
+  assert.deepEqual(scoreReport(msg(BM_SCORE, { kind: 8, session: 830, nick: 'ZOE' })), { game: 8, score: 830, tag: 'ZOE', id: idHash(1234) });  // Pic Snap
+  assert.equal(scoreReport(msg(BM_SCORE, { kind: 8, session: 1001 })), null);     // past a roll of ten perfect photos
+  assert.equal(scoreReport(msg(BM_SCORE, { kind: 9, session: 50 })), null);       // no such game
 });
 
 test('the board\'s games are the ones the game sends (scoreReportAll() in Catch151.ino), each with its cartridge', () => {
   const ino = readFileSync(HERE + '../../Catch151.ino', 'utf8');
-  const match = +ino.match(/#define GAME_MATCH (\d+)/)[1];
-  const sent = ino.match(/static const uint8_t G\[\] = \{([^}]*)\}/)[1].split(',').map((s) => s.trim() === 'GAME_MATCH' ? match : +s);
+  const match = +ino.match(/#define GAME_MATCH (\d+)/)[1], snap = +ino.match(/#define GAME_SNAP (\d+)/)[1];
+  const named = { GAME_MATCH: match, GAME_SNAP: snap };
+  const sent = ino.match(/static const uint8_t G\[\] = \{([^}]*)\}/)[1].split(',').map((s) => named[s.trim()] ?? +s);
   assert.deepEqual(Object.keys(GAMES).map(Number), sent);
   assert.equal(GAMES[match].name, 'BerryMatch');
+  assert.equal(GAMES[snap].name, 'Pic Snap');
   for (const g of [...sent, 5]) assert.ok(CART[g]?.startsWith('data:image/png;base64,'), `game ${g}'s cartridge`);
 });
 
@@ -104,9 +108,10 @@ test('the board as /stats shows it hides ids and rude tags, and the picture is d
   assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'));
   assert.ok(svg.includes('<image') && svg.includes('id="c87"'));  // a W, drawn
   assert.ok(!/playing/i.test(svg) && !svg.includes('<circle'));  // no count of players: the page has the one
-  assert.equal(svg.match(/<image /g).length, 7);  // seven games, each with its cartridge
+  assert.equal(svg.match(/<image /g).length, 8);  // eight games, each with its cartridge
   assert.ok(svg.includes(`href="${CART[7]}"`));   // BerryMatch's among them
-  assert.ok(svg.includes('height="770"'));        // the page's <img> is sized so (web/leaderboard/index.html)
+  assert.ok(svg.includes(`href="${CART[8]}"`));   // ...and Pic Snap's
+  assert.ok(svg.includes('height="854"'));        // the page's <img> is sized so (web/leaderboard/index.html)
 });
 
 test('BerryMatch\'s row: none yet, then its best with thousands commas, as Pinball\'s', () => {
@@ -118,7 +123,7 @@ test('BerryMatch\'s row: none yet, then its best with thousands commas, as Pinba
   assert.equal(gold(boardSvg(none)), 0);
   assert.equal(gold(boardSvg(b)), 1);
   const page = readFileSync(HERE + '../../web/leaderboard/index.html', 'utf8');
-  assert.match(page, /width="760" height="770"/);
+  assert.match(page, /width="760" height="854"/);
 });
 
 test('the first of a game is told so: a BM_SCORE from the relay to it, as src/buddy.h reads one', () => {
