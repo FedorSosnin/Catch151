@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Catch 151 XL shows when it's charging:** the Waveshare board has no way to see USB, so its charging bolt never came on. Now it tells from the battery's voltage, which jumps when the charger starts or stops: the bolt comes on within a second of plugging in and goes off on unplugging, and a board started while plugged in finds out within a few minutes. The percentage no longer leaps up when you plug in (8% became 40%): it only goes down on the battery and only up while charging, as on the Knomi. Nothing changes on the Knomi, the Mac, Windows or the web.
+
 ## [2.2.17] - 2026-11-23
 
 - **Pic Snap counts down to the next photo:** after each photo, under its print, a gold line counts the seconds to the next one (**NEXT SHOT IN 3**, 2, 1), then says **GET READY!** while the next place comes up, so you're ready when the Pokémon shows. "It got away!" counts down the same way. A tap still skips the wait, and after the tenth photo the roll comes as before.
