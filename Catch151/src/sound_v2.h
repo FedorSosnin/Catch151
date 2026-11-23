@@ -48,7 +48,8 @@ static void v2SoundOpen() {
 
 static void v2SoundPage() {
   v2MenuBackdrop();
-  v2Sign(T(S_SOUND));
+  char sign[32];
+  v2Sign(v2Caps(T(S_SOUND), sign, sizeof(sign)));  // (in capitals, as every board's)
   v2Panel(72, V2_SOUND_PANEL_Y0, 394, V2_SOUND_PANEL_Y1, 10);
   v2SetLabel(T(S_MUSIC), V2_SOUND_MUS_Y);
   v2Slider(V2_SOUND_MUS_Y, musicEnabled() ? musicVolume() : 0);
