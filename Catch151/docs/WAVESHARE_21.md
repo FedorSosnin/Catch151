@@ -154,23 +154,27 @@ bash tools/build_ws21.sh     # compile only: build-ws21/Catch151.ino.bin
 
 What the code uses:
 
-- **Panel:** esp_lcd's RGB panel, driven directly (`Ws21Panel`). Two frame buffers in PSRAM: the next frame goes
-  into the one not on show, which takes over at the start of the next refresh, so nothing tears. Bounce buffers of
-  20 lines in internal RAM feed the panel. 12 MHz pixel clock (44 Hz). Data changes on the **falling** edge of the
-  pixel clock: on the rising edge, as in Waveshare's demo, this panel showed streaks along the rows.
+- **Panel:** esp_lcd's RGB panel, driven directly (`Ws21Panel`), with no frame buffer of the driver's. Three
+  frames of 466 × 466 in PSRAM: one on show, one waiting for the next refresh, one being drawn, so nothing tears and
+  the game never waits for a refresh. Two bounce buffers of 20 lines in internal RAM feed the panel. Each time one
+  has gone out, `ws21Fill()` refills it from the frame on show: a plain copy of each row's part inside the circle,
+  with the 7 px border and the corners black. 12 MHz pixel clock (44 Hz). Data changes on the **falling** edge of
+  the pixel clock: on the rising edge, as in Waveshare's demo, this panel showed streaks along the rows.
 - **Panel setup:** Waveshare's own command list, copied from their demo. Arduino_GFX has one for a similar 2.1" panel
   (`TL021WVC02`), but its gamma, VCOM and inversion settings differ. It goes over a 9-bit software SPI on GPIO
   1 and 2, with the CS and the panel's reset on the expander (`Ws21InitBus`).
-- **Canvas:** `Ws21Canvas` makes the panel's rows from the 466 canvas a band of 8 at a time in internal RAM: in the
-  middle, turned, and with the rim. Each band goes to the frame buffer by DMA while the next one is made, all on the
-  game's core. The CPU writing PSRAM through the cache was the slowest part of a frame.
+- **Drawing:** the game draws straight into the frame to be shown (`Ws21Canvas`, "direct"): every screen paints all
+  of itself each time it's drawn, so there is nothing to copy. Then the Knomi's soft rim is shaded into the frame's
+  edge (`shadeRim()`), and the frame is shown. Turned, the game draws on a canvas instead, and each frame is made
+  from it by the CPU (below). See "Faster frames" for how it got here.
 - **Straight:** the picture sits as the panel does (`WS21_ROT_DEG` 0), so the USB-C ports point out at 45°: the case
   handles that. Turned 45°, one port pointed straight down, but a frame took 164 ms against the 100 the game is made
   for, and everything played slower than on the Knomi; Fedor chose speed. Any angle still works (`ROTDEG`): each
   panel pixel then blends the four canvas pixels round its point (`WS21_SMOOTH`); without the blend, pixel art
   comes out dotted and its dithering in zigzags.
 - **Auto-rotate:** in quarter turns, as the board is held. Each copies whole pixels, with no blending: upside down
-  the same way as straight (120 ms a frame), sideways a canvas column per panel row (140 ms).
+  the same way as straight (120 ms a frame), sideways a canvas column per panel row (140 ms). Turned, the game draws
+  on the canvas and each frame is made from it (2026-11-20 numbers, before "Faster frames").
 - **Dimming:** only while the pet sleeps, as on computers (Fedor). The Knomi still dims when left alone.
 - **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas and turned with
   the picture. A small task on the other core reads it every 8 ms while a finger is down and queues each press and
@@ -196,6 +200,37 @@ Not done yet, on purpose:
 - **Light sleep.** The board can't tell whether USB is in, so the code acts as if it always is: no light sleep, and
   no low-battery shutdown. The RGB panel also needs care before light sleep, because it stops scanning out.
 - **Wi-Fi updates.** They need their own channel (`web/ws21/`, a manifest of its own) before they can be turned on.
+
+### Faster frames (2026-11-23)
+
+Fedor: "Its a large screen but feels so much slower than the Knomi." Pinball showed it most: 99 ms a frame (10 a
+second, for a game paced at 25), and Pinball caps a step at 100 ms, so near that the ball also ran slow.
+
+Where a frame went (Pinball, `PROF` and `FPS`): 36 ms putting back the table under what moves (a 434 KB copy, PSRAM
+to PSRAM), 36 ms copying the canvas out to the panel's frame buffer, about 27 ms drawing the rest. Halving the
+refresh rate saved only 6%; reading the canvas by DMA, or on both cores, saved 3 to 5 ms. PSRAM is the limit, so
+the fix was copying less:
+
+- **No frame buffer of 480 × 480.** The refill builds each panel row from a 466 frame itself (above), so frames
+  are the canvas's size, and the game can draw into them.
+- **Direct drawing.** The game draws into the frame to be shown: the copy out is gone (`DIRECT 0` puts it back,
+  for comparing). Three frames in turn, so the one drawn into is never on show or waiting.
+- **The rim once a frame, in the frame.** Shaded in the refill it cost 664 us a band, 70% of the game's core. In
+  the frame, from a quarter table in internal RAM, it's about 9 ms. Where it darkens by less than 8/256 (at most one
+  step of the panel's colours) it's left out: a ring 29 px wide instead of 45.
+- **Pinball's table by DMA** (`restoreFrom()`): 18 to 21 ms instead of 36. Most of that is the DMA driver writing
+  back the cache over the source, which it does for every copy from PSRAM.
+- **The cache.** PSRAM is only reached through the 32 KB cache, and the DMA and the refill go round it. Writing back
+  by address walks every line of the range (17 ms a frame), so the whole cache is written back at once
+  (`ws21Writeback()`, 0.4 ms), and old lines are dropped by address, which is quick. The whole-cache write-back has
+  no lock of its own: with the refill dropping lines at the same moment, the chip stopped ("Dcache sync parameter
+  configuration error"). It now runs with interrupts held off. That's 0.4 ms, well inside a 20-line band (0.9 ms).
+  Bands of 30 lines were tried too: no fewer late refills, and internal RAM fell to 34 KB while TLS connected.
+
+Result, on the bench board: Pinball 67 ms a frame (15 a second, the ball at full speed); the home screen 82 ms
+(115 before). The refill still costs about a third of the game's core (a 20-line band takes about 350 us to copy
+out of PSRAM, 24 of them a refresh). Lower refresh rates help a little more: Pinball about 55 ms at 8 MHz (29 Hz), not yet tried by eye for
+flicker. Copying the bands by DMA instead would free most of that core: the next step.
 
 ### What bring-up found (2026-11-20)
 
@@ -234,14 +269,15 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 
 | Command | What it does |
 |---|---|
-| `FPS` | Frames drawn since the last `FPS`, their time, and the frame copy's parts. |
+| `FPS` | Frames drawn since the last `FPS`, their time, and the flush's parts: the overlay, the CPU's part of a copy (and the cache's write-back), waiting for the DMA, the rim and handing over, and Pinball's table by DMA. |
+| `PROF` | Pinball's frame in parts, ms each: 0 the physics, 1 the table back, 2 what's lit, 3 the grass, 4 the wild one, 5 the flippers, 6 the ball, 7 the words, 8 the card over it, 9 the flush. |
+| `DIRECT 0` / `DIRECT 1` | Drawing on the canvas and copying it out, as before, or straight into the frame (the default). |
 | `PERF` | The frame copy's cost, 10 in a row. |
 | `ROTDEG n` | Turns the picture n degrees clockwise. |
 | `SMOOTH 0` / `SMOOTH 1` / `SMOOTH 2` | Turned: nearest pixel, blended, or blended only across the 2 px grid. |
 | `PCLK n` | The pixel clock in MHz. |
 | `PCLKEDGE 0` / `PCLKEDGE 1` | Data on the rising or falling edge. |
 | `REFILLCORE 0` / `REFILLCORE 1` | The core the panel's refill runs on. Saved; used from the next start. |
-| `DMAIN 1` | The straight copy reads the canvas by DMA: 9 ms a frame quicker, but the lines come back. |
 | `PDMCHECK` | With `WS21_AUDIO_PDM`: GPIO 19 read back, to see the sound stream runs. |
 | `AUDIO` | With an amplifier: the mixing's share of core 0, its longest block, dropouts, the amp and the track. |
 | `AUDIOBENCH n` | 2 s of music track n mixed by a player of its own and timed (the game waits meanwhile). |
@@ -249,14 +285,14 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `PDMMODE n` | The sound stream's shape: 1 Espressif's DAC mode (the default), 0 the codec mode first built, to compare by ear. |
 | `PDMGAIN n` | The mix's level on its way out, in tenths (20, x2, the default). |
 | `TOUCHLOG 1` | Each press and lift, with how long the chip and the game took to see it. |
-| `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both (faster, but the lines come back). |
-| `LCD` | Refreshes since the last `LCD`, the longest gap between two, refreshes with a lost refill signal (`eofmiss`) and refreshes refilled out of step (`eofodd`). |
+| `SPLIT 0` / `SPLIT 1` | Turned: the frame made on the game's core alone, or on both. |
+| `LCD` | Refreshes since the last `LCD`, the longest gap between two, refreshes with a lost refill signal (`eofmiss`), refreshes refilled out of step (`eofodd`), and the refill's time a band (`fill`: count, average, longest, in us). |
 | `EOFFIX 0` / `EOFFIX 1` | The fix for lost refill signals off or on (on at start). |
 | `STALL us n` | Holds up the interrupts n times for us microseconds, as a flash write does. |
 | `NVSTEST n` | n real flash writes, to a scratch area (`ws21t`), not the save. |
 | `HOLD n` | The game stops for n seconds; only the panel's refill runs. |
 | `WIFIOFF` | Wi-Fi off until the next start. |
-| `SHOT` | The whole 480 × 480 frame buffer, as RGB565. |
+| `SHOT` | The panel's 480 × 480 as shown, RGB565 (the rows made as the refill makes them). |
 | `BAT` | The cell now: mV, the smoothed mV, the percentage, whether it charges (`chg`), the lift taken off while charging, the reset reason (`rst`) and the time since the start. |
 | `BATLOG` | The last 2 minutes, twice a second: mV and `chg`. It lasts through a restart that isn't a power cut, marked by a 0. The board also prints `bat: charging` when it changes, and `bat: start` with the reset reason. |
 

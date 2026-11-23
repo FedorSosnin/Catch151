@@ -972,7 +972,11 @@ void handleSerial() {
 #ifdef BOARD_KNOMI_V2
   if (line == "SHOT") {  // panel capture: "SHOT 240 240 rotation\n" + RGB565 little endian
     Serial.printf("SHOT %d %d %u\n", PANEL_SIZE, PANEL_SIZE, gPanelRot);
+#ifdef BOARD_WS21
+    gfx->shotWrite(Serial);  // the panel's rows as the refill makes them (ws21_hal.h)
+#else
     Serial.write((uint8_t *)gfx->panelBuffer(), PANEL_SIZE * PANEL_SIZE * 2);
+#endif
     Serial.println("DONE");
     return;
   } else if (line.startsWith("TAP ")) {  // simulated touch in logical coordinates (466): "TAP x y [ms]"
@@ -1084,8 +1088,11 @@ void handleSerial() {
     uint32_t miss, odd;
     bool found;
     panel->eofStats(&miss, &odd, &found);
-    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s\n", (unsigned)n, (unsigned)gap,
-                  (unsigned)late, (unsigned)miss, (unsigned)odd, !found ? "none" : panel->eofFix ? "on" : "off");
+    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s fill n=%u avg=%u max=%u drop=%u us\n",
+                  (unsigned)n, (unsigned)gap, (unsigned)late, (unsigned)miss, (unsigned)odd,
+                  !found ? "none" : panel->eofFix ? "on" : "off", (unsigned)gWs21Show.fillN,
+                  (unsigned)(gWs21Show.fillN ? gWs21Show.fillUs / gWs21Show.fillN : 0), (unsigned)gWs21Show.fillMax, 0u);
+    gWs21Show.fillUs = gWs21Show.fillN = gWs21Show.fillMax = 0;
     Serial.println("DONE");
     return;
   } else if (line.startsWith("EOFFIX ")) {  // 0: the driver's lost-refill-signal fault left as it is (testing)
@@ -1117,6 +1124,22 @@ void handleSerial() {
   } else if (line.startsWith("HOLD ")) {  // the game stops for n seconds: only the panel's refill runs (bring-up)
     uint32_t until = millis() + (uint32_t)line.substring(5).toInt() * 1000;
     while ((int32_t)(until - millis()) > 0) delay(20);
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("DIRECT ")) {  // 0: drawn on the canvas and copied out, as before (comparing)
+    gWs21DirectOk = line.substring(7).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line == "PROF") {  // the marks in a game's frame (Pinball's), ms per frame each, since the last PROF
+    float n = gWs21ProfN ? gWs21ProfN : 1, sum = 0;
+    Serial.printf("prof n=%u", (unsigned)gWs21ProfN);
+    for (int k = 0; k < 12; k++) {
+      if (gWs21ProfUs[k]) Serial.printf(" %d=%.1f", k, gWs21ProfUs[k] / 1000.f / n);
+      sum += gWs21ProfUs[k] / 1000.f / n;
+      gWs21ProfUs[k] = 0;
+    }
+    Serial.printf(" sum=%.1f\n", sum);
+    gWs21ProfN = 0;
     Serial.println("DONE");
     return;
   } else if (line == "FPS") {  // frames drawn since the last FPS, and their time; flush()'s share of it
@@ -1160,10 +1183,6 @@ void handleSerial() {
     Serial.println("DONE");
     return;
 #endif
-  } else if (line.startsWith("DMAIN ")) {  // 1: the straight copy reads the canvas by DMA (quicker; lines came back)
-    gWs21DmaIn = line.substring(6).toInt() != 0;
-    Serial.println("DONE");
-    return;
   } else if (line.startsWith("TOUCHLOG ")) {  // 1: each press and lift logged, with its delays (testing)
     touch.log = line.substring(9).toInt() != 0;
     Serial.println("DONE");
@@ -2580,6 +2599,10 @@ uint32_t lastScreenKey = 0;
 
 // Draws a frame and returns true if it flushed it to the panel.
 bool render() {
+#ifdef BOARD_WS21
+  // every screen paints all of itself, so it draws straight into the frame to be shown (ws21_hal.h): no copy
+  gfx->setDirect(gWs21DirectOk);
+#endif
 #ifdef KNOMI_RIM
   gKnomiLiftOn = false;  // V2: nothing over the Knomi's rim until this frame's need bars mark their labels (knomi_rim.h)
 #endif
@@ -5429,6 +5452,9 @@ void renderPinball() {
     closePinball();
     return;
   }
+#ifdef BOARD_WS21
+  ws21ProfStart();
+#endif
   uint32_t now = millis();
   float dt = (now - pinLast) / 1000.0f;
   pinLast = now;
@@ -5441,6 +5467,9 @@ void renderPinball() {
 #if HAS_MUSIC
   musicTempo(pin.btlOn && pin.wildMax && pin.outT <= 0 ? 1.12f : 1.0f);  // its song a little faster in a battle
 #endif
+#ifdef BOARD_WS21
+  ws21ProfMark(0);  // the physics
+#endif
   pinDraw(pin, playKeysUi);
   if (pinOverT) {  // the end: the score, the record, the joy, as every game shows it
     char big[16], rec[32];
@@ -5449,7 +5478,13 @@ void renderPinball() {
     v2GameResult(gameLabel(GAME_PINBALL), nullptr, big, pinNewHi && pin.score > 0, rec, pin.score >= 4000 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
   }
   drawIntroCard();
+#ifdef BOARD_WS21
+  ws21ProfMark(8);
+#endif
   gfx->flush();
+#ifdef BOARD_WS21
+  ws21ProfMark(9);
+#endif
 }
 
 // ---------- BerryMatch ----------

@@ -774,12 +774,21 @@ static void pbKeysHint(int y) {
   fsSay(both, x2 + textW(both, 2) / 2, y + 44, 0xFFFFFF);
 }
 // the table, s at this moment (keys: a computer's, the hint shows its keys)
+#ifdef BOARD_WS21
+#define PBP(k) ws21ProfMark(k)
+#else
+#define PBP(k)
+#endif
 static void pinDraw(const PinState &s, bool keys) {
   pbDay = s.day;
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
   scScreen();
   int32_t key = s.day ? 1 : 0;
+#ifdef BOARD_WS21
+  if (!pbPic) pbPic = ws21FrameAlloc();  // (on whole 64-byte lines: the table comes back by DMA, restoreFrom())
+#else
   if (!pbPic) pbPic = (uint16_t *)ps_malloc(V2_W * V2_W * sizeof(uint16_t));
+#endif
   if (!pbPicFloor) pbPicFloor = (uint16_t *)ps_malloc(V2_W * V2_W * sizeof(uint16_t));
   if (pbPic && pbPicFloor) {
     if (pbPicKey != key) {
@@ -787,14 +796,22 @@ static void pinDraw(const PinState &s, bool keys) {
       memcpy(pbPicFloor, fb, V2_W * V2_W * sizeof(uint16_t));
       pbRaised(false);
       memcpy(pbPic, fb, V2_W * V2_W * sizeof(uint16_t));
+#ifdef BOARD_WS21
+      ws21Writeback();  // out to PSRAM, where the DMA reads it
+#endif
       pbPicKey = key;
     } else {
+#ifdef BOARD_WS21
+      gfx->restoreFrom(pbPic);
+#else
       memcpy(fb, pbPic, V2_W * V2_W * sizeof(uint16_t));
+#endif
     }
   } else {
     pbPaintStatic();
     pbRaised(false);
   }
+  PBP(1);
   // what changes, on the floor: berries lit (blinking just after all six), bumpers, Diglett, the grass, the wild one
   for (int k = 0; k < 6; k++)
     if (((s.berryLit >> k) & 1) || (s.berryFlash > 0 && (int)(s.berryFlash * 6) % 2)) {
@@ -810,15 +827,19 @@ static void pinDraw(const PinState &s, bool keys) {
   if (s.digUp && s.evoT > 0) pbDigEvolve(1 - s.evoT / PB_EVO_S);
   else if (s.digUp || s.digHitT > 0)
     pbDiglett(true, !s.digUp, s.digUp ? s.digT / (s.dug ? PB_DUG_S : PB_DIG_S) : 0, dugOn ? 51 : 50, s.digUp ? s.dugHeads : 0);
+  PBP(2);
   if (s.grassT > 0 || s.phase == PIN_CATCH) pbGrass(true);
   else if (!s.btlOn) {  // something in there: rustling through the grass, or eyes blinking in the cave
     float t = millis() / 1000.0f;
     if (pbDay) pbGrassRustle(t);
     else if (fmodf(t, 3.7f) < 0.18f) pbCaveEyes(false);
   } else if (!pbDay) pbCaveEyes(false);  // (out in the ring: nobody in there)
+  PBP(3);
   pbWild(s, MOVE_TBL[s.move].type);
+  PBP(4);
   pbFlipperAt(-1, s.flipA[0]);
   pbFlipperAt(1, s.flipA[1]);
+  PBP(5);
   // the ball: rolled as it goes; up the ramp nearer (bigger) and its shadow further off; on the floor under the ramp or
   // the wire, them back over it; in the grass, the blades in front of it
   bool showBall = s.phase == PIN_PLAY || s.phase == PIN_CATCH || (s.phase == PIN_LOST && s.t < 0.3f);
@@ -840,6 +861,7 @@ static void pinDraw(const PinState &s, bool keys) {
     }
   }
   if (!arrowUnder && arrow < PB_RAMP_ARROWS) pbRampArrow(arrow, true);
+  PBP(6);
   // what it says
   char b[40];
   if (s.phase == PIN_LOST) {  // the bottom glowing red; the next ball's number
@@ -894,5 +916,6 @@ static void pinDraw(const PinState &s, bool keys) {
   pinScoreText(s.score, sc, sizeof(sc));
   snprintf(mult, sizeof(mult), "x%u", (unsigned)s.mult);
   pbHud(sc, s.phase == PIN_END ? 0 : s.ballsLeft + (s.phase == PIN_LOST ? 0 : 1), s.mult > 1 ? mult : nullptr);
+  PBP(7);
 }
 
