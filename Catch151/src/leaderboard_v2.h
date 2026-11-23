@@ -6,7 +6,8 @@
 // Game Boy's screen drawn in four shades of its own green as the old games were: a game's title screen, its name big,
 // its cartridge's picture at 2x in a box as Pokemon Red and Blue drew theirs, the best and what it is, who set it and
 // when (a crown before the tag), the second and third, and TAP TO PLAY, which starts it, as the old title screens'
-// PUSH START (only that line: a swipe anywhere else turns the page). The best three come from the relay (BM_BOARD: buddy.h boardFrom(), Catch151.ino boardAsk()), asked for
+// PUSH START: so does a tap anywhere on the screen (2.2.16; Fedor: "Not just the tiny button at the bottom. Its too
+// hard to press on the knomi"), while a swipe there still turns the page. The best three come from the relay (BM_BOARD: buddy.h boardFrom(), Catch151.ino boardAsk()), asked for
 // when the menu opens. Who's That? keeps no score: its page says so. (Until 2026-11-22 the pages ran to the left of the
 // cartridges, and LEADERBOARDS ran down the first page's left edge, pointing there.)
 
@@ -241,8 +242,9 @@ static void v2LbPage() {
   v2CloseX();
 }
 
-// the game a tap on a leaderboard page's play line plays, or -1. Only there: a control acts the moment it's touched and
-// a swipe that starts on one presses it (Catch151.ino tapDownTry()), so the rest of the page is for swiping
+// the game a tap on a leaderboard page's play line plays, or -1. Only there does the touch itself play it: a control
+// acts the moment it's touched and a swipe that starts on one presses it (Catch151.ino tapDownTry()). The rest of the
+// screen plays it on the lift, if the finger didn't move (gamesMenuTap()), so a swipe there turns the page
 static bool lbOnPlay(int16_t x, int16_t y) {
   int px, pw;
   lbPlayBox(px, pw);

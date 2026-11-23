@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Tap anywhere to play:** on a game's own page in the Games menu, a tap anywhere on the Game Boy screen starts that game, not only the small **Tap to play** line at the bottom, which was hard to hit on the Knomi. A swipe across the screen still goes on to the next game's page, and the side buttons and the X work as before.
+
 ## [2.2.15] - 2026-11-23
 
 - **A game's end shows the speed it trained:** under the happiness, a mini game's result now says **SPD TRAINING +4**: how much your Pokémon's speed training went up, as the card's Training page counts it (the better the game, the more). Nothing shows once speed training is full at 100, or after a game too short to train. Reel Fishing's end has no room for it, but it trains all the same.

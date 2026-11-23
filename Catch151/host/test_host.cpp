@@ -758,7 +758,20 @@ static void testGame() {
     tapAt(432, 228);  // the right arrow, where every paged screen has it
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == 7);
     tapAt(170, 300);  // Pinball: its page
-    tapAt(233, 358);  // TAP TO PLAY
+    // a swipe across its screen turns the page and plays nothing; back on Pinball's, a tap anywhere on the screen
+    // plays it (Fedor: "you should be able to click anywhere on that screen to launch the game. Not just the tiny
+    // button at the bottom")
+    extern bool bmOpen;
+    for (int dir = -1; dir <= 1; dir += 2) {  // right to left: on to BerryMatch's; left to right: back
+      for (int i = 0; i <= 6; i++) {
+        hostPointer(233 - dir * (125 - 250 * i / 6), 200, true);
+        runTicks(30);
+      }
+      hostPointer(233 + dir * 125, 200, false);
+      runTicks(400);
+      CHECK(gamesMenuOpen && !pinOpen && !bmOpen && gameAt(150, 128) < 0);
+    }
+    tapAt(233, 200);  // the middle of its screen, its cartridge's picture
     CHECK(pinOpen && !gamesMenuOpen && introCard == 6);
     runTicks(500);
     tapAt(233, 335);  // Ready, GO!
@@ -1060,6 +1073,11 @@ static void testGame() {
     CHECK(!gamesMenuOpen);
     CHECK(anySound(HOST_AUDIO_RATE / 10));
     musicSetEnabled(true);
+    // any medal the Pokemon is due (Final Form: it was set fully evolved), earned and seen now: otherwise the minute's
+    // tick earns it wherever that falls, and its banner takes the home's next tap. On CI's Linux, whose 5 ms sleeps are
+    // exact, it fell on the ring's second hold below: no ring, the tap opened the medal's page (the Mac oversleeps)
+    pet.checkMedals();
+    pet.endCelebration();
     // no swipes on home (Fedor: "Making the hold menu the main navigation there"): a quick swipe each way
     // opens nothing; the ring opens the pages, where a swipe still turns them
     extern bool galleryOpen, clockOpen, v2RadialOpen;
@@ -1293,9 +1311,11 @@ static void testGame() {
             if (!rows(f, a, 0, 377) && !rows(f, b, 0, 377)) return true;
           return false;
         };
+        extern int8_t achDetail, achGroup;
         cardOpen = true;
         cardAch = false;
         cardPage = 2;
+        achDetail = achGroup = -1;  // (no medal's card left from before: its swipes would step through its group)
         runTicks(400);
         std::vector<uint16_t> from = grab();
         hostPointer(436, 228, true);  // the side button (tapAt() would wait past the slide)

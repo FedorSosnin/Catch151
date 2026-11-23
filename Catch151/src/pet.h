@@ -427,6 +427,7 @@ public:
   void rename(const char *name);
   void buddiesOnScreen(uint8_t n);  // buddies showing right now: MED_BUDDY, MED_PARTY
   bool hasMedal(uint32_t m) const { return (medals | trainerMedals) & m; }
+  void checkMedals();  // any medal now due: earned and celebrated (the minute's tick does it; the host test, at once)
   bool showMedal() const { return timeLeft(medalUntil) > 0; }
   bool showMilestone() const { return timeLeft(milestoneUntil) > 0; }
   uint32_t celebrateLeft() const { return timeLeft(showMedal() ? medalUntil : milestoneUntil); }
@@ -488,7 +489,6 @@ private:
   void applyAway(uint32_t mins);  // time away: the bars drop, it ages, maybe hatches
   void registerCare();   // first care of the day: streak + bond
   void addBond(uint8_t amt);
-  void checkMedals();
   void tick();
   void hatch();
   void registerSpecies(int16_t dex);
