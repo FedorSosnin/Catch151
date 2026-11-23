@@ -1555,6 +1555,9 @@ static void testKeyboard() {
   uint32_t board[7];
   memcpy(board, pet.boardHi, sizeof(board));
   memset(pet.boardHi, 0, sizeof(pet.boardHi));
+  const uint32_t boardMatch0 = pet.boardMatch;  // (BerryMatch's and Pic Snap's bests count too: an earlier roll here
+  const uint16_t boardSnap0 = pet.boardSnap;    // left one, so none until this part is done)
+  pet.boardMatch = pet.boardSnap = 0;
   pet.gameHi = 40;  // an all-time record from before the leaderboard started over doesn't count
   gameEndToMenu(0);  // no score on the board yet: just the menu
   CHECK(gamesMenuOpen && !kbOpen);
@@ -1590,6 +1593,8 @@ static void testKeyboard() {
   CHECK(!kbOpen && gamesMenuOpen && !strcmp(pet.gamerTag, "YYYY"));
   gamesMenuOpen = false;
   memcpy(pet.boardHi, board, sizeof(board));
+  pet.boardMatch = boardMatch0;
+  pet.boardSnap = boardSnap0;
 
   // a mouse's taps (the Mac and Windows apps, the web on a computer; Fedor: "remove the keyboard zoom from them"):
   // a letter on the whole keyboard is typed at once, and it never zooms
