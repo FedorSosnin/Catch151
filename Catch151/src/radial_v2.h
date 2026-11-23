@@ -106,25 +106,25 @@ static const char *const SPR_V2_RAD_DEX[18] = {
 };
 
 #if V2_RAD_N == 5
-// a speaker in the gear's silver, its sound in white
+// a speaker in the gear's silver, its sound in white (in the middle of its 18 columns, as the others are)
 static const char *const SPR_V2_RAD_SOUND[18] = {
   "..................",
-  "........kk........",
-  ".......ksk........",
-  "......kssk...w....",
-  ".....ksssk....w...",
-  "....kssssk.....w..",
-  "kkkkkssssk.w...w..",
-  "kwwssssssk..w..w..",
-  "kssssssssk..w..w..",
-  "kSSSSSSSSk..w..w..",
-  "kSSSSSSSSk..w..w..",
-  "kkkkkSSSSk.w...w..",
-  "....kSSSSk.....w..",
-  ".....kSSSk....w...",
-  "......kSSk...w....",
-  ".......kSk........",
-  "........kk........",
+  ".........kk.......",
+  "........ksk.......",
+  ".......kssk...w...",
+  "......ksssk....w..",
+  ".....kssssk.....w.",
+  ".kkkkkssssk.w...w.",
+  ".kwwssssssk..w..w.",
+  ".kssssssssk..w..w.",
+  ".kSSSSSSSSk..w..w.",
+  ".kSSSSSSSSk..w..w.",
+  ".kkkkkSSSSk.w...w.",
+  ".....kSSSSk.....w.",
+  "......kSSSk....w..",
+  ".......kSSk...w...",
+  "........kSk.......",
+  ".........kk.......",
   "..................",
 };
 static void v2SoundOpen();  // (sound_v2.h)
@@ -295,12 +295,13 @@ static void v2RadialDraw() {
       }
     v2LutRun(row + x, V2_W - x, dim);
   }
-#if V2_RAD_N == 5  // (each icon and its word inside its section and the ring: worked out on their corners. Down
-                   // there, the ring's edge at the words' foot, y 386, is 135 px either side of the middle line)
+#if V2_RAD_N == 5  // each icon on its section's middle line, its word centred under it, both inside the ring
+                   // (worked out on their corners: down there the gear and the speaker 126 px out, at 51 degrees, so
+                   // the longest word, 8 letters, fits under them; the ring's edge at its foot is 4 px further)
   v2RadialItem(SPR_V2_RAD_STATS, CX, 72, T(S_RAD_STATS), 114);
   v2RadialItem(SPR_V2_RAD_MEDAL, 376, 187, T(S_RAD_MEDALS), 229);
-  v2RadialItem(SPR_V2_RAD_GEAR, 330, 330, T(S_RAD_SETTINGS), 372, CX + 7, CX + 133);
-  v2RadialItem(SPR_V2_RAD_SOUND, 136, 330, T(S_SOUND), 372, CX - 133, CX - 7);
+  v2RadialItem(SPR_V2_RAD_GEAR, 312, 331, T(S_RAD_SETTINGS), 373, CX + 7, CX + 133);
+  v2RadialItem(SPR_V2_RAD_SOUND, 154, 331, T(S_SOUND), 373, CX - 133, CX - 7);
   v2RadialItem(SPR_V2_RAD_DEX, 90, 187, T(S_DEX_TITLE), 229);
 #else
   v2RadialItem(SPR_V2_RAD_GEAR, CX, 72, T(S_SETTINGS), 114);  // (72 px icons: their corners inside the ring's edge)
