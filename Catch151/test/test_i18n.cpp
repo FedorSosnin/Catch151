@@ -127,6 +127,7 @@ static const ExpectedFmt EXPECTED[] = {
   { S_FISH_FINE_FMT, "%s" },
   { S_FISH_LARGE_FMT, "%s" },
   { S_SPD_TRAIN_FMT, "%u" },    // a game's end: what it added to SPD (menus_v2.h v2GameResult())
+  { S_PS_NEXT_FMT, "%u" },      // Pic Snap between two photos: the seconds to the next (picsnap_v2.h)
 };
 static const int NUM_EXPECTED = (int)(sizeof(EXPECTED) / sizeof(EXPECTED[0]));
 

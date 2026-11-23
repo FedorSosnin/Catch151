@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Pic Snap counts down to the next photo:** after each photo, under its print, a gold line counts the seconds to the next one (**NEXT SHOT IN 3**, 2, 1), then says **GET READY!** while the next place comes up, so you're ready when the Pokémon shows. "It got away!" counts down the same way. A tap still skips the wait, and after the tenth photo the roll comes as before.
+
 ## [2.2.16] - 2026-11-23
 
 - **Tap anywhere to play:** on a game's own page in the Games menu, a tap anywhere on the Game Boy screen starts that game, not only the small **Tap to play** line at the bottom, which was hard to hit on the Knomi. A swipe across the screen still goes on to the next game's page, and the side buttons and the X work as before.

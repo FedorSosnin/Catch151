@@ -172,6 +172,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ENFOQUE",
     "CENTRO",
     "ENTRENO VEL +%u",
+    "PROXIMA FOTO EN %u",
+    "PREPARATE!",
   },
   // ---------------- EN ----------------
   {
@@ -338,6 +340,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "FOCUS",
     "CENTER",
     "SPD TRAINING +%u",
+    "NEXT SHOT IN %u",
+    "GET READY!",
   },
   // ---------------- FR ----------------
   {
@@ -504,6 +508,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "NETTETE",
     "CENTRE",
     "ENTRAINEMENT VIT +%u",
+    "PROCHAINE DANS %u",
+    "SOIS PRET !",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -675,6 +681,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "SCH\216RFE",
     "MITTE",
     "INI-TRAINING +%u",
+    "N\216CHSTES FOTO IN %u",
+    "MACH DICH BEREIT!",
   },
   // ---------------- IT ----------------
   {
@@ -841,6 +849,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "FUOCO",
     "CENTRO",
     "ALLENAMENTO VEL +%u",
+    "PROSSIMA FOTO TRA %u",
+    "PREPARATI!",
   },
   // ---------------- PT ----------------
   {
@@ -1007,6 +1017,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "FOCO",
     "CENTRO",
     "TREINO VEL +%u",
+    "PROXIMA FOTO EM %u",
+    "PREPARE-SE!",
   },
   // ---------------- JA ----------------
   {
@@ -1196,6 +1208,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ピント",
     "まんなか",
     "すばやさの くんれん +%u",
+    "つぎの しゃしんまで %u",
+    "かまえて！",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -1367,6 +1381,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "초점",
     "가운데",
     "속도 훈련 +%u",
+    "다음 사진까지 %u",
+    "준비해요!",
   },
 };
 

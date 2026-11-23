@@ -896,6 +896,16 @@ static void testGame() {
       for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
       CHECK(ps.phase == PSP_PRINT);
       runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      // at its foot, in gold, the seconds to the next photo (Fedor: "I just want people to be ready for the next one")
+      extern ScaledCanvas *gfx;
+      auto goldFoot = [&]() {
+        const uint16_t *fb = gfx->getFramebuffer();
+        int n = 0;
+        for (int y = 410; y < 434; y++)
+          for (int x = 100; x < 366; x++) n += fb[y * 466 + x] == 0xF606;  // (0xF2C230)
+        return n;
+      };
+      CHECK(goldFoot() > 20);
       tapAt(233, 233);  // on to the next place
       for (int i = 0; i < 60 && ps.phase != PSP_AIM; i++) runTicks(50);
       CHECK(ps.shot == 1 && ps.phase == PSP_AIM);
@@ -904,6 +914,7 @@ static void testGame() {
       ps.shot = PS_SHOTS - 1;  // (the rest of the roll skipped: this was its last photo)
       for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
       runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      CHECK(ps.phase == PSP_PRINT && goldFoot() == 0);  // the last photo's: no next one, the roll comes
       tapAt(233, 233);
       runTicks(200);
       CHECK(ps.phase == PSP_END && !psOverT);  // the roll

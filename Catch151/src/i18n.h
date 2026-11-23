@@ -157,6 +157,7 @@ enum StrId : STRID_BASE {
   S_PS_PERFECT, S_PS_GREAT, S_PS_NICE, S_PS_BLURRY, S_PS_OFF,  // ...a print's word: by its points, or what let it down
   S_PS_FOCUS, S_PS_CENTRE,                  // ...and its two scores
   S_SPD_TRAIN_FMT,  // a game's end (v2GameResult()): what it added to SPD training, as a won battle's line does ATK's
+  S_PS_NEXT_FMT, S_PS_READY,  // Pic Snap between two photos (picsnap_v2.h): the seconds to the next, then the word as it comes
   STR_COUNT
 };
 
