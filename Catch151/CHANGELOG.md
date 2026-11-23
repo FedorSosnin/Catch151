@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.17] - 2026-11-23
 
 - **Pic Snap counts down to the next photo:** after each photo, under its print, a gold line counts the seconds to the next one (**NEXT SHOT IN 3**, 2, 1), then says **GET READY!** while the next place comes up, so you're ready when the Pokémon shows. "It got away!" counts down the same way. A tap still skips the wait, and after the tenth photo the roll comes as before.
 
