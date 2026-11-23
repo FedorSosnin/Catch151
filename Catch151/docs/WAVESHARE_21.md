@@ -246,6 +246,8 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `AUDIO` | With an amplifier: the mixing's share of core 0, its longest block, dropouts, the amp and the track. |
 | `AUDIOBENCH n` | 2 s of music track n mixed by a player of its own and timed (the game waits meanwhile). |
 | `MUSIC n` / `MUSIC` | Track n whatever the screen, on this board even while the pet sleeps; `MUSIC` alone gives it back. |
+| `PDMMODE n` | The sound stream's shape: 1 Espressif's DAC mode (the default), 0 the codec mode first built, to compare by ear. |
+| `PDMGAIN n` | The mix's level on its way out, in tenths (20, x2, the default). |
 | `TOUCHLOG 1` | Each press and lift, with how long the chip and the game took to see it. |
 | `SPLIT 0` / `SPLIT 1` | The frame copy on the game's core alone, or on both (faster, but the lines come back). |
 | `LCD` | Refreshes since the last `LCD`, the longest gap between two, refreshes with a lost refill signal (`eofmiss`) and refreshes refilled out of step (`eofodd`). |
@@ -263,9 +265,9 @@ wired (`WS21_AUDIO_PDM`, on since 2026-11-22), this board also plays the music a
 as the computers do. `audio.cpp` mixes everything at 16 kHz in a task on core 0: effects and cries at the Sound
 level, the music at the Music level, ducked while an effect plays (the same code as `host/host_audio.cpp`). The
 hold menu has a fifth item, Sound, as on the computers (`sound_v2.h`): a slider for the music, one for the effects and
-cries, and Mute. The task owns the amplifier's on/off line. The amp is on while
-anything sounds, and while the board is in use with either slider above 0. It's off while the pet sleeps and once
-the screen dims with nothing playing. The DMA holds 4 blocks of 8 ms, so a tap sounds within about 40 ms. The
+cries, and Mute. The task owns the amplifier's on/off line. The amp is on only
+while something sounds, and 150 ms after: the unsmoothed stream hisses even when it carries silence (Fedor: "when
+music is off, there is still static"). An effect waits the amp's 50 ms wake. The DMA holds 4 blocks of 8 ms, so a tap sounds within about 40 ms. The
 console's `AUDIO` shows how much of core 0 the mixing takes and whether the stream ever ran dry. Measured on the bench
 board (2026-11-22): 3% of core 0 with no music, about 40% with a battle track or Pinball's playing (longest block 9 of 8
 ms, covered by the 32 ms in the DMA: no dropouts), the game's frames 123 ms instead of 119, and the panel's refill
@@ -317,7 +319,7 @@ carries everything, five wires straight onto the amp (the case's `wiring/AMP-WIR
 |---|---|---|
 | 3 | GPIO 19: the sound as a 1-bit stream | A+ |
 | 5 | GND | A−: the sound's own ground, so the amp's supply current on pin 1 doesn't add to it |
-| 4 | GPIO 20 | SD: high plays, low shuts it down (the game turns it off when idle or asleep) |
+| 4 | GPIO 20 | SD: high plays, low shuts it down (the game turns it on only while something sounds) |
 | 6 | 3V3 | Vin |
 | 1 | GND | Gnd |
 | | | Speaker + and −: one speaker, or two in series (16 Ω, a little quieter) |
@@ -326,9 +328,13 @@ carries everything, five wires straight onto the amp (the case's `wiring/AMP-WIR
 - Straight in is safe: on Adafruit's board (and its copies) the Vol trimmer is a 10 kΩ divider from A+ to A−, then
   1 µF and 100 Ω into the chip. GPIO 19 drives 10 kΩ, 0.33 mA at most.
 - Nothing smooths the stream before the amplifier, so it gets the megahertz edges (Espressif's docs call for a
-  low-pass filter on this kind of output). Expect it to play, maybe with a faint hiss; not heard yet. If the hiss is
-  too much: first the firmware (the stream's rate, GPIO 19's drive strength), then a 1 kΩ in the pin 3 wire with
-  10 nF from A+ to A− at the amp.
+  low-pass filter on this kind of output). Heard on 2026-11-22:
+  - In the codec mode first built (`I2S_PDM_TX_SLOT_DEFAULT_CONFIG`, stereo): "a TON of static".
+  - In Espressif's DAC mode (`I2S_PDM_TX_CLK_DAC_DEFAULT_CONFIG` and `I2S_PDM_TX_SLOT_DAC_DEFAULT_CONFIG`, mono: the
+    master clock 160 MHz / 2.003 instead of / 3.255, so less jitter, and twice the level), with the mix at x2: "better",
+    but static still with no music, as the amp stayed on between sounds.
+  - With the amp on only while something sounds: "On the lowest setting, it seems good!"
+  - Cleaner still, if it's ever needed: a 1 kΩ in the pin 3 wire with 10 nF from A+ to A− at the amp.
 - Start with the board's Vol trimmer turned most of the way down, then turn it up.
 - The "USB" port then only charges: GPIO 19 and 20 are its data lines. Flash and use the console through "UART".
 - `WS21_AUDIO_PDM` is on in `pin_config.h` (2026-11-22). The hatch jingle plays at start-up, then the music.
