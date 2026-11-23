@@ -66,6 +66,7 @@ static uint8_t v2MusicPick(uint32_t now) {
   if (fishOpen) return fish.phase == FP_REEL ? MUS_FISH_FIGHT : MUS_FISH;  // a fish on the line: its own, at its pace
   if (pinOpen) return MUS_PINBALL;  // Pinball: its own (in a battle in the ring a little faster: renderPinball())
   if (bmOpen) return MUS_BERRYMATCH;  // BerryMatch: its own
+  if (psOpen) return MUS_TRAVEL;      // Pic Snap: a tour of Knomi Island, to Travel's song
   if (battleOpen && bPhase != BP_TIRED) return v2MusicBattle();  // (tired: a notice over what was there)
   if (buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || galleryOpen || gamesMenuOpen || kbOpen || clockOpen ||
       cardOpen)

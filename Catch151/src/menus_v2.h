@@ -1749,7 +1749,7 @@ static void v2Cart(int x, int y, const uint16_t *pic, const char *title, Rgb she
 static uint16_t *v2LblArt = nullptr;
 static uint16_t *v2Lbl(int i) { return v2LblArt ? v2LblArt + i * V2_LBL_W * V2_LBL_H : nullptr; }
 static bool v2LblStart() {
-  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(11 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));  // (8: Reel Fishing's, 9: Pinball's, 10: BerryMatch's)
+  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(12 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));  // (8: Reel Fishing's, 9: Pinball's, 10: BerryMatch's, 11: Pic Snap's)
   return v2LblArt != nullptr;
 }
 static void v2LblKeep(int i) {
@@ -1797,6 +1797,7 @@ static void v2LblBurst(Rgb base, Rgb ray) {
 }
 static int16_t v2LblKey[2] = { -1, -1 };  // what each set was painted for (-1: not yet)
 static void bmPaintLabel();  // (BerryMatch's: berrymatch_v2.h, further on)
+static void psPaintLabel();  // (Pic Snap's: picsnap_v2.h, further on)
 static void v2PaintGameLabels() {
   if (!v2LblStart()) return;
   // Berry Drop: a clearing, Bulbasaur under three falling berries. A title on three lines leaves room for the
@@ -1882,6 +1883,9 @@ static void v2PaintGameLabels() {
   // BerryMatch: a little board, three Oran Berries lined up, Squirtle watching (berrymatch_v2.h)
   bmPaintLabel();
   v2LblKeep(10);
+  // Pic Snap: a Pokemon in the tall grass, the viewfinder's corners round it (picsnap_v2.h)
+  psPaintLabel();
+  v2LblKeep(11);
 }
 static void v2PaintPlayLabels() {
   if (!v2LblStart()) return;
@@ -1914,14 +1918,14 @@ static void v2PaintPlayLabels() {
 // them (Fedor: "the same spots as they are on other screens"), and "Page 1 of 2" under the cartridges. A page turning
 // slides only the cartridges, inside the Game Boy's screen (Fedor: "just the carts should slide and not the
 // background"): slide_v2.h, its moving box
-#define V2_CARTS 8
+#define V2_CARTS 9
 #define V2_CARTS_PAGE 4
 #define V2_CART_PAGES ((V2_CARTS + V2_CARTS_PAGE - 1) / V2_CARTS_PAGE)
 static const int16_t V2_CART_XY[V2_CARTS_PAGE][2] = { { 106, 96 }, { 254, 96 }, { 106, 238 }, { 254, 238 } };
-static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5, 6, 7 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball, BerryMatch)
-static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8, 9, 10 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
+static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5, 6, 7, 8 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball, BerryMatch, Pic Snap)
+static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8, 9, 10, 11 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
 // the colours the games came in: Green, Silver, Red, Yellow, Blue; Play together's Gold, Crystal, Yellow
-static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A, 0x7A52C8, 0xD8508C };  // (Reel Fishing: Magikarp's orange; Pinball: purple; BerryMatch: a Razz Berry's pink)
+static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A, 0x7A52C8, 0xD8508C, 0x2FA4A8 };  // (Reel Fishing: Magikarp's orange; Pinball: purple; BerryMatch: a Razz Berry's pink; Pic Snap: teal)
 static int v2GamesPage = 0;    // the page the Games menu is on (kept, so a game ends back on its own page)
 static int v2CartsOn(int page) { int n = V2_CARTS - page * V2_CARTS_PAGE; return n < V2_CARTS_PAGE ? n : V2_CARTS_PAGE; }
 static const int16_t V2_PLAY_XY[3][2] = { { 56, 150 }, { 180, 150 }, { 304, 150 } };
@@ -1990,7 +1994,7 @@ static bool v2TagChipHit(int16_t x, int16_t y) {
 // Each game's own page (leaderboard_v2.h; Fedor, 2026-11-22: "When you click on a game cartridge, it will take you to
 // its leaderboard page. That way each game has its own page. When you are in the leaderboard view, you can go left and
 // right to cycle through each game"): its leaderboard, and TAP TO PLAY. v2GamesPage -1 is the first cartridge's (Berry
-// Drop's), -2 the second's, on to -8 (BerryMatch's). Its side buttons and a swipe go round the games, the last's next
+// Drop's), -2 the second's, on to -9 (Pic Snap's). Its side buttons and a swipe go round the games, the last's next
 // the first; its X goes back to the cartridges. (2.2.15 had these pages to the left of the cartridges, in a row.)
 #define V2_LB_PAGES V2_CARTS
 static void v2GamesTv() {
@@ -3114,6 +3118,7 @@ static int v2GameEnd(uint32_t *since = nullptr) {
   else if (fishOpen && fishOverT) t = fishOverT;
   else if (pinOpen && pinOverT) t = pinOverT;
   else if (bmOpen && bmOverT) t = bmOverT;
+  else if (psOpen && psOverT) t = psOverT;
   else {
     y = V2_AGAIN_YB;
     if (sdOpen && sdPhase == SD_DONE) t = sdT;
@@ -3168,6 +3173,7 @@ static void v2GameEndDo(int k) {
       if (fishOpen) closeFish();
       if (pinOpen) closePinball();
       if (bmOpen) closeMatch();
+      if (psOpen) closeSnap();
     }
     cardOpen = true;
     cardAch = false;
@@ -3183,7 +3189,7 @@ static void v2GameEndDo(int k) {
     else if (!pet.isEgg() && !pet.sleeping && !pet.ceremony) buddyInvite(kind);
     return;
   }
-  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : surfOpen ? 4 : fishOpen ? 5 : pinOpen ? 6 : 7;
+  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : surfOpen ? 4 : fishOpen ? 5 : pinOpen ? 6 : bmOpen ? 7 : 8;
   gameOpen = false;
   if (quizOpen) closeQuiz();
   if (runOpen) closeRun();
@@ -3192,6 +3198,7 @@ static void v2GameEndDo(int k) {
   if (fishOpen) closeFish();
   if (pinOpen) closePinball();
   if (bmOpen) closeMatch();
+  if (psOpen) closeSnap();
   if (again) {
     if (g == 0) startGame();
     else if (g == 1) startQuiz();
@@ -3200,9 +3207,10 @@ static void v2GameEndDo(int k) {
     else if (g == 4) startSurf();
     else if (g == 5) startFish();
     else if (g == 6) startPinball();
-    else startMatch();
+    else if (g == 7) startMatch();
+    else startSnap();
   }
-  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen && !pinOpen && !bmOpen) gameEndToMenu(g);  // (it may not start: asleep)
+  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen && !pinOpen && !bmOpen && !psOpen) gameEndToMenu(g);  // (it may not start: asleep)
 }
 
 // ----- the home's dialogs and moments (rooms2_px.py release_dialog(), batch3.py medal_banner(), bath(), evolving()) -----

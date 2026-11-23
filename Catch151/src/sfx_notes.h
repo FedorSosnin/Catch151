@@ -36,6 +36,8 @@ static const Note N_FISH_SLACK[]  = {{880, 40}, {784, 40}, {698, 40}, {587, 60}}
 static const Note N_FISH_SNAP[]   = {{3136, 15}, {1568, 15}, {392, 40}, {196, 80}};
 static const Note N_FISH_LANDED[] = {{784, 60}, {988, 60}, {1175, 60}, {1568, 160}};
 static const Note N_FISH_SCALE[]  = {{1047, 30}, {0, 40}, {1047, 30}, {0, 40}, {1568, 140}};
+// Pic Snap's
+static const Note N_SHUTTER[] = {{3136, 10}, {0, 45}, {2349, 14}};  // the shutter: click, clack
 
 struct SfxDef { const Note *n; uint8_t len; };
 static const SfxDef SFX[SFX_COUNT] = {
@@ -44,6 +46,7 @@ static const SfxDef SFX[SFX_COUNT] = {
   {N_SHAKE1, 1}, {N_SHAKE2, 1}, {N_SHAKE3, 1},
   {N_FISH_CAST, 5}, {N_FISH_PLIP, 3}, {N_FISH_NIBBLE, 1}, {N_FISH_BITE, 4}, {N_FISH_HOOK, 4}, {N_FISH_REEL, 1},
   {N_FISH_WARN, 3}, {N_FISH_STRAIN, 3}, {N_FISH_SLACK, 4}, {N_FISH_SNAP, 4}, {N_FISH_LANDED, 4}, {N_FISH_SCALE, 5},
+  {N_SHUTTER, 3},
 };
 // an effect whose notes run into each other: no fade between them, the wave carried on, and its last note fading
 // to about half by its end (the tap)

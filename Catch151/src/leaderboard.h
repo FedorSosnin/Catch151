@@ -9,7 +9,7 @@
 
 // the games as the Games menu numbers them (Catch151.ino gameLabel()): those with a board keep a score; Who's That? (1)
 // doesn't. Reel Fishing's (5) is its biggest fish
-#define LB_GAMES 8
+#define LB_GAMES 9
 inline bool lbHasBoard(int g) { return g >= 0 && g < LB_GAMES && g != 1; }
 
 // how the language marks thousands: 43,825 (English, Japanese, Korean), 43 825 (French), 43.825 (the others)
@@ -24,7 +24,7 @@ inline void lbThousands(uint32_t v, char *out, int n, Lang l) {
   out[o] = 0;
 }
 
-// a game's score as its page shows it: Berry Drop's, Pinball's and BerryMatch's a number; Rock Hopper's and PikaSurf's
+// a game's score as its page shows it: Berry Drop's, Pinball's, BerryMatch's and Pic Snap's a number; Rock Hopper's and PikaSurf's
 // seconds as m:ss; Dungeon Crawler's floor; Reel Fishing's weight (tenths of a kg) in pounds, as the game weighs them
 inline void lbScoreText(int g, uint32_t v, char *out, int n, Lang l) {
   if (g == 2 || g == 4) snprintf(out, n, "%lu:%02lu", (unsigned long)(v / 60), (unsigned long)(v % 60));

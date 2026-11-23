@@ -13,9 +13,9 @@ static const char *score(int g, uint32_t v, Lang l = LANG_EN) {
 }
 
 TEST(leaderboard, the_games_with_a_board) {
-  CHECK(lbHasBoard(0) && lbHasBoard(7) && lbHasBoard(5));
+  CHECK(lbHasBoard(0) && lbHasBoard(7) && lbHasBoard(5) && lbHasBoard(8));  // (8: Pic Snap)
   CHECK(!lbHasBoard(1));  // Who's That? keeps no score
-  CHECK(!lbHasBoard(-1) && !lbHasBoard(8));
+  CHECK(!lbHasBoard(-1) && !lbHasBoard(9));
 }
 
 TEST(leaderboard, scores_read_as_each_game_shows_them) {
@@ -24,6 +24,7 @@ TEST(leaderboard, scores_read_as_each_game_shows_them) {
   CHECK(!strcmp(score(6, 1234567), "1,234,567"));
   CHECK(!strcmp(score(7, 999), "999"));
   CHECK(!strcmp(score(7, 1000), "1,000"));
+  CHECK(!strcmp(score(8, 905), "905"));    // Pic Snap's roll
   CHECK(!strcmp(score(2, 60), "1:00"));    // Rock Hopper's seconds
   CHECK(!strcmp(score(4, 31), "0:31"));    // PikaSurf's
   CHECK(!strcmp(score(4, 605), "10:05"));

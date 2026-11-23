@@ -55,6 +55,7 @@ static bool v2PlayingGame() {
   if (fishOpen) return !fishOverT;
   if (pinOpen) return !pinOverT;
   if (bmOpen) return !bmOverT;
+  if (psOpen) return !psOverT && ps.phase != PSP_END;
   if (sdOpen) return sdPhase == SD_ASK || sdPhase == SD_REVEAL;
   if (vbOpen) return vbPhase != VB_READY && vbPhase != VB_DONE;
   return false;

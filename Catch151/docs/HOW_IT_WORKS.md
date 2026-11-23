@@ -42,9 +42,10 @@ Games don't raise anything if you quit by swiping up.
 | 🎣 **Reel Fishing** | +5, plus 2 per 44 lb | −10, more for heavy catches | −5 | Yes | +2 | Yes |
 | 🕹️ **Pinball** | +5, plus 2 per 400 points | −10, more for high scores | −5 | Yes | +2 | Yes |
 | 🫐 **BerryMatch** | +5, plus 2 per 200 points | −10, more for high scores | −5 | Yes | +2 | Yes |
+| 📷 **Pic Snap** | +5, plus 2 per 40 points | −10, more for high scores | −5 | Yes | +2 | Yes |
 | ❓ **Who's That?** | +3, plus 3 per right answer | | | | +1 | |
 
-Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball and BerryMatch each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
+Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball, BerryMatch and Pic Snap each add at most +35 joy per game. Who's That? adds at most +33, with ten seconds for each silhouette: out of time counts as wrong. Energy and food won't drop below 5 from a game.
 
 At the end, **Play Again!** starts the same game again and the ✕ goes back to the games; a tap on the Repel bar under them opens the Repel's page on your Pokémon's card. Every second you actually play counts toward a Repel (see [Items](#items)): not the how-to card or the end, and only while you're touching, tilting or pressing keys, so sitting in the dungeon earns nothing. The games with a buddy count too.
 
@@ -120,6 +121,20 @@ A board of berries to swap and line up, 5 squares by 5 with the four corners cut
 - **The last moves:** the count under the board turns gold for the last three, and **LAST MOVE!** shows when the board is ready for the last one (a move that earns more isn't the last). When the moves are gone and the board settles, the game ends: the score, the record and Play Again!
 - **On a computer and the web:** the mouse works as a finger. The arrow keys move a white cursor round the board (past the cut corners), Space picks the piece under it, and with one picked an arrow swaps it that way. Space also sends off the how-to card, as the Knomi's button does.
 - **Rewards:** joy and speed training from the score, a point for every 200 (a game scores about 4,000 on average), as the table above. The game plays Berry Drop's song.
+
+### Pic Snap
+
+A camera on Knomi Island. Ten places, two in each zone, and a wild Pokémon shows up in each. Take one photo in each place: a roll of ten. Your best roll is kept.
+
+- **The places:** the Forest's tall grass and its pines, the Beach's shore and its waves, the Cave's crystals and a rock ledge, the Mansion's graveyard and its lit window, the Field's sky and its flowers at sunset. Every roll has all ten, in a new order.
+- **Who shows up:** a Pokémon of that zone that suits the spot: bugs and grass ones in the tall grass, swimmers in the sea, ghosts in the graveyard, birds in the sky. Now and then a rare one, and about 1 in 100 is shiny.
+- **It shows up** out of the grass, from behind a log, a rock or a rail, out of the sea, down from the sky or out of the dark. It stays about 7 seconds (5 by the last photo). While it's there it breathes, looks about, hops and takes a few steps. Then it's gone: **IT GOT AWAY!** scores nothing.
+- **The camera** drifts on its own, a little more as the roll goes on. Its lens hunts for focus: the sharp part sweeps from the things close by (big grass, a starfish, a tombstone) through the Pokémon to the things far off, and back. Every sweep crosses the Pokémon, and now and then it rests on it for a moment. Out of focus is drawn in the place's own colours, dithered like the game's skies.
+- **Snap:** tap anywhere. On a computer, click or press Space (the Knomi's button too). One photo a place.
+- **The score:** up to 50 for focus and up to 50 for the Pokémon in the middle: 100 a photo, 1,000 a roll. The print says **PERFECT!** at 95, **GREAT SHOT!** at 80, **NICE SHOT!** at 55, or what let it down: **A BIT BLURRY** or **OFF CENTER**. Tap the print to go on.
+- **The end:** your ten photos small, each with its points, then the score and your record.
+- **Rewards:** joy and speed training from the score, a point for every 40, as the table above. Waiting for the moment scores about 750 to 850; tapping at any old moment, about 400.
+- On a computer and the web it plays Travel's song. It isn't on the online leaderboard yet.
 
 ## Battles
 

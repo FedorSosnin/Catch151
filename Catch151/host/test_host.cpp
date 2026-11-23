@@ -24,6 +24,7 @@
 #include "rtcbat.h"
 #include "pinball.h"  // Pinball's state, to check the game played (the sketch's pin)
 #include "berrymatch.h"  // BerryMatch's, the same (the sketch's bm)
+#include "picsnap.h"  // Pic Snap's, the same (the sketch's ps)
 #include "i18n.h"
 #include "pet.h"
 #include "press.h"
@@ -755,7 +756,6 @@ static void testGame() {
     CHECK(!pinOpen && !gamesMenuOpen);  // home, as every game's swipe goes
     hostSerialPush("GAMES");  // the menu again, still on its second page
     runTicks(300);
-    tapAt(432, 228);  // no third page: nothing (and the menu stays)
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
     {  // BerryMatch, the second page's fourth: under its card (the button, Space, sends it off); a piece touched is
        // picked and one beside it swaps; the arrows move its cursor and Space picks; a swipe up quits
@@ -827,6 +827,66 @@ static void testGame() {
       runTicks(300);
       CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
     }
+    {  // Pic Snap, alone on the third page: under its card, the first place ready behind it and nobody there yet; the
+       // card sent off, a wild one shows up; a tap anywhere takes the photo (the print up), a tap on the print goes on
+       // to the next place; the last photo's print ends the roll: the roll, then the score, the record kept; PLAY
+       // AGAIN! a new roll; a swipe up quits, its pictures freed
+      extern bool psOpen;
+      extern PsState ps;
+      extern uint32_t psOverT;
+      extern Pet pet;
+      tapAt(432, 228);  // the right arrow: the third page
+      CHECK(gamesMenuOpen && gameAt(150, 128) == 8 && gameAt(300, 128) < 0);
+      tapAt(150, 128);
+      tapAt(233, 358);  // (its page's TAP TO PLAY)
+      CHECK(psOpen && !gamesMenuOpen && introCard == 8);
+      runTicks(500);
+      CHECK(ps.phase == PSP_LOAD && ps.shot == 0);  // it waits under the card
+      hostButton(true);  // the button (Space): Ready, GO!
+      runTicks(60);
+      hostButton(false);
+      runTicks(300);
+      CHECK(introCard == -1 && (ps.phase == PSP_IN || ps.phase == PSP_AIM) && ps.dex > 0);
+      for (int i = 0; i < 40 && ps.phase != PSP_AIM; i++) runTicks(50);
+      CHECK(ps.phase == PSP_AIM);
+      tapAt(90, 330);  // anywhere: the photo
+      CHECK((ps.phase == PSP_SNAP || ps.phase == PSP_PRINT) && ps.got[0] && ps.score == ps.pts[0]);
+      for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
+      CHECK(ps.phase == PSP_PRINT);
+      runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      tapAt(233, 233);  // on to the next place
+      for (int i = 0; i < 60 && ps.phase != PSP_AIM; i++) runTicks(50);
+      CHECK(ps.shot == 1 && ps.phase == PSP_AIM);
+      tapAt(380, 233);
+      CHECK((ps.phase == PSP_SNAP || ps.phase == PSP_PRINT) && ps.got[1]);  // (the tap takes a while here)
+      ps.shot = PS_SHOTS - 1;  // (the rest of the roll skipped: this was its last photo)
+      for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
+      runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      tapAt(233, 233);
+      runTicks(200);
+      CHECK(ps.phase == PSP_END && !psOverT);  // the roll
+      runTicks(700);
+      tapAt(233, 233);  // its score, over it
+      runTicks(200);
+      CHECK(psOverT && pet.snapHi == ps.score && ps.score == ps.pts[0] + ps.pts[1]);  // (the two photos taken)
+      tapAt(233, 287);  // PLAY AGAIN!
+      runTicks(300);
+      CHECK(psOpen && !psOverT && ps.shot == 0 && ps.score == 0);
+      hostPointer(233, 400, true);  // a swipe up quits
+      for (int k = 1; k <= 8; k++) {
+        hostPointer(233, 400 - k * 30, true);
+        runTicks(16);
+      }
+      hostPointer(233, 160, false);
+      runTicks(400);
+      extern bool snapPicturesHeld();
+      CHECK(!psOpen && !gamesMenuOpen && !snapPicturesHeld());
+      hostSerialPush("GAMES");  // the menu again, on its third page; back to the second
+      runTicks(300);
+      CHECK(gamesMenuOpen && gameAt(150, 128) == 8);
+      tapAt(34, 228);
+      CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
+    }
     // a swipe turns the page when it starts off the cartridges (one that starts on one presses it, as every control
     // acts on the touch: Fedor's choice, 2026-11-18)
     int sy = 0;
@@ -844,14 +904,14 @@ static void testGame() {
     CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
     // each game's own page (Fedor: "When you click on a game cartridge, it will take you to its leaderboard page ...
     // When you are in the leaderboard view, you can go left and right to cycle through each game"): from Berry Drop's,
-    // back is the last game's, BerryMatch's; its X goes back to the cartridges, on BerryMatch's page; on from
-    // BerryMatch's is Berry Drop's again
+    // back is the last game's, Pic Snap's; its X goes back to the cartridges, on Pic Snap's page (the third); on from
+    // Pic Snap's is Berry Drop's again
     tapAt(150, 128);  // Berry Drop's cartridge: its page
     CHECK(gamesMenuOpen && gameAt(150, 128) < 0);
-    tapAt(34, 228);  // the left arrow: round to BerryMatch's
+    tapAt(34, 228);  // the left arrow: round to Pic Snap's
     tapAt(233, 422);  // its X
-    CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 300) == 7);
-    tapAt(300, 300);  // BerryMatch's cartridge: its page
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 8 && gameAt(300, 300) < 0);
+    tapAt(150, 128);  // Pic Snap's cartridge: its page
     tapAt(432, 228);  // the right arrow: round to Berry Drop's
     tapAt(233, 422);
     CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
