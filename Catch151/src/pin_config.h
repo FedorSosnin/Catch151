@@ -107,8 +107,8 @@
 // With an amplifier added by hand, uncomment its line (docs/WAVESHARE_21.md, "Sound"):
 // #define WS21_BUZZER
 // - WS21_AUDIO_PDM: a PAM8302A on the 12-pin connector, Fedor's choice (2026-11-20). GPIO 19 sends the sound as a
-//   1-bit stream (the I2S in PDM mode, with no clock line), a resistor and a capacitor smooth it into the amplifier's
-//   A+, and GPIO 20 is the amplifier's SD (high plays). The "USB" port then only charges.
+//   1-bit stream (the I2S in PDM mode, with no clock line) straight into the amplifier's A+ (no resistor or capacitor,
+//   Fedor 2026-11-22), and GPIO 20 is the amplifier's SD (high plays). The "USB" port then only charges.
 // - WS21_AUDIO_I2S: a MAX98357A on the microSD slot's lines (the game uses no card; GPIO 1 and 2 only set up the
 //   panel at boot).
 // On (2026-11-22, Fedor: "let's add music and sound through that amp"): the PAM8302A on the 12-pin connector. Effects,
@@ -116,7 +116,7 @@
 #define WS21_AUDIO_PDM
 // #define WS21_AUDIO_I2S
 #if defined(WS21_AUDIO_PDM)
-#define PDM_DO_IO 19               // 12-pin connector pin 3 -> 1 kOhm -> A+ (10 nF from A+ to GND; A- to GND)
+#define PDM_DO_IO 19               // 12-pin connector pin 3 -> A+ (pin 5, GND -> A-)
 #define PA 20                      // pin 4 -> SD: high plays, low shuts the amplifier down
 #else
 #define I2S_BCK_IO 2               // microSD CLK -> MAX98357A BCLK

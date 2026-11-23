@@ -308,21 +308,26 @@ The code for it is in place: `audio.cpp` plays the effects through it, with no c
 
 ### Wiring: a PAM8302A on the 12-pin plug (Fedor's choice)
 
-Parts: a PAM8302A board (the purple "2.5W Class D Amp" ones), one or two 16 mm 1 W 8 Ω speakers, a 1 kΩ resistor
-and a 10 nF ceramic capacitor (marked "103"). The board's own 12-pin cable carries everything:
+Parts: a PAM8302A board (the purple "2.5W Class D Amp" ones) and one or two 16 mm 1 W 8 Ω speakers. No resistor
+or capacitor (Fedor, 2026-11-22: "I would rather not use any to keep this simple"). The board's own 12-pin cable
+carries everything, five wires straight onto the amp (the case's `wiring/AMP-WIRING.md` has the steps and a diagram):
 
 | 12-pin plug | Board signal | PAM8302A |
 |---|---|---|
-| 3 | GPIO 19: the sound as a 1-bit stream | through the 1 kΩ to A+; the 10 nF from A+ to Gnd |
-| | | A− to Gnd |
+| 3 | GPIO 19: the sound as a 1-bit stream | A+ |
+| 5 | GND | A−: the sound's own ground, so the amp's supply current on pin 1 doesn't add to it |
 | 4 | GPIO 20 | SD: high plays, low shuts it down (the game turns it off when idle or asleep) |
 | 6 | 3V3 | Vin |
-| 1 or 5 | GND | Gnd |
+| 1 | GND | Gnd |
 | | | Speaker + and −: one speaker, or two in series (16 Ω, a little quieter) |
 
 - Count the pins from pin 1 on the board's silkscreen, not by wire colour.
-- The resistor and capacitor turn the stream into sound before the amplifier: without them it gets megahertz
-  noise.
+- Straight in is safe: on Adafruit's board (and its copies) the Vol trimmer is a 10 kΩ divider from A+ to A−, then
+  1 µF and 100 Ω into the chip. GPIO 19 drives 10 kΩ, 0.33 mA at most.
+- Nothing smooths the stream before the amplifier, so it gets the megahertz edges (Espressif's docs call for a
+  low-pass filter on this kind of output). Expect it to play, maybe with a faint hiss; not heard yet. If the hiss is
+  too much: first the firmware (the stream's rate, GPIO 19's drive strength), then a 1 kΩ in the pin 3 wire with
+  10 nF from A+ to A− at the amp.
 - Start with the board's Vol trimmer turned most of the way down, then turn it up.
 - The "USB" port then only charges: GPIO 19 and 20 are its data lines. Flash and use the console through "UART".
 - `WS21_AUDIO_PDM` is on in `pin_config.h` (2026-11-22). The hatch jingle plays at start-up, then the music.

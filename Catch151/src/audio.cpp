@@ -90,7 +90,7 @@ void audioSetIdle(bool) {}
 // The Waveshare 2.1 with an amplifier added by hand (docs/WAVESHARE_21.md, "Sound"; Fedor: "let's add music and sound
 // through that amp"): the effects, the Pokemon's cries and the music, mixed as on a computer (host_audio.cpp) by a task
 // on core 0 that streams to the amplifier without a break. A PAM8302A gets the mix as a 1-bit stream on one pin,
-// smoothed by a resistor and a capacitor (WS21_AUDIO_PDM); a MAX98357A gets it as I2S (WS21_AUDIO_I2S).
+// straight into its A+ (WS21_AUDIO_PDM); a MAX98357A gets it as I2S (WS21_AUDIO_I2S).
 #include <Arduino.h>
 #include <Preferences.h>
 #include <atomic>
@@ -270,8 +270,8 @@ static bool outputStart() {
   esp_err_t e = i2s_new_channel(&cc, &gTx, nullptr);
 #ifdef WS21_AUDIO_PDM
   if (e == ESP_OK) {
-    // one data line and no clock line: the stream's density is the sound, the 1 kOhm and 10 nF turn it back into a
-    // voltage for the PAM8302A's A+
+    // one data line and no clock line: the stream's density is the sound. It goes straight into the PAM8302A's A+
+    // (through its 10 kOhm volume trimmer); the amplifier and the speaker smooth it
     i2s_pdm_tx_config_t pc = {
       .clk_cfg = I2S_PDM_TX_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
       .slot_cfg = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
