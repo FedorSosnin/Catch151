@@ -14,6 +14,8 @@
 #include "Arduino_GFX_Library.h"
 #ifdef BOARD_HOST  // Mac and others: built as a Knomi with different hardware underneath (see host/README.md)
 #include "host/host_hal.h"
+#elif defined(BOARD_WS21)  // Waveshare ESP32-S3-Touch-LCD-2.1: also a Knomi with other hardware underneath (docs/WAVESHARE_21.md)
+#include "src/ws21_hal.h"
 #elif defined(BOARD_KNOMI_V2)
 #include "src/knomi_hal.h"
 #else
@@ -44,6 +46,7 @@
 #include "src/fishing.h"
 #include "src/pinball.h"   // Pinball: its rules and physics (drawn by pinball_v2.h)
 #include "src/berrymatch.h"  // BerryMatch: its rules (drawn by berrymatch_v2.h)
+#include "src/picsnap.h"  // Pic Snap: its rules (drawn by picsnap_v2.h)
 #include "src/leaderboard.h"  // the leaderboard on the devices: its pages' rules (drawn by leaderboard_v2.h)
 #include "src/dungeon.h"
 #include "src/zones.h"
@@ -77,7 +80,15 @@ bool otaChecking = false;  // it says "Searching..." while the check runs
 // (autoUpdateLoad / autoUpdateSet, by checkUpdate()).
 bool autoUpdate = true;
 
-#ifdef BOARD_KNOMI_V2
+#if defined(BOARD_WS21)
+// ST7701S over 16-bit RGB; its setup commands go once over a 3-wire SPI whose CS and reset are on the TCA9554 IO
+// expander (ws21_hal.h)
+Ws21InitBus *bus = new Ws21InitBus();
+Ws21Panel *panel = new Ws21Panel(bus);  // two frame buffers, swapped between refreshes
+Ws21Canvas *gfx = new Ws21Canvas(panel);
+
+KnomiTouch touch;
+#elif defined(BOARD_KNOMI_V2)
 Arduino_DataBus *bus = new Arduino_ESP32SPI(LCD_DC, LCD_CS, LCD_SCLK, LCD_MOSI, GFX_NOT_DEFINED);
 KnomiPanel *panel = new KnomiPanel(bus, LCD_RESET, 0 /*rotation*/, true /*IPS*/, PANEL_SIZE, PANEL_SIZE);
 ScaledCanvas *gfx = new ScaledCanvas(panel);
@@ -96,7 +107,9 @@ TouchDrvCST92xx touch;
 // active CJK font: always false for now, loading will arrive with
 // Japanese/Korean/Chinese support (see PR #13)
 bool gCjkFont = false;
-#ifdef BOARD_KNOMI_V2
+#if defined(BOARD_WS21)
+#define TOUCH_ADDR TOUCH_I2C_ADDR  // CST820 (pin_config.h)
+#elif defined(BOARD_KNOMI_V2)
 #define TOUCH_ADDR 0x15  // CST816S
 #else
 #define TOUCH_ADDR 0x5A  // CST9217
@@ -185,6 +198,7 @@ int16_t wifiKbX = 0, wifiKbY = 0;
 #define KB_W 64
 #define KB_H 52
 bool clockOpen = false;       // time-setting screen (swipe down)
+bool soundOpen = false;       // V2, not the Knomi: with clockOpen, the Sound page instead (sound_v2.h)
 int clockH = 12, clockM = 0;  // time being edited
 bool clockEdited = false;      // set by hand: don't overwrite it with network time
 bool tzPickOpen = false;      // the time zone picker, over the time page (the Knomi's)
@@ -194,10 +208,6 @@ bool clockTzUi = false;       // the time page shows where the time comes from: 
 #else
 bool clockTzUi = true;        // ...Wi-Fi, and the time zone button
 #endif
-#define TZ_BTN_X 83           // the city button
-#define TZ_BTN_Y 234
-#define TZ_BTN_W 300
-#define TZ_BTN_H 40
 #define TZ_CITY_Y 200         // the picker: the city's name, then its UTC offset
 #define TZ_ARROW_Y 214        // ...and the arrows either side
 
@@ -307,6 +317,13 @@ uint32_t bmLast = 0, bmOverT = 0;
 bool bmBot = false;                    // BMBOT on the console: it plays by itself (testing, screenshots)
 uint32_t bmBotT = 0;
 int8_t bmPetForce = -1;                // BMPETAT n: yours sitting at that corner now (berrymatch_v2.h; testing, pictures)
+// Pic Snap (picsnap.h, drawn by picsnap_v2.h)
+PsState ps;
+bool psOpen = false, psNewHi = false;
+uint32_t psLast = 0, psOverT = 0;
+bool psBot = false;                    // PSBOT on the console: it snaps by itself (testing, screenshots)
+bool psCapture = false;                // a photo was just taken: the next frame keeps the picture
+int8_t psFreeze = 0;                   // PSHOLD: the lens and the camera held still (testing, pictures)
 uint32_t fishBotT = 0;
 uint32_t gBacklightFlashUntil = 0;     // the Knomi's backlight to full until then (the bite; too tight)
 // a PikaSurf duel with a buddy (BK_SURF): both on the same course (the session id is the seed), each
@@ -494,7 +511,13 @@ bool wasPressed = false;
 // the CST9217 signals on the INT pin when there is touch data; we use it to avoid
 // reading the I2C bus while the chip is asleep (that read hung for ~1s)
 volatile bool gTouchIrq = false;
-void IRAM_ATTR touchIsr() { gTouchIrq = true; }
+void IRAM_ATTR touchIsr() {
+  gTouchIrq = true;
+#ifdef BOARD_WS21
+  if (!gWs21TouchEdge) gWs21TouchEdgeMs = millis();
+  gWs21TouchEdge = true;  // (its touch task reads the chip: ws21_hal.h)
+#endif
+}
 uint32_t lastRender = 0;
 uint32_t sdEpoch = 0;  // +1 every time the SD is reloaded (thumbnails change)
 // AMOLED protection: dimmed on inactivity
@@ -516,6 +539,12 @@ void v2KbTyped();       // ...and the keys typed on it, while a keyboard is open
 void v2HoverOverlay();
 #endif
 static int v2RadialAt(int16_t x, int16_t y);
+void v2GamesToCarts();  // (menus_v2.h: from a game's page back to the cartridges)
+#if HAS_MUSIC
+static void v2SoundPage();  // (sound_v2.h)
+static void v2SoundTap(int16_t x, int16_t y);
+static bool v2SoundPress(int16_t x, int16_t y, PressTarget &t);
+#endif
 static void v2RadialLift(int16_t x, int16_t y);
 bool v2ResetSure = false;    // V2: ERASE EVERYTHING was tapped once; the question now asks "Are you sure?"
 uint32_t v2ResetSureT = 0;
@@ -531,7 +560,7 @@ void setup() {
   // CRITICAL: without this, Serial.print BLOCKS the game when no
   // serial monitor is open on the host (the USB CDC TX buffer fills up
   // and nobody drains it) -> with timeout 0 messages are dropped
-#ifndef BOARD_KNOMI_V2  // the Knomi sends serial through a CH340 (UART0): it never blocks
+#ifndef BOARD_KNOMI_V2  // the Knomi sends serial through a CH340 (UART0): it never blocks (the Waveshare 2.1 a CH343)
   Serial.setTxTimeoutMs(0);
 #endif
   Serial.printf("Catch 151 fw v%s\n", FW_VERSION);
@@ -597,7 +626,7 @@ void setup() {
     uint32_t seed = 1767225600UL;             // truly blank RTC
     uint32_t seen = pet.savedEpoch();         // uses the NVS that pet already has open
     if (seen > seed) seed = seen;
-    rtcSetEpoch(seed);
+    rtcSetSeed(seed);
     e = rtcEpoch();
     Serial.printf("RTC has no time: seeded to %u%s\n", seed,
                   seen > 1767225600UL ? " (from the last saved time)" : "");
@@ -636,6 +665,9 @@ void ensureMon() {
 static bool v2Sliding();  // V2: a menu's page sliding (slide_v2.h, with the scene)
 // loop timing, for lag reports: the slowest pass since the last HEALTH line, and its parts
 static uint32_t loopNetMs = 0, loopDrawMs = 0, loopMaxMs = 0, loopSlowCount = 0;
+#ifdef BOARD_WS21
+static uint32_t gProfRenders = 0, gProfRenderMs = 0, gProfFrom = 0;  // the console's FPS
+#endif
 
 void loopTiming(uint32_t start) {
   uint32_t total = millis() - start;
@@ -763,7 +795,7 @@ void loop() {
   // V2: from any screen a restart loses nothing on (Fedor: "the knomi finds the update but never auto install it":
   // menus stay open when left alone, and only the light wakes the pet), and asleep in the middle of the day (otaAutoNow())
   bool otaBusy = pet.ceremony || choiceKind || confirmUntil || bsState != BS_IDLE || gameOpen || runOpen || surfOpen || fishOpen || pinOpen ||
-                 bmOpen || dungeonOpen || battleOpen || quizOpen || vbOpen || sdOpen || tradeOpen || kbOpen ||
+                 bmOpen || psOpen || dungeonOpen || battleOpen || quizOpen || vbOpen || sdOpen || tradeOpen || kbOpen ||
                  wifiSetupState() != WS_OFF || towerClimbing();
 #define OTA_AUTO_WHEN otaAutoNow(screenOff || dimStage >= 1, otaBusy, pet.sleeping, sceneHour())
   if (autoUpdate && otaState() == OTA_AVAILABLE && OTA_AUTO_WHEN &&
@@ -820,6 +852,10 @@ void loop() {
     uint32_t drawT = millis();
     drewFrame = render();
     loopDrawMs = millis() - drawT;
+#ifdef BOARD_WS21
+    gProfRenders++;
+    gProfRenderMs += loopDrawMs;
+#endif
   }
   loopTiming(loopStart);
   // yields the CPU on passes that don't draw: without this the loop spins at full speed
@@ -836,15 +872,17 @@ PowerCtx powerCtx(uint32_t now) {
   // V2: asleep, only the home is dim; a menu opened over it (the radial menu too) is in full colour (Fedor). Left
   // alone it still dims, as any screen does
   if (v2RadialOpen || !onMainScreen()) c.sleeping = false;
-#ifdef BOARD_HOST
-  if (!c.sleeping) c.idleMs = 0;  // a desktop window has no panel to protect: only the pet's sleep dims it
+#if defined(BOARD_HOST) || defined(BOARD_WS21)
+  // a desktop window has no panel to protect: only the pet's sleep dims it. The Waveshare 2.1 likewise (Fedor: "We
+  // should turn that on ONLY when we put our pokemon to sleep"); the Knomi still dims when left alone
+  if (!c.sleeping) c.idleMs = 0;
 #endif
   // a battle waits for you (it no longer ends by itself): left alone long enough to dim, it is
   // drawn at the slower rates like any other screen
   bool battleIdle = battleOpen && c.idleMs > POWER_DIM1_MS;
   c.gameOpen = gameOpen || (battleOpen && !battleIdle) || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen ||
-               fishOpen || pinOpen || bmOpen;
-  c.arcadeOpen = runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen || pinOpen || bmOpen;  // (BerryMatch: the falls smooth)  // (Pinball: the ball smooth)  // (Reel Fishing: 25 fps, its beat smooth)
+               fishOpen || pinOpen || bmOpen || psOpen;
+  c.arcadeOpen = runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen || pinOpen || bmOpen || psOpen;  // (Pic Snap: the drift and the focus smooth)  // (BerryMatch: the falls smooth)  // (Pinball: the ball smooth)  // (Reel Fishing: 25 fps, its beat smooth)
   c.usb = usbPresent();
   c.charging = batCharging();
   c.batPct = batPercent();
@@ -968,6 +1006,10 @@ void handleSerial() {
     float g[3] = {0, 0, 0};
     bool ok = accel.read(g);
     Serial.printf("acc ok=%d x=%.2f y=%.2f z=%.2f\n", ok, g[0], g[1], g[2]);
+#ifdef BOARD_WS21
+    accel.readRaw(g);  // the sensor's own axes, before WS21_ACC_MAP and the turn (to set WS21_ACC_MAP)
+    Serial.printf("acc raw x=%.2f y=%.2f z=%.2f\n", g[0], g[1], g[2]);
+#endif
     Serial.println("DONE");
     return;
   } else if (line == "OTACHECK") {
@@ -1008,6 +1050,135 @@ void handleSerial() {
     gBtnSimUntil = millis() + line.substring(4).toInt();
     Serial.println("DONE");
     return;
+#ifdef BOARD_WS21
+  } else if (line.startsWith("PCLK ")) {  // the panel's pixel clock in MHz (testing): until the next start
+    float mhz = line.substring(5).toFloat();
+    bool ok = mhz >= 4 && mhz <= 24 && panel->setPclk((uint32_t)(mhz * 1e6f));
+    Serial.printf("pclk %.1f MHz %s\n", mhz, ok ? "ok" : "refused");
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("ROTDEG ")) {  // the picture's turn on the panel, clockwise degrees (testing)
+    ws21SetRotation(line.substring(7).toInt());
+    gfx->flush();
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("SMOOTH ")) {  // turned: 1 blends between pixels, 2 only across the 2 px grid, 0 nearest
+    gWs21Smooth = (uint8_t)constrain(line.substring(7).toInt(), 0, 2);
+    gfx->flush();
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("PCLKEDGE ")) {  // 1: data out on PCLK's falling edge (bring-up: streaks along the rows)
+    panel->setPclkEdge(line.substring(9).toInt() != 0);
+    Serial.println("DONE");
+    return;
+  } else if (line == "LCD") {  // the refills since the last LCD: frames, longest gap between two (us), gaps over 50 ms
+    uint32_t n, gap, late;
+    panel->timing(&n, &gap, &late);
+    uint32_t miss, odd;
+    bool found;
+    panel->eofStats(&miss, &odd, &found);
+    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s\n", (unsigned)n, (unsigned)gap,
+                  (unsigned)late, (unsigned)miss, (unsigned)odd, !found ? "none" : panel->eofFix ? "on" : "off");
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("EOFFIX ")) {  // 0: the driver's lost-refill-signal fault left as it is (testing)
+    panel->eofFix = line.substring(7).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("STALL ")) {  // "STALL us n": n hold-ups of the interrupts, as a flash write does (testing)
+    int sp = line.indexOf(' ', 6);
+    uint32_t us = line.substring(6, sp).toInt(), n = sp > 0 ? line.substring(sp + 1).toInt() : 1;
+    for (uint32_t i = 0; i < n; i++) {
+      portDISABLE_INTERRUPTS();
+      esp_rom_delay_us(us);
+      portENABLE_INTERRUPTS();
+      delay(37 + (esp_random() & 15));  // (not in step with the refresh)
+    }
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("NVSTEST ")) {  // "NVSTEST n": n flash writes to a scratch area, not the save (testing)
+    Preferences t;
+    if (t.begin("ws21t", false)) {
+      uint32_t n = line.substring(8).toInt(), t0 = millis();
+      for (uint32_t i = 0; i < n; i++) t.putUInt("n", i);
+      t.clear();
+      t.end();
+      Serial.printf("nvstest %u writes in %u ms\n", (unsigned)n, (unsigned)(millis() - t0));
+    }
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("HOLD ")) {  // the game stops for n seconds: only the panel's refill runs (bring-up)
+    uint32_t until = millis() + (uint32_t)line.substring(5).toInt() * 1000;
+    while ((int32_t)(until - millis()) > 0) delay(20);
+    Serial.println("DONE");
+    return;
+  } else if (line == "FPS") {  // frames drawn since the last FPS, and their time; flush()'s share of it
+    uint32_t now = millis(), span = now - gProfFrom;
+    Serial.printf("fps=%.1f render=%.1f ms over %lu ms\n", gProfRenders * 1000.f / (span ? span : 1),
+                  gProfRenders ? (float)gProfRenderMs / gProfRenders : 0.f, (unsigned long)span);
+    gfx->profPrint();
+    gProfRenders = gProfRenderMs = 0;
+    gProfFrom = now;
+    Serial.println("DONE");
+    return;
+#ifdef WS21_AUDIO_PDM
+  } else if (line == "PDMCHECK") {  // the sound pin read back: a running 1-bit stream flips all the time (bring-up)
+    PIN_INPUT_ENABLE(GPIO_PIN_MUX_REG[PDM_DO_IO]);
+    int hi = 0, flips = 0, last = -1;
+    for (int i = 0; i < 4000; i++) {
+      int b = (REG_READ(GPIO_IN_REG) >> PDM_DO_IO) & 1;
+      hi += b;
+      if (last >= 0 && b != last) flips++;
+      last = b;
+    }
+    Serial.printf("pdm: %d of 4000 reads high, %d flips; amplifier SD %d\n", hi, flips, digitalRead(PA));
+    Serial.println("DONE");
+    return;
+#endif
+#if HAS_MUSIC && defined(BOARD_WS21)
+  } else if (line == "AUDIO") {  // the amplifier's mixing: its load on core 0, dropouts, what plays (bring-up)
+    audioReport();
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("AUDIOBENCH ")) {  // 2 s of music track n mixed and timed, nothing played (bring-up)
+    audioBench((uint8_t)line.substring(11).toInt());
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("PDMMODE ")) {  // the sound stream's shape: 1 DAC (made for an amplifier), 0 codec (the
+    audioPdm(line.substring(8).toInt(), -1);  // first build): compared by ear for the static (Fedor, 2026-11-22)
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("PDMGAIN ")) {  // the mix's level on its way out, in tenths (20 = x2): louder sound over
+    audioPdm(-1, line.substring(8).toInt());  // the same static, so the trimmer can come down
+    Serial.println("DONE");
+    return;
+#endif
+  } else if (line.startsWith("DMAIN ")) {  // 1: the straight copy reads the canvas by DMA (quicker; lines came back)
+    gWs21DmaIn = line.substring(6).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("TOUCHLOG ")) {  // 1: each press and lift logged, with its delays (testing)
+    touch.log = line.substring(9).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("SPLIT ")) {  // 1: the other core makes half of each frame (testing)
+    gWs21Split = line.substring(6).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("REFILLCORE ")) {  // the core the panel's refill runs on, 0 or 1: from the next start
+    Preferences p;
+    p.begin("ws21", false);
+    p.putUChar("rc", line.substring(11).toInt() ? 1 : 0);
+    p.end();
+    Serial.printf("refill core %d from the next start (now %d)\n", line.substring(11).toInt() ? 1 : 0, panel->refillCore);
+    Serial.println("DONE");
+    return;
+  } else if (line == "WIFIOFF") {  // Wi-Fi off until the next start (bring-up: does the radio upset the panel?)
+    clockPollPause(true);  // (no reconnecting)
+    clockWifiSignOff();
+    Serial.println("DONE");
+    return;
+#endif
   } else if (line == "PERF") {  // cost of the flush to the panel
     uint32_t t0 = micros();
     for (int i = 0; i < 10; i++) gfx->flush();
@@ -1155,6 +1326,29 @@ void handleSerial() {
     int x, y;
     if (bmOpen && sscanf(line.c_str() + 6, "%d %d", &x, &y) == 2) bmEvents(bmTap(bm, x, y));
     Serial.println("DONE");
+  } else if (line == "PICSNAP") {  // Pic Snap, under its card (testing)
+    gamesMenuOpen = false;
+    startSnap();
+    if (psOpen) introOpen(8);  // (GAME_SNAP, further on)
+    Serial.println("DONE");
+  } else if (line == "PSBOT" && pet.noSave) {  // Pic Snap snaps by itself (testing, screenshots)
+    psBot = !psBot;
+    Serial.println("DONE");
+  } else if (line.startsWith("PSPLACE ") && pet.noSave) {  // Pic Snap: this place now, PSPLACE n [dex] (testing, pictures)
+    int n = -1, dex = 0;
+    if (psOpen && sscanf(line.c_str() + 8, "%d %d", &n, &dex) >= 1 && n >= 0 && n < PS_SCENES) snapPlace((uint8_t)n, (int16_t)dex);
+    Serial.println("DONE");
+  } else if (line.startsWith("PSHOLD ") && pet.noSave) {  // Pic Snap: the lens at f and the camera's drift held, PSHOLD f wx wy
+    float f = 0, wx = 0, wy = 0;                            // (f 0..1, the drift in px; PSHOLD -1 lets them go on; pictures)
+    int n = sscanf(line.c_str() + 7, "%f %f %f", &f, &wx, &wy);
+    if (psOpen && n >= 1) {
+      psFreeze = f >= 0;
+      if (psFreeze) ps.f = ps.fa = ps.fb = f, ps.wx = wx, ps.wy = wy;
+    }
+    Serial.println("DONE");
+  } else if (line == "PSSNAP" && pet.noSave) {  // Pic Snap: a photo now (testing)
+    if (psOpen) snapEvents(psSnap(ps));
+    Serial.println("DONE");
   } else if (line == "PINBOT" && pet.noSave) {  // Pinball plays by itself (testing)
     pinBot = !pinBot;
     Serial.println("DONE");
@@ -1181,9 +1375,13 @@ void handleSerial() {
 #if HAS_MUSIC
   } else if (line.startsWith("MUSIC")) {  // V2: "MUSIC n" plays track n (music.h) whatever the screen; "MUSIC" alone, the screens'
     v2MusicForce(line.length() > 6 ? line.substring(6).toInt() : -1);
+#ifdef BOARD_WS21
+    audioForceMusic(line.length() > 6);  // (on the board it plays even while the pet sleeps: testing)
+#endif
     Serial.println("DONE");
 #endif
   } else if (line == "GAMES") {
+    v2GamesToCarts();  // (opened, it shows the cartridges)
     openGamesMenu();
     Serial.println("DONE");
   } else if (line.startsWith("LANG ") && pet.noSave) {  // V2: the language, 0..7 as i18n.h numbers them (testing)
@@ -1500,7 +1698,7 @@ void handleTouch() {
   // games: the touch is resolved on finger lift, so that swiping up exits
   // without pressing anything on the way. Only the Rock Hopper jump fires on touch-down: there every ms counts.
   if (battleOpen || quizOpen || gamesMenuOpen || gameOpen || runOpen || surfOpen || dungeonOpen || zoneScreen || sdOpen || vbOpen ||
-      fishOpen || pinOpen || bmOpen) {
+      fishOpen || pinOpen || bmOpen || psOpen) {
     if (pressed) { tXl = x; tYl = y; }  // tXl: aim with the finger where there is no accelerometer
     // in the dungeon, keeping the finger down keeps walking
     if (dungeonOpen && !introUp() && pressed && wasPressed && !swallowGesture && !dnOverT && millis() - tStart > 350 &&
@@ -1523,6 +1721,7 @@ void handleTouch() {
       if (runOpen && !introUp() && !swallowGesture) runJump = true;
       if (fishOpen && !introUp() && !swallowGesture) fishTouchDown(x, y);  // a cast, a strike, a reel: on the touch
       if (bmOpen && !introUp() && !swallowGesture) matchTouchDown(x, y);  // BerryMatch: a piece picked or swapped as it's touched
+      if (psOpen && !introUp() && !swallowGesture) snapTouchDown();  // Pic Snap: the photo, as the finger goes down
       tapDownTry(x, y, true);
     }
     if (pressed) {
@@ -1667,6 +1866,9 @@ void onSwipe(int dir) {
     return;
   }
 #endif
+#if HAS_MUSIC
+  if (clockOpen && soundOpen) return;  // V2: the Sound page is one page
+#endif
   if (clockOpen && wifiSetupState() == WS_OFF) {  // V2: Settings, (the Knomi's Wi-Fi,) About; left advances
     int next = clockPage + (dir > 0 ? -1 : 1);
     if (next >= 0 && next < V2_CLOCK_PAGES) {
@@ -1793,6 +1995,12 @@ void onTap(int16_t x, int16_t y) {
     return;
   }
   if (clockOpen) {
+#if HAS_MUSIC
+    if (soundOpen) {  // V2: the Sound page (sound_v2.h)
+      v2SoundTap(x, y);
+      return;
+    }
+#endif
 #if defined(BOARD_KNOMI_V2)
     if (!tzPickOpen && clockPage == 0 && clockLocked() && x >= V2_RESET_X0 - 3 && x <= V2_RESET_X1 + 3 &&
         y >= V2_RESET_Y0 - 3 && y <= V2_RESET_Y1 + 3) {  // V2: START OVER asks first, on the home screen
@@ -1975,6 +2183,7 @@ void onTap(int16_t x, int16_t y) {
         feedMenuUntil = millis() + 6000;
       }
     } else if (i == 1) {
+      v2GamesToCarts();  // V2: opened from home, the cartridges (a game's end opens its own page)
       openGamesMenu();
     } else if (i == 2) {
       openZones();
@@ -2296,7 +2505,7 @@ void printT(const char *s) {
 static bool staticScreen() {
   if (pet.awaitingStarter()) return false;  // V2: the starters walk
   if (pet.awaitingStarter()) return true;
-  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen || fishOpen || pinOpen || bmOpen) return false;  // the gallery manages its own repainting
+  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen || fishOpen || pinOpen || bmOpen || psOpen) return false;  // the gallery manages its own repainting
   if (clockOpen && clockPage == V2_ABOUT_PAGE) return false;  // V2: About's coin spins and gleams
   if (kbOpen || clockOpen) return true;
   if (cardOpen && !cardAch && cardPage >= 4) return false;  // V2: an item's page: the item hovers (Fedor)
@@ -2319,6 +2528,9 @@ static uint32_t screenKey() {
   } else if (clockOpen) {
     h = mixKey(h, clockH * 60 + clockM);
     h = mixKey(h, clockPage);
+#if HAS_MUSIC
+    h = mixKey(h, soundOpen * 1024 + audioEnabled() * 512 + musicEnabled() * 256 + soundVolume() * 16 + musicVolume());
+#endif
     h = mixKey(h, clockLocked() ? rtcEpoch() / 60 : 0);  // a shown clock moves on by the minute
     h = mixKey(h, tzPickOpen * 256 + tzPickIdx + clockTzUi * 65536);
     h = mixKey(h, wifiSetupState());
@@ -2439,6 +2651,10 @@ bool render() {
   }
   if (bmOpen) {
     renderMatch();
+    return true;
+  }
+  if (psOpen) {
+    renderSnap();
     return true;
   }
   if (battleOpen) {
@@ -2665,12 +2881,15 @@ void quitGame() {
   if (fishOpen) closeFish();
   if (pinOpen) closePinball();
   if (bmOpen) closeMatch();
+  if (psOpen) closeSnap();
   gameOpen = gamesMenuOpen = false;
 }
 
 // tilt zero: whatever it reads now is "straight"
 #if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
-// the screen follows gravity, except with a finger on it or when tilting is part of the game
+// the screen follows gravity, except with a finger on it or when tilting is part of the game. On the Waveshare 2.1 in
+// quarter turns from its own (WS21_ROT_DEG: 45, 135, 225, 315; Fedor: "Can we turn auto rotate back on? But in 90*
+// increments from where it is now?"), which all cost the same: any angle but 0 is turned pixel by pixel
 void autoRotateTick(uint32_t now) {
   static uint32_t last = 0;
   static RotFilter filter;
@@ -2681,6 +2900,17 @@ void autoRotateTick(uint32_t now) {
     return;
   }
   float g[3];
+#ifdef BOARD_WS21
+  static uint8_t quarter = 0;  // quarter turns from WS21_ROT_DEG
+  if (!accel.readBase(g)) return;
+  uint8_t rot = quarter;
+  if (filter.update(g[0], g[1], now, &rot)) {
+    quarter = rot;
+    ws21SetRotation(WS21_ROT_DEG + 90 * rot);
+    gfx->flush();  // some screens only redraw on change
+    Serial.printf("screen: %d degrees\n", gWs21RotDeg);
+  }
+#else
   if (!accel.read(g)) return;
   uint8_t rot = gPanelRot;
   if (filter.update(g[0], g[1], now, &rot)) {
@@ -2688,6 +2918,7 @@ void autoRotateTick(uint32_t now) {
     gfx->flush();  // some screens only redraw on change
     Serial.printf("screen: rotation %u\n", rot);
   }
+#endif
 }
 #endif
 
@@ -2764,21 +2995,22 @@ void stepGame() {
 
 // ---------- games menu ----------
 // As the zones: a round window onto each game, its own scene with your Pokemon in it, the name under.
-#define GAMES_COUNT 8    // battles have their own icon on the home screen
+#define GAMES_COUNT 9    // battles have their own icon on the home screen
 #define GAME_PINBALL 6
 #define GAME_MATCH 7
+#define GAME_SNAP 8
 #define GAME_ICON_R 50
 
 const char *gameLabel(int row) {
-  static const StrId L[GAMES_COUNT] = { S_GAME_TILT, S_GAME_WHO, S_GAME_RUN, S_GAME_DUNGEON, S_GAME_SURF, S_GAME_FISH, S_GAME_PINBALL, S_GAME_MATCH };
+  static const StrId L[GAMES_COUNT] = { S_GAME_TILT, S_GAME_WHO, S_GAME_RUN, S_GAME_DUNGEON, S_GAME_SURF, S_GAME_FISH, S_GAME_PINBALL, S_GAME_MATCH, S_GAME_SNAP };
   return T(L[row]);
 }
 
 // how to play it, plainly: the ways to move and the point. Two versions where the controls differ: the
 // Knomi's (tilting, touch) and the one for computers and the web (the arrow keys too); neither names a device
 const char *gameHowTo(int row) {
-  static const StrId H[GAMES_COUNT] = { S_HOW_BERRY, S_HOW_WHO, S_HOW_RUN, S_HOW_DN, S_HOW_SURF, S_HOW_FISH, S_HOW_PINBALL, S_HOW_MATCH };
-  static const StrId K[GAMES_COUNT] = { S_HOW_BERRY_KEYS, S_HOW_WHO, S_HOW_RUN, S_HOW_DN_KEYS, S_HOW_SURF_KEYS, S_HOW_FISH_KEYS, S_HOW_PINBALL_KEYS, S_HOW_MATCH_KEYS };
+  static const StrId H[GAMES_COUNT] = { S_HOW_BERRY, S_HOW_WHO, S_HOW_RUN, S_HOW_DN, S_HOW_SURF, S_HOW_FISH, S_HOW_PINBALL, S_HOW_MATCH, S_HOW_SNAP };
+  static const StrId K[GAMES_COUNT] = { S_HOW_BERRY_KEYS, S_HOW_WHO, S_HOW_RUN, S_HOW_DN_KEYS, S_HOW_SURF_KEYS, S_HOW_FISH_KEYS, S_HOW_PINBALL_KEYS, S_HOW_MATCH_KEYS, S_HOW_SNAP_KEYS };
   return T(playKeysUi ? K[row] : H[row]);
 }
 
@@ -2884,7 +3116,7 @@ int drawWrapped(const char *s, uint8_t size, int maxW, int y, int lineH, bool dr
 }
 
 // a card is up over a game that is open (a card left over from a closed game counts for nothing)
-bool introUp() { return introCard >= 0 && (gameOpen || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen || fishOpen || pinOpen || bmOpen); }
+bool introUp() { return introCard >= 0 && (gameOpen || quizOpen || runOpen || surfOpen || dungeonOpen || sdOpen || vbOpen || fishOpen || pinOpen || bmOpen || psOpen); }
 
 // Play together's games have cards too (after the Games menu's 0..4): the same card on both boards, and
 // the game begins once both players have pressed Ready, GO! (buddyGameReady)
@@ -2996,6 +3228,8 @@ void introBegin(int g) {
     tiltZero();
   } else if (g == GAME_MATCH) {
     bmLast = now;
+  } else if (g == GAME_SNAP) {
+    psLast = now;
   } else if (g >= CARD_VOLLEY) {  // a game with a buddy: say you're ready; it begins when they are too
     bReadyMine = true;
     bReadySendT = 0;
@@ -3049,13 +3283,29 @@ void gamesMenuTap(int16_t x, int16_t y) {
   }
   int adx = pageArrowDx(V2_PAGE_ARROW_Y);  // where an arrow isn't (the first page's left, the last's right): nothing
   if (pageArrowHit(x, y, CX - adx, V2_PAGE_ARROW_Y) || pageArrowHit(x, y, CX + adx, V2_PAGE_ARROW_Y)) return;
-  int g = v2GamesPage < 0 ? v2LbPlayAt(x, y) : gameAt(x, y);  // V2: a cartridge, or a leaderboard page's play line
-  // a tap on the screen between the cartridges does nothing (four a page leave room round them, where a page
-  // arrow may not be): the X, or a tap off the screen, closes it
-  if (g < 0 && x >= V2_GB_X0 && x < V2_GB_X1 && y >= V2_GB_Y0 && y < V2_GB_Y1) return;
+  bool onScreen = x >= V2_GB_X0 && x < V2_GB_X1 && y >= V2_GB_Y0 && y < V2_GB_Y1;
+  if (v2GamesPage >= 0) {  // V2: the cartridges
+    int c = v2CartIndexAt(x, y);
+    if (c >= 0) {  // its game's own page: its leaderboard, TAP TO PLAY (Fedor: "each game has its own page")
+      sfxPlay(SFX_TAP);
+      v2GamesPage = -1 - c;
+      return;
+    }
+    // a tap on the screen between the cartridges does nothing (four a page leave room round them, where a page
+    // arrow may not be): the X, or a tap off the screen, closes it, with the click every X has (Fedor)
+    if (onScreen) return;
+    sfxPlay(SFX_TAP);
+    gamesMenuOpen = false;
+    return;
+  }
+  int g = v2LbPlayAt(x, y);  // V2: a game's page: its play line plays it
+  if (g < 0) {
+    if (onScreen) return;  // (the rest of its screen is for swiping)
+    sfxPlay(SFX_TAP);  // its X, or a tap off the screen: back to the cartridges
+    v2GamesToCarts();
+    return;
+  }
   gamesMenuOpen = false;
-  if (g < 0) sfxPlay(SFX_TAP);  // V2: its X (or a tap beside the cartridges) closes it with the click every X has (Fedor)
-  if (g < 0) return;  // outside = go back
   sfxPlay(SFX_TAP);
   if (g == 0) startGame();
   else if (g == 1) startQuiz();
@@ -3064,8 +3314,9 @@ void gamesMenuTap(int16_t x, int16_t y) {
   else if (g == 4) startSurf();
   else if (g == 5) startFish();
   else if (g == 6) startPinball();
-  else startMatch();
-  if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen || pinOpen || bmOpen) introOpen(g);  // it opens under its card
+  else if (g == 7) startMatch();
+  else startSnap();
+  if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen || pinOpen || bmOpen || psOpen) introOpen(g);  // it opens under its card
 }
 
 // the art in a rounded square r from its centre, its corners rad round
@@ -3245,7 +3496,7 @@ void endVisit() {
 
 // checks the time and advances the visit, even with another screen open on top
 bool onMainScreen() {
-  return !gameOpen && !runOpen && !surfOpen && !dungeonOpen && !fishOpen && !pinOpen && !bmOpen && !battleOpen && !quizOpen && !gamesMenuOpen && !zoneScreen && !galleryOpen && !cardOpen &&
+  return !gameOpen && !runOpen && !surfOpen && !dungeonOpen && !fishOpen && !pinOpen && !bmOpen && !psOpen && !battleOpen && !quizOpen && !gamesMenuOpen && !zoneScreen && !galleryOpen && !cardOpen &&
                       !kbOpen && !clockOpen && !choiceKind && !confirmUntil && !buddyMenuOpen && !partyOpen && !tradeOpen &&
                       !playMenuOpen && !sdOpen && !vbOpen;
 }
@@ -3345,7 +3596,7 @@ void knomiButtonTap() {
   screenOff = false;
   wakeUI();
   if (wasAsleep) return;  // in the dark it only wakes, like the touchscreen
-  if (fishOpen || pinOpen || bmOpen) return;  // (Reel Fishing, Pinball and BerryMatch have the button as it goes down: handleKnomiButton())
+  if (fishOpen || pinOpen || bmOpen || psOpen) return;  // (Reel Fishing, Pinball, BerryMatch and Pic Snap have the button as it goes down: handleKnomiButton())
 #if defined(BOARD_HOST)
   if (v2KeyThrow()) return;  // V2 on a computer: Space throws on the catch (master_v2.h)
 #endif
@@ -3366,6 +3617,7 @@ void knomiAskReset() {
   if (fishOpen) closeFish();
   if (pinOpen) closePinball();
   if (bmOpen) closeMatch();
+  if (psOpen) closeSnap();
   gamesMenuOpen = playMenuOpen = false;
   zoneDetailClose();
   zoneScreen = ZS_NONE;
@@ -3393,6 +3645,7 @@ void handleKnomiButton(uint32_t now) {
     if (fishOpen && !screenOff && dimStage == 0) fishButton();  // Reel Fishing: the button casts, strikes, reels
     if (pinOpen && !screenOff && dimStage == 0) pinButton(true);  // Pinball: both flippers, while it's held
     if (bmOpen && !screenOff && dimStage == 0) matchButton();     // BerryMatch: the card's READY, GO!; Space picks
+    if (psOpen && !screenOff && dimStage == 0) snapButton();      // Pic Snap: the card's READY, GO!; then the shutter
   } else if (pressed && !resetAsked && !pinOpen && now - downAt >= KNOMI_BTN_RESET_MS) {  // (Pinball: held is flippers up)
     resetAsked = true;
     knomiAskReset();
@@ -3403,7 +3656,7 @@ void handleKnomiButton(uint32_t now) {
     if (held < 30 || resetAsked) return;  // 30 ms: debounce
     if (held < KNOMI_BTN_HOLD_MS) {
       knomiButtonTap();
-    } else if (fishOpen || pinOpen || bmOpen) {
+    } else if (fishOpen || pinOpen || bmOpen || psOpen) {
       // Reel Fishing, Pinball and BerryMatch have the button: a long press is just a press there, never the screen off
     } else if (held < KNOMI_BTN_HOLD_MAX_MS) {
       screenOff = !screenOff;
@@ -4817,10 +5070,10 @@ void fishReport() {
 
 // V2: a game's best to the relay with the gamer tag, for the leaderboard (relay/src/index.js), as fishReport() sends the
 // biggest fish: Berry Drop's score (game 0), Rock Hopper's seconds (2), Dungeon Crawler's floor (3), PikaSurf's
-// seconds (4), Pinball's score (6), BerryMatch's (7), as the Games menu numbers them. Nothing before there's one. Sent at each game's
+// seconds (4), Pinball's score (6), BerryMatch's (7), Pic Snap's (8), as the Games menu numbers them. Nothing before there's one. Sent at each game's
 // end (the relay keeps the best), all of them when the relay is reached anew or the tag changes
 void scoreReport(uint8_t g) {
-  uint32_t v = g == GAME_MATCH ? pet.boardMatch : g < 7 && g != 1 && g != 5 ? pet.boardHi[g] : 0;  // the best since the leaderboard started over
+  uint32_t v = g == GAME_MATCH ? pet.boardMatch : g == GAME_SNAP ? pet.boardSnap : g < 7 && g != 1 && g != 5 ? pet.boardHi[g] : 0;  // the best since the leaderboard started over
   if (!v) return;
   BuddyMsg m;
   buddyInit(m, BM_SCORE, buddyNetId(), 0, v);  // (the session field carries the score)
@@ -4873,7 +5126,7 @@ void boardTest() {
   }
 }
 void scoreReportAll() {
-  static const uint8_t G[] = { 0, 2, 3, 4, 6, GAME_MATCH };
+  static const uint8_t G[] = { 0, 2, 3, 4, 6, GAME_MATCH, GAME_SNAP };
   for (uint8_t g : G) scoreReport(g);
   fishReport();
   for (int i = 0; i < Pet::BOARD_FISH_KINDS; i++)  // and each kind's heaviest, a few a second (fishKindsTick())
@@ -5310,6 +5563,144 @@ void renderMatch() {
   gfx->flush();
 }
 
+// ---------- Pic Snap ----------
+// A camera on Knomi Island (picsnap.h has its rules, picsnap_v2.h draws it): ten places, a wild Pokemon in each, the
+// camera drifting and its lens hunting for focus on its own; a tap anywhere (the button, Space) takes the photo, scored
+// for focus and for the Pokemon in the middle. The roll's total is the record. On a computer the mouse taps as a
+// finger does.
+void startSnap() {
+  if (pet.isEgg() || pet.sleeping || pet.ceremony) { sfxPlay(SFX_DENY); return; }
+  if (!psAllocAll()) { sfxPlay(SFX_DENY); return; }  // (no room for its pictures)
+  psStart(ps, esp_random());
+  psOpen = true;
+  psNewHi = false;
+  psOverT = 0;
+  psLast = millis();
+  psCapture = false;
+  psFreeze = 0;
+  psPrepFor = -1;
+  psMonDex = 0;
+  snapReady(0);  // the first place, while the card is up
+}
+
+void closeSnap() {
+  psOpen = false;
+  introCard = -1;
+  psFreeAll();
+  psPrepFor = -1;
+}
+
+// its pictures are still in memory (the host test: they go when it closes)
+bool snapPicturesHeld() { return psPhoto || psLay[0] || psFar; }
+
+// the place now in the roll made ready all at once (ms 0), or as far as ms allows; its Pokemon too, once it's known
+bool snapReady(uint32_t ms) {
+  if (ps.phase != PSP_LOAD) return false;
+  psPrepWork(psPlace(ps), ms);
+  if (!psPrepDone) return false;
+  psLoadMon(ps);
+  psAimed(ps, psResX, psResY);
+  return true;
+}
+
+// PSPLACE: that place (and that Pokemon) now, in this photo's stead (testing, pictures)
+void snapPlace(uint8_t place, int16_t dex) {
+  for (int i = 0; i < PS_SHOTS; i++)
+    if (ps.order[i] == place) {
+      ps.order[i] = ps.order[ps.shot];
+      break;
+    }
+  ps.order[ps.shot] = place;
+  psBeginPlace(ps);
+  if (dex >= 1 && dex <= DEX_COUNT) ps.dex = dex;
+  snapReady(0);
+  snapEvents(psReady(ps));
+}
+
+// what happened: its sound, the end (its reward and record)
+void snapEvents(uint32_t ev) {
+  if (!ev) return;
+  if (ev & PE_IN) {
+#if HAS_MUSIC
+    voiceSay(ps.dex, VOICE_PET);  // its cry, as it shows up
+#endif
+  }
+  if (ev & PE_SNAP) {
+    sfxPlay(SFX_SHUTTER);
+    psCapture = true;
+  }
+  if (ev & PE_PERFECT) sfxPlay(SFX_MEDAL);
+  else if (ev & PE_GOOD) sfxPlay(SFX_LEVEL);
+  if (ev & PE_AWAY) sfxPlay(SFX_DENY);
+  if (ev & PE_END) {
+    psNewHi = ps.score > pet.snapHi;
+    pet.snapResult(ps.score);  // the reward and record only at the end
+    scoreReport(GAME_SNAP);  // V2: the leaderboard
+    sfxPlay(psNewHi ? SFX_MEDAL : SFX_PLAY);
+    Serial.printf("picsnap: %u\n", (unsigned)ps.score);
+  }
+}
+
+// a finger down anywhere: the photo (on the print: on to the next place; at the roll's end: the score)
+void snapTouchDown() {
+  if (!psOpen || psOverT) return;
+  v2PlayInputAt = millis();
+  if (ps.phase == PSP_END) {
+    if (ps.t > 0.6f) psOverT = millis() | 1;
+    return;
+  }
+  snapEvents(psSnap(ps));
+}
+
+// the Knomi's button (Space on a computer): the card's READY, GO!; then the shutter, as a tap
+void snapButton() {
+  if (!psOpen || psOverT) return;
+  if (introUp()) {
+    introDismiss(0, -1);
+    return;
+  }
+  snapTouchDown();
+}
+
+#define PS_ROLL_S 4.0f  // the roll at the end, before the score comes up over it
+void renderSnap() {
+  if (pet.ceremony) {
+    closeSnap();
+    return;
+  }
+  uint32_t now = millis();
+  float dt = (now - psLast) / 1000.0f;
+  psLast = now;
+  if (dt > 0.1f) dt = 0.1f;  // a stall (a flash save) mustn't skip the moment
+  if (!introPaused() && !psOverT) {
+    if (ps.phase == PSP_LOAD && psPrepFor == psPlace(ps) && psPrepDone) snapEvents(psReady(ps));
+    if (psFreeze && (ps.phase == PSP_IN || ps.phase == PSP_AIM || ps.phase == PSP_OUT)) {  // PSHOLD: the lens and the
+      float f = ps.f, wx = ps.wx, wy = ps.wy;                                                // camera still, the Pokemon
+      snapEvents(psStep(ps, dt));                                                              // there as long as it's held
+      if (ps.phase == PSP_AIM) ps.t = 0;
+      ps.f = ps.fa = ps.fb = f, ps.wx = wx, ps.wy = wy;
+    } else {
+      snapEvents(psStep(ps, dt));
+    }
+    if (psBot && psBotWants(ps)) snapEvents(psSnap(ps));
+    if (ps.phase == PSP_END && ps.t > PS_ROLL_S) psOverT = now | 1;
+    lastInteract = now;  // the camera moving keeps the screen awake
+  }
+  psDraw(ps, now, psCapture, playKeysUi);
+  psCapture = false;
+  // the next place made ready while the print (or IT GOT AWAY!) is up, a little a frame
+  if (ps.phase == PSP_LOAD) snapReady(40);
+  else if ((ps.phase == PSP_PRINT || ps.phase == PSP_AWAY) && ps.shot + 1 < PS_SHOTS) psPrepWork(ps.order[ps.shot + 1], 40);
+  if (psOverT) {  // the end: the score, the record, the joy, as every game shows it
+    char big[16], rec[32];
+    snprintf(big, sizeof(big), "%u", (unsigned)ps.score);
+    snprintf(rec, sizeof(rec), T(S_RECORD_FMT), (unsigned)pet.snapHi);
+    v2GameResult(gameLabel(GAME_SNAP), nullptr, big, psNewHi && ps.score > 0, rec, ps.score >= 600 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
+  }
+  drawIntroCard();
+  gfx->flush();
+}
+
 // ---------- PikaSurf ----------
 // Yours surfs down the screen near the top, the water rushing up past it; rocks come up in three lanes
 // and Pikachu rides alongside until he pulls ahead (surf.h). Steered like Berry Drop: tilting, the arrow
@@ -5689,6 +6080,7 @@ void openClock() {
   clockLoadNow();
   clockPage = 0;
   tzPickOpen = false;
+  soundOpen = false;
   clockOpen = true;
 }
 
@@ -5720,22 +6112,23 @@ void classicFontEnd(bool cjk) {
   if (cjk) applyLangFont();
 }
 
-// the big h:mm and AM/PM of the time screens (shown in 12-hour format; inside it is still 24)
-void drawBigTime(int h24, int m) {
+// the big h:mm and AM/PM of the time screens (shown in 12-hour format; inside it is still 24). size: the digits'
+// (the ink is 7 rows of it from y down), AM/PM at 4 with their bottoms level
+void drawBigTimeAt(int h24, int m, int size, int y) {
   bool cjk = classicFontBegin();
   char t[8];
   snprintf(t, sizeof(t), "%d:%02d", clock12Hour(h24), m);
   // centred as one group, whatever the digits: "4:27 PM" and "12:05 AM" alike. The widths leave out the
   // blank column after the last letter, so what shows is what's centred
-  {  // V2: sizes 8 and 4, even, so each font pixel lands whole on the Knomi (7 and 3 were soft); their bottoms level
-    int tw = textW(t, 8) - 8, aw = textW("AM", 4) - 4, gap = 12;
+  {  // V2: even sizes, so each font pixel lands whole on the Knomi (7 and 3 were soft)
+    int tw = textW(t, size) - size, aw = textW("AM", 4) - 4, gap = size * 3 / 2;
     int x0 = CX - (tw + gap + aw) / 2;
-    if (t[0] == '1') x0 -= 4;
-    setSize(8);
-    setCur(x0, 100);
+    if (t[0] == '1') x0 -= size / 2;
+    setSize(size);
+    setCur(x0, y);
     printT(t);
     setSize(4);
-    setCur(x0 + tw + gap, 132);
+    setCur(x0 + tw + gap, y + (size - 4) * 8);
     printT(h24 < 12 ? "AM" : "PM");
   }
   classicFontEnd(cjk);
@@ -5794,7 +6187,11 @@ void tzPickerTap(int16_t x, int16_t y) {
 // language pills centered on y; fills the active one
 #define LANG_PILL_Y 296
 #define LANG_PILL_H 30
+#if HAS_MUSIC
+#define LANG_PILL_X 185          // language pill (cycles through LANG_COUNT on tap): in the middle without SND's
+#else
 #define LANG_PILL_X 336          // language pill (cycles through LANG_COUNT on tap)
+#endif
 #define LANG_PILL_W 96
 static const char *const LANG_CODES[LANG_COUNT] = { "ES", "EN", "FR", "DE", "IT", "PT", "JA", "KO" };
 
@@ -6031,6 +6428,13 @@ void renderSettings() {
 #endif
 
 void renderClock() {
+#if HAS_MUSIC
+  if (soundOpen) {  // V2: the Sound page (sound_v2.h)
+    v2SoundPage();
+    gfx->flush();
+    return;
+  }
+#endif
   if (clockPage == V2_ABOUT_PAGE) {  // V2: About, the last page (about_v2.h)
     v2About();
     gfx->flush();
@@ -6075,13 +6479,8 @@ void clockTap(int16_t x, int16_t y) {
     return;
   }
 #endif
-#ifdef BOARD_KNOMI_V2
-  if (clockLocked() && clockTzUi && x >= TZ_BTN_X && x < TZ_BTN_X + TZ_BTN_W && y >= TZ_BTN_Y && y < TZ_BTN_Y + TZ_BTN_H) {
-    sfxPlay(SFX_TAP);
-    tzPickerOpen();
-    return;
-  }
-#endif
+  // (V1's time zone button, y 234-274, is gone: V2 draws it under the time and about_v2.h takes its taps. Its old
+  // place, still asked first until 2026-11-22, took the taps on the Music slider and on half the Knomi's Sound row)
   if (clockPage == 0 && clockLocked()) {  // V2: the time zone, the sound and the language rows (about_v2.h)
     v2SettingsTap(x, y);
     return;
@@ -6095,11 +6494,13 @@ void clockTap(int16_t x, int16_t y) {
     return;
   }
   if (y >= LANG_PILL_Y && y <= LANG_PILL_Y + LANG_PILL_H) {
+#if !HAS_MUSIC  // (elsewhere the Sound page has it)
     if (x >= 34 && x < 130) {                  // sound switch
       audioSetEnabled(!audioEnabled());
       if (audioEnabled()) sfxPlay(SFX_TAP);    // confirms when turned on
       return;
     }
+#endif
     if (x >= LANG_PILL_X && x < LANG_PILL_X + LANG_PILL_W) {  // cycles language
       setLang((Lang)((gLang + 1) % LANG_COUNT));
       applyLangFont();  // the font changes with the language
@@ -9007,6 +9408,10 @@ static bool pressSet(PressTarget &t, int x, int y, int w, int h, const char *lab
 // "tap anywhere to close" screens keep working as they did, without a preview.
 bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   static char buf[52];
+  // V2: the ring open, nothing under it is a control: a touch acts on nothing as it lands, nothing lifts under the
+  // mouse; the ring takes the lift (Fedor: "clicking sound clicks on the map icon behind it. When this menu is open,
+  // the other buttons should not function")
+  if (v2RadialOpen) return false;
   if (introUp()) {  // a game's card: its button
     if (!introAwayT && introBtnHit(x, y))
       return pressSet(t, CX - CARD_BTN_W / 2, CY + CARD_BTN_DY, CARD_BTN_W, CARD_BTN_H, T(S_READY_GO));
@@ -9060,10 +9465,10 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       int px, pw;
       lbPlayBox(px, pw);
       if (lbOnPlay(x, y)) return pressSet(t, px - 6, LB_PLAY_Y - 6, pw + 12, 26, gameLabel(V2_CART_GAME[-1 - v2GamesPage]));
-      return v2PressNav(x, y, t, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, true);
+      return v2GamesPressNav(x, y, t);
     }
     int g = gameAt(x, y);
-    if (g < 0) return v2PressNav(x, y, t, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y, true);  // V2: its page arrows and X
+    if (g < 0) return v2GamesPressNav(x, y, t);  // V2: its page arrows and X
     if (g < 0) return false;
     int k = v2CartOfGame(g);  // V2: round the cartridge
     return pressSet(t, V2_CART_XY[k][0] - 5, V2_CART_XY[k][1] - 5, 115, 140, gameLabel(g));
@@ -9088,7 +9493,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     if (v2PressNav(x, y, t, 0, 0, 0, true, ZONE_CLOSE_Y)) return true;  // V2: its X
     return false;  // Pokedex grids (here and below) swipe between pages: a slow swipe must not pick a square
   }
-  if (gameOpen || runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen || pinOpen || bmOpen) return false;  // aiming, jumping, surfing, walking, volleying, fishing, flipping, matching: no buttons
+  if (gameOpen || runOpen || surfOpen || dungeonOpen || vbOpen || fishOpen || pinOpen || bmOpen || psOpen) return false;  // aiming, jumping, surfing, walking, volleying, fishing, flipping, matching, snapping: no buttons
 
   // --- everything else (same order as onTap) ---
   if (pet.awaitingStarter()) {
@@ -9157,6 +9562,9 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2KbLayerNow(), buf));
   }
   if (clockOpen) {
+#if HAS_MUSIC
+    if (soundOpen) return v2SoundPress(x, y, t);  // V2: the Sound page (sound_v2.h)
+#endif
     if (tzPickOpen && clockPage == 0 && closeHit(x, y)) return v2PressNav(x, y, t, 0, 0, 0, true);  // the picker's X
     if (clockPage == V2_ABOUT_PAGE && v2AboutQr) return v2AboutPress(x, y, t);  // V2: a link's QR code: its X
     if (!tzPickOpen && wifiSetupState() == WS_OFF && v2PressNav(x, y, t, clockPage, V2_CLOCK_PAGES, V2_PAGE_ARROW_Y, true)) return true;
@@ -9189,10 +9597,6 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       if (pressIn(x, y, 133, 340, 200, 48)) return pressSet(t, 133, 340, 200, 48, "OK");
       return false;
     }
-    if (clockLocked() && clockTzUi && pressIn(x, y, TZ_BTN_X, TZ_BTN_Y, TZ_BTN_W, TZ_BTN_H)) {
-      int i = clockTzIndex();
-      return pressSet(t, TZ_BTN_X, TZ_BTN_Y, TZ_BTN_W, TZ_BTN_H, TIME_ZONES[i >= 0 ? i : TIME_ZONE_DEFAULT].city);
-    }
 #endif
     if (!clockLocked() && y >= 190 && y <= 248) {
       static const int16_t BX[4] = { 104, 170, 252, 318 };
@@ -9204,7 +9608,9 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
       return false;
     }
     if (y >= LANG_PILL_Y && y <= LANG_PILL_Y + LANG_PILL_H) {
+#if !HAS_MUSIC
       if (x >= 34 && x < 130) return pressSet(t, 34, LANG_PILL_Y, 96, LANG_PILL_H, audioEnabled() ? T(S_SND_ON) : T(S_SND_OFF));
+#endif
       if (x >= LANG_PILL_X && x < LANG_PILL_X + LANG_PILL_W) {
         snprintf(buf, sizeof(buf), "%s >", LANG_CODES[gLang]);
         return pressSet(t, LANG_PILL_X, LANG_PILL_Y, LANG_PILL_W, LANG_PILL_H, buf);

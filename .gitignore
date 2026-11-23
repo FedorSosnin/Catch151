@@ -1,6 +1,7 @@
 # build artifacts (Catch151/build, and the old ones at the top from before everything moved into Catch151/)
 build/
 build-knomi/
+build-ws21/
 
 # caches and regenerable workshop artifacts
 Catch151/tools/downloads/

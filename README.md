@@ -554,6 +554,8 @@ Game rules run on your computer without a board:
 
 The code also builds for the Waveshare ESP32-S3-Touch-AMOLED-1.75, a bigger round board with a microSD slot. [`docs/WAVESHARE.md`](Catch151/docs/WAVESHARE.md) explains how to build it, flash it and load the sprites.
 
+A port to the Waveshare ESP32-S3-Touch-LCD-2.1 (480 × 480, for a handheld with speakers and a battery) is being prepared. It compiles but hasn't run on the board yet: see [`docs/WAVESHARE_21.md`](Catch151/docs/WAVESHARE_21.md).
+
 ### What's where
 
 Everything is in the [`Catch151`](Catch151) folder:

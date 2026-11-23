@@ -663,6 +663,39 @@ static void v2NameText(const char *name, int y) {
   }
 }
 
+// The battery on the top line: its outline on the 2 px grid with the level inside, then the percentage, the two
+// centred together. The icon in the ink colour, amber under 40%, red under 15% (as the original look had it), green
+// with a bolt in place of the level while it charges.
+#define V2_BAT_W 28  // the body (its tip is 4 px more)
+#define V2_BAT_H 14  // as tall as the digits beside it
+static void v2Battery(int pct, bool charging, int y) {
+  char t[6];
+  snprintf(t, sizeof(t), "%d%%", pct);
+  bool cjk = classicFontBegin();  // digits and % in the classic font, as the clock has them
+  setSize(2);
+  int x = SNAP2(CX - (V2_BAT_W + 4 + 6 + textW(t, 2)) / 2);
+  uint16_t ink = inkColor();
+  uint16_t col = charging ? UI_BAR_OK : pct >= 40 ? ink : pct >= 15 ? UI_BAR_WARN : UI_BAR_BAD;
+  gfx->fillRect(x + 2, y, V2_BAT_W - 4, 2, col);  // the outline, 2 px, its corners cut
+  gfx->fillRect(x + 2, y + V2_BAT_H - 2, V2_BAT_W - 4, 2, col);
+  gfx->fillRect(x, y + 2, 2, V2_BAT_H - 4, col);
+  gfx->fillRect(x + V2_BAT_W - 2, y + 2, 2, V2_BAT_H - 4, col);
+  gfx->fillRect(x + V2_BAT_W, y + 4, 4, V2_BAT_H - 8, col);  // the tip
+  if (charging) {  // a bolt in 2 px cells across the inside, which is 12 cells by 5
+    static const uint8_t BOLT[5][2] = { { 6, 7 }, { 5, 6 }, { 4, 7 }, { 5, 6 }, { 4, 5 } };  // each row's first and last cell
+    for (int r = 0; r < 5; r++)
+      gfx->fillRect(x + 2 + BOLT[r][0] * 2, y + 2 + r * 2, (BOLT[r][1] - BOLT[r][0] + 1) * 2, 2, C565(0xff, 0xd9, 0x4a));
+  } else {  // the level: 20 by 6, 2 px in from the outline
+    int fw = SNAP2((V2_BAT_W - 8) * pct / 100);
+    if (pct > 0 && fw < 2) fw = 2;
+    if (fw) gfx->fillRect(x + 4, y + 4, fw, V2_BAT_H - 8, col);
+  }
+  gfx->setTextColor(ink);
+  setCur(x + V2_BAT_W + 4 + 6, y);
+  printT(t);
+  classicFontEnd(cjk);
+}
+
 // the time for the home's clock, read once a second (on the Waveshare the clock is read over I2C): 0 before it's known
 static uint32_t v2ClockEpoch() {
   static uint32_t at = 0, e = 0;
@@ -734,7 +767,7 @@ static void v2FadeText(int x, int y, const char *s, int d, uint16_t col, int a) 
 }
 
 // The big clock, asleep: h:mm big and AM/PM small beside it, their bottoms level, as the clock screen's
-// (drawBigTime()) but smaller, in white on a dark shadow so it reads on the dimmed night. Drawn after the icons, so a
+// (drawBigTimeAt()) but smaller, in white on a dark shadow so it reads on the dimmed night. Drawn after the icons, so a
 // poop under it never covers the time. Each minute it moves a pixel or two round a small loop, so an AMOLED panel
 // isn't holding the same bright pixels all night
 static void v2SleepClockDraw() {
@@ -782,11 +815,26 @@ static void v2SleepClockDraw() {
 }
 
 // The clock on top (asleep, it's down under your Pokemon: v2SleepClockDraw()), then the level, the name (big and
-// bold) and the status. No battery (the Knomi has none) and no streak flame (it's on the card).
+// bold) and the status. On a board with a battery (the Waveshare 2.1) the battery takes the clock's place on top
+// (Fedor: "We need to find a place to show battery level. Maybe instead of the clock at the top of the screen"); the
+// time is on the clock page, and asleep it still comes down under your Pokemon. The Knomi and the computers have no
+// battery, so they keep the clock. No streak flame (it's on the card).
 static void v2Header(const char *name, uint16_t nameColor, const char *msg, const char *level) {
+  static uint32_t batAt = 0;
+  static int bat = -1;
+  static bool charging = false;
+  uint32_t now = millis();
+  if (!batAt || now - batAt >= 1000) {  // once a second, as the clock
+    batAt = now ? now : 1;
+    bat = batPercent();  // -1: no battery (or none connected): the clock
+    charging = bat >= 0 && batCharging();
+  }
   uint32_t e = v2ClockEpoch();
+  float sleepP = v2SleepClockP();
   gfx->setTextColor(inkColor());
-  if (e && v2SleepClockP() <= 0) {  // (no time yet: no clock)
+  if (bat >= 0) {
+    if (sleepP <= 0 || sleepP >= 0.1f) v2Battery(bat, charging, V2_CLOCK_Y);  // (not while the sleep clock leaves it)
+  } else if (e && sleepP <= 0) {  // (no time yet: no clock)
     char clk[12];
     int h = (e / 3600) % 24;
     snprintf(clk, sizeof(clk), "%d:%02d %s", clock12Hour(h), (int)((e / 60) % 60), h < 12 ? "AM" : "PM");
@@ -2253,10 +2301,12 @@ static void v2DrawPoops(int n, bool party) {
 #include "repel_v2.h"    // the Repel
 #include "radial_v2.h"   // the radial menu: a hold on the Pokemon
 #include "about_v2.h"    // Settings' first page's rows, and the About page with the coin
+#include "sound_v2.h"    // the Sound page (not the Knomi): the ring's speaker
 #include "tower_v2.h"    // Knomi Tower: Travel's second page and the climb
 #include "fishing_v2.h"  // Reel Fishing: MOCKUPS only (FISHMOCK n)
 #include "pinball_v2.h"  // Pinball, drawn
 #include "berrymatch_v2.h"  // BerryMatch, drawn
+#include "picsnap_v2.h"     // Pic Snap, drawn
 #include "leaderboard_v2.h"  // the leaderboard on the Game Boy: a page a game, left of the cartridges
 #include "slide_v2.h"    // a menu's pages slide as they turn
 #include "music_v2.h"    // the music each screen wants (a computer and the web)

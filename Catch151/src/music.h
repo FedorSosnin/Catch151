@@ -1,9 +1,13 @@
 #pragma once
 // V2: background music. Each pass of the loop the game says which track its screen wants (music_v2.h picks it), and
-// music_synth.h plays it under the effects, faded from one to the next. Only on a computer and the web: the Knomi has
-// no speaker, and the Waveshare's audio task plays one effect at a time, so on the boards there is no music code and
-// no song in the firmware (HAS_MUSIC 0). The songs are written in tools/music/songs.py, which makes music_data.h.
+// music_synth.h plays it under the effects, faded from one to the next. On a computer, the web, and the Waveshare 2.1
+// with an amplifier added (audio.cpp mixes it there as host_audio.cpp does). The Knomi has no speaker, so it has no
+// music code and no song in its firmware (HAS_MUSIC 0). The songs are written in tools/music/songs.py, which makes
+// music_data.h.
 #include <stdint.h>
+#ifdef BOARD_WS21
+#include "pin_config.h"  // (WS21_AUDIO_PDM / WS21_AUDIO_I2S: an amplifier is wired)
+#endif
 
 enum MusicTrack : uint8_t {
   MUS_NONE,
@@ -44,7 +48,7 @@ enum MusicTrack : uint8_t {
 
 enum : uint8_t { VOICE_PET, VOICE_WIN };  // a Pokemon's cry (cry.h): petted, or after a win
 
-#ifdef BOARD_HOST
+#if defined(BOARD_HOST) || (defined(BOARD_WS21) && (defined(WS21_AUDIO_PDM) || defined(WS21_AUDIO_I2S)))
 #define HAS_MUSIC 1
 void musicWant(uint8_t track);  // the track this screen wants: what plays follows it (host_audio.cpp)
 bool musicEnabled();            // the Music switch, saved as mus, on by default (apart from SOUND, the effects')

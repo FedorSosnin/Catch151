@@ -164,12 +164,22 @@ bool clockWifiKnownPass(const char *, char *, size_t) { return false; }
 int clockWifiKnownCount() { return 0; }
 bool clockWasSeed() { return false; }
 
-// ---- power: always plugged in ----
+// ---- power: always plugged in. POKEMACGOCHI_FAKE_BAT=<0-100>[c] gives it a battery, for pictures of a board's
+// battery on the home screen ("15c": 15% and charging) ----
+static const char *fakeBat() {
+  const char *e = getenv("POKEMACGOCHI_FAKE_BAT");
+  return e && *e ? e : nullptr;
+}
 bool batBegin() { return false; }
 void pmuEnablePanel() {}
 void batSetPollMs(uint32_t) {}
-int batPercent() { return -1; }
-bool batCharging() { return false; }
+int batPercent() {
+  const char *e = fakeBat();
+  if (!e) return -1;
+  int p = atoi(e);
+  return p < 0 ? 0 : p > 100 ? 100 : p;
+}
+bool batCharging() { return fakeBat() && strchr(fakeBat(), 'c'); }
 int batMillivolts() { return 0; }
 bool batShouldShutdown() { return false; }
 void batPowerOff() {}

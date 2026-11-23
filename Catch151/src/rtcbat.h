@@ -5,6 +5,11 @@
 bool rtcBegin();
 uint32_t rtcEpoch();             // local seconds since 1970; 0 if there is no time yet
 void rtcSetEpoch(uint32_t e);    // sets it by hand (the time screen, the seed): no longer network time
+#ifdef BOARD_WS21
+void rtcSetSeed(uint32_t e);     // the start-up seed: not written to the clock chip, where it would pass for the time
+#else
+inline void rtcSetSeed(uint32_t e) { rtcSetEpoch(e); }
+#endif
 bool clockFromNetwork();         // network time (NTP, a time server): the time screen only shows it
 
 #ifdef BOARD_KNOMI_V2

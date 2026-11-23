@@ -1,6 +1,8 @@
 #include "ota_update.h"
 
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
+// (not on the Waveshare 2.1: the update site carries the Knomi's firmware, which would not drive its screen. It gets
+// the stubs below until it has an update channel of its own: docs/WAVESHARE_21.md)
+#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST) && !defined(BOARD_WS21)
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>

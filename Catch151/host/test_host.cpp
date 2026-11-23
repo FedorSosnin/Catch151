@@ -24,6 +24,7 @@
 #include "rtcbat.h"
 #include "pinball.h"  // Pinball's state, to check the game played (the sketch's pin)
 #include "berrymatch.h"  // BerryMatch's, the same (the sketch's bm)
+#include "picsnap.h"  // Pic Snap's, the same (the sketch's ps)
 #include "i18n.h"
 #include "pet.h"
 #include "press.h"
@@ -649,7 +650,9 @@ static void testGame() {
   hostSerialPush("GAMES");
   runTicks(300);
   CHECK(gamesMenuOpen && introCard == -1);
-  tapAt(150, 128);  // Berry Drop's tile (V2: its cartridge, which stops at 166)
+  tapAt(150, 128);  // Berry Drop's tile (V2: its cartridge, which stops at 166): its own page, its leaderboard
+  CHECK(gamesMenuOpen && !gameOpen);
+  tapAt(233, 358);  // TAP TO PLAY
   CHECK(gameOpen && !gamesMenuOpen && introCard == 0);
   runTicks(500);    // landed
   tapAt(233, 240);  // the text
@@ -661,6 +664,7 @@ static void testGame() {
   runTicks(300);
   gameOpen = false;  // (Berry Drop, left: the menu opens over it in this test)
   tapAt(150, 128);
+  tapAt(233, 358);  // (its page's TAP TO PLAY)
   runTicks(500);
   CHECK(gameOpen && introCard == 0);
   hostPointer(233, 380, true);  // a swipe up from the bottom: it would quit a game, here it sends the card
@@ -678,6 +682,7 @@ static void testGame() {
   hostSerialPush("GAMES");
   runTicks(300);
   tapAt(170, 300);  // Rock Hopper's tile (V2: its cartridge, the first page's third, from 118 x 238)
+  tapAt(233, 358);  // (its page's TAP TO PLAY)
   runTicks(500);
   tapAt(233, 335);  // Ready, GO!
   for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);  // until it has ended
@@ -701,6 +706,7 @@ static void testGame() {
     hostSerialPush("GAMES");
     runTicks(300);
     tapAt(170, 300);  // Rock Hopper again
+    tapAt(233, 358);  // (its page's TAP TO PLAY)
     runTicks(500);
     tapAt(233, 335);
     for (int i = 0; i < 40 && !runOverT; i++) runTicks(200);
@@ -708,7 +714,10 @@ static void testGame() {
     CHECK(runOpen && runOverT);
   }
   tapAt(233, 422);  // the X
-  CHECK(!runOpen && gamesMenuOpen);
+  extern int gameAt(int16_t x, int16_t y);
+  CHECK(!runOpen && gamesMenuOpen && gameAt(150, 128) < 0);  // back on its own page, to see where it stands
+  tapAt(233, 422);  // that page's X: the cartridges
+  CHECK(gamesMenuOpen);
   {  // the Games menu's two pages, four cartridges a page (Fedor): the right arrow turns to the second, where
      // Dungeon Crawler, Reel Fishing and Pinball are; Pinball opens under its card, plays (a finger held on the left
      // half raises the left flipper; the button both), and a swipe up quits it (home, as every game's does); the menu
@@ -719,7 +728,8 @@ static void testGame() {
     CHECK(gameAt(150, 128) == 0 && gameAt(300, 300) == 4);  // Berry Drop; PikaSurf
     tapAt(432, 228);  // the right arrow, where every paged screen has it
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3 && gameAt(300, 128) == 5 && gameAt(150, 300) == 6 && gameAt(300, 300) == 7);
-    tapAt(170, 300);  // Pinball
+    tapAt(170, 300);  // Pinball: its page
+    tapAt(233, 358);  // TAP TO PLAY
     CHECK(pinOpen && !gamesMenuOpen && introCard == 6);
     runTicks(500);
     tapAt(233, 335);  // Ready, GO!
@@ -746,13 +756,13 @@ static void testGame() {
     CHECK(!pinOpen && !gamesMenuOpen);  // home, as every game's swipe goes
     hostSerialPush("GAMES");  // the menu again, still on its second page
     runTicks(300);
-    tapAt(432, 228);  // no third page: nothing (and the menu stays)
     CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
     {  // BerryMatch, the second page's fourth: under its card (the button, Space, sends it off); a piece touched is
        // picked and one beside it swaps; the arrows move its cursor and Space picks; a swipe up quits
       extern bool bmOpen;
       extern BmState bm;
       tapAt(300, 300);
+      tapAt(233, 358);  // (its page's TAP TO PLAY)
       CHECK(bmOpen && !gamesMenuOpen && introCard == 7);
       runTicks(500);
       hostButton(true);
@@ -817,6 +827,66 @@ static void testGame() {
       runTicks(300);
       CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
     }
+    {  // Pic Snap, alone on the third page: under its card, the first place ready behind it and nobody there yet; the
+       // card sent off, a wild one shows up; a tap anywhere takes the photo (the print up), a tap on the print goes on
+       // to the next place; the last photo's print ends the roll: the roll, then the score, the record kept; PLAY
+       // AGAIN! a new roll; a swipe up quits, its pictures freed
+      extern bool psOpen;
+      extern PsState ps;
+      extern uint32_t psOverT;
+      extern Pet pet;
+      tapAt(432, 228);  // the right arrow: the third page
+      CHECK(gamesMenuOpen && gameAt(150, 128) == 8 && gameAt(300, 128) < 0);
+      tapAt(150, 128);
+      tapAt(233, 358);  // (its page's TAP TO PLAY)
+      CHECK(psOpen && !gamesMenuOpen && introCard == 8);
+      runTicks(500);
+      CHECK(ps.phase == PSP_LOAD && ps.shot == 0);  // it waits under the card
+      hostButton(true);  // the button (Space): Ready, GO!
+      runTicks(60);
+      hostButton(false);
+      runTicks(300);
+      CHECK(introCard == -1 && (ps.phase == PSP_IN || ps.phase == PSP_AIM) && ps.dex > 0);
+      for (int i = 0; i < 40 && ps.phase != PSP_AIM; i++) runTicks(50);
+      CHECK(ps.phase == PSP_AIM);
+      tapAt(90, 330);  // anywhere: the photo
+      CHECK((ps.phase == PSP_SNAP || ps.phase == PSP_PRINT) && ps.got[0] && ps.score == ps.pts[0]);
+      for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
+      CHECK(ps.phase == PSP_PRINT);
+      runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      tapAt(233, 233);  // on to the next place
+      for (int i = 0; i < 60 && ps.phase != PSP_AIM; i++) runTicks(50);
+      CHECK(ps.shot == 1 && ps.phase == PSP_AIM);
+      tapAt(380, 233);
+      CHECK((ps.phase == PSP_SNAP || ps.phase == PSP_PRINT) && ps.got[1]);  // (the tap takes a while here)
+      ps.shot = PS_SHOTS - 1;  // (the rest of the roll skipped: this was its last photo)
+      for (int i = 0; i < 40 && ps.phase != PSP_PRINT; i++) runTicks(50);
+      runTicks(PS_PRINT_MIN_S * 1000 + 100);
+      tapAt(233, 233);
+      runTicks(200);
+      CHECK(ps.phase == PSP_END && !psOverT);  // the roll
+      runTicks(700);
+      tapAt(233, 233);  // its score, over it
+      runTicks(200);
+      CHECK(psOverT && pet.snapHi == ps.score && ps.score == ps.pts[0] + ps.pts[1]);  // (the two photos taken)
+      tapAt(233, 287);  // PLAY AGAIN!
+      runTicks(300);
+      CHECK(psOpen && !psOverT && ps.shot == 0 && ps.score == 0);
+      hostPointer(233, 400, true);  // a swipe up quits
+      for (int k = 1; k <= 8; k++) {
+        hostPointer(233, 400 - k * 30, true);
+        runTicks(16);
+      }
+      hostPointer(233, 160, false);
+      runTicks(400);
+      extern bool snapPicturesHeld();
+      CHECK(!psOpen && !gamesMenuOpen && !snapPicturesHeld());
+      hostSerialPush("GAMES");  // the menu again, on its third page; back to the second
+      runTicks(300);
+      CHECK(gamesMenuOpen && gameAt(150, 128) == 8);
+      tapAt(34, 228);
+      CHECK(gamesMenuOpen && gameAt(150, 128) == 3);
+    }
     // a swipe turns the page when it starts off the cartridges (one that starts on one presses it, as every control
     // acts on the touch: Fedor's choice, 2026-11-18)
     int sy = 0;
@@ -831,6 +901,19 @@ static void testGame() {
     runTicks(50);
     hostPointer(330, sy, false);
     runTicks(300);
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
+    // each game's own page (Fedor: "When you click on a game cartridge, it will take you to its leaderboard page ...
+    // When you are in the leaderboard view, you can go left and right to cycle through each game"): from Berry Drop's,
+    // back is the last game's, Pic Snap's; its X goes back to the cartridges, on Pic Snap's page (the third); on from
+    // Pic Snap's is Berry Drop's again
+    tapAt(150, 128);  // Berry Drop's cartridge: its page
+    CHECK(gamesMenuOpen && gameAt(150, 128) < 0);
+    tapAt(34, 228);  // the left arrow: round to Pic Snap's
+    tapAt(233, 422);  // its X
+    CHECK(gamesMenuOpen && gameAt(150, 128) == 8 && gameAt(300, 300) < 0);
+    tapAt(150, 128);  // Pic Snap's cartridge: its page
+    tapAt(432, 228);  // the right arrow: round to Berry Drop's
+    tapAt(233, 422);
     CHECK(gamesMenuOpen && gameAt(150, 128) == 0);
     // the press preview only on a hold (Fedor: "on HOLD. But not right away on touch"): a finger that slides onto a
     // cartridge shows nothing and, lifted at once, starts nothing; held still there, it shows; slid off, it goes
@@ -970,8 +1053,31 @@ static void testGame() {
     hostPointer(233, 240, false);
     runTicks(200);
     CHECK(v2RadialOpen);
-    tapAt(88, 206);  // the Pokedex, on the left
+    tapAt(88, 206);  // the Pokedex, on the left (up left, where the ring is in five)
     CHECK(galleryOpen && !v2RadialOpen && galleryPage == 0);
+    {  // the ring in five (not the Knomi): its speaker, down left, opens the Sound page (sound_v2.h); its X closes it
+      extern bool soundOpen;
+      galleryOpen = false;
+      runTicks(300);
+      hostPointer(233, 240, true);
+      runTicks(700);
+      hostPointer(233, 240, false);
+      runTicks(200);
+      CHECK(v2RadialOpen);
+      extern ZoneScreen zoneScreen;
+      tapAt(100, 335);  // the speaker's section, over the home's first icon (the map): only the ring takes it (Fedor:
+                        // "clicking sound clicks on the map icon behind it")
+      CHECK(clockOpen && soundOpen && !v2RadialOpen && zoneScreen == ZS_NONE);
+      tapAt(233, 422);
+      CHECK(!clockOpen);
+      runTicks(300);
+      hostPointer(233, 240, true);  // ...and the Pokedex again, for what follows
+      runTicks(700);
+      hostPointer(233, 240, false);
+      runTicks(200);
+      tapAt(88, 206);
+      CHECK(galleryOpen && galleryPage == 0);
+    }
     swipe(360, 230, 110, 230);  // right to left: the next page
     CHECK(galleryOpen && galleryPage == 1);
     galleryOpen = false;
@@ -1072,6 +1178,31 @@ static void testGame() {
       CHECK(bBallT != t0);
       closeBattle();
       runTicks(200);
+      // the Sound page (Fedor: "One slider for music, and one for other sounds. Along with a mute button that turns both
+      // off quickly"): its sliders and Mute (the ring's speaker opens it: tested with the ring, above)
+      {
+        extern bool clockOpen, soundOpen;
+        bool snd = audioEnabled(), mus = musicEnabled();
+        clockOpen = soundOpen = true;
+        runTicks(300);
+        tapAt(212, 202);  // the Effects slider's 0: off
+        CHECK(!audioEnabled());
+        tapAt(308, 202);  // ...its 2: on, at 2
+        CHECK(audioEnabled() && soundVolume() == 2);
+        tapAt(260, 142);  // the Music slider's 1
+        CHECK(musicEnabled() && musicVolume() == 1);
+        tapAt(233, 289);  // Mute: both off
+        CHECK(!audioEnabled() && !musicEnabled());
+        tapAt(233, 289);  // Unmute: both back, each at its level
+        CHECK(audioEnabled() && musicEnabled() && soundVolume() == 2 && musicVolume() == 1);
+        tapAt(233, 422);  // its X
+        CHECK(!clockOpen);
+        soundSetVolume(3);
+        musicSetVolume(3);
+        audioSetEnabled(snd);
+        musicSetEnabled(mus);
+        runTicks(200);
+      }
       // Settings, tidied, and About (Fedor: "an about page with my logo on it ... a way to get to the repo but also my
       // youtube channel"): the Sound and Language rows; the next page is About; its links open in the browser, and
       // with nothing to open them the link's QR code shows (as on the Knomi), a tap puts it away; the X closes
@@ -1083,15 +1214,8 @@ static void testGame() {
         clockOpen = true;
         clockPage = 0;
         runTicks(300);
-        bool snd = audioEnabled();
-        tapAt(212, 208);  // the Sound row's slider (a computer's): its 0, off
-        CHECK(!audioEnabled());
-        tapAt(308, 208);  // ...its 2
-        CHECK(audioEnabled() && soundVolume() == 2);
-        soundSetVolume(3);
-        audioSetEnabled(snd);
         Lang was = gLang;
-        tapAt(290, 280);  // the Language row's button: the next language
+        tapAt(290, 238);  // the Language row's button, the only row (the sound has its own page): the next language
         CHECK(gLang == (Lang)((was + 1) % LANG_COUNT));
         setLang(was);
         applyLangFont();

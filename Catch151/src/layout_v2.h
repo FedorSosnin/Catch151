@@ -1,12 +1,13 @@
 #pragma once
 #include <stdint.h>
+#include "music.h"  // (HAS_MUSIC: the settings page's height)
 // Catch 151 V2 home layout, on the 466x466 canvas (centre 233,233, visible radius 231).
 // Angles are in degrees, 0 = right, clockwise (screen y goes down).
 
 #define V2_GRID 4                 // one 8-bit pixel of scenery = 4 canvas px = 2 Knomi px
 
-// header (no battery, no streak flame on the home screen)
-#define V2_CLOCK_Y 10             // size 2, e.g. "4:15 PM" (clock12Hour)
+// header (no streak flame on the home screen)
+#define V2_CLOCK_Y 10             // size 2, e.g. "4:15 PM" (clock12Hour); the battery here on a board with one
 #define V2_LEVEL_Y 34             // size 2
 #define V2_NAME_Y 54              // size 3, bold (drawn twice 1 px apart), accent colour; light ink on dark zones
 #define V2_STATUS_Y 90            // size 2
@@ -147,13 +148,19 @@ static const int16_t V2_MANSION_RISE[4] = { 20, 226, 446, 330 };   // added to t
 #define V2_CLOCK_PAGES 2  // (a computer's Wi-Fi and updates are its own business)
 #endif
 #define V2_ABOUT_PAGE (V2_CLOCK_PAGES - 1)
-#define V2_SET_PANEL_Y1 318  // the first page's panel's bottom: START OVER is under it
-
-// the time page's START OVER (menus_v2.h): its box, which is also its tap
-#define V2_RESET_X0 113
+// the first page's panel's bottom, START OVER under it (menus_v2.h): its box, which is also its tap. Without the sound
+// rows (not the Knomi: the Sound page, sound_v2.h), both higher
+#if HAS_MUSIC
+#define V2_SET_PANEL_Y1 272
+#define V2_RESET_Y0 290
+#define V2_RESET_Y1 326
+#else
+#define V2_SET_PANEL_Y1 318
 #define V2_RESET_Y0 337
-#define V2_RESET_X1 353
 #define V2_RESET_Y1 373
+#endif
+#define V2_RESET_X0 113
+#define V2_RESET_X1 353
 
 // the trophy room (menus_v2.h): its medals in the room's order, badges, the top shelf, the cups, the frames,
 // the rosettes (medal bits, pet.h), which the medal card's page buttons and swipes step through ("Page 7 of 25")

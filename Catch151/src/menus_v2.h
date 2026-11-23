@@ -606,9 +606,14 @@ static void v2Card() {
 // V1's language pill is defined further down the sketch; the same values here (a different one would warn).
 #define LANG_PILL_Y 296
 #define LANG_PILL_H 30
+#if HAS_MUSIC  // (not the Knomi: no sound button here, the Sound page has it, so the language in the middle)
+#define LANG_PILL_X 185
+#else
 #define LANG_PILL_X 336
+#endif
 #define LANG_PILL_W 96
 static void v2SettingsRows();  // (about_v2.h)
+void drawBigTimeAt(int h24, int m, int size, int y);  // (the sketch)
 // Settings' first page. Its time set (the network's or the computer's): the time, where it comes from, a row each for
 // the sound and the language, START OVER (about_v2.h; the version is on the About page now). Being set by hand (a
 // Knomi without Wi-Fi): V1's controls where they were
@@ -620,10 +625,12 @@ static void v2Clock(const char *langCode) {
   gfx->setTextColor(UI_INK);
   if (locked) {  // network time or the computer's: shown as it runs
     uint32_t e = rtcEpoch();
-    drawBigTime((e / 3600) % 24, (e / 60) % 60);
+    // at 6, with room round it (Fedor: "that clock is too big. It needs padding around the numbers so it doesnt
+    // touch"; at 8 it ran from 16 px under the panel's top to 3 px over the time zone's button)
+    drawBigTimeAt((e / 3600) % 24, (e / 60) % 60, 6, 100);
     v2SettingsRows();
   } else {
-    drawBigTime(clockH, clockM);
+    drawBigTimeAt(clockH, clockM, 6, 120);  // (as the settings page's, in the middle of the room over the buttons)
     static const int16_t KX[4] = { 104, 170, 252, 318 };
     for (int k = 0; k < 4; k++) v2LabelButton(KX[k] + 3, 190 + 3, KX[k] + 55, 190 + 55, k % 2 ? "+" : "-", C565(0x4f, 0x93, 0xc4), UI_WHITE, 4);
     gfx->setTextColor(V2_INK_MUTED);
@@ -633,10 +640,12 @@ static void v2Clock(const char *langCode) {
     setCur(276, 256);
     printT(T(S_MIN));
   }
-  if (!locked) {  // being set: sound, left, and the language, right, both one tap; OK
+  if (!locked) {  // being set: sound, left (the Knomi), and the language, right, both one tap; OK
+#if !HAS_MUSIC
     bool snd = audioEnabled();
     v2LabelButton(37, LANG_PILL_Y + 3, 127, LANG_PILL_Y + LANG_PILL_H - 3, snd ? T(S_SND_ON) : T(S_SND_OFF),
                   snd ? C565(0x58, 0xb8, 0x68) : C565(0x8e, 0x8c, 0x96));
+#endif
     char lp[10];
     snprintf(lp, sizeof(lp), "%s >", langCode);
     v2LabelButton(LANG_PILL_X + 3, LANG_PILL_Y + 3, LANG_PILL_X + LANG_PILL_W - 3, LANG_PILL_Y + LANG_PILL_H - 3, lp,
@@ -663,7 +672,7 @@ static void v2TzPicker() {
   uint32_t utc = clockUtc() ? clockUtc() : rtcEpoch();
   uint32_t l = clockLocalIn(tzPickIdx, utc);
   gfx->setTextColor(UI_INK);
-  drawBigTime((l / 3600) % 24, (l / 60) % 60);
+  drawBigTimeAt((l / 3600) % 24, (l / 60) % 60, 6, 122);  // (as the settings page's, midway to the city)
   const char *city = TIME_ZONES[tzPickIdx].city;
   setSize(4);
   int cs = textW(city, 4) <= 300 ? 4 : 2;  // (an even size: on the Knomi each font pixel lands whole; 3 spread over a pixel and a half, Fedor: crisp as the battles)
@@ -1579,7 +1588,11 @@ static void v2PaintGb(int) {
   gfx->fillCircle(bx1 - 60, by1 - 60, 60, sc565(0x5E5C74));  // (the round corner's fill, then its rim)
   gfx->fillRect(bx1 - 60, by0 + 22, 60, by1 - by0 - 82, sc565(0x5E5C74));
   gfx->fillRect(bx0 + 22, by1 - 60, bx1 - bx0 - 82, 60, sc565(0x5E5C74));
-  gfx->fillRect(bx0, by0, bx1 - bx0, 4, sc565(0x7A7890));  // lit along its top
+  for (int dy = 0; dy < 4; dy++) {  // lit along its top, inside its round corners (Fedor: it ran out over them)
+    float e = 22 - dy - 0.5f;
+    int in = 22 - (int)sqrtf(22 * 22 - e * e);
+    gfx->fillRect(bx0 + in, by0 + dy, bx1 - bx0 - 2 * in, 1, sc565(0x7A7890));
+  }
   // the two lines across its top, a gap where the words would be
   for (int k = 0; k < 2; k++) {
     uint16_t c = k ? sc565(0x2A2A6E) : sc565(0xB83A78);
@@ -1736,7 +1749,7 @@ static void v2Cart(int x, int y, const uint16_t *pic, const char *title, Rgb she
 static uint16_t *v2LblArt = nullptr;
 static uint16_t *v2Lbl(int i) { return v2LblArt ? v2LblArt + i * V2_LBL_W * V2_LBL_H : nullptr; }
 static bool v2LblStart() {
-  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(11 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));  // (8: Reel Fishing's, 9: Pinball's, 10: BerryMatch's)
+  if (!v2LblArt) v2LblArt = (uint16_t *)ps_malloc(12 * V2_LBL_W * V2_LBL_H * sizeof(uint16_t));  // (8: Reel Fishing's, 9: Pinball's, 10: BerryMatch's, 11: Pic Snap's)
   return v2LblArt != nullptr;
 }
 static void v2LblKeep(int i) {
@@ -1784,6 +1797,7 @@ static void v2LblBurst(Rgb base, Rgb ray) {
 }
 static int16_t v2LblKey[2] = { -1, -1 };  // what each set was painted for (-1: not yet)
 static void bmPaintLabel();  // (BerryMatch's: berrymatch_v2.h, further on)
+static void psPaintLabel();  // (Pic Snap's: picsnap_v2.h, further on)
 static void v2PaintGameLabels() {
   if (!v2LblStart()) return;
   // Berry Drop: a clearing, Bulbasaur under three falling berries. A title on three lines leaves room for the
@@ -1869,6 +1883,9 @@ static void v2PaintGameLabels() {
   // BerryMatch: a little board, three Oran Berries lined up, Squirtle watching (berrymatch_v2.h)
   bmPaintLabel();
   v2LblKeep(10);
+  // Pic Snap: a Pokemon in the tall grass, the viewfinder's corners round it (picsnap_v2.h)
+  psPaintLabel();
+  v2LblKeep(11);
 }
 static void v2PaintPlayLabels() {
   if (!v2LblStart()) return;
@@ -1901,14 +1918,14 @@ static void v2PaintPlayLabels() {
 // them (Fedor: "the same spots as they are on other screens"), and "Page 1 of 2" under the cartridges. A page turning
 // slides only the cartridges, inside the Game Boy's screen (Fedor: "just the carts should slide and not the
 // background"): slide_v2.h, its moving box
-#define V2_CARTS 8
+#define V2_CARTS 9
 #define V2_CARTS_PAGE 4
 #define V2_CART_PAGES ((V2_CARTS + V2_CARTS_PAGE - 1) / V2_CARTS_PAGE)
 static const int16_t V2_CART_XY[V2_CARTS_PAGE][2] = { { 106, 96 }, { 254, 96 }, { 106, 238 }, { 254, 238 } };
-static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5, 6, 7 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball, BerryMatch)
-static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8, 9, 10 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
+static const uint8_t V2_CART_GAME[V2_CARTS] = { 0, 1, 2, 4, 3, 5, 6, 7, 8 };  // V1's games in the cartridges' order (Berry Drop, Who's That?, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball, BerryMatch, Pic Snap)
+static const uint8_t V2_CART_LBL[V2_CARTS] = { 0, 1, 2, 3, 4, 8, 9, 10, 11 };   // each one's label picture (v2Lbl: 5..7 are Play together's)
 // the colours the games came in: Green, Silver, Red, Yellow, Blue; Play together's Gold, Crystal, Yellow
-static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A, 0x7A52C8, 0xD8508C };  // (Reel Fishing: Magikarp's orange; Pinball: purple; BerryMatch: a Razz Berry's pink)
+static const Rgb V2_CART_COL[V2_CARTS] = { 0x3E9A52, 0xB4BAC8, 0xD8403A, 0xF2C230, 0x3A6FC8, 0xF07A3A, 0x7A52C8, 0xD8508C, 0x2FA4A8 };  // (Reel Fishing: Magikarp's orange; Pinball: purple; BerryMatch: a Razz Berry's pink; Pic Snap: teal)
 static int v2GamesPage = 0;    // the page the Games menu is on (kept, so a game ends back on its own page)
 static int v2CartsOn(int page) { int n = V2_CARTS - page * V2_CARTS_PAGE; return n < V2_CARTS_PAGE ? n : V2_CARTS_PAGE; }
 static const int16_t V2_PLAY_XY[3][2] = { { 56, 150 }, { 180, 150 }, { 304, 150 } };
@@ -1974,33 +1991,53 @@ static bool v2TagChipHit(int16_t x, int16_t y) {
   v2TagChipBox(x0, w);
   return x >= x0 - 16 && x < x0 + w + 16 && y >= V2_TAG_CHIP_Y - 12 && y < V2_TAG_CHIP_Y + 30;
 }
-// The leaderboard (2.2.15, leaderboard_v2.h): a page a game to the left of the cartridges, in the cartridges' order
-// running on to the left (Fedor: "add our leaderboard in a section to the left of the games"): v2GamesPage -1 is Berry
-// Drop's, next to the Games, -2 Who's That?'s, on to -8, BerryMatch's. The pages all in a row, for the side buttons,
-// a swipe and the slide: v2GamesAt() (0 BerryMatch's leaderboard page .. 7 Berry Drop's, then the cartridges' pages)
+// Each game's own page (leaderboard_v2.h; Fedor, 2026-11-22: "When you click on a game cartridge, it will take you to
+// its leaderboard page. That way each game has its own page. When you are in the leaderboard view, you can go left and
+// right to cycle through each game"): its leaderboard, and TAP TO PLAY. v2GamesPage -1 is the first cartridge's (Berry
+// Drop's), -2 the second's, on to -9 (Pic Snap's). Its side buttons and a swipe go round the games, the last's next
+// the first; its X goes back to the cartridges. (2.2.15 had these pages to the left of the cartridges, in a row.)
 #define V2_LB_PAGES V2_CARTS
-#define V2_GAMES_ALL (V2_LB_PAGES + V2_CART_PAGES)
-static int v2GamesAt() { return v2GamesPage + V2_LB_PAGES; }
-static void v2LbHint();  // (leaderboard_v2.h: LEADERBOARDS down the first page's left edge)
 static void v2GamesTv() {
   v2GbBack(T(S_GAMES));
   v2TagChip();
   if (v2GamesPage >= V2_CART_PAGES) v2GamesPage = V2_CART_PAGES - 1;
-  if (v2GamesPage == 0) v2LbHint();
   for (int k = 0, c = v2GamesPage * V2_CARTS_PAGE; k < v2CartsOn(v2GamesPage); k++, c++)
     v2Cart(V2_CART_XY[k][0], V2_CART_XY[k][1], v2Lbl(V2_CART_LBL[c]), gameLabel(V2_CART_GAME[c]), V2_CART_COL[c]);
-  drawPageArrows(v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y);
+  drawPageArrows(v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
   v2PageOf(V2_CART_PAGES, v2GamesPage, 400);
   v2CloseX();
 }
+// the side buttons a Games page shows: a game's page both (round the games), the cartridges' none past the first or last
+static void v2GamesArrows() {
+  if (v2GamesPage < 0) drawPageArrows(1, 3, V2_PAGE_ARROW_Y);
+  else drawPageArrows(v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
+}
 // the Games menu's page arrow under a tap: -1 back, 1 on, 0 neither (or one not shown)
-static int v2GamesArrowAt(int16_t x, int16_t y) { return pageArrowAt(x, y, v2GamesAt(), V2_GAMES_ALL, V2_PAGE_ARROW_Y); }
-// turns the Games menu's page (a swipe or an arrow): false if there's no page that way
+static int v2GamesArrowAt(int16_t x, int16_t y) {
+  if (v2GamesPage < 0) return pageArrowAt(x, y, 1, 3, V2_PAGE_ARROW_Y);
+  return pageArrowAt(x, y, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y);
+}
+// ...and its press preview (the side buttons and the X)
+static bool v2GamesPressNav(int16_t x, int16_t y, PressTarget &t) {
+  if (v2GamesPage < 0) return v2PressNav(x, y, t, 1, 3, V2_PAGE_ARROW_Y, true);
+  return v2PressNav(x, y, t, v2GamesPage, V2_CART_PAGES, V2_PAGE_ARROW_Y, true);
+}
+// turns the Games menu's page (a swipe or an arrow): false if there's no page that way. A game's page goes round the
+// games: on from the last is the first
 static bool v2GamesTurn(int d) {
+  if (v2GamesPage < 0) {
+    int c = (-1 - v2GamesPage + d + V2_LB_PAGES) % V2_LB_PAGES;
+    v2GamesPage = -1 - c;
+    return true;
+  }
   int p = v2GamesPage + d;
-  if (p < -V2_LB_PAGES || p >= V2_CART_PAGES) return false;
+  if (p < 0 || p >= V2_CART_PAGES) return false;
   v2GamesPage = p;
   return true;
+}
+// from a game's page back to the cartridges, on the page with that one on it (its X; the menu opened from home)
+void v2GamesToCarts() {
+  if (v2GamesPage < 0) v2GamesPage = (-1 - v2GamesPage) / V2_CARTS_PAGE;
 }
 // the Games menu turned to the page with game g on it (its number, as V2_CART_GAME has them), for a game's end: its
 // cartridge's page, or its leaderboard page if it was started from there (to see the new score)
@@ -2026,8 +2063,14 @@ static int v2CartAt(int16_t x, int16_t y, const int16_t (*xy)[2], int n) {
     if (x >= xy[k][0] - 5 && x < xy[k][0] + 110 && y >= xy[k][1] - 5 && y < xy[k][1] + 135) return k;
   return -1;
 }
+// the cartridge under a tap on a cartridges page (0 .. V2_CARTS - 1, as V2_CART_GAME has them), or -1: its game's page
+static int v2CartIndexAt(int16_t x, int16_t y) {
+  if (v2GamesPage < 0) return -1;
+  int k = v2CartAt(x, y, V2_CART_XY, v2CartsOn(v2GamesPage));
+  return k < 0 ? -1 : v2GamesPage * V2_CARTS_PAGE + k;
+}
 static int v2GameAt(int16_t x, int16_t y) {  // V1's game number, on this page
-  if (v2GamesPage < 0) return -1;  // (a leaderboard page: leaderboard_v2.h v2LbPlayAt())
+  if (v2GamesPage < 0) return -1;  // (a game's page: leaderboard_v2.h v2LbPlayAt())
   int k = v2CartAt(x, y, V2_CART_XY, v2CartsOn(v2GamesPage));
   return k < 0 ? -1 : V2_CART_GAME[v2GamesPage * V2_CARTS_PAGE + k];
 }
@@ -2362,9 +2405,13 @@ static int v2KbNext(int L, int code) {
 // Only for fingers (Fedor: "Since mac and PC builds arent meant for touchscreen, lets remove the keyboard zoom from
 // them"): the Knomi and other boards always zoom; on a computer the tap a mouse's types its key at once, and only a
 // finger's (the web game on a phone or a tablet, host_runtime.cpp) zooms in. The Mac and Windows apps never zoom.
+// Not on the Waveshare 2.1 either: its keys are about 4 mm wide, big enough without (Fedor: "it doesnt have to zoom
+// in on this device - its big enough without that zoom. We can keep that on for Knomi builds").
 #ifdef BOARD_HOST
 extern volatile bool gHostFinger;
 static bool v2KbZooms() { return gHostFinger; }
+#elif defined(BOARD_WS21)
+static bool v2KbZooms() { return false; }
 #else
 static bool v2KbZooms() { return true; }
 #endif
@@ -3071,6 +3118,7 @@ static int v2GameEnd(uint32_t *since = nullptr) {
   else if (fishOpen && fishOverT) t = fishOverT;
   else if (pinOpen && pinOverT) t = pinOverT;
   else if (bmOpen && bmOverT) t = bmOverT;
+  else if (psOpen && psOverT) t = psOverT;
   else {
     y = V2_AGAIN_YB;
     if (sdOpen && sdPhase == SD_DONE) t = sdT;
@@ -3125,6 +3173,7 @@ static void v2GameEndDo(int k) {
       if (fishOpen) closeFish();
       if (pinOpen) closePinball();
       if (bmOpen) closeMatch();
+      if (psOpen) closeSnap();
     }
     cardOpen = true;
     cardAch = false;
@@ -3140,7 +3189,7 @@ static void v2GameEndDo(int k) {
     else if (!pet.isEgg() && !pet.sleeping && !pet.ceremony) buddyInvite(kind);
     return;
   }
-  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : surfOpen ? 4 : fishOpen ? 5 : pinOpen ? 6 : 7;
+  int g = gameOpen ? 0 : quizOpen ? 1 : runOpen ? 2 : dungeonOpen ? 3 : surfOpen ? 4 : fishOpen ? 5 : pinOpen ? 6 : bmOpen ? 7 : 8;
   gameOpen = false;
   if (quizOpen) closeQuiz();
   if (runOpen) closeRun();
@@ -3149,6 +3198,7 @@ static void v2GameEndDo(int k) {
   if (fishOpen) closeFish();
   if (pinOpen) closePinball();
   if (bmOpen) closeMatch();
+  if (psOpen) closeSnap();
   if (again) {
     if (g == 0) startGame();
     else if (g == 1) startQuiz();
@@ -3157,9 +3207,10 @@ static void v2GameEndDo(int k) {
     else if (g == 4) startSurf();
     else if (g == 5) startFish();
     else if (g == 6) startPinball();
-    else startMatch();
+    else if (g == 7) startMatch();
+    else startSnap();
   }
-  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen && !pinOpen && !bmOpen) gameEndToMenu(g);  // (it may not start: asleep)
+  if (!gameOpen && !quizOpen && !runOpen && !dungeonOpen && !surfOpen && !fishOpen && !pinOpen && !bmOpen && !psOpen) gameEndToMenu(g);  // (it may not start: asleep)
 }
 
 // ----- the home's dialogs and moments (rooms2_px.py release_dialog(), batch3.py medal_banner(), bath(), evolving()) -----

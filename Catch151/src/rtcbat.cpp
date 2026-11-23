@@ -72,20 +72,93 @@ static uint32_t rtcUtc() {
   return baseUtc + d / 1000;
 }
 
+#ifdef BOARD_WS21
+// The Waveshare 2.1's PCF85063 keeps the time while the game isn't running (UTC, written at each network time and
+// each time set by hand), so a restart without Wi-Fi still knows the time and how long it was off. Network time
+// still wins when it comes. With the slide switch off it only keeps time if a rechargeable cell is fitted on its
+// socket (J4): docs/WAVESHARE_21.md, "Battery".
+#include <Wire.h>
+#include <SensorPCF85063.hpp>
+static SensorPCF85063 hwRtc;
+static bool hwRtcOk = false;
+// A fresh board's chip runs on whatever date it left the factory with (this one said January 2026): taken as the
+// time, the first save got that date, and when network time came, the months between counted as time away (Fedor's
+// Pikachu was Lv.100 on its first day). So the chip's time counts only once the game has written it: it marks its
+// spare RAM byte then. The chip's own flag that its clock stopped (a flat backup cell) also rules it out.
+#define PCF_ADDR 0x51
+#define PCF_RAM 0x03      // its one byte of RAM
+#define PCF_SECONDS 0x04  // bit 7: the clock stopped since it was last set
+#define PCF_OURS 0xC5     // in the RAM byte: the time is the game's
+static int pcfReg(uint8_t r) {
+  Wire.beginTransmission(PCF_ADDR);
+  Wire.write(r);
+  if (Wire.endTransmission(false) != 0 || Wire.requestFrom((uint8_t)PCF_ADDR, (uint8_t)1) != 1) return -1;
+  return Wire.read();
+}
+static uint32_t hwRtcRead() {
+  if (!hwRtcOk) return 0;
+  const int ram = pcfReg(PCF_RAM), sec = pcfReg(PCF_SECONDS);
+  if (ram != PCF_OURS || sec < 0 || (sec & 0x80)) {
+    Serial.printf("clock: the PCF85063's time isn't the game's (RAM %02X, seconds %02X): not used\n", ram & 0xFF,
+                  sec & 0xFF);
+    return 0;
+  }
+  RTC_DateTime t = hwRtc.getDateTime();
+  if (t.getYear() < 2025 || t.getYear() > 2120) return 0;  // never set, or lost
+  struct tm tmv = {};
+  tmv.tm_year = t.getYear() - 1900;
+  tmv.tm_mon = t.getMonth() - 1;
+  tmv.tm_mday = t.getDay();
+  tmv.tm_hour = t.getHour();
+  tmv.tm_min = t.getMinute();
+  tmv.tm_sec = t.getSecond();
+  return civilEpoch(tmv);  // (not mktime(): TZ is the chosen zone's here)
+}
+static void hwRtcWrite(uint32_t utc) {
+  if (!hwRtcOk || !utc) return;
+  time_t tt = utc;
+  struct tm tmv;
+  gmtime_r(&tt, &tmv);
+  hwRtc.setDateTime(RTC_DateTime(tmv.tm_year + 1900, tmv.tm_mon + 1, tmv.tm_mday, tmv.tm_hour, tmv.tm_min, tmv.tm_sec));
+  Wire.beginTransmission(PCF_ADDR);  // (setting the time clears the stopped flag) and it's the game's from now on
+  Wire.write(PCF_RAM);
+  Wire.write(PCF_OURS);
+  Wire.endTransmission();
+}
+#endif
+
 bool rtcBegin() {
   tzLoad();
+#ifdef BOARD_WS21
+  hwRtcOk = hwRtc.begin(Wire, IIC_SDA, IIC_SCL);
+  if (!hwRtcOk) Serial.println("PCF85063 not detected");
+  if (uint32_t u = hwRtcRead()) {
+    baseUtc = u;
+    baseMs = millis();
+    Serial.printf("clock: %lu from the PCF85063\n", (unsigned long)u);
+  }
+#endif
   return true;
 }
 uint32_t rtcEpoch() {
   uint32_t u = rtcUtc();
   return u ? u + offsetAt(u) : 0;
 }
-void rtcSetEpoch(uint32_t e) {  // local: back to UTC (twice, for a day that changes to or from summer time)
+static void setLocal(uint32_t e) {  // local: back to UTC (twice, for a day that changes to or from summer time)
   uint32_t u = e - offsetAt(e);
   baseUtc = e - offsetAt(u);
   baseMs = millis();
   fromNet = false;
 }
+void rtcSetEpoch(uint32_t e) {
+  setLocal(e);
+#ifdef BOARD_WS21
+  hwRtcWrite(baseUtc);
+#endif
+}
+#ifdef BOARD_WS21
+void rtcSetSeed(uint32_t e) { setLocal(e); }
+#endif
 bool clockFromNetwork() { return fromNet; }
 uint32_t clockUtc() { return fromNet ? rtcUtc() : 0; }
 uint32_t clockGapMin() { return 0; }  // millis() runs through light sleep: no gaps
@@ -354,6 +427,9 @@ static bool clockStep() {
         baseUtc = (uint32_t)tt;
         baseMs = millis();
         fromNet = true;
+#ifdef BOARD_WS21
+        hwRtcWrite(baseUtc);
+#endif
         Serial.printf("NTP ok, local time %02d:%02d (%s)\n", tmv.tm_hour, tmv.tm_min, TIME_ZONES[tzIdx].city);
       } else Serial.println("NTP: no response");
       stayedOn = WiFi.status() == WL_CONNECTED;
@@ -368,6 +444,39 @@ static bool clockStep() {
   return false;
 }
 
+#ifdef BOARD_WS21
+// The Waveshare 2.1 has no PMU or fuel gauge: the cell's voltage comes through a divider into an ADC pin
+// (pin_config.h), and the percentage from the LiPo curve (batcurve.h).
+// TODO(bring-up): the board can't say whether USB is in or the cell is charging (unless a free pin is wired to
+// sense VBUS: docs/WAVESHARE_21.md). Until then it counts as always on USB: no light sleep and no low-battery
+// shutdown (a protected cell cuts off by itself), and the percentage reads high while charging.
+#include "batcurve.h"
+static uint32_t batT = 0, batPoll = 2000;
+static int batMv = 0, batSmooth = 0;
+bool batBegin() {
+  analogSetPinAttenuation(BAT_ADC_PIN, ADC_11db);
+  return true;
+}
+void pmuEnablePanel() {}  // (the panel's setup is ws21_hal.h's)
+void batSetPollMs(uint32_t ms) { batPoll = ms; }
+static void batRead() {
+  uint32_t now = millis();
+  if (batT && now - batT < batPoll) return;
+  batT = now ? now : 1;
+  uint32_t sum = 0;
+  for (int i = 0; i < 8; i++) sum += analogReadMilliVolts(BAT_ADC_PIN);
+  batMv = (int)(sum / 8 * BAT_ADC_RATIO);
+  if (batMv < 2500) batMv = batSmooth = 0;  // no cell
+  else batSmooth = batSmooth ? batSmooth + (batMv - batSmooth) / 4 : batMv;
+}
+int batPercent() { batRead(); return batSmooth ? batPercentFromMv(batSmooth) : -1; }
+bool batCharging() { return false; }
+int batMillivolts() { batRead(); return batMv; }
+bool batShouldShutdown() { return false; }
+void batPowerOff() {}
+bool usbPresent() { return true; }
+bool usbPresentNow() { return true; }
+#else
 bool batBegin() { return false; }
 void pmuEnablePanel() {}
 void batSetPollMs(uint32_t) {}
@@ -378,6 +487,7 @@ bool batShouldShutdown() { return false; }
 void batPowerOff() {}
 bool usbPresent() { return true; }
 bool usbPresentNow() { return true; }
+#endif
 void pwrSetup() {}
 bool pwrShortPressed() { return false; }
 

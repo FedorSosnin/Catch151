@@ -11,6 +11,9 @@
 
 #ifdef BOARD_HOST
 inline uint8_t gPanelRot = 0;  // a window doesn't rotate
+#elif defined(BOARD_WS21)
+inline uint8_t gPanelRot = 0;  // stays 0: the picture turns at any angle there instead (ws21_hal.h, gWs21RotDeg), and
+                               // with gravity in quarter turns from WS21_ROT_DEG
 #else
 inline uint8_t gPanelRot = 1;  // at boot: in the right hand, with the cable on the left
 #endif
