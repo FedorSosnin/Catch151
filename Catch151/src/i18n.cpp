@@ -157,6 +157,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Efectos",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "Silenciar",
     "Activar sonido",
+    "AJUSTES",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
   // ---------------- EN ----------------
   {
@@ -308,6 +309,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Effects",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "Mute",
     "Unmute",
+    "SETTINGS",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
   // ---------------- FR ----------------
   {
@@ -459,6 +461,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Effets",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "Couper le son",
     "Remettre le son",
+    "REGLAGES",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -615,6 +618,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Effekte",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "Stumm",
     "Ton an",
+    "OPTIONEN",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
   // ---------------- IT ----------------
   {
@@ -766,6 +770,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Effetti",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "Muto",
     "Riattiva audio",
+    "OPZIONI",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
   // ---------------- PT ----------------
   {
@@ -917,6 +922,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "Efeitos",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "Silenciar",
     "Ativar som",
+    "AJUSTES",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
   // ---------------- JA ----------------
   {
@@ -1091,6 +1097,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "こうかおん",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "ミュート",
     "ミュートかいじょ",
+    "せってい",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -1247,6 +1254,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "효과음",  // the Sound page (sound_v2.h): its effects row, and the button that turns both off, then on
     "음소거",
     "음소거 해제",
+    "설정",  // the ring in five's Settings (radial_v2.h), down right: short enough to fit
   },
 };
 

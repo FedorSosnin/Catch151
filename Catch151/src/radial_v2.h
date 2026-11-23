@@ -8,9 +8,10 @@
 // middle, the release question comes at 3 s, as before. The ring is see-through, as the icons' band is (Fedor),
 // so while it's open the home leaves out what it would show through: the header, the band, the icons, the pill.
 //
-// Where there's sound (not the Knomi: HAS_MUSIC) the ring is in five, a fifth of a turn each, Settings still on top:
-// Medals up right, Stats down right, Sound down left (a speaker: the Sound page, sound_v2.h; Fedor: "lets add a new
-// button to the menu ... Lets call it Sound with a speaker icon") and the Pokedex up left.
+// Where there's sound (not the Knomi: HAS_MUSIC) the ring is in five, a fifth of a turn each: Stats on top, Medals up
+// right, Settings down right, Sound down left (a speaker: the Sound page, sound_v2.h; Fedor: "lets add a new button to
+// the menu ... Lets call it Sound with a speaker icon"), the Pokedex up left (Fedor: "lets move Stats to the top, and
+// move settings down next to sound").
 
 #define V2_RAD_IN 86    // the ring, from the screen's centre
 #define V2_RAD_OUT 204
@@ -179,11 +180,12 @@ static int v2RadialAt(int16_t x, int16_t y) {
 // what each opens: the page its swipe on home opened (V2 has none there: this ring is the way to them)
 static void v2RadialPick(int s) {
 #if V2_RAD_N == 5
-  if (s == 3) {  // Sound (not the Knomi)
+  static const int8_t PICK[5] = { 2, 1, 0, 4, 3 };  // round from the top: Stats, Medals, Settings, Sound, the Pokedex
+  s = PICK[s];                                       // (as the four's numbers below; 4 Sound)
+  if (s == 4) {  // Sound (not the Knomi)
     v2SoundOpen();
     return;
   }
-  if (s == 4) s = 3;  // (the Pokedex, up left)
 #endif
   if (s == 0) {  // Settings: the swipe down's
     openClock();
@@ -220,13 +222,17 @@ static void v2RadialLift(int16_t x, int16_t y) {
   }
 }
 // an icon at 4x centred at (cx, cy), and its label (in capitals) centred under it or over it (labelY): white on a
-// dark 2 px shadow, as the pages' numbers, so it reads on any scene through the ring
-static void v2RadialItem(const char *const *icon, int cx, int cy, const char *label, int labelY) {
+// dark 2 px shadow, as the pages' numbers, so it reads on any scene through the ring. lx0..lx1: where the label must
+// stay (the ring in five's lower two: inside the ring, so it moves in from under its icon if it's long)
+static void v2RadialItem(const char *const *icon, int cx, int cy, const char *label, int labelY, int lx0 = 0,
+                         int lx1 = V2_W) {
   drawMap(icon, HOME_ICON_N, cx - 36, cy - 36, 4, false);
   char b[40];
   v2Caps(label, b, sizeof(b));
   setSize(2);
-  int x = centerX(b, 2) + (cx - CX);
+  int x = centerX(b, 2) + (cx - CX), w = textW(b, 2);
+  if (x + w > lx1) x = lx1 - w;
+  if (x < lx0) x = lx0;
   gfx->setTextColor(C565(0x1b, 0x1b, 0x25));
   setCur(x + 2, labelY + 2);
   printT(b);
@@ -289,11 +295,12 @@ static void v2RadialDraw() {
       }
     v2LutRun(row + x, V2_W - x, dim);
   }
-#if V2_RAD_N == 5  // (each icon and its word inside its section and the ring: worked out on their corners)
-  v2RadialItem(SPR_V2_RAD_GEAR, CX, 72, T(S_SETTINGS), 114);
+#if V2_RAD_N == 5  // (each icon and its word inside its section and the ring: worked out on their corners. Down
+                   // there, the ring's edge at the words' foot, y 386, is 135 px either side of the middle line)
+  v2RadialItem(SPR_V2_RAD_STATS, CX, 72, T(S_RAD_STATS), 114);
   v2RadialItem(SPR_V2_RAD_MEDAL, 376, 187, T(S_RAD_MEDALS), 229);
-  v2RadialItem(SPR_V2_RAD_STATS, 330, 330, T(S_RAD_STATS), 372);
-  v2RadialItem(SPR_V2_RAD_SOUND, 136, 330, T(S_SOUND), 372);
+  v2RadialItem(SPR_V2_RAD_GEAR, 330, 330, T(S_RAD_SETTINGS), 372, CX + 7, CX + 133);
+  v2RadialItem(SPR_V2_RAD_SOUND, 136, 330, T(S_SOUND), 372, CX - 133, CX - 7);
   v2RadialItem(SPR_V2_RAD_DEX, 90, 187, T(S_DEX_TITLE), 229);
 #else
   v2RadialItem(SPR_V2_RAD_GEAR, CX, 72, T(S_SETTINGS), 114);  // (72 px icons: their corners inside the ring's edge)

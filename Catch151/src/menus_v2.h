@@ -1588,7 +1588,11 @@ static void v2PaintGb(int) {
   gfx->fillCircle(bx1 - 60, by1 - 60, 60, sc565(0x5E5C74));  // (the round corner's fill, then its rim)
   gfx->fillRect(bx1 - 60, by0 + 22, 60, by1 - by0 - 82, sc565(0x5E5C74));
   gfx->fillRect(bx0 + 22, by1 - 60, bx1 - bx0 - 82, 60, sc565(0x5E5C74));
-  gfx->fillRect(bx0, by0, bx1 - bx0, 4, sc565(0x7A7890));  // lit along its top
+  for (int dy = 0; dy < 4; dy++) {  // lit along its top, inside its round corners (Fedor: it ran out over them)
+    float e = 22 - dy - 0.5f;
+    int in = 22 - (int)sqrtf(22 * 22 - e * e);
+    gfx->fillRect(bx0 + in, by0 + dy, bx1 - bx0 - 2 * in, 1, sc565(0x7A7890));
+  }
   // the two lines across its top, a gap where the words would be
   for (int k = 0; k < 2; k++) {
     uint16_t c = k ? sc565(0x2A2A6E) : sc565(0xB83A78);

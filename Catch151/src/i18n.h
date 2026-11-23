@@ -151,6 +151,7 @@ enum StrId : STRID_BASE {
   S_LEADERBOARD, S_LEADERBOARDS, S_LB_HI_SCORE, S_LB_LONGEST_RUN, S_LB_LONGEST_RIDE, S_LB_DEEPEST, S_LB_BIGGEST_FISH,
   S_LB_FLOOR_FMT, S_LB_PLAY, S_LB_PLAY_KEYS, S_LB_FUN, S_LB_NAME_ALL, S_LB_NO_SCORES, S_LB_OFFLINE, S_LB_NONE, S_LB_SHINY_FMT,
   S_SND_EFFECTS, S_MUTE, S_UNMUTE,  // the Sound page (sound_v2.h, not the Knomi): the effects' row, Mute, and Unmute
+  S_RAD_SETTINGS,  // the ring in five's Settings, down right (radial_v2.h): German and Italian shorter, to fit there
   STR_COUNT
 };
 
