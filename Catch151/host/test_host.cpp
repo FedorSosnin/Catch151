@@ -39,11 +39,13 @@
 uint8_t hostMusicWanted();  // host_audio.cpp: the track the game wants now (V2's music; 0 with V1)
 
 static int gFails = 0, gChecks = 0;
+static void failState();  // once the game runs: what's open and the touch's state, under a failed check
 #define CHECK(cond)                                                     \
   do {                                                                  \
     gChecks++;                                                          \
     if (!(cond)) {                                                      \
       printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);           \
+      failState();                                                      \
       gFails++;                                                         \
     }                                                                   \
   } while (0)
@@ -563,12 +565,39 @@ extern uint32_t runOverT;
 extern int8_t introCard;
 extern uint32_t lastInteract;
 
+// Under a failed check, once the game runs: what's open, what a touch would meet and the touch's own state, so a
+// check that fails only elsewhere (CI's Linux, never this Mac: 2.2.15) says why from its log
+static bool gGameOn = false;
+static void failState() {
+  if (!gGameOn) return;
+  extern bool v2RadialOpen, galleryOpen, cardOpen, cardAch, clockOpen, soundOpen, kbOpen, battleOpen, screenOff,
+      swallowGesture, holdFired, wasPressed, pressOn;
+  extern int galleryPage;
+  extern uint8_t cardPage, dimStage, choiceKind;
+  extern uint32_t confirmUntil, feedMenuUntil, tStart;
+  extern int16_t tX0, tY0, tXl, tYl;
+  extern ZoneScreen zoneScreen;
+  extern Pet pet;
+  extern bool homeModal(), introUp();
+  extern int partyOthers();
+  printf("  | at %u ms: ring %d gallery %d/%d card %d/%d%s clock %d sound %d games %d kb %d battle %d zone %d intro %d\n",
+         (unsigned)millis(), v2RadialOpen, galleryOpen, galleryPage, cardOpen, cardPage, cardAch ? " (medals)" : "",
+         clockOpen, soundOpen, gamesMenuOpen, kbOpen, battleOpen, (int)zoneScreen, introUp());
+  printf("  | dim %u off %d swallow %d held %d down %d press %d; touch (%d,%d) to (%d,%d) %u ms ago; interacted %u ms ago\n",
+         dimStage, screenOff, swallowGesture, holdFired, wasPressed, pressOn, tX0, tY0, tXl, tYl,
+         (unsigned)(millis() - tStart), (unsigned)(millis() - lastInteract));
+  printf("  | confirm %d choice %u feed %d modal %d (medal %d milestone %d evolve %d) ceremony %d sleeping %d others %d\n",
+         confirmUntil != 0, choiceKind, feedMenuUntil != 0, homeModal(), pet.showMedal(), pet.showMilestone(),
+         pet.wantEvolveButton(), (int)pet.ceremony, pet.sleeping, partyOthers());
+}
+
 static void testGame() {
   std::string res = tempDir(), save = tempDir(), cwd = getcwd(nullptr, 0);
   CHECK(symlink((cwd + "/../tools/sdcard/mons").c_str(), (res + "/mons").c_str()) == 0);
   CHECK(symlink((cwd + "/fonts").c_str(), (res + "/fonts").c_str()) == 0);
   std::string saveSub = save + "/a/b";  // also creates the intermediate folders
   hostInit(res.c_str(), saveSub.c_str());
+  gGameOn = true;
   CHECK(!readFile(saveSub + "/" SAVE_NS_NEW ".prefs").empty());
 
   runTicks(200);
