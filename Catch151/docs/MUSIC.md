@@ -29,7 +29,7 @@ it's left for later.
 | A buddy | Buddy Battle |
 | A battle won, a catch, a tower floor won | Victory, once |
 | A battle lost, run from, a catch that broke free; the throw itself | nothing (a quick fade) |
-| Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Volley, Reel Fishing, Pinball, BerryMatch | Each its own (Reel Fishing has two: at the pier, and a fish on the line) |
+| Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Volley, Reel Fishing, Pinball, BerryMatch, Pic Snap | Each its own (Reel Fishing has two: at the pier, and a fish on the line) |
 | Who's That? and Showdown | Who's That? |
 | Evolving | Evolution, once, under the evolve effect |
 | A goodbye | Goodbye |

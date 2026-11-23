@@ -633,6 +633,31 @@ s.section('B', 8, BM_CB, BM_B, BM_PICK, BM_BASS, [BM_DR] * 7 + [BM_FILL])
 s.section('A2', 8, BM_CA, BM_A, 'thirds', BM_BASS, [CRASH] + [BM_DR] * 6 + [BM_FILL], insts=('bell25', 'gbharm', 'basspl'))
 s.form(['I'], ['A', 'B', 'A2', 'B'])
 
+# ------------------------------------------------------------------ Pic Snap: the camera's own, tiptoeing round the island
+# Creeping up on a wild one with a camera: a soft swing at a stroll, the tune in short steps with rests between them,
+# looking about, and a plucked bass walking on tiptoe. Each phrase ends on a held breath, and the beat's last bar has a
+# wood click and a clap where the tune stops, the shutter going. In the B part the tune opens out to a flute, longer
+# notes over the view (a G7 for the light catching it), then creeps back. E-flat major, which no other song is in
+s = add(song('PICSNAP', 'Pic Snap', 108, key=('Eb', 'major'), insts=('gblead', 'gbpick', 'basspl'), vols=(12, 7, 14, 7)))
+PS_DR = '12: k . S r . S k . S r . S'
+PS_SNAP = '12: k . S r . S k . S w . x'   # the shutter: a click, then the snap
+PS_H = '12: . . 2 . . 3 . . 1 . . 3'      # the chord picked on the swung off-beats, on tiptoe
+PS_BASS = '12: R . . 3 . . 5 . . A . .'   # walking, leading into each next chord
+PS_A = """
+  o5 b-6 g12 b-6 o6 e-12 e-4 r4 | e-6 d12 c6 o5 b-12 g4 r4 | a-6 o6 c12 e-6 c12 o5 a-6 b-12 o6 c4 |
+  d4 o5 b-6 r12 a-4 f4 | b-6 g12 b-6 o6 e-12 g4 r6 f12 | g6 f12 e-6 d12 e-4 c4 |
+  c6 o5 a-12 f6 a-12 b-6 o6 d12 f6 d12 | e-4 r6 o5 b-12 o6 e-4 r4 |"""
+PS_CA = 'Eb | Cm | Ab | Bb7 | Eb | Cm | Fm7 Bb7 | Eb'
+s.section('I', 2, 'Eb | Bb7', None, PS_H, PS_BASS, [PS_DR, PS_SNAP])
+s.section('A', 8, PS_CA, PS_A, PS_H, PS_BASS, [PS_DR] * 7 + [PS_SNAP])
+s.section('B', 8, 'Ab | Bb | Gm | Cm | Fm7 | G7 | Cm Ab | Bb7', """
+  o6 c4^6 o5 b-12 a-4 e-4 | f4^6 b-12 o6 d4 f4 | g4^6 f12 d4 o5 b-4 | o6 c2 o5 g6 b-12 o6 e-4 |
+  f4^6 e-12 c4 o5 a-4 | b4^6 o6 d12 f4 d4 | e-6 d12 c4 e-6 c12 o5 a-4 | b-4 r6 o6 d12 f4 r4 |""",
+          'thirds', '12: R . . . . . 5 . . . . .', ['12: k . . r . S k . S r . .'] * 7 + [PS_SNAP],
+          insts=('flute', 'gbharm', 'basspl'), vols=(12, 6, 14, 6))
+s.section('A2', 8, PS_CA, PS_A, 'thirds', PS_BASS, [PS_DR] * 7 + [PS_SNAP], insts=('gblead', 'soft25', 'basspl'))
+s.form(['I'], ['A', 'B', 'A2', 'B'])
+
 # ------------------------------------------------------------------ how loud each plays
 # Measured (each voice's RMS: host/music_wav.cpp prints the mix's) so they all sit about 8 dB under the effects: the
 # home and the menus at -24.5 dBFS, the battles and the games at -24, the night and the goodbye softer, the jingles
@@ -644,7 +669,7 @@ GAINS = {
     'BERRY': 1.24, 'RUN': 0.88, 'SURF': 0.91, 'DUNGEON': 1.29, 'QUIZ': 1.41, 'VOLLEY': 0.89,
     'EVOLVE': 0.90, 'GOODBYE': 0.86,
     'ZONE_FOREST': 0.95, 'ZONE_BEACH': 1.10, 'ZONE_CAVE': 1.55, 'ZONE_MANSION': 1.50, 'ZONE_FIELD': 0.84,
-    'FISH': 1.16, 'FISH_FIGHT': 0.85, 'PINBALL': 0.87,
+    'FISH': 1.16, 'FISH_FIGHT': 0.85, 'PINBALL': 0.87, 'PICSNAP': 1.15,
 }
 
 
