@@ -1004,8 +1004,10 @@ static void testGame() {
       hostPointer(233, 240, false);
       runTicks(200);
       CHECK(v2RadialOpen);
-      tapAt(136, 330);
-      CHECK(clockOpen && soundOpen && !v2RadialOpen);
+      extern ZoneScreen zoneScreen;
+      tapAt(100, 335);  // the speaker's section, over the home's first icon (the map): only the ring takes it (Fedor:
+                        // "clicking sound clicks on the map icon behind it")
+      CHECK(clockOpen && soundOpen && !v2RadialOpen && zoneScreen == ZS_NONE);
       tapAt(233, 422);
       CHECK(!clockOpen);
       runTicks(300);

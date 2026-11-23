@@ -9227,6 +9227,10 @@ static bool pressSet(PressTarget &t, int x, int y, int w, int h, const char *lab
 // "tap anywhere to close" screens keep working as they did, without a preview.
 bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   static char buf[52];
+  // V2: the ring open, nothing under it is a control: a touch acts on nothing as it lands, nothing lifts under the
+  // mouse; the ring takes the lift (Fedor: "clicking sound clicks on the map icon behind it. When this menu is open,
+  // the other buttons should not function")
+  if (v2RadialOpen) return false;
   if (introUp()) {  // a game's card: its button
     if (!introAwayT && introBtnHit(x, y))
       return pressSet(t, CX - CARD_BTN_W / 2, CY + CARD_BTN_DY, CARD_BTN_W, CARD_BTN_H, T(S_READY_GO));
