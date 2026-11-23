@@ -257,6 +257,8 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `HOLD n` | The game stops for n seconds; only the panel's refill runs. |
 | `WIFIOFF` | Wi-Fi off until the next start. |
 | `SHOT` | The whole 480 × 480 frame buffer, as RGB565. |
+| `BAT` | The cell now: mV, the smoothed mV, the percentage, whether it charges (`chg`), the lift taken off while charging, the reset reason (`rst`) and the time since the start. |
+| `BATLOG` | The last 2 minutes, twice a second: mV and `chg`. It lasts through a restart that isn't a power cut, marked by a 0. The board also prints `bat: charging` when it changes, and `bat: start` with the reset reason. |
 
 ## Sound
 
@@ -396,13 +398,29 @@ soldering on the board:
   cell still charges with the switch off. There is no soft power button and no way for the firmware to turn the
   power off.
 - **The level:** the cell's voltage through the 1/3 divider on GPIO 4, turned into a percentage by the LiPo curve.
-  Nothing on the board says whether USB is in or the cell is charging. So the percentage reads high while charging,
-  and the code treats the board as always on USB for now (no light sleep, no low-battery shutdown).
-  - A fix that needs a wire: USB 5 V (12-pin, pin 2) through a divider into GPIO 19 or 20 would tell the firmware
-    when USB is in.
+  Nothing on the board says whether USB is in or the cell is charging, so the code treats the board as always on
+  USB for now (no light sleep, no low-battery shutdown).
+- **Charging:** told from the cell's voltage instead. When the charger starts or stops, the voltage jumps. On the
+  bench board (a 2000 mAh cell, charged at about 2 A) it rose about 100 mV within half a second of plugging in, and
+  fell about 115 mV on unplugging. Its own loads move it 10 mV or less. The firmware reads it twice a second. A
+  rise of 40 mV or more means plugged in, a fall as big means unplugged (`BatPlugDetect` in `src/batcurve.h`).
+  - After 30 minutes at the top (4.15 V or more), it counts as charged and the bolt goes.
+  - A board started while plugged in (after a flash, an update or a crash) sees no jump. It goes by the slow climb
+    instead: while charging, the voltage rose about 6 mV a minute (3725, 3729, 3733, 3741 mV, one minute apart).
+    Four one-minute averages, each at least 2 mV over the one before and 10 mV in all, mean charging. So the bolt
+    comes about 4 minutes after a start. Near the top, where the voltage holds still, it doesn't come.
+  - With R7 swapped for a gentler charge (above), the jump is smaller. At about 0.5 A it may be near the 40 mV limit:
+    check with `BATLOG` while plugging in.
+  - Charging lifts the voltage by that same jump, so the percentage would leap too (8% on the cell, 37% plugged in,
+    on the bench board). While charging, the jump is taken off (100 mV after a start found by the climb). At the top
+    it fades out over the 30 minutes, so the number ends at 100%. As on the Knomi, the number only goes down on the
+    cell and only up while charging.
+  - The guess only drives the icon and its number. Sleep and shutdown still treat the board as on USB.
+  - A wire would make it certain: USB 5 V (12-pin, pin 2) through a divider into GPIO 20 (19 now carries the
+    sound) would tell the firmware when USB is in.
 - **On screen:** the battery takes the clock's place at the top of the home screen: an icon and the percentage.
-  The icon turns amber under 40% and red under 15%. While charging it turns green with a bolt, but only once the
-  board can tell it is charging (the wire above). With no cell, the clock comes back. The time is still on the
+  The icon turns amber under 40% and red under 15%. While charging it turns green with a bolt (see Charging,
+  above). With no cell, the clock comes back. The time is still on the
   clock page. To see it on a computer: `POKEMACGOCHI_FAKE_BAT=85` (or `15c` for 15% and charging) on a test copy.
 - **The power LED** is always on while powered (about 1 mA). Remove it, or cover it, if battery life matters.
 - **The clock's backup cell:** with no cell on J4, the clock forgets the time whenever the slide switch is off. With

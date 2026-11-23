@@ -447,14 +447,18 @@ static bool clockStep() {
 #ifdef BOARD_WS21
 // The Waveshare 2.1 has no PMU or fuel gauge: the cell's voltage comes through a divider into an ADC pin
 // (pin_config.h), and the percentage from the LiPo curve (batcurve.h).
-// TODO(bring-up): the board can't say whether USB is in or the cell is charging (unless a free pin is wired to
-// sense VBUS: docs/WAVESHARE_21.md). Until then it counts as always on USB: no light sleep and no low-battery
-// shutdown (a protected cell cuts off by itself), and the percentage reads high while charging.
+// Nothing on the board says whether USB is in. Charging is told from the jump in the cell's voltage when the
+// charger starts or stops (BatPlugDetect, batcurve.h), for the battery's icon and its percentage. Everything else
+// still counts the board as always on USB: no light sleep and no low-battery shutdown (a protected cell cuts off by
+// itself).
 #include "batcurve.h"
 static uint32_t batT = 0, batPoll = 2000;
 static int batMv = 0, batSmooth = 0;
+static BatPlugDetect batPlug;
+static void batLogStart();
 bool batBegin() {
   analogSetPinAttenuation(BAT_ADC_PIN, ADC_11db);
+  batLogStart();
   return true;
 }
 void pmuEnablePanel() {}  // (the panel's setup is ws21_hal.h's)
@@ -469,13 +473,64 @@ static void batRead() {
   if (batMv < 2500) batMv = batSmooth = 0;  // no cell
   else batSmooth = batSmooth ? batSmooth + (batMv - batSmooth) / 4 : batMv;
 }
-int batPercent() { batRead(); return batSmooth ? batPercentFromMv(batSmooth) : -1; }
-bool batCharging() { return false; }
+int batPercent() { batRead(); return batSmooth ? batPlug.percent(batSmooth, millis()) : -1; }
+bool batCharging() { return batPlug.charging; }
 int batMillivolts() { batRead(); return batMv; }
 bool batShouldShutdown() { return false; }
 void batPowerOff() {}
 bool usbPresent() { return true; }
 bool usbPresentNow() { return true; }
+// The cell twice a second: for the charging guess, and kept for the last 2 minutes for the console (BAT, BATLOG).
+// The log is in RTC memory, so it lasts through a restart that isn't a power cut (a brown-out, a crash): BATLOG then
+// shows what came before, with a 0 where it restarted.
+#include <esp_system.h>
+#define BAT_LOG_N 240
+#define BAT_LOG_MAGIC 0xBA7106u
+RTC_NOINIT_ATTR static int16_t batLogMv[BAT_LOG_N];
+RTC_NOINIT_ATTR static uint8_t batLogChg[BAT_LOG_N];
+RTC_NOINIT_ATTR static uint32_t batLogN, batLogMagic;
+static uint32_t batLogT = 0;
+static void batLogStart() {
+  bool kept = batLogMagic == BAT_LOG_MAGIC && batLogN < 0x40000000u;
+  if (!kept) {
+    batLogN = 0;
+    batLogMagic = BAT_LOG_MAGIC;
+  } else {  // the restart, marked
+    batLogMv[batLogN % BAT_LOG_N] = 0;
+    batLogChg[batLogN % BAT_LOG_N] = 0;
+    batLogN++;
+  }
+  Serial.printf("bat: start, reset reason %d, log %s\n", (int)esp_reset_reason(), kept ? "kept" : "new");
+}
+static int batRawMv() {
+  uint32_t sum = 0;
+  for (int i = 0; i < 8; i++) sum += analogReadMilliVolts(BAT_ADC_PIN);
+  return (int)(sum / 8 * BAT_ADC_RATIO);
+}
+void batTick() {
+  uint32_t now = millis();
+  if (batLogT && now - batLogT < 500) return;
+  batLogT = now ? now : 1;
+  int mv = batRawMv();
+  bool was = batPlug.charging;
+  batPlug.sample(mv, now);
+  if (batPlug.charging != was) {
+    batSmooth = mv;  // the step: the smoothing starts again from it, not sliding across it
+    Serial.printf("bat: %s (%d mV, lift %d)\n", batPlug.charging ? "charging" : "not charging", mv, batPlug.lift);
+  }
+  batLogMv[batLogN % BAT_LOG_N] = (int16_t)mv;
+  batLogChg[batLogN % BAT_LOG_N] = batPlug.charging;
+  batLogN++;
+}
+void batDiagPrint(bool all) {
+  Serial.printf("bat mv=%d smooth=%d pct=%d chg=%d lift=%d rst=%d up=%lus\n", batRawMv(), batSmooth,
+                batSmooth ? batPlug.percent(batSmooth, millis()) : -1, batPlug.charging ? 1 : 0, batPlug.lift,
+                (int)esp_reset_reason(), (unsigned long)(millis() / 1000));
+  if (!all) return;
+  uint32_t n = batLogN < BAT_LOG_N ? batLogN : BAT_LOG_N;
+  for (uint32_t i = batLogN - n; i < batLogN; i++)
+    Serial.printf("%u %d %u\n", (unsigned)i, batLogMv[i % BAT_LOG_N], batLogChg[i % BAT_LOG_N]);
+}
 #else
 bool batBegin() { return false; }
 void pmuEnablePanel() {}
