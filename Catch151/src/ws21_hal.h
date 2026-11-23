@@ -165,7 +165,9 @@ inline void ws21Drop(const void *p, size_t bytes) {  // (p and bytes on 32-byte 
 // the rest from rows, where frame row y is rows + (y - first) * LCD_WIDTH (the frame itself: first 0; a band the DMA
 // brought into internal RAM: its first row). (The rim's shading is in the frame already: Ws21Canvas::shadeRim().)
 // The panel's refill makes every row this way, and the console's SHOT too.
-static IRAM_ATTR void ws21PanelRows(const uint16_t *rows, int first, uint16_t *out, int py0, int n) {
+// Upside down (flip: the frame drawn upright, the board turned over), panel row y shows frame row 465 - y, right to
+// left. The circle and the rim are the same either way up, so only the copy changes.
+static IRAM_ATTR void ws21PanelRows(const uint16_t *rows, int first, uint16_t *out, int py0, int n, bool flip = false) {
   for (int r = 0; r < n; r++, out += PANEL_SIZE) {
     const int y = py0 + r - WS21_BORDER;
     if (y < 0 || y >= LCD_HEIGHT) {
@@ -174,7 +176,13 @@ static IRAM_ATTR void ws21PanelRows(const uint16_t *rows, int first, uint16_t *o
     }
     const int x0 = gKnomiRim ? gKnomiRimX0[y] : 0, x1 = gKnomiRim ? gKnomiRimX1[y] : LCD_WIDTH;
     memset(out, 0, (size_t)(WS21_BORDER + x0) * 2);
-    memcpy(out + WS21_BORDER + x0, rows + (y - first) * LCD_WIDTH + x0, (size_t)(x1 - x0) * 2);
+    if (!flip) {
+      memcpy(out + WS21_BORDER + x0, rows + (y - first) * LCD_WIDTH + x0, (size_t)(x1 - x0) * 2);
+    } else {
+      const uint16_t *src = rows + (LCD_HEIGHT - 1 - y - first) * LCD_WIDTH + (LCD_WIDTH - 1);
+      uint16_t *o = out + WS21_BORDER;
+      for (int x = x0; x < x1; x++) o[x] = src[-x];
+    }
     memset(out + WS21_BORDER + x1, 0, (size_t)(LCD_WIDTH - x1 + WS21_BORDER) * 2);
   }
 }
@@ -198,6 +206,7 @@ struct Ws21Prefetch {
   int c0 = 0;                     // the band's first frame row,
   size_t off = 0;                 // where that row starts in stage
   bool empty = false;             // (only border rows: nothing to bring)
+  bool flip = false;              // (upside down: the rows from the bottom)
   volatile uint32_t issued = 0, done = 0;
   volatile uint32_t hits = 0, misses = 0, late = 0;
 };
@@ -258,14 +267,20 @@ static bool ws21PrefetchBegin(int bandRows) {
   }
   return true;
 }
-// the DMA's copy of frame f's rows for the band starting at panel row py0 (n rows), into stage
-static void ws21PrefetchKick(const uint16_t *f, int py0, int n) {
+// the DMA's copy of frame f's rows for the band starting at panel row py0 (n rows), into stage (upside down: the
+// frame's rows from the bottom)
+static void ws21PrefetchKick(const uint16_t *f, int py0, int n, bool flip) {
   Ws21Prefetch &p = gWs21Pre;
   p.py0 = -1;
   if (!p.stage || !f || p.issued != p.done) return;  // (one still under way: none this time)
   int c0 = py0 - WS21_BORDER, c1 = py0 + n - WS21_BORDER;
   c0 = c0 < 0 ? 0 : c0;
   c1 = c1 > LCD_HEIGHT ? LCD_HEIGHT : c1;
+  if (flip && c1 > c0) {
+    const int a = LCD_HEIGHT - c1, b = LCD_HEIGHT - c0;
+    c0 = a, c1 = b;
+  }
+  p.flip = flip;
   p.src = f;
   p.c0 = c0;
   p.empty = c1 <= c0;
@@ -296,9 +311,9 @@ static void ws21PrefetchKick(const uint16_t *f, int py0, int n) {
   p.py0 = py0;
 }
 // whether the band (f, py0) has come into stage
-static bool ws21PrefetchReady(const uint16_t *f, int py0) {
+static bool ws21PrefetchReady(const uint16_t *f, int py0, bool flip) {
   Ws21Prefetch &p = gWs21Pre;
-  if (p.py0 != py0 || p.src != f) return false;
+  if (p.py0 != py0 || p.src != f || p.flip != flip) return false;
   if (p.empty) return true;
   if (p.issued == p.done) return true;
   p.late++;
@@ -309,6 +324,7 @@ static bool ws21PrefetchReady(const uint16_t *f, int py0) {
 // static member placed there won't link).
 struct Ws21Show {
   uint16_t *frm[3] = { nullptr, nullptr, nullptr };
+  volatile bool flip[3] = { false, false, false };  // each frame shown upside down (drawn upright, the board turned over)
   volatile uint8_t show = 0, next = 0;  // the frame being sent; the one to send from the next refresh
   volatile uint32_t fillUs = 0, fillN = 0, fillMax = 0;  // the refill's time (the console's LCD)
 };
@@ -325,16 +341,21 @@ static IRAM_ATTR bool ws21Fill(esp_lcd_panel_handle_t, void *bb, int pos, int le
   const int64_t t0 = esp_timer_get_time();
   if (pos == 0) w.show = w.next;
   const uint16_t *f = w.frm[w.show];
+  const bool flip = w.flip[w.show];
   const int py0 = pos / PANEL_SIZE, n = len / (PANEL_SIZE * 2);
-  if (ws21PrefetchReady(f, py0)) {
-    ws21PanelRows((const uint16_t *)(p.stage + p.off), p.c0, (uint16_t *)bb, py0, n);
+  if (ws21PrefetchReady(f, py0, flip)) {
+    ws21PanelRows((const uint16_t *)(p.stage + p.off), p.c0, (uint16_t *)bb, py0, n, flip);
     p.hits++;
   } else {
-    ws21PanelRows(f, 0, (uint16_t *)bb, py0, n);
+    ws21PanelRows(f, 0, (uint16_t *)bb, py0, n, flip);
     p.misses++;
     int c0 = py0 - WS21_BORDER, c1 = py0 + n - WS21_BORDER;
     c0 = c0 < 0 ? 0 : c0;
     c1 = c1 > LCD_HEIGHT ? LCD_HEIGHT : c1;
+    if (flip && c1 > c0) {
+      const int a = LCD_HEIGHT - c1, b = LCD_HEIGHT - c0;
+      c0 = a, c1 = b;
+    }
     if (c1 > c0) {  // (the frame on show has nothing dirty in the cache: present())
       const uintptr_t a = (uintptr_t)(f + c0 * LCD_WIDTH) & ~(uintptr_t)31;
       const uintptr_t b = ((uintptr_t)(f + c1 * LCD_WIDTH) + 31) & ~(uintptr_t)31;
@@ -346,8 +367,9 @@ static IRAM_ATTR bool ws21Fill(esp_lcd_panel_handle_t, void *bb, int pos, int le
   // the next band: this frame's, or the first of the next refresh, from the frame waiting by then
   int nx = pos + len / 2;
   const uint16_t *nf = f;
-  if (nx >= PANEL_SIZE * PANEL_SIZE) nx = 0, nf = w.frm[w.next];
-  ws21PrefetchKick(nf, nx / PANEL_SIZE, n);
+  bool nflip = flip;
+  if (nx >= PANEL_SIZE * PANEL_SIZE) nx = 0, nf = w.frm[w.next], nflip = w.flip[w.next];
+  ws21PrefetchKick(nf, nx / PANEL_SIZE, n, nflip);
   const uint32_t us = (uint32_t)(esp_timer_get_time() - t0);
   w.fillUs += us;
   w.fillN++;
@@ -463,14 +485,20 @@ public:
   }
   // f is shown from the next refresh on. Anything the CPU drew into it goes out of the cache to PSRAM first, where the
   // refill reads it, and its lines leave the cache (the refill's reads mustn't find old copies there).
-  void present(uint16_t *f) {
+  // flip: f is upright and the board is upside down, so the refill turns it over
+  void present(uint16_t *f, bool flip = false) {
     ws21Writeback();
     ws21Drop(f, WS21_FRAME_ALLOC);
-    gWs21Show.next = f == frm[0] ? 0 : f == frm[1] ? 1 : 2;
+    const uint8_t k = f == frm[0] ? 0 : f == frm[1] ? 1 : 2;
+    gWs21Show.flip[k] = flip;
+    gWs21Show.next = k;
     presented = f;
   }
   // the panel's rows py0.. from the frame on show (the console's SHOT)
-  void shownRows(uint16_t *out, int py0, int n) { ws21PanelRows(frm[gWs21Show.show], 0, out, py0, n); }
+  void shownRows(uint16_t *out, int py0, int n) {
+    const uint8_t k = gWs21Show.show;
+    ws21PanelRows(frm[k], 0, out, py0, n, gWs21Show.flip[k]);
+  }
   uint16_t *frontBuffer() const { return frm[gWs21Show.show]; }
   uint16_t *lastPresented() const { return presented; }
   bool isFrame(const uint16_t *f) const { return f == frm[0] || f == frm[1] || f == frm[2]; }
@@ -592,7 +620,8 @@ static IRAM_ATTR bool ws21DmaDone(async_memcpy_handle_t, async_memcpy_event_t *,
 // - direct (setDirect(), the usual): the game draws straight into the frame to be shown, so there's nothing to copy
 //   at all. The canvas then is that frame, a different one each time, and what's in it is from three frames back.
 //   Every screen paints all of itself each time it's drawn (render(); one that hasn't changed isn't drawn or sent
-//   at all), and so does the update's progress screen, so all can draw this way. Not while turned.
+//   at all), and so does the update's progress screen, so all can draw this way. Upside down too (the refill turns
+//   the frame over); not sideways.
 // The panel's refill adds the border and the rim (ws21PanelRows()).
 //
 // Why DMA (bring-up, 2026-11-20): the CPU writing PSRAM through the cache reads every line in first and writes it
@@ -634,7 +663,7 @@ public:
 
   void flush(bool = false) override {
     const int64_t t0 = esp_timer_get_time();
-    if (direct && gWs21RotDeg) setDirect(false);  // (just turned: the canvas, with the last frame, goes out turned)
+    if (direct && !directTurn()) setDirect(false);  // (just turned sideways: the canvas, with the last frame, goes out turned)
     pressOverlay();
     const int64_t t1 = esp_timer_get_time();
     int64_t waited = 0;
@@ -662,7 +691,7 @@ public:
     const int64_t t2 = esp_timer_get_time();
     if (!direct) ws21Drop(f, WS21_FRAME_ALLOC);  // (written by the DMA: no old lines of it to read below)
     shadeRim(f);
-    panel->present(f);
+    panel->present(f, direct && gWs21RotDeg == 180);
     if (direct) handOut();  // the next frame is drawn into another
     const int64_t t3 = esp_timer_get_time();
     prof[0] += t1 - t0;           // the press overlay
@@ -675,8 +704,10 @@ public:
   // Direct drawing on or off (above). On: the game draws into a frame from the next flush (this one's, if it hasn't
   // drawn yet). Off: the canvas is back, with the last frame shown copied into it, for anything that builds on what's
   // there (a page sliding). Not while turned: the frame is the turned picture, not the canvas.
+  // upright or upside down (the refill turns it over); sideways the frame has to be made from the canvas
+  static bool directTurn() { return gWs21RotDeg == 0 || gWs21RotDeg == 180; }
   void setDirect(bool on) {
-    if (gWs21RotDeg) on = false;
+    if (!directTurn()) on = false;
     if (on == direct) return;
     if (on) {
       direct = true;

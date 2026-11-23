@@ -1142,7 +1142,8 @@ void handleSerial() {
       sum += gWs21ProfUs[k] / 1000.f / n;
       gWs21ProfUs[k] = 0;
     }
-    Serial.printf(" sum=%.1f\n", sum);
+    Serial.printf(" sum=%.1f psram free=%u largest=%u\n", sum, (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     gWs21ProfN = 0;
     Serial.println("DONE");
     return;
@@ -5718,6 +5719,9 @@ void renderSnap() {
     closeSnap();
     return;
   }
+#ifdef BOARD_WS21
+  ws21ProfStart();
+#endif
   uint32_t now = millis();
   float dt = (now - psLast) / 1000.0f;
   psLast = now;
@@ -5736,11 +5740,20 @@ void renderSnap() {
     if (ps.phase == PSP_END && ps.t > PS_ROLL_S) psOverT = now | 1;
     lastInteract = now;  // the camera moving keeps the screen awake
   }
+#ifdef BOARD_WS21
+  ws21ProfMark(0);  // the game's step
+#endif
   psDraw(ps, now, psCapture, playKeysUi);
   psCapture = false;
+#ifdef BOARD_WS21
+  ws21ProfMark(6);  // (the rest of the drawing: the print, the photo, the roll)
+#endif
   // the next place made ready while the print (or IT GOT AWAY!) is up, a little a frame
   if (ps.phase == PSP_LOAD) snapReady(40);
   else if ((ps.phase == PSP_PRINT || ps.phase == PSP_AWAY) && ps.shot + 1 < PS_SHOTS) psPrepWork(ps.order[ps.shot + 1], 40);
+#ifdef BOARD_WS21
+  ws21ProfMark(7);  // the next place made ready
+#endif
   if (psOverT) {  // the end: the score, the record, the joy, as every game shows it
     char big[16], rec[32];
     snprintf(big, sizeof(big), "%u", (unsigned)ps.score);
@@ -5748,7 +5761,13 @@ void renderSnap() {
     v2GameResult(gameLabel(GAME_SNAP), nullptr, big, psNewHi && ps.score > 0, rec, ps.score >= 600 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
   }
   drawIntroCard();
+#ifdef BOARD_WS21
+  ws21ProfMark(8);
+#endif
   gfx->flush();
+#ifdef BOARD_WS21
+  ws21ProfMark(9);
+#endif
 }
 
 // ---------- PikaSurf ----------

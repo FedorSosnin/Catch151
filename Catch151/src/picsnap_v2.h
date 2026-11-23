@@ -36,6 +36,14 @@ static uint8_t *psNearA = nullptr;
 static uint8_t *psWork[2] = { nullptr, nullptr };  // one channel being blurred, and the near plane's cover
 static uint8_t *psRing = nullptr;       // a blur's last rows (psBlur())
 static uint16_t *psStripBuf = nullptr;  // a strip of the canvas-sized painting
+// A still screen kept whole: the print (the photo dimmed over the screen, the print, its word, score and meters), or
+// IT GOT AWAY! Drawn once; each frame after, it's put back and only the line under it drawn. Redrawn each frame, the
+// whole screen dimmed pixel by pixel, it took 91 ms a frame on the Waveshare 2.1 (2026-11-23), and the next place's
+// making ready got that much less of each second. Only if there's room once the lens steps have theirs (none: drawn
+// each frame, as before)
+static uint16_t *psStill = nullptr;
+static int32_t psStillKey = -1;
+static uint32_t psPhotoN = 0;  // photos kept (psKeepPhoto(), IT GOT AWAY!'s too): a still is the photo's
 static uint16_t *psPhoto = nullptr;     // the photo just taken (PS_K x PS_K)
 static uint16_t *psThumbs = nullptr;    // the roll: each photo small (PS_SHOTS x PS_THUMB x PS_THUMB)
 static uint8_t *psSub = nullptr;        // the Pokemon's little picture: four planes, its colours times its cover
@@ -49,7 +57,9 @@ static void psFreeAll() {
   }
   psLays = 0;
   free(psFar), free(psNear), free(psNearA), free(psWork[0]), free(psWork[1]), free(psRing), free(psStripBuf);
-  free(psPhoto), free(psThumbs), free(psSub), free(psOcc);
+  free(psPhoto), free(psThumbs), free(psSub), free(psOcc), free(psStill);
+  psStill = nullptr;
+  psStillKey = -1;
   psFar = psNear = nullptr;
   psNearA = psWork[0] = psWork[1] = psRing = nullptr;
   psStripBuf = psPhoto = psThumbs = psOcc = nullptr;
@@ -80,7 +90,38 @@ static bool psAllocAll() {
     psFreeAll();
     return false;
   }
+#ifdef ESP_PLATFORM
+  const bool room = heap_caps_get_free_size(MALLOC_CAP_SPIRAM) > (size_t)V2_W * V2_W * 2 + 1024 * 1024;  // (1 MB left)
+#else
+  const bool room = true;  // (a computer)
+#endif
+  if (room) {
+#ifdef BOARD_WS21
+    psStill = ws21FrameAlloc();  // (on whole lines, as the frames: it goes back by DMA, restoreFrom())
+#else
+    psStill = (uint16_t *)ps_malloc((size_t)V2_W * V2_W * 2);
+#endif
+  }
   return true;
+}
+// the still screen kept for key, put back (false: not kept)
+static bool psStillBack(int32_t key) {
+  if (!psStill || psStillKey != key) return false;
+#ifdef BOARD_WS21
+  gfx->restoreFrom(psStill);
+#else
+  memcpy(gfx->getFramebuffer(), psStill, (size_t)V2_W * V2_W * 2);
+#endif
+  return true;
+}
+// the screen as drawn so far, kept as key's still
+static void psStillKeep(int32_t key) {
+  if (!psStill) return;
+  memcpy(psStill, gfx->getFramebuffer(), (size_t)V2_W * V2_W * 2);
+#ifdef BOARD_WS21
+  ws21Writeback();  // (out to PSRAM, where the DMA reads it)
+#endif
+  psStillKey = key;
 }
 // the picture made for a lens step (with fewer than all of them, the nearest there is)
 static int psLaySlot(int step) { return psLays >= PS_LENS_STEPS ? step : (step * (psLays - 1) + PS_BLUR_MAX / 2) / PS_BLUR_MAX; }
@@ -949,6 +990,7 @@ static void psViewfinder(const PsState &s) {
 
 // the photo: the screen as it is (the place and the Pokemon, before the marks), each 2 x 2 block's top left
 static void psKeepPhoto(const PsState &s) {
+  psPhotoN++;
   const uint16_t *fb = (const uint16_t *)gfx->getFramebuffer();
   for (int y = 0; y < PS_K; y++)
     for (int x = 0; x < PS_K; x++) psPhoto[y * PS_K + x] = fb[2 * y * V2_W + 2 * x];
@@ -1018,6 +1060,11 @@ static StrId psVerdict(uint8_t pts, uint8_t focus, uint8_t centre) {
 // word over it, its score and how it was got under it
 static void psDrawPrint(const PsState &s, float t) {
   float k = t < 0.25f ? psEase(t / 0.25f) : 1;
+  const int32_t key = (int32_t)(psPhotoN << 1);
+  if (k >= 1 && psStillBack(key)) {  // (kept: put back, only the line under it drawn)
+    psNextLine(s, t, PS_PRINT_S);
+    return;
+  }
   psPhotoFull((int)(130 * k));
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
   if (k < 1) {  // shrinking toward its place
@@ -1040,6 +1087,7 @@ static void psDrawPrint(const PsState &s, float t) {
   fsSay(b, CX, 318, pts >= PS_GOOD ? 0xF2C230 : 0xFFFFFF, 4);
   psMeter(T(S_PS_FOCUS), 362, s.focusPts, PS_PTS_FOCUS);
   psMeter(T(S_PS_CENTRE), 386, s.centrePts, PS_PTS_CENTRE);
+  psStillKeep(key);
   psNextLine(s, t, PS_PRINT_S);
 }
 // the roll at the end: each photo small, its points under it, in rows of 3, 4 and 3
@@ -1153,11 +1201,19 @@ static void psLife(uint8_t place, uint32_t now, int px, int py) {
   }
 }
 
+#ifdef BOARD_WS21
+#define PSP(k) ws21ProfMark(k)  // (the console's PROF: Pic Snap's frame in parts)
+#else
+#define PSP(k)
+#endif
 static void psDrawPlace(PsState &s, uint32_t now, bool mon = true) {
   const PsSceneDef &d = psScene(s);
   int px = (psPanX(s) >> 2) * 4, py = (psPanY(s) >> 2) * 4;  // (in whole cells, as psBlitPlace() pans the place)
+  PSP(1);
   psBlitPlace(psLensStep(s.f), px, py);
+  PSP(2);
   psLife(psPlace(s), now, px, py);
+  PSP(3);
   int fx = d.feetX - px, fy = d.feetY - py;
   int sink = psPlace(s) == PS_WAVES ? psMonUp * 3 / 4 : 0;  // in the sea: up to its middle in the water
   bool pop = d.how == PSH_POP;
@@ -1175,6 +1231,7 @@ static void psDrawPlace(PsState &s, uint32_t now, bool mon = true) {
   }
   psDrawMon(fx, fy, fx + SNAP2((int)lroundf(s.ox)), fy + sink + SNAP2((int)lroundf(s.oy)), pop ? fy + 2 : -1,
             psMonBlur(psFocusErr(s)), !mon ? 0 : d.how == PSH_FADE ? s.vis : 1, now, act, at, loop);
+  PSP(4);
 }
 static void psDraw(PsState &s, uint32_t now, bool capture, bool keys) {
   scScreen();
@@ -1190,12 +1247,18 @@ static void psDraw(PsState &s, uint32_t now, bool capture, bool keys) {
     return;
   }
   if (s.phase == PSP_PRINT || (s.phase == PSP_LOAD && psShowedPrint && s.shot > 0)) {
+    PSP(1);
     psDrawPrint(s, s.phase == PSP_PRINT ? s.t : 9);
+    PSP(5);
     return;
   }
   if (s.phase == PSP_AWAY || (s.phase == PSP_LOAD && s.shot > 0)) {  // the place as it was left, dimmed
-    psPhotoFull(110);
-    fsSay(T(S_PS_AWAY), CX, 220, 0xFFFFFF, 3);
+    const int32_t key = (int32_t)(psPhotoN << 1 | 1);
+    if (!psStillBack(key)) {
+      psPhotoFull(110);
+      fsSay(T(S_PS_AWAY), CX, 220, 0xFFFFFF, 3);
+      psStillKeep(key);
+    }
     psNextLine(s, s.t, PS_AWAY_S);
     psShowedPrint = false;
     return;
@@ -1211,12 +1274,14 @@ static void psDraw(PsState &s, uint32_t now, bool capture, bool keys) {
   }
   psDrawPlace(s, now);
   if (s.phase == PSP_OUT) {  // keep the place as it's left, for IT GOT AWAY!
+    psPhotoN++;
     const uint16_t *fb = (const uint16_t *)gfx->getFramebuffer();
     for (int y = 0; y < PS_K; y++)
       for (int x = 0; x < PS_K; x++) psPhoto[y * PS_K + x] = fb[2 * y * V2_W + 2 * x];
   }
   psViewfinder(s);
   if (s.shot == 0 && (s.phase == PSP_IN || (s.phase == PSP_AIM && s.t < 2.5f))) psHint(keys);
+  PSP(5);
 }
 
 // The cartridge's label (menus_v2.h, 79 x 42 at the canvas's top left): Oddish in the Forest's tall grass, soft pines

@@ -167,8 +167,9 @@ What the code uses:
   1 and 2, with the CS and the panel's reset on the expander (`Ws21InitBus`).
 - **Drawing:** the game draws straight into the frame to be shown (`Ws21Canvas`, "direct"): every screen paints all
   of itself each time it's drawn, so there is nothing to copy. Then the Knomi's soft rim is shaded into the frame's
-  edge (`shadeRim()`), and the frame is shown. Turned, the game draws on a canvas instead, and each frame is made
-  from it by the CPU (below). See "Faster frames" for how it got here.
+  edge (`shadeRim()`), and the frame is shown. Upside down (auto-rotate), the refill turns the frame over as it
+  copies the rows, so that costs nothing. Sideways, the game draws on a canvas instead, and each frame is made from it
+  by the CPU (below). See "Faster frames" for how it got here.
 - **Straight:** the picture sits as the panel does (`WS21_ROT_DEG` 0), so the USB-C ports point out at 45°: the case
   handles that. Turned 45°, one port pointed straight down, but a frame took 164 ms against the 100 the game is made
   for, and everything played slower than on the Knomi; Fedor chose speed. Any angle still works (`ROTDEG`): each
@@ -244,6 +245,14 @@ Result, on the bench board: Pinball 67 ms a frame (15 a second, the ball at full
   79 ms, Pinball 67 (its table's DMA copy then holds up the read-ahead: 38% of bands fell back to the CPU). At
   29 Hz (`PCLK 8`) there's room: Pinball 49 ms (20 a second) against 55 with the CPU's refill. Fedor saw no
   flicker at 29 Hz, so that's the pixel clock now: 8 MHz.
+- **Upside down** (auto-rotate at 180°) used to draw on the canvas and have the CPU turn each frame: 21 ms more a
+  frame, on every screen. Now the refill reads each band's rows from the bottom and copies them right to left
+  (`ws21PanelRows()`, `flip`), and the game draws straight into the frame as upright. The circle and the rim are
+  the same either way up.
+- **Pic Snap** took 210 ms a frame while a photo's print was up: the photo doubled over the whole screen and dimmed
+  pixel by pixel, every frame (91 ms), and the next place made ready a step a frame (about 85 ms a step). The print
+  screen, and IT GOT AWAY!, are now drawn once and kept (`psStill`, 434 KB of PSRAM if there's 1 MB more to spare),
+  then put back by DMA each frame: about 22 ms. A frame there is about 115 ms, so the next place is ready sooner.
 - **DMA channels:** the read-ahead takes one more pair (now the panel, the frame copy, the read-ahead, the sound,
   and one left for TLS). HTTPS with it isn't tested yet. `WS21_REFILL_DMA 0` builds it out.
 
@@ -285,7 +294,7 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | Command | What it does |
 |---|---|
 | `FPS` | Frames drawn since the last `FPS`, their time, and the flush's parts: the overlay, the CPU's part of a copy (and the cache's write-back), waiting for the DMA, the rim and handing over, and Pinball's table by DMA. |
-| `PROF` | Pinball's frame in parts, ms each: 0 the physics, 1 the table back, 2 what's lit, 3 the grass, 4 the wild one, 5 the flippers, 6 the ball, 7 the words, 8 the card over it, 9 the flush. |
+| `PROF` | A game's frame in parts, ms each, and PSRAM free. Pinball: 0 the physics, 1 the table back, 2 what's lit, 3 the grass, 4 the wild one, 5 the flippers, 6 the ball, 7 the words, 8 the card over it, 9 the flush. Pic Snap: 0 the game's step, 2 the place, 3 its life, 4 the Pokémon (blurred), 5 the viewfinder or the print, 6 the rest, 7 the next place made ready, 8 the card, 9 the flush. |
 | `DIRECT 0` / `DIRECT 1` | Drawing on the canvas and copying it out, as before, or straight into the frame (the default). |
 | `PERF` | The frame copy's cost, 10 in a row. |
 | `ROTDEG n` | Turns the picture n degrees clockwise. |
