@@ -33,9 +33,10 @@
 #define LCD_R3 18
 #define LCD_R4 17
 // timings, as Waveshare's demo: 18 MHz, about 66 frames a second
-#define LCD_PCLK_HZ 12000000  // 44 refreshes a second (Waveshare's demos: 16 and 18): plenty for a game drawing ~7 frames a
-                               // second, and each refresh's copy out of PSRAM takes the CPU less often. The console's
-                               // PCLK tries others
+#define LCD_PCLK_HZ 8000000  // 29 refreshes a second (Waveshare's demos: 16 and 18 MHz). PSRAM is what limits a frame,
+                              // and each refresh reads the whole picture out of it: at 29 Hz Pinball takes 49 ms a frame
+                              // against 67 at 44 Hz (12 MHz), and Fedor saw no flicker (2026-11-23). The console's
+                              // PCLK tries others
 #define LCD_PCLK_NEG 1  // data out on the falling edge, so the panel reads it steady on the rising one. With 0 (as
                         // Waveshare's demos) thin streaks ran along the rows at any pixel clock (2026-11-20)
 #define LCD_HSYNC_POL 1  // (1: idle high, esp_lcd's default, which the demo keeps)

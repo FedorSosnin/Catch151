@@ -159,8 +159,9 @@ What the code uses:
   the game never waits for a refresh. Two bounce buffers of 16 lines in internal RAM feed the panel. Each time one
   has gone out, `ws21Fill()` refills it from the frame on show: a plain copy of each row's part inside the circle,
   with the 7 px border and the corners black. The rows come from internal RAM, where the DMA brought them while the
-  band before went out (`Ws21Prefetch`); if they aren't there, the CPU reads them from PSRAM. 12 MHz pixel clock (44 Hz). Data changes on the **falling** edge of
-  the pixel clock: on the rising edge, as in Waveshare's demo, this panel showed streaks along the rows.
+  band before went out (`Ws21Prefetch`); if they aren't there, the CPU reads them from PSRAM.
+  8 MHz pixel clock, 29 Hz. Data changes on the **falling** edge of the pixel clock: on the rising edge, as in
+  Waveshare's demo, this panel showed streaks along the rows.
 - **Panel setup:** Waveshare's own command list, copied from their demo. Arduino_GFX has one for a similar 2.1" panel
   (`TL021WVC02`), but its gamma, VCOM and inversion settings differ. It goes over a 9-bit software SPI on GPIO
   1 and 2, with the CS and the panel's reset on the expander (`Ws21InitBus`).
@@ -241,8 +242,8 @@ Result, on the bench board: Pinball 67 ms a frame (15 a second, the ball at full
   interrupt until the watchdog stopped the chip). The bounce buffers went to 16 lines to make room for its 15 KB.
 - **But PSRAM is the limit, not the CPU.** Freeing the core barely moved the frame times at 44 Hz: the home screen
   79 ms, Pinball 67 (its table's DMA copy then holds up the read-ahead: 38% of bands fell back to the CPU). At
-  29 Hz (`PCLK 8`) there's room: Pinball 49 ms (20 a second) against 55 with the CPU's refill. The refresh rate is
-  the next choice, by eye: flicker.
+  29 Hz (`PCLK 8`) there's room: Pinball 49 ms (20 a second) against 55 with the CPU's refill. Fedor saw no
+  flicker at 29 Hz, so that's the pixel clock now: 8 MHz.
 - **DMA channels:** the read-ahead takes one more pair (now the panel, the frame copy, the read-ahead, the sound,
   and one left for TLS). HTTPS with it isn't tested yet. `WS21_REFILL_DMA 0` builds it out.
 
