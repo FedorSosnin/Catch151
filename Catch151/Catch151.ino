@@ -695,6 +695,9 @@ void loop() {
   uint32_t loopStart = now;
   loopNetMs = loopDrawMs = 0;
   pet.update(now);
+#ifdef BOARD_WS21
+  batTick();  // the cell, twice a second: whether it charges
+#endif
 
   // the amplifier follows the sleep state (the call returns early if unchanged).
   // This covers every path: the light button, night sleep and the one that arrives
@@ -1069,6 +1072,10 @@ void handleSerial() {
     return;
   } else if (line.startsWith("PCLKEDGE ")) {  // 1: data out on PCLK's falling edge (bring-up: streaks along the rows)
     panel->setPclkEdge(line.substring(9).toInt() != 0);
+    Serial.println("DONE");
+    return;
+  } else if (line == "BAT" || line == "BATLOG") {  // the battery now; BATLOG also the last 2 minutes, twice a second
+    batDiagPrint(line == "BATLOG");
     Serial.println("DONE");
     return;
   } else if (line == "LCD") {  // the refills since the last LCD: frames, longest gap between two (us), gaps over 50 ms

@@ -55,6 +55,10 @@ bool batShouldShutdown();          // discharged to the safe limit (batcurve.h):
 void batPowerOff();                // physical PMU power-off
 bool usbPresent();
 bool usbPresentNow();             // uncached (one I2C read): to decide whether it can sleep
+#ifdef BOARD_WS21
+void batTick();                   // in the loop: reads the cell twice a second (the charging guess)
+void batDiagPrint(bool all);      // console BAT; BATLOG also the last 2 minutes (mV, charging)
+#endif
 
 // AXP2101 PWR button: long press 4s = physical power-off (RTC stays alive);
 // the short press is captured by the firmware (screen on/off)
