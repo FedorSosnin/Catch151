@@ -86,7 +86,7 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 | **Battle wild Pokémon** | **Pick a ball and throw** | **Catch them, 1 to 3 ★** |
 | ![The Pokédex at 54 of 151, with stars, the shinies sparkling](Catch151/docs/images/v2/pokedex.gif) | ![Knomi Island: the round island with five zones, the coast's foam and waves moving](Catch151/docs/images/v2/travel.gif) | ![The Forest's Pokémon: 23 of 41, with Search](Catch151/docs/images/v2/zone.png) |
 | **Fill the Pokédex** | **Travel Knomi Island** | **See what's missing** |
-| ![The games: four cartridges a page on a Game Boy's screen, then the arrow turns to page 2, Dungeon Crawler, Reel Fishing, Pinball and the new BerryMatch](Catch151/docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](Catch151/docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](Catch151/docs/images/v2/game-end.png) |
+| ![The games: four cartridges a page on a Game Boy's screen, then the arrow turns to page 2, Dungeon Crawler, Reel Fishing, Pinball and BerryMatch, and page 3, the new Pic Snap](Catch151/docs/images/v2/games.gif) | ![Rock Hopper's how-to card over the game](Catch151/docs/images/v2/howto.png) | ![Berry Drop's end: the score, Play Again! and the Repel bar](Catch151/docs/images/v2/game-end.png) |
 | **Eight mini games** | **How to play, before each game** | **Play Again!** |
 | ![Who's That Pokémon? The clock counts down, a wrong name turns red and the answer shows: Nidoqueen](Catch151/docs/images/v2/quiz.gif) | ![The trophy room: 9 of 26 medals, a gleam sweeping over the ones won](Catch151/docs/images/v2/trophy-room.gif) | ![The shiny medal's card: a golden Pikachu under glass in a spotlight, sparkling, earned](Catch151/docs/images/v2/medal-card.gif) |
 | **Who's That Pokémon?** | **The trophy room** | **How to earn each medal** |
@@ -117,13 +117,15 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Travel Knomi Island.** Five zones on a round island that's alive: foam runs round the coast, the pines sway and the Mansion's windows light up and go dark. See what's still missing in each, then follow the pier out to Knomi Tower.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** New: **BerryMatch**, the newest mini game: a board of berries and candy to swap and line up. Your Pokémon runs in to watch from the corners. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Snap a photo.** New: **Pic Snap**, the newest mini game: a camera on Knomi Island. A wild Pokémon pops out of the grass, the sea or the dark in each of ten places while the lens hunts for focus; snap it sharp and in the middle for up to 100 points a photo, ten photos a roll.
+
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Match berries.** **BerryMatch**: a board of berries and candy to swap and line up. Your Pokémon runs in to watch from the corners. Three or more of a kind are caught, the rest fall into the gaps and new ones drop in, and chains score more. Line up four or five for a Great, Ultra or Master Ball that catches a whole row, a ring or the whole board.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Play pinball.** **Pinball**, on a round table that is the screen itself. Shoot the ramp, run the orbit to light the berries and hit the three bumpers for Diglett, who evolves into Dugtrio. Roll the ball into the tall grass (at night, a cave) and a wild Pokémon that lives there jumps into the ring in the middle: every hit of the ball is your Pokémon's move.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Go fishing.** **Reel Fishing**, five casts off the Beach's pier. Pick a fish by its shadow, strike when the float goes under and reel it in to its own beat, then weigh it and let it go. The score is the total weight, against bronze, silver and gold.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Eight mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing, Pinball and BerryMatch, on cartridges in a Game Boy, four a page. **Play Again!** at the end.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Nine mini games.** Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Who's That Pokémon?, Reel Fishing, Pinball, BerryMatch and Pic Snap, on cartridges in a Game Boy, four a page, each with its own page and leaderboard. Every one trains your Pokémon's speed, and the end says by how much. **Play Again!** at the end.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Buddies.** Knomis, Macs, PCs and browsers on the same Wi-Fi visit each other. Their Pokémon walk beside yours, give it a Party Boost, and battle, trade and play games for two.
 
@@ -131,17 +133,29 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Care for it.** Feed it berries from the backpack, give it a bath and turn the lights off for bed. It evolves when it's ready, and one day it says goodbye and walks off over the hill.
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 32 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Sound (the effects and cries) and Music each have their own level from 0 to 3 in Settings. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Music and cries.** On the Mac, Windows and the web, original chiptune plays on every screen: a home tune that turns slow and dreamy at night, a Travel tune and a battle theme for each zone, Knomi Tower, the legends, the mini games and more, 32 tracks in all. Every Pokémon has its own cry, when you pet it and when it wins. Hold your Pokémon and tap **Sound** for a slider for the music and one for the effects and cries, each from 0 to 3, and a big **Mute** button. (The Knomi has no speaker, so it stays quiet.) **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**, and see [Original music and sound](#original-music-and-sound).
 
-<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Settings, Medals, Stats and the Pokédex.
+<img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Hold it for a menu.** Hold your finger on your Pokémon for a ring of Stats, Medals, Settings and the Pokédex, and on a computer or the web, Sound.
 
 <img src="Catch151/docs/images/v2/pokeball.png" width="18" alt=""> **Everywhere, in 8 languages.** The Knomi, Mac, Windows and the web, in English, Spanish, French, German, Italian, Portuguese, Japanese and Korean. Updates install themselves, and your Pokémon is kept.
 
-## New: BerryMatch
+## New: Pic Snap
+
+<p align="center"><img src="Catch151/docs/images/v2/picsnap.gif" alt="Pic Snap: Pikachu pops up from behind a log in the Forest while the lens hunts for focus, the photo comes out as a print worth 87, then Clefairy turns up among the Cave's crystals" width="360"></p>
+
+The newest mini game, the ninth cartridge, on the Game Boy's third page: a camera on Knomi Island. There are ten places, two in each zone (the Forest's tall grass and pines, the Beach's shore and waves, the Cave's crystals and a ledge, the Mansion's graveyard and lit window, the Field's sky and its flowers at sunset), and in each a wild Pokémon of that zone shows up: out of the grass, the sea or the dark, from behind a log or a rock, or down from the sky. It stays a few seconds, looking about, hopping and taking a few steps, while the camera drifts and its lens hunts for focus, sweeping from what's close through the Pokémon to what's far off. Tap anywhere (or click, or press Space) to snap.
+
+Each photo scores up to 50 points for focus and 50 for the Pokémon in the middle, and comes out as a print with its points. A roll is ten photos, 1,000 points at best, and ends with all ten as small prints round your score. Your best roll is kept and goes on the [leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/) with your gamer tag, and like every mini game it gives your Pokémon joy and speed training.
+
+<p align="center"><img src="Catch151/docs/images/v2/picsnap-end.png" width="300" alt="A roll's end: 830, NEW RECORD!, So much fun!, SPD TRAINING +4, Play Again! and the Repel bar, with the ten prints round it"></p>
+
+How it all works: [Pic Snap](Catch151/docs/HOW_IT_WORKS.md#pic-snap).
+
+## BerryMatch
 
 <p align="center"><img src="Catch151/docs/images/v2/berrymatch.gif" alt="BerryMatch on the lawn: pieces caught and refilled, a chain worth more, a Great Ball and an Ultra Ball made, moves earned, and Pikachu running off one corner and in at another" width="360"></p>
 
-The newest mini game, the eighth cartridge on the Game Boy's second page: a match-3 on the game's own Razz, Oran and Pinap Berries and Rare Candies, as big and sharp as in the backpack, on a five by five board with its corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back, and a tap that just misses the piece you meant still swaps it. Four in a line leave a **Great Ball** (it catches its row and column), an L or a T an **Ultra Ball** (everything two steps around it), five in a line a **Master Ball** (the whole board): swap one with any piece next to it to set it off, and one caught in another's blast goes off too.
+The eighth mini game, on the Game Boy's second page: a match-3 on the game's own Razz, Oran and Pinap Berries and Rare Candies, as big and sharp as in the backpack, on a five by five board with its corners cut so it sits round on the screen. Tap a piece, then one next to it, and they swap; three or more of a kind in a row or a column are caught, the pieces above fall and new ones drop in from the top, and whatever lines up as they land is caught too, each step of a chain worth more. A swap that lines nothing up swaps back, and a tap that just misses the piece you meant still swaps it. Four in a line leave a **Great Ball** (it catches its row and column), an L or a T an **Ultra Ball** (everything two steps around it), five in a line a **Master Ball** (the whole board): swap one with any piece next to it to set it off, and one caught in another's blast goes off too.
 
 A game starts with twenty moves, and playing well earns more: a Great Ball made earns 1, an Ultra Ball 2, a Master Ball 3, and a chain that keeps going 1 for each catch after its third, so a good game runs on. Your Pokémon plays along, small as if a little way off: it runs in from the edge of the screen to one of the board's cut corners, watches, hops when you make a ball or earn moves, and runs off to come back at another. The board shuffles when no swap is left, a hint wiggles after a while (three a game), and on a computer the arrow keys and Space work too. It has its own song, [▶&nbsp;BerryMatch](https://fedorsosnin.github.io/Catch151/music/), and your best goes on the leaderboard.
 
@@ -365,7 +379,7 @@ Your Pokémon's ATK, DEF and SPD grow as it levels up, and training adds more on
 
 - **Winning a battle** adds attack training: 3 a win, so 34 wins fill it.
 - **Every 6 hours of good care** (every need at 40 or more) adds defense training. Sleep counts, and a need can dip under 40 for up to 15 minutes before the 6 hours start over.
-- **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball) add speed training.
+- **Mini games** (Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball, BerryMatch and Pic Snap) add speed training. A game's end shows how much, as **SPD TRAINING +2**, under the happiness it gave (Reel Fishing's end has no room for it, but it trains all the same).
 - **Weight** isn't training: food adds it (candy the most), and games, battles and time burn it off. Over 50, your Pokémon tires twice as fast.
 
 Each kind of training stops at 100. The card's **Training** page (**Stats** in the ring, then two pages on) shows how far along each one is, with **MAX** when it's full, and your Pokémon's weight. Once attack training is maxed, a win says so instead of adding more. A new Pokémon starts training from zero.
@@ -386,13 +400,15 @@ Tap the tower on Travel's second page, then **CLIMB!** with a full energy bar. Y
 
 ### Games
 
-Tap the **handheld** icon, on the left, for the mini games: cartridges on a Game Boy's screen, each label a little scene from its game. When one starts, a card drops in over it with how to play; press **Ready, GO!** or swipe the card away to start. They train speed, and the time you play counts toward your next Repel. At the end, **Play Again!** starts it again, the ✕ goes back to the games, and the Repel bar opens the Repel's page. **Swipe up from the lower half of the screen to quit any game**, with nothing earned.
+Tap the **handheld** icon, on the left, for the mini games: cartridges on a Game Boy's screen, each label a little scene from its game. When one starts, a card drops in over it with how to play; press **Ready, GO!** or swipe the card away to start. They train speed (the end of a game says by how much), and the time you play counts toward your next Repel. At the end, **Play Again!** starts it again, the ✕ goes back to the games, and the Repel bar opens the Repel's page. **Swipe up from the lower half of the screen to quit any game**, with nothing earned.
 
 - **Dungeon Crawler:** explore a cave floor by floor. Tap toward where you want to step, or hold to keep walking. Walk into a wild Pokémon to attack it with your own best move, pick up Razz, Oran and Pinap Berries to heal, and find the stairs down. A better-trained Pokémon gets deeper.
 - **Rock Hopper:** tap to jump over rocks, bushes, fallen logs, stumps and mushrooms in a forest that keeps getting faster. How long can you last?
 - **PikaSurf:** your Pokémon surfs down the rushing water on a board; tilt, drag it or use the arrow keys to dodge the rocks coming up in three lanes. Pikachu surfs alongside and never hits one, until he pulls ahead out of sight. It keeps speeding up, and one rock ends the run.
 - **Reel Fishing:** five casts off the pier at the Beach, the rod in your hands. Tap the water by a fish (the bigger the shadow, the heavier it is; bubbles over one mean it's about to bite), wait out the nibbles, and tap when the float goes under. Then tap to the beat to reel it in, keeping the white needle in the green of the **LINE** bar on the right: too fast and the line snaps, too slow and it slips off, and each weight has its own pace (the fish swells on it, and on a computer the fight song plays it). Every fish is weighed, a gold gauge on the left filling to its weight and saying how big it is for its kind, then let go: the score is the total weight, against bronze, silver and gold lines at 110, 331 and 661 lb. One giant comes in every game. The Knomi's button (Space on a computer) casts, strikes and reels too.
 - **Pinball:** a round table, its rim the wall. Hold the left or right half of the screen to raise that flipper; the Knomi's button (Space on a computer) raises both, and on a computer the left and right arrows raise each. Three balls. The ramp up the left comes back to your left flipper (+250), the orbit round the top lights berries (all six double your points, the next six triple them), the three bumpers bring out Diglett (+1000; beat it twice and the next is Dugtrio, three heads to hit), and the tall grass by the right wall (at night, a cave) sends a wild Pokémon into the ring in the middle: hit it with the ball, each hit your Pokémon's move, to knock it out in 20 seconds (+500).
+- **BerryMatch:** tap a piece, then one next to it, to swap them; three or more of a kind in a row or a column are caught and new ones drop in. Four or five in a line leave a Great, Ultra or Master Ball. Twenty moves to start, and good play earns more.
+- **Pic Snap:** a wild Pokémon turns up in each of ten places on Knomi Island; tap (or click, or press Space) when it's sharp and in the middle of the frame. Ten photos a roll, up to 100 points each.
 - **Who's That Pokémon?:** name the silhouette, ten rounds per game, never the same Pokémon twice. Each one has ten seconds on the clock: run out and it counts as wrong, and the answer shows.
 - **Berry Drop:** in the woods under two tall berry trees, tilt left and right, or drag your Pokémon with a finger, to catch falling berries. They fall faster with every catch, with no top speed, so every game ends.
 
@@ -554,7 +570,7 @@ Game rules run on your computer without a board:
 
 The code also builds for the Waveshare ESP32-S3-Touch-AMOLED-1.75, a bigger round board with a microSD slot. [`docs/WAVESHARE.md`](Catch151/docs/WAVESHARE.md) explains how to build it, flash it and load the sprites.
 
-A port to the Waveshare ESP32-S3-Touch-LCD-2.1 (480 × 480, for a handheld with speakers and a battery) is being prepared. It compiles but hasn't run on the board yet: see [`docs/WAVESHARE_21.md`](Catch151/docs/WAVESHARE_21.md).
+A port to the Waveshare ESP32-S3-Touch-LCD-2.1 (480 × 480, for a handheld with a speaker and a battery) is being prepared. It runs on a bench board, with sound through a small amplifier: see [`docs/WAVESHARE_21.md`](Catch151/docs/WAVESHARE_21.md).
 
 ### What's where
 

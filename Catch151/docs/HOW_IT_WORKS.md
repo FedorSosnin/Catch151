@@ -186,7 +186,7 @@ Every form in the Pokédex (regular and shiny count apart) has 1–3 ★: its ge
 
 - **Winning a battle** adds attack training (+3 a win).
 - **Every 6 hours of good care** adds defense training (+1). Good care means every need stays at 40 or more. Hours asleep count too, and a need can dip under 40 for up to 15 minutes while it's awake (time to notice and feed it) before the 6 hours start over. The count is saved, so a restart or an update doesn't lose it.
-- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball and BerryMatch add 1 for every 5 points.
+- **Mini games** add speed training: Berry Drop, Rock Hopper, PikaSurf, Dungeon Crawler, Reel Fishing, Pinball, BerryMatch and Pic Snap add 1 for every 5 points. The game's end says how much it added, **SPD TRAINING +N**, under the joy (`v2GameResult()`, from `Pet::speGain`); Reel Fishing's end card has no room for the line.
 - **Weight** isn't training: every berry adds 4 and candy 12 (6 more if it was already 80% full). Games, battles and time burn it off. Over 50, energy drops twice as fast; 20 or less earns the Fit medal.
 
 Each kind of training stops at 100. Hold your Pokémon and tap **Stats** for the card, then two pages on: the **Training** page shows each one's bar, with **MAX** when it's full, and what trains it, plus a row for weight. Training belongs to the Pokémon: a new one starts from zero.

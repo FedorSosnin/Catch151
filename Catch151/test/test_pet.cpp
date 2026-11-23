@@ -2081,6 +2081,14 @@ TEST(save, state_survives_a_reboot) {
   d.matchResult(2140);
   CHECK_EQ(d.boardMatch, (uint32_t)2140);
   CHECK(d.hasScore());
+  Pet e;  // ...and Pic Snap's, game 8 on the board
+  e.begin();
+  memset(e.boardHi, 0, sizeof(e.boardHi));
+  e.boardMatch = e.boardSnap = 0;
+  CHECK(!e.hasScore());
+  e.snapResult(830);
+  CHECK_EQ(e.boardSnap, (uint16_t)830);
+  CHECK(e.hasScore());
   CHECK_STREQ(b.nick, "SPARKY");
   CHECK(b.isRegistered(25));
   CHECK(!b.awaitingStarter());

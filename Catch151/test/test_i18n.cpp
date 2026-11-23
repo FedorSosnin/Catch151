@@ -126,6 +126,7 @@ static const ExpectedFmt EXPECTED[] = {
   { S_FISH_SMALL_FMT, "%s" },   // the weigh-in: how big it is for its kind, its name
   { S_FISH_FINE_FMT, "%s" },
   { S_FISH_LARGE_FMT, "%s" },
+  { S_SPD_TRAIN_FMT, "%u" },    // a game's end: what it added to SPD (menus_v2.h v2GameResult())
 };
 static const int NUM_EXPECTED = (int)(sizeof(EXPECTED) / sizeof(EXPECTED[0]));
 

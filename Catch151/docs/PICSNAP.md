@@ -13,8 +13,8 @@ Pokémon in each, and you snap it when it's sharp and in the middle (Fedor, 2026
   print and the roll at the end, and the cartridge's label (`psPaintLabel()`).
 - **In the sketch:** `startSnap()`, `snapEvents()` (the sounds, the reward and record), `snapTouchDown()` (a photo as
   the finger goes down), `snapButton()` (the card's READY, GO!, then the shutter), `renderSnap()`.
-- **Saved:** the record as `pshi`, the leaderboard's best as `lbps`. It's sent to the relay as game 8, which the relay
-  doesn't keep yet.
+- **Saved:** the record as `pshi`, the leaderboard's best as `lbps`. It's sent to the relay as game 8, which keeps it on
+  the leaderboard as the other games' (`relay/src/board.js` `GAMES[8]`).
 
 ## The places
 
@@ -77,7 +77,5 @@ moths, a far bird, petals (`psLife()`).
 
 ## Not done yet
 
-- The online leaderboard: the relay's `GAMES[8]`, its board picture's row, the leaderboard page's card. Until then the
-  game doesn't ask for a gamer tag after a Pic Snap roll (`Pet::hasScore()`).
 - A song of its own (it plays Travel's).
 - A check on the Knomi and the Waveshare: the time a frame takes and the PSRAM left.
