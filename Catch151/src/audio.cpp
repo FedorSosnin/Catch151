@@ -109,6 +109,7 @@ void audioSetIdle(bool) {}
 #define BLOCK 128          // frames mixed at a time (8 ms); 4 of them wait in the DMA, so a tap sounds within ~40 ms
 #define QUEUE_LEN 8
 #define AMP_WAKE_MS 50     // the amplifier just switched on: an effect waits this long (it swallowed short ones)
+#define AMP_TAIL_MS 150    // the PAM8302A stays on this long after the last sound (taps in a row: no clicking on/off)
 
 static i2s_chan_handle_t gTx = nullptr;
 static std::atomic<bool> gOn{true}, gSleeping{false}, gIdle{false}, gBusy{false};
@@ -267,11 +268,20 @@ static void audioTask(void *) {
     const bool mono = false;
 #endif
     uint32_t t0 = micros(), now = millis();
-    // the amplifier: on while anything sounds, or awake and in use with SOUND or the music on; off asleep or idle
     bool queued = gTail.load(std::memory_order_acquire) != gHead.load(std::memory_order_acquire);
     bool hold = gHold && (int32_t)(gHoldUntil.load() - now) > 0;
     bool sounding = gDef || queued || gVoice.active() || gVoiceReady.load() || gMusic.audible();
+#ifdef WS21_AUDIO_PDM
+    // the amplifier: on only while something sounds, and AMP_TAIL_MS after. The unsmoothed stream hisses even when
+    // it carries silence (Fedor: "when music is off, there is still static"), so it isn't kept on between sounds;
+    // an effect then waits AMP_WAKE_MS for it
+    static uint32_t lastSound = 0;
+    if (sounding) lastSound = now;
+    ampSet(sounding || (lastSound && now - lastSound < AMP_TAIL_MS));
+#else
+    // the amplifier: on while anything sounds, or awake and in use with SOUND or the music on; off asleep or idle
     ampSet(sounding || (!gSleeping && (hold || ((gOn || gMusicOn) && !gIdle))));
+#endif
     bool warm = gAmpLevel && now - gAmpOnAt >= AMP_WAKE_MS;
     gBusy = sounding || hold;
 
