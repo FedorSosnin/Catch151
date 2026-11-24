@@ -5650,7 +5650,8 @@ void startSnap() {
   psFreeze = 0;
   psPrepFor = -1;
   psMonDex = 0;
-  snapReady(0);  // the first place, while the card is up
+  // the first place is made ready under the card, a little a frame (renderSnap()): all at once here, the screen
+  // stopped before the card was even up
 }
 
 void closeSnap() {
@@ -5768,7 +5769,7 @@ void renderSnap() {
   ws21ProfMark(6);  // (the rest of the drawing: the print, the photo, the roll)
 #endif
   // the next place made ready while the print (or IT GOT AWAY!) is up, a little a frame
-  if (ps.phase == PSP_LOAD) snapReady(40);
+  if (ps.phase == PSP_LOAD) snapReady(introUp() ? 40 : 80);  // (the card gone: nothing else to show yet)
   else if ((ps.phase == PSP_PRINT || ps.phase == PSP_AWAY) && ps.shot + 1 < PS_SHOTS) psPrepWork(ps.order[ps.shot + 1], 40);
 #ifdef BOARD_WS21
   ws21ProfMark(7);  // the next place made ready
