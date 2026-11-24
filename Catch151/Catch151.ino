@@ -5591,7 +5591,8 @@ void startSnap() {
   psFreeze = 0;
   psPrepFor = -1;
   psMonDex = 0;
-  snapReady(0);  // the first place, while the card is up
+  // the first place is made ready under the card, a little a frame (renderSnap()): all at once here, the screen
+  // stopped before the card was even up
 }
 
 void closeSnap() {
@@ -5700,7 +5701,7 @@ void renderSnap() {
   psDraw(ps, now, psCapture, playKeysUi);
   psCapture = false;
   // the next place made ready while the print (or IT GOT AWAY!) is up, a little a frame
-  if (ps.phase == PSP_LOAD) snapReady(40);
+  if (ps.phase == PSP_LOAD) snapReady(introUp() ? 40 : 80);  // (the card gone: nothing else to show yet)
   else if ((ps.phase == PSP_PRINT || ps.phase == PSP_AWAY) && ps.shot + 1 < PS_SHOTS) psPrepWork(ps.order[ps.shot + 1], 40);
   if (psOverT) {  // the end: the score, the record, the joy, as every game shows it
     char big[16], rec[32];
