@@ -175,9 +175,10 @@ What the code uses:
   for, and everything played slower than on the Knomi; Fedor chose speed. Any angle still works (`ROTDEG`): each
   panel pixel then blends the four canvas pixels round its point (`WS21_SMOOTH`); without the blend, pixel art
   comes out dotted and its dithering in zigzags.
-- **Auto-rotate:** in quarter turns, as the board is held. Each copies whole pixels, with no blending: upside down
-  the same way as straight (120 ms a frame), sideways a canvas column per panel row (140 ms). Turned, the game draws
-  on the canvas and each frame is made from it (2026-11-20 numbers, before "Faster frames").
+- **Auto-rotate:** in quarter turns, as the board is held. It holds still in every game, Pic Snap and BerryMatch
+  included (2026-11-23). Each copies whole pixels, with no blending: upside down the same way as straight (120 ms a
+  frame), sideways a canvas column per panel row (140 ms). Turned, the game draws on the canvas and each frame is made
+  from it (2026-11-20 numbers, before "Faster frames").
 - **Dimming:** only while the pet sleeps, as on computers (Fedor). The Knomi still dims when left alone.
 - **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas and turned with
   the picture. A small task on the other core reads it every 8 ms while a finger is down and queues each press and
@@ -295,6 +296,7 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 |---|---|
 | `FPS` | Frames drawn since the last `FPS`, their time, and the flush's parts: the overlay, the CPU's part of a copy (and the cache's write-back), waiting for the DMA, the rim and handing over, and Pinball's table by DMA. |
 | `PROF` | A game's frame in parts, ms each, and PSRAM free. Pinball: 0 the physics, 1 the table back, 2 what's lit, 3 the grass, 4 the wild one, 5 the flippers, 6 the ball, 7 the words, 8 the card over it, 9 the flush. Pic Snap: 0 the game's step, 2 the place, 3 its life, 4 the Pokémon (blurred), 5 the viewfinder or the print, 6 the rest, 7 the next place made ready, 8 the card, 9 the flush. |
+| `PLAY g` / `QUIT` | After `NOSAVE`: game g (0 Tilt Catch to 8 Pic Snap) under its card, as from the Games menu; out of it again. A swipe sends the card away. |
 | `DIRECT 0` / `DIRECT 1` | Drawing on the canvas and copying it out, as before, or straight into the frame (the default). |
 | `PERF` | The frame copy's cost, 10 in a row. |
 | `ROTDEG n` | Turns the picture n degrees clockwise. |

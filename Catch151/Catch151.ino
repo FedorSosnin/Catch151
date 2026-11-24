@@ -1362,6 +1362,23 @@ void handleSerial() {
     startSnap();
     if (psOpen) introOpen(8);  // (GAME_SNAP, further on)
     Serial.println("DONE");
+  } else if (line.startsWith("PLAY ") && pet.noSave) {  // "PLAY g": game g (0..8) under its card, as from the Games
+    int g = atoi(line.c_str() + 5);                      // menu (testing: timing each game)
+    gamesMenuOpen = false;
+    if (g == 0) startGame();
+    else if (g == 1) startQuiz();
+    else if (g == 2) startRun();
+    else if (g == 3) startDungeon();
+    else if (g == 4) startSurf();
+    else if (g == 5) startFish();
+    else if (g == 6) startPinball();
+    else if (g == 7) startMatch();
+    else if (g == 8) startSnap();
+    if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen || pinOpen || bmOpen || psOpen) introOpen(g);
+    Serial.println("DONE");
+  } else if (line == "QUIT" && pet.noSave) {  // out of any game, no reward (the swipe up; testing)
+    quitGame();
+    Serial.println("DONE");
   } else if (line == "PSBOT" && pet.noSave) {  // Pic Snap snaps by itself (testing, screenshots)
     psBot = !psBot;
     Serial.println("DONE");
@@ -2922,15 +2939,17 @@ void quitGame() {
 
 // tilt zero: whatever it reads now is "straight"
 #if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
-// the screen follows gravity, except with a finger on it or when tilting is part of the game. On the Waveshare 2.1 in
-// quarter turns from its own (WS21_ROT_DEG: 45, 135, 225, 315; Fedor: "Can we turn auto rotate back on? But in 90*
-// increments from where it is now?"), which all cost the same: any angle but 0 is turned pixel by pixel
+// the screen follows gravity, except with a finger on it or in a game (Fedor, 2026-11-23: Pic Snap and BerryMatch
+// "hold the screen still like the other games"). On the Waveshare 2.1 in quarter turns from its own (WS21_ROT_DEG: 45,
+// 135, 225, 315; Fedor: "Can we turn auto rotate back on? But in 90* increments from where it is now?"): upside down
+// is drawn straight into the frame and turned by the refill, sideways is turned pixel by pixel
 void autoRotateTick(uint32_t now) {
   static uint32_t last = 0;
   static RotFilter filter;
   if (now - last < 100) return;
   last = now;
-  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || fishOpen || pinOpen || (battleOpen && bPhase >= BP_AIM)) {
+  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || fishOpen || pinOpen || bmOpen || psOpen ||
+      (battleOpen && bPhase >= BP_AIM)) {
     filter.reset();
     return;
   }
