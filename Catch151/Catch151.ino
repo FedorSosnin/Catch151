@@ -690,6 +690,19 @@ static void v2SayPet();                    // ...and a Pokemon's cry: petted, af
 static void v2SayWin();
 static void v2SayDex();
 #endif
+#ifdef BOARD_WS21
+// the screen now, in a few words, for the log (ws21GuardCheck())
+static const char *ws21ScreenNow() {
+  static char b[96];
+  snprintf(b, sizeof(b), "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s(zone %d)", battleOpen ? "battle " : "", pinOpen ? "pinball " : "",
+           psOpen ? "picsnap " : "", bmOpen ? "berrymatch " : "", fishOpen ? "fishing " : "", surfOpen ? "surf " : "",
+           runOpen ? "run " : "", dungeonOpen ? "dungeon " : "", quizOpen ? "quiz " : "", gameOpen ? "tiltcatch " : "",
+           vbOpen ? "volley " : "", sdOpen ? "showdown " : "", gamesMenuOpen ? "gamesmenu " : "", galleryOpen ? "pokedex " : "",
+           cardOpen ? "card " : "", v2RadialOpen ? "radial " : "", introCard >= 0 ? "howto " : "", v2Sliding() ? "sliding " : "",
+           (int)zoneScreen);
+  return b;
+}
+#endif
 void loop() {
   uint32_t now = millis();
   uint32_t loopStart = now;
@@ -697,6 +710,11 @@ void loop() {
   pet.update(now);
 #ifdef BOARD_WS21
   batTick();  // the cell, twice a second: whether it charges
+  static uint32_t guardT = 0;
+  if (now - guardT >= 1000) {  // anything drawn past a picture's edge (ws21_hal.h), and in which screen
+    guardT = now;
+    if (gfx) ws21GuardCheck(ws21ScreenNow());
+  }
 #endif
 
   // the amplifier follows the sleep state (the call returns early if unchanged).
@@ -972,7 +990,11 @@ void handleSerial() {
 #ifdef BOARD_KNOMI_V2
   if (line == "SHOT") {  // panel capture: "SHOT 240 240 rotation\n" + RGB565 little endian
     Serial.printf("SHOT %d %d %u\n", PANEL_SIZE, PANEL_SIZE, gPanelRot);
+#ifdef BOARD_WS21
+    gfx->shotWrite(Serial);  // the panel's rows as the refill makes them (ws21_hal.h)
+#else
     Serial.write((uint8_t *)gfx->panelBuffer(), PANEL_SIZE * PANEL_SIZE * 2);
+#endif
     Serial.println("DONE");
     return;
   } else if (line.startsWith("TAP ")) {  // simulated touch in logical coordinates (466): "TAP x y [ms]"
@@ -1084,8 +1106,15 @@ void handleSerial() {
     uint32_t miss, odd;
     bool found;
     panel->eofStats(&miss, &odd, &found);
-    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s\n", (unsigned)n, (unsigned)gap,
-                  (unsigned)late, (unsigned)miss, (unsigned)odd, !found ? "none" : panel->eofFix ? "on" : "off");
+    Serial.printf("lcd frames=%u maxgap=%u late=%u eofmiss=%u eofodd=%u fix=%s fill n=%u avg=%u max=%u us dma=%s "
+                  "read-ahead %u, cpu %u, dma late %u\n",
+                  (unsigned)n, (unsigned)gap, (unsigned)late, (unsigned)miss, (unsigned)odd,
+                  !found ? "none" : panel->eofFix ? "on" : "off", (unsigned)gWs21Show.fillN,
+                  (unsigned)(gWs21Show.fillN ? gWs21Show.fillUs / gWs21Show.fillN : 0), (unsigned)gWs21Show.fillMax,
+                  gWs21Pre.stage ? "on" : "off", (unsigned)gWs21Pre.hits, (unsigned)gWs21Pre.misses,
+                  (unsigned)gWs21Pre.late);
+    gWs21Show.fillUs = gWs21Show.fillN = gWs21Show.fillMax = 0;
+    gWs21Pre.hits = gWs21Pre.misses = gWs21Pre.late = 0;
     Serial.println("DONE");
     return;
   } else if (line.startsWith("EOFFIX ")) {  // 0: the driver's lost-refill-signal fault left as it is (testing)
@@ -1117,6 +1146,29 @@ void handleSerial() {
   } else if (line.startsWith("HOLD ")) {  // the game stops for n seconds: only the panel's refill runs (bring-up)
     uint32_t until = millis() + (uint32_t)line.substring(5).toInt() * 1000;
     while ((int32_t)(until - millis()) > 0) delay(20);
+    Serial.println("DONE");
+    return;
+  } else if (line.startsWith("DIRECT ")) {  // 0: drawn on the canvas and copied out, as before (comparing)
+    gWs21DirectOk = line.substring(7).toInt() != 0;
+    Serial.println("DONE");
+    return;
+  } else if (line == "PROF") {  // the marks in a game's frame (Pinball's), ms per frame each, since the last PROF
+    float n = gWs21ProfN ? gWs21ProfN : 1, sum = 0;
+    Serial.printf("prof n=%u", (unsigned)gWs21ProfN);
+    for (int k = 0; k < 12; k++) {
+      if (gWs21ProfUs[k]) Serial.printf(" %d=%.1f", k, gWs21ProfUs[k] / 1000.f / n);
+      sum += gWs21ProfUs[k] / 1000.f / n;
+      gWs21ProfUs[k] = 0;
+    }
+    Serial.printf(" sum=%.1f psram free=%u largest=%u\n", sum, (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+    gWs21ProfN = 0;
+    Serial.println("DONE");
+    return;
+  } else if (line == "GUARDTEST") {  // a row written just above the picture being drawn: the guard must catch it
+    uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+    for (int x = 0; x < LCD_WIDTH; x++) fb[x - LCD_WIDTH] = 0x0884;
+    Serial.printf("guard test: %s\n", ws21GuardCheck("GUARDTEST") ? "caught" : "NOT caught");
     Serial.println("DONE");
     return;
   } else if (line == "FPS") {  // frames drawn since the last FPS, and their time; flush()'s share of it
@@ -1160,10 +1212,6 @@ void handleSerial() {
     Serial.println("DONE");
     return;
 #endif
-  } else if (line.startsWith("DMAIN ")) {  // 1: the straight copy reads the canvas by DMA (quicker; lines came back)
-    gWs21DmaIn = line.substring(6).toInt() != 0;
-    Serial.println("DONE");
-    return;
   } else if (line.startsWith("TOUCHLOG ")) {  // 1: each press and lift logged, with its delays (testing)
     touch.log = line.substring(9).toInt() != 0;
     Serial.println("DONE");
@@ -1337,6 +1385,23 @@ void handleSerial() {
     gamesMenuOpen = false;
     startSnap();
     if (psOpen) introOpen(8);  // (GAME_SNAP, further on)
+    Serial.println("DONE");
+  } else if (line.startsWith("PLAY ") && pet.noSave) {  // "PLAY g": game g (0..8) under its card, as from the Games
+    int g = atoi(line.c_str() + 5);                      // menu (testing: timing each game)
+    gamesMenuOpen = false;
+    if (g == 0) startGame();
+    else if (g == 1) startQuiz();
+    else if (g == 2) startRun();
+    else if (g == 3) startDungeon();
+    else if (g == 4) startSurf();
+    else if (g == 5) startFish();
+    else if (g == 6) startPinball();
+    else if (g == 7) startMatch();
+    else if (g == 8) startSnap();
+    if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen || pinOpen || bmOpen || psOpen) introOpen(g);
+    Serial.println("DONE");
+  } else if (line == "QUIT" && pet.noSave) {  // out of any game, no reward (the swipe up; testing)
+    quitGame();
     Serial.println("DONE");
   } else if (line == "PSBOT" && pet.noSave) {  // Pic Snap snaps by itself (testing, screenshots)
     psBot = !psBot;
@@ -2584,6 +2649,10 @@ uint32_t lastScreenKey = 0;
 
 // Draws a frame and returns true if it flushed it to the panel.
 bool render() {
+#ifdef BOARD_WS21
+  // every screen paints all of itself, so it draws straight into the frame to be shown (ws21_hal.h): no copy
+  gfx->setDirect(gWs21DirectOk);
+#endif
 #ifdef KNOMI_RIM
   gKnomiLiftOn = false;  // V2: nothing over the Knomi's rim until this frame's need bars mark their labels (knomi_rim.h)
 #endif
@@ -2898,15 +2967,17 @@ void quitGame() {
 
 // tilt zero: whatever it reads now is "straight"
 #if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
-// the screen follows gravity, except with a finger on it or when tilting is part of the game. On the Waveshare 2.1 in
-// quarter turns from its own (WS21_ROT_DEG: 45, 135, 225, 315; Fedor: "Can we turn auto rotate back on? But in 90*
-// increments from where it is now?"), which all cost the same: any angle but 0 is turned pixel by pixel
+// the screen follows gravity, except with a finger on it or in a game (Fedor, 2026-11-23: Pic Snap and BerryMatch
+// "hold the screen still like the other games"). On the Waveshare 2.1 in quarter turns from its own (WS21_ROT_DEG: 45,
+// 135, 225, 315; Fedor: "Can we turn auto rotate back on? But in 90* increments from where it is now?"): upside down
+// is drawn straight into the frame and turned by the refill, sideways is turned pixel by pixel
 void autoRotateTick(uint32_t now) {
   static uint32_t last = 0;
   static RotFilter filter;
   if (now - last < 100) return;
   last = now;
-  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || fishOpen || pinOpen || (battleOpen && bPhase >= BP_AIM)) {
+  if (screenOff || wasPressed || gameOpen || surfOpen || vbOpen || fishOpen || pinOpen || bmOpen || psOpen ||
+      (battleOpen && bPhase >= BP_AIM)) {
     filter.reset();
     return;
   }
@@ -5575,6 +5646,9 @@ void renderPinball() {
     closePinball();
     return;
   }
+#ifdef BOARD_WS21
+  ws21ProfStart();
+#endif
   uint32_t now = millis();
   float dt = (now - pinLast) / 1000.0f;
   pinLast = now;
@@ -5587,6 +5661,9 @@ void renderPinball() {
 #if HAS_MUSIC
   musicTempo(pin.btlOn && pin.wildMax && pin.outT <= 0 ? 1.12f : 1.0f);  // its song a little faster in a battle
 #endif
+#ifdef BOARD_WS21
+  ws21ProfMark(0);  // the physics
+#endif
   pinDraw(pin, playKeysUi);
   if (pinOverT) {  // the end: the score, the record, the joy, as every game shows it
     char big[16], rec[32];
@@ -5595,7 +5672,13 @@ void renderPinball() {
     v2GameResult(gameLabel(GAME_PINBALL), nullptr, big, pinNewHi && pin.score > 0, rec, pin.score >= 4000 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
   }
   drawIntroCard();
+#ifdef BOARD_WS21
+  ws21ProfMark(8);
+#endif
   gfx->flush();
+#ifdef BOARD_WS21
+  ws21ProfMark(9);
+#endif
 }
 
 // ---------- BerryMatch ----------
@@ -5822,6 +5905,9 @@ void renderSnap() {
     closeSnap();
     return;
   }
+#ifdef BOARD_WS21
+  ws21ProfStart();
+#endif
   uint32_t now = millis();
   float dt = (now - psLast) / 1000.0f;
   // each photo's aiming, timed for the console: its frames, their time, the slowest (how smooth it is on a board)
@@ -5850,8 +5936,14 @@ void renderSnap() {
     if (ps.phase == PSP_END && ps.t > PS_ROLL_S) psOverT = now | 1;
     lastInteract = now;  // the camera moving keeps the screen awake
   }
+#ifdef BOARD_WS21
+  ws21ProfMark(0);  // the game's step
+#endif
   psDraw(ps, now, psCapture, playKeysUi);
   psCapture = false;
+#ifdef BOARD_WS21
+  ws21ProfMark(6);  // (the rest of the drawing: the print, the photo, the roll)
+#endif
   // the next place made ready while the print (or IT GOT AWAY!) is up, a little a frame. None while a finger is down:
   // the frames stay quick enough to follow it, or a swipe (the card's, up to quit) ended between two of them and was
   // only a tap (the XL, 2026-11-23)
@@ -5859,6 +5951,9 @@ void renderSnap() {
     if (ps.phase == PSP_LOAD) snapReady(introUp() ? 40 : 80);  // (the card gone: nothing else to show yet)
     else if ((ps.phase == PSP_PRINT || ps.phase == PSP_AWAY) && ps.shot + 1 < PS_SHOTS) psPrepWork(ps.order[ps.shot + 1], 40);
   }
+#ifdef BOARD_WS21
+  ws21ProfMark(7);  // the next place made ready
+#endif
   if (psOverT) {  // the end: the score, the record, the joy, as every game shows it
     char big[16], rec[32];
     snprintf(big, sizeof(big), "%u", (unsigned)ps.score);
@@ -5866,7 +5961,13 @@ void renderSnap() {
     v2GameResult(gameLabel(GAME_SNAP), nullptr, big, psNewHi && ps.score > 0, rec, ps.score >= 600 ? T(S_GREAT_JOY) : T(S_PLUS_JOY));
   }
   drawIntroCard();
+#ifdef BOARD_WS21
+  ws21ProfMark(8);
+#endif
   gfx->flush();
+#ifdef BOARD_WS21
+  ws21ProfMark(9);
+#endif
 }
 
 // ---------- PikaSurf ----------

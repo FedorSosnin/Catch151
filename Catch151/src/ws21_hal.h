@@ -14,8 +14,11 @@
 #include <esp_lcd_panel_rgb.h>
 #include <esp_lcd_panel_ops.h>
 #include <esp_cache.h>
+#include "esp32s3/rom/cache.h"  // (Cache_WriteBack_All: ws21Writeback())
 #include <esp_timer.h>
 #include <esp_async_memcpy.h>
+#include "esp_private/gdma.h"       // (the refill's own DMA: Ws21Prefetch)
+#include "esp_private/gdma_link.h"
 #include <Preferences.h>
 #include "soc/lcd_cam_struct.h"
 #include "soc/gpio_periph.h"  // (the console's PDMCHECK reads the sound pin back)
@@ -132,12 +135,318 @@ static const uint8_t WS21_INIT_OPS[] = {
     WRITE_COMMAND_8, 0x29,
     END_WRITE};
 
-// The panel: the ST7701S's setup over the 3-wire bus, then the ESP32-S3's RGB peripheral, reading out two frame
-// buffers in PSRAM in turn. The game's next frame goes into the one not on show, which takes over at the start of
-// the next refresh: nothing is ever shown half drawn (with one buffer it tore). Arduino_GFX's RGB panel keeps one
-// buffer and can't be told otherwise, so this talks to esp_lcd itself. The timings are Waveshare's (pin_config.h).
-// The bounce buffers copy each band of lines from PSRAM to internal RAM before it goes out, so the game's own PSRAM
-// traffic is less likely to make the picture drift. The backlight is PWM on LCD_BL (a MOSFET: high = on).
+// A frame: the 466x466 picture, as the canvas (no border, no rim). Each is allocated a little long, to a whole number
+// of 64-byte lines, so the DMA and the cache can take it in whole lines.
+#define WS21_FRAME_BYTES ((size_t)LCD_WIDTH * LCD_HEIGHT * 2)
+#define WS21_FRAME_ALLOC ((WS21_FRAME_BYTES + 63) & ~(size_t)63)
+// Each frame-sized picture (the frames, the canvas, Pinball's table, Pic Snap's still) has a guard on each side:
+// WS21_GUARD bytes of WS21_GUARD_FILL that nothing should write. Something draws a few rows past the screen's top
+// (or bottom) now and then, and the game draws straight into the frames: the first frame lies just after the I2C
+// driver's memory, which was overwritten with dark pixels, and the touch task crashed on it (Fedor, 2026-11-23: "quit
+// to a black screen" in a battle, and once in Pinball; LoadProhibited at 0x08841108 in i2c_master, the I2C bus at
+// 0x3c202edc, the first frame at 0x3c203400). A stray row now lands in a guard: ws21GuardCheck() says where, and in
+// what screen, and fills it again.
+#define WS21_GUARD 16384  // (17 rows of the screen each side)
+#define WS21_GUARD_FILL 0x5A
+#define WS21_GUARDS_MAX 8
+inline uint8_t *gWs21Guarded[WS21_GUARDS_MAX];  // each picture's allocation (its guard before it at the start)
+inline uint16_t *ws21FrameAlloc() {
+  uint8_t *b = (uint8_t *)heap_caps_aligned_calloc(64, 1, WS21_FRAME_ALLOC + 2 * WS21_GUARD, MALLOC_CAP_SPIRAM);
+  if (!b) return nullptr;
+  memset(b, WS21_GUARD_FILL, WS21_GUARD);
+  memset(b + WS21_GUARD + WS21_FRAME_ALLOC, WS21_GUARD_FILL, WS21_GUARD);
+  for (auto &g : gWs21Guarded)
+    if (!g) {
+      g = b;
+      break;
+    }
+  return (uint16_t *)(b + WS21_GUARD);
+}
+inline void ws21FrameFree(uint16_t *p) {
+  if (!p) return;
+  uint8_t *b = (uint8_t *)p - WS21_GUARD;
+  for (auto &g : gWs21Guarded)
+    if (g == b) g = nullptr;
+  heap_caps_free(b);
+}
+// How far into a guard something wrote: the bytes from the picture's edge out to the farthest one changed (0: none)
+inline int ws21GuardReach(const uint8_t *g, bool before) {
+  if (before) {
+    for (int i = 0; i < WS21_GUARD; i++)
+      if (g[i] != WS21_GUARD_FILL) return WS21_GUARD - i;
+  } else {
+    for (int i = WS21_GUARD - 1; i >= 0; i--)
+      if (g[i] != WS21_GUARD_FILL) return i + 1;
+  }
+  return 0;
+}
+// The guards looked at (the 2 KB next to each picture: a row or two past an edge lands there first; all of a guard
+// once one is hit), any hit said with where (the screen open) and filled again. True if one was hit
+inline bool ws21GuardCheck(const char *where) {
+  constexpr int NEAR = 2048;
+  bool hit = false;
+  for (uint8_t *b : gWs21Guarded) {
+    if (!b) continue;
+    uint8_t *pre = b, *post = b + WS21_GUARD + WS21_FRAME_ALLOC;
+    bool dirty = false;
+    for (int i = WS21_GUARD - NEAR; i < WS21_GUARD && !dirty; i++) dirty = pre[i] != WS21_GUARD_FILL;
+    for (int i = 0; i < NEAR && !dirty; i++) dirty = post[i] != WS21_GUARD_FILL;
+    if (!dirty) continue;
+    hit = true;
+    int rb = ws21GuardReach(pre, true), ra = ws21GuardReach(post, false);
+    uint16_t px = rb ? *(uint16_t *)(pre + WS21_GUARD - 2) : *(uint16_t *)post;
+    Serial.printf("GUARD: the picture at %p was written past its %s%s: %d bytes before, %d after (%.1f / %.1f rows), "
+                  "pixel %04X, in %s\n",
+                  b + WS21_GUARD, rb ? "top" : "", ra ? (rb ? " and bottom" : "bottom") : "", rb, ra,
+                  rb / (2.f * LCD_WIDTH), ra / (2.f * LCD_WIDTH), px, where);
+    memset(pre, WS21_GUARD_FILL, WS21_GUARD);
+    memset(post, WS21_GUARD_FILL, WS21_GUARD);
+  }
+  return hit;
+}
+// The cache and the frames. PSRAM is only reached through the 32 KB data cache, and the DMA and the panel's refill go
+// round it. Writing back by address walks every line of the range: 17 ms for a frame (2026-11-23). Dropping by
+// address is quick, and writing back the whole cache only walks the cache. So: everything the CPU drew goes out with
+// ws21Writeback() (the whole cache), and a frame's old lines are dropped with ws21Drop() where the DMA or the refill
+// will go round them.
+// The ROM's whole-cache write-back has no lock of its own: another cache operation started while it runs (the refill's
+// drop, from its interrupt) stops the chip ("Dcache sync parameter configuration error", 2026-11-23). So it runs
+// with this core's interrupts held off (about 0.7 ms), and the refill takes the same lock round its drop, in case
+// it runs on the other core (REFILLCORE 0).
+static portMUX_TYPE gWs21CacheMux = portMUX_INITIALIZER_UNLOCKED;
+inline void ws21Writeback() {
+  portENTER_CRITICAL(&gWs21CacheMux);
+  Cache_WriteBack_All();
+  portEXIT_CRITICAL(&gWs21CacheMux);
+}
+inline void ws21Drop(const void *p, size_t bytes) {  // (p and bytes on 32-byte lines; anything dirty there is lost)
+  esp_cache_msync((void *)p, bytes, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+}
+
+// Panel rows py0.. (n of them, PANEL_SIZE px each) into out: the 7 px border and the corners outside the circle black,
+// the rest from rows, where frame row y is rows + (y - first) * LCD_WIDTH (the frame itself: first 0; a band the DMA
+// brought into internal RAM: its first row). (The rim's shading is in the frame already: Ws21Canvas::shadeRim().)
+// The panel's refill makes every row this way, and the console's SHOT too.
+// Upside down (flip: the frame drawn upright, the board turned over), panel row y shows frame row 465 - y, right to
+// left. The circle and the rim are the same either way up, so only the copy changes.
+static IRAM_ATTR void ws21PanelRows(const uint16_t *rows, int first, uint16_t *out, int py0, int n, bool flip = false) {
+  for (int r = 0; r < n; r++, out += PANEL_SIZE) {
+    const int y = py0 + r - WS21_BORDER;
+    if (y < 0 || y >= LCD_HEIGHT) {
+      memset(out, 0, PANEL_SIZE * 2);
+      continue;
+    }
+    const int x0 = gKnomiRim ? gKnomiRimX0[y] : 0, x1 = gKnomiRim ? gKnomiRimX1[y] : LCD_WIDTH;
+    memset(out, 0, (size_t)(WS21_BORDER + x0) * 2);
+    if (!flip) {
+      memcpy(out + WS21_BORDER + x0, rows + (y - first) * LCD_WIDTH + x0, (size_t)(x1 - x0) * 2);
+    } else {
+      const uint16_t *src = rows + (LCD_HEIGHT - 1 - y - first) * LCD_WIDTH + (LCD_WIDTH - 1);
+      uint16_t *o = out + WS21_BORDER;
+      for (int x = x0; x < x1; x++) o[x] = src[-x];
+    }
+    memset(out + WS21_BORDER + x1, 0, (size_t)(LCD_WIDTH - x1 + WS21_BORDER) * 2);
+  }
+}
+
+// The refill reading ahead by DMA (2026-11-23). Copying a band out of PSRAM with the CPU took about 350 us of every
+// 900, a third of the game's core. So each refill, once its band is made, has the DMA bring the next band's rows
+// into internal RAM (stage); the next refill finds them there and only copies them across, which is quick. If they
+// aren't there (the frame changed in between, or the DMA isn't done), the CPU reads PSRAM as before. Its own channel
+// pair, driven directly: esp_async_memcpy writes back the cache over the source by address first, every time (slow:
+// the whole frame took 17 ms), and the frame on show never has anything in the cache to write back (present()).
+// Done is counted by the DMA's own interrupt (the descriptors' owner bits weren't handed back, and a check on them
+// made every later mount fail, logging from the refill's interrupt until the watchdog stopped the chip). A copy is
+// never started while one is under way, and the refill never waits for one.
+struct Ws21Prefetch {
+  gdma_channel_handle_t tx = nullptr, rx = nullptr;
+  gdma_link_list_handle_t txl = nullptr, rxl = nullptr;
+  uint8_t *stage = nullptr;  // internal RAM
+  size_t stageBytes = 0, extAlign = 32;
+  const uint16_t *src = nullptr;  // what's coming or come: the frame,
+  int py0 = -1;                   // its band (the first panel row; -1 none),
+  int c0 = 0;                     // the band's first frame row,
+  size_t off = 0;                 // where that row starts in stage
+  bool empty = false;             // (only border rows: nothing to bring)
+  bool flip = false;              // (upside down: the rows from the bottom)
+  volatile uint32_t issued = 0, done = 0;
+  volatile uint32_t hits = 0, misses = 0, late = 0;
+};
+static Ws21Prefetch gWs21Pre;
+static IRAM_ATTR bool ws21PrefetchDone(gdma_channel_handle_t, gdma_event_data_t *, void *) {
+  gWs21Pre.done++;
+  return false;
+}
+
+static bool ws21PrefetchBegin(int bandRows) {
+  Ws21Prefetch &p = gWs21Pre;
+  if (p.tx) return true;
+  gdma_channel_alloc_config_t tc = {};
+  tc.direction = GDMA_CHANNEL_DIRECTION_TX;
+  tc.flags.reserve_sibling = 1;
+  if (gdma_new_ahb_channel(&tc, &p.tx) != ESP_OK) return false;
+  gdma_channel_alloc_config_t rc = {};
+  rc.direction = GDMA_CHANNEL_DIRECTION_RX;
+  rc.sibling_chan = p.tx;
+  if (gdma_new_ahb_channel(&rc, &p.rx) != ESP_OK) {
+    gdma_del_channel(p.tx);
+    p.tx = nullptr;
+    return false;
+  }
+  // a free memory-to-memory trigger, as esp_async_memcpy takes one
+  gdma_trigger_t trig = GDMA_MAKE_TRIGGER(GDMA_TRIG_PERIPH_M2M, 0);
+  uint32_t ids = 0;
+  esp_err_t e = gdma_get_free_m2m_trig_id_mask(p.rx, &ids);
+  if (e == ESP_OK && ids) trig.instance_id = __builtin_ctz(ids);
+  esp_err_t e1 = gdma_connect(p.rx, trig), e2 = gdma_connect(p.tx, trig);
+  gdma_strategy_config_t st = {};
+  st.owner_check = false;
+  st.auto_update_desc = true;
+  st.eof_till_data_popped = true;
+  esp_err_t e3 = gdma_apply_strategy(p.tx, &st), e4 = gdma_apply_strategy(p.rx, &st);
+  gdma_transfer_config_t xc = {};
+  xc.max_data_burst_size = 32;
+  xc.access_ext_mem = true;
+  esp_err_t e5 = gdma_config_transfer(p.tx, &xc), e6 = gdma_config_transfer(p.rx, &xc);
+  Serial.printf("ws21: refill DMA: trigger %d (mask %x, %d), connect %d %d, strategy %d %d, transfer %d %d\n",
+                trig.instance_id, (unsigned)ids, e, e1, e2, e3, e4, e5, e6);
+  size_t ia = 4, ea = 32;
+  gdma_get_alignment_constraints(p.tx, &ia, &ea);
+  p.extAlign = ea < 32 ? 32 : ea;
+  p.stageBytes = (((size_t)bandRows * LCD_WIDTH * 2 + 2 * p.extAlign) + 63) & ~(size_t)63;
+  p.stage = (uint8_t *)heap_caps_aligned_calloc(64, 1, p.stageBytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+  gdma_link_list_config_t lc = {};
+  lc.num_items = p.stageBytes / 4032 + 2;
+  lc.item_alignment = 4;
+  lc.flags.check_owner = 0;
+  gdma_rx_event_callbacks_t cb = {};
+  cb.on_recv_eof = ws21PrefetchDone;
+  if (!p.stage || gdma_new_link_list(&lc, &p.txl) != ESP_OK || gdma_new_link_list(&lc, &p.rxl) != ESP_OK ||
+      gdma_register_rx_event_callbacks(p.rx, &cb, nullptr) != ESP_OK) {
+    Serial.println("ws21: no room for the refill's DMA: the CPU refills");
+    p.stage = nullptr;  // (the channels stay unused)
+    return false;
+  }
+  return true;
+}
+// the DMA's copy of frame f's rows for the band starting at panel row py0 (n rows), into stage (upside down: the
+// frame's rows from the bottom)
+static void ws21PrefetchKick(const uint16_t *f, int py0, int n, bool flip) {
+  Ws21Prefetch &p = gWs21Pre;
+  p.py0 = -1;
+  if (!p.stage || !f || p.issued != p.done) return;  // (one still under way: none this time)
+  int c0 = py0 - WS21_BORDER, c1 = py0 + n - WS21_BORDER;
+  c0 = c0 < 0 ? 0 : c0;
+  c1 = c1 > LCD_HEIGHT ? LCD_HEIGHT : c1;
+  if (flip && c1 > c0) {
+    const int a = LCD_HEIGHT - c1, b = LCD_HEIGHT - c0;
+    c0 = a, c1 = b;
+  }
+  p.flip = flip;
+  p.src = f;
+  p.c0 = c0;
+  p.empty = c1 <= c0;
+  if (p.empty) {
+    p.py0 = py0;
+    return;
+  }
+  const uintptr_t m = p.extAlign - 1;
+  const uintptr_t a = (uintptr_t)(f + c0 * LCD_WIDTH) & ~m, b = ((uintptr_t)(f + c1 * LCD_WIDTH) + m) & ~m;
+  if (b - a > p.stageBytes) return;
+  p.off = (uintptr_t)(f + c0 * LCD_WIDTH) - a;
+  gdma_buffer_mount_config_t tb = {};
+  tb.buffer = (void *)a;
+  tb.buffer_alignment = p.extAlign;
+  tb.length = b - a;
+  tb.flags.mark_eof = 1;
+  tb.flags.mark_final = GDMA_FINAL_LINK_TO_NULL;
+  gdma_buffer_mount_config_t rb = {};
+  rb.buffer = p.stage;
+  rb.buffer_alignment = 4;
+  rb.length = b - a;
+  rb.flags.mark_final = GDMA_FINAL_LINK_TO_NULL;
+  if (gdma_link_mount_buffers(p.txl, 0, &tb, 1, nullptr) != ESP_OK) return;
+  if (gdma_link_mount_buffers(p.rxl, 0, &rb, 1, nullptr) != ESP_OK) return;
+  p.issued++;
+  gdma_start(p.rx, gdma_link_get_head_addr(p.rxl));
+  gdma_start(p.tx, gdma_link_get_head_addr(p.txl));
+  p.py0 = py0;
+}
+// whether the band (f, py0) has come into stage
+static bool ws21PrefetchReady(const uint16_t *f, int py0, bool flip) {
+  Ws21Prefetch &p = gWs21Pre;
+  if (p.py0 != py0 || p.src != f || p.flip != flip) return false;
+  if (p.empty) return true;
+  if (p.issued == p.done) return true;
+  p.late++;
+  return false;
+}
+
+// What the refill reads: the frames, and which is on show. Kept outside the panel so the refill can be in IRAM (a
+// static member placed there won't link).
+struct Ws21Show {
+  uint16_t *frm[3] = { nullptr, nullptr, nullptr };
+  volatile bool flip[3] = { false, false, false };  // each frame shown upside down (drawn upright, the board turned over)
+  volatile uint8_t show = 0, next = 0;  // the frame being sent; the one to send from the next refresh
+  volatile uint32_t fillUs = 0, fillN = 0, fillMax = 0;  // the refill's time (the console's LCD)
+};
+static Ws21Show gWs21Show;
+
+// A bounce buffer to refill: the next band of the panel's rows (pos on), from the frame on show. A refresh's first
+// band moves on to the frame waiting, if any. From what the DMA read ahead if it's there; if not, the CPU reads the
+// frame, and the lines it read leave the cache afterwards (the refill would otherwise push the game's own data out
+// of the 32 KB cache all the time). Then the DMA goes for the next band. In IRAM, and nothing per pixel: it runs
+// over a thousand times a second.
+static IRAM_ATTR bool ws21Fill(esp_lcd_panel_handle_t, void *bb, int pos, int len, void *) {
+  Ws21Show &w = gWs21Show;
+  Ws21Prefetch &p = gWs21Pre;
+  const int64_t t0 = esp_timer_get_time();
+  if (pos == 0) w.show = w.next;
+  const uint16_t *f = w.frm[w.show];
+  const bool flip = w.flip[w.show];
+  const int py0 = pos / PANEL_SIZE, n = len / (PANEL_SIZE * 2);
+  if (ws21PrefetchReady(f, py0, flip)) {
+    ws21PanelRows((const uint16_t *)(p.stage + p.off), p.c0, (uint16_t *)bb, py0, n, flip);
+    p.hits++;
+  } else {
+    ws21PanelRows(f, 0, (uint16_t *)bb, py0, n, flip);
+    p.misses++;
+    int c0 = py0 - WS21_BORDER, c1 = py0 + n - WS21_BORDER;
+    c0 = c0 < 0 ? 0 : c0;
+    c1 = c1 > LCD_HEIGHT ? LCD_HEIGHT : c1;
+    if (flip && c1 > c0) {
+      const int a = LCD_HEIGHT - c1, b = LCD_HEIGHT - c0;
+      c0 = a, c1 = b;
+    }
+    if (c1 > c0) {  // (the frame on show has nothing dirty in the cache: present())
+      const uintptr_t a = (uintptr_t)(f + c0 * LCD_WIDTH) & ~(uintptr_t)31;
+      const uintptr_t b = ((uintptr_t)(f + c1 * LCD_WIDTH) + 31) & ~(uintptr_t)31;
+      portENTER_CRITICAL_ISR(&gWs21CacheMux);
+      esp_cache_msync((void *)a, b - a, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+      portEXIT_CRITICAL_ISR(&gWs21CacheMux);
+    }
+  }
+  // the next band: this frame's, or the first of the next refresh, from the frame waiting by then
+  int nx = pos + len / 2;
+  const uint16_t *nf = f;
+  bool nflip = flip;
+  if (nx >= PANEL_SIZE * PANEL_SIZE) nx = 0, nf = w.frm[w.next], nflip = w.flip[w.next];
+  ws21PrefetchKick(nf, nx / PANEL_SIZE, n, nflip);
+  const uint32_t us = (uint32_t)(esp_timer_get_time() - t0);
+  w.fillUs += us;
+  w.fillN++;
+  if (us > w.fillMax) w.fillMax = us;
+  return false;
+}
+
+// The panel: the ST7701S's setup over the 3-wire bus, then the ESP32-S3's RGB peripheral. The RGB peripheral sends
+// the panel's rows from two small bounce buffers in internal RAM, and each time one has gone out it is refilled from
+// the frame on show by fill(): the black border and corners and the rim's shading are added there, row by row
+// (ws21PanelRows()), so a frame is only the 466x466 picture. That saves the full-size copy every frame that a
+// 480x480 frame buffer needed, and the refill reads only the circle out of PSRAM (Fedor, 2026-11-23: "feels so
+// much slower than the Knomi"). Three frames in turn: one on show, one waiting for the next refresh, one being
+// drawn, so the game never waits for a refresh and nothing is shown half drawn. The timings are Waveshare's
+// (pin_config.h). The backlight is PWM on LCD_BL (a MOSFET: high = on).
 class Ws21Panel : public Arduino_G {
 public:
   explicit Ws21Panel(Ws21InitBus *b) : Arduino_G(PANEL_SIZE, PANEL_SIZE), bus(b) {}
@@ -148,6 +457,16 @@ public:
     bus->sendCommand(0x01);  // a software reset after the expander's, as Arduino_GFX's RGB display does
     delay(120);
     bus->batchOperation(WS21_INIT_OPS, sizeof(WS21_INIT_OPS));
+#ifndef WS21_REFILL_DMA
+#define WS21_REFILL_DMA 1
+#endif
+    if (WS21_REFILL_DMA && !ws21PrefetchBegin(LCD_BOUNCE_PX / PANEL_SIZE))
+      Serial.println("ws21: no DMA channel for the refill: the CPU refills");
+    for (auto &f : frm) {  // black (calloc), before the refill first reads one
+      if (!f) f = ws21FrameAlloc();
+      if (!f) return false;
+      esp_cache_msync(f, WS21_FRAME_ALLOC, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+    }
     // The core the refill runs on (its interrupt goes where the panel is made): the console's REFILLCORE, 1 (the
     // game's) unless set. On the other core the game's core gets about 7% more done, but the game's PSRAM work then
     // holds up the refill (bring-up, 2026-11-20)
@@ -169,17 +488,7 @@ public:
       }, "ws21mk", 4096, args, 5, nullptr, refillCore);
       ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2000));
     }
-    if (!handle) return false;
-    void *f0 = nullptr, *f1 = nullptr;
-    esp_lcd_rgb_panel_get_frame_buffer(handle, 2, &f0, &f1);
-    fbs[0] = (uint16_t *)f0;
-    fbs[1] = (uint16_t *)f1;
-    if (!fbs[0] || !fbs[1]) return false;
-    for (uint16_t *f : fbs) {  // the border is black, and stays so
-      memset(f, 0, FB_BYTES);
-      esp_cache_msync(f, FB_BYTES, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
-    }
-    return true;
+    return handle != nullptr;
   }
   uint8_t refillCore = 1;
 
@@ -200,7 +509,7 @@ public:
     c.timings.flags.pclk_active_neg = LCD_PCLK_NEG;
     c.data_width = 16;
     c.bits_per_pixel = 16;
-    c.num_fbs = 2;
+    c.flags.no_fb = 1;  // the frames are ours (frm), and fill() makes the panel's rows from them
     c.bounce_buffer_size_px = LCD_BOUNCE_PX;
     c.dma_burst_size = 64;
     c.hsync_gpio_num = LCD_HSYNC;
@@ -211,10 +520,6 @@ public:
     static const int8_t DATA[16] = { LCD_B0, LCD_B1, LCD_B2, LCD_B3, LCD_B4, LCD_G0, LCD_G1, LCD_G2,
                                      LCD_G3, LCD_G4, LCD_G5, LCD_R0, LCD_R1, LCD_R2, LCD_R3, LCD_R4 };
     for (int i = 0; i < 16; i++) c.data_gpio_nums[i] = DATA[i];
-    c.flags.fb_in_psram = 1;
-    // after each band is copied out, its cache lines are dropped: the refill (27 MB/s) would otherwise push the game's
-    // own data out of the 32 KB cache all the time. (The frame buffers are written by DMA, past the cache: flush())
-    c.flags.bb_invalidate_cache = 1;
     // Made on the game's core (unless REFILLCORE says otherwise), so its refill interrupt runs there too: then the
     // refill (each band copied out of PSRAM) and the game's own heavy PSRAM work never run at the same moment. With
     // the refill on the other core and flush() shared by both, they did, the refill fell behind and the streaks came
@@ -224,6 +529,7 @@ public:
     esp_lcd_rgb_panel_event_callbacks_t cb = {};
     cb.on_frame_buf_complete = frameDone;
     cb.on_vsync = frameStart;
+    cb.on_bounce_empty = ws21Fill;
     esp_lcd_rgb_panel_register_event_callbacks(h, &cb, this);
     findEofCount(h);
     esp_lcd_panel_reset(h);
@@ -231,27 +537,33 @@ public:
     handle = h;
   }
 
-  // The buffer to draw the next frame into: the one not on show. Right after a swap the old one may still be read out
-  // until the refresh that was using it ends, so it waits for that (a frame is 17 ms; the game rarely asks that soon).
+  // The frame to draw the next one into: neither the one on show nor the one waiting to be. With three there is
+  // always one, at once. (The refill only ever moves on to the waiting one, so the one returned stays free.)
   uint16_t *backBuffer() {
-    if (!fbs[0]) return nullptr;
-    if (pending) {
-      uint32_t t0 = millis();
-      while (frames == askedAt && millis() - t0 < 50) vTaskDelay(1);
-      pending = false;
-    }
-    return fbs[!shown];
+    const uint8_t a = gWs21Show.show, b = gWs21Show.next;
+    for (uint8_t k = 0; k < 3; k++)
+      if (k != a && k != b) return frm[k];
+    return frm[(a + 1) % 3];  // (never)
   }
-  // shows fb from the next refresh on (no copy: esp_lcd switches buffers when given one of its own). Whatever wrote
-  // it went past the cache (DMA: Ws21Canvas::flush()), so the cache must hold none of its old lines
-  void present(uint16_t *fb) {
-    esp_cache_msync(fb, FB_BYTES, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-    esp_lcd_panel_draw_bitmap(handle, 0, 0, PANEL_SIZE, PANEL_SIZE, fb);
-    askedAt = frames;  // (read after the switch was asked for: the next refresh to start reads the new one)
-    shown = fb == fbs[1];
-    pending = true;
+  // f is shown from the next refresh on. Anything the CPU drew into it goes out of the cache to PSRAM first, where the
+  // refill reads it, and its lines leave the cache (the refill's reads mustn't find old copies there).
+  // flip: f is upright and the board is upside down, so the refill turns it over
+  void present(uint16_t *f, bool flip = false) {
+    ws21Writeback();
+    ws21Drop(f, WS21_FRAME_ALLOC);
+    const uint8_t k = f == frm[0] ? 0 : f == frm[1] ? 1 : 2;
+    gWs21Show.flip[k] = flip;
+    gWs21Show.next = k;
+    presented = f;
   }
-  uint16_t *frontBuffer() const { return fbs[shown]; }
+  // the panel's rows py0.. from the frame on show (the console's SHOT)
+  void shownRows(uint16_t *out, int py0, int n) {
+    const uint8_t k = gWs21Show.show;
+    ws21PanelRows(frm[k], 0, out, py0, n, gWs21Show.flip[k]);
+  }
+  uint16_t *frontBuffer() const { return frm[gWs21Show.show]; }
+  uint16_t *lastPresented() const { return presented; }
+  bool isFrame(const uint16_t *f) const { return f == frm[0] || f == frm[1] || f == frm[2]; }
   // the pixel clock, from the next refresh on (the console's PCLK, to find the fastest one that doesn't glitch)
   bool setPclk(uint32_t hz) { return handle && esp_lcd_rgb_panel_set_pclk(handle, hz) == ESP_OK; }
   // which edge of PCLK the data changes on (the console's PCLKEDGE, bring-up): 1 = falling
@@ -288,8 +600,6 @@ public:
   void draw24bitRGBBitmap(int16_t, int16_t, uint8_t *, int16_t, int16_t) override {}
 
 private:
-  static constexpr size_t FB_BYTES = (size_t)PANEL_SIZE * PANEL_SIZE * 2;
-
   // the RGB driver's interrupt, each time it has sent a whole buffer: from then on it reads the one last presented
   // (not IRAM_ATTR: this core's RGB interrupt isn't IRAM-safe either, and inline it won't link)
   static bool frameDone(esp_lcd_panel_handle_t, const esp_lcd_rgb_panel_event_data_t *, void *ctx) {
@@ -326,12 +636,13 @@ private:
     return false;
   }
   // Finds the driver's count. The driver's state is private, so it is found by what sits after it: the number of
-  // signals a frame should have, then the callbacks and ctx just registered. Not found (another IDF), nothing changes.
+  // signals a frame should have, then the callbacks (frame sent, refresh start, refill) and ctx just registered. Not found (another IDF), nothing changes.
   void findEofCount(esp_lcd_panel_handle_t h) {
     const uint32_t *w = (const uint32_t *)h;
     for (int i = 1; i < 256; i++) {
       if (w[i] == EOFS_PER_FRAME && w[i + 1] == 0 && w[i + 2] == (uint32_t)(uintptr_t)frameDone &&
-          w[i + 3] == (uint32_t)(uintptr_t)frameStart && w[i + 4] == 0 && w[i + 5] == (uint32_t)(uintptr_t)this) {
+          w[i + 3] == (uint32_t)(uintptr_t)frameStart && w[i + 4] == (uint32_t)(uintptr_t)ws21Fill &&
+          w[i + 5] == (uint32_t)(uintptr_t)this) {
         eofLast = w[i - 1];
         eofCount = (volatile size_t *)&w[i - 1];
         return;
@@ -345,11 +656,9 @@ private:
   volatile uint32_t eofMiss = 0, eofOdd = 0;
   Ws21InitBus *bus;
   esp_lcd_panel_handle_t handle = nullptr;
-  uint16_t *fbs[2] = { nullptr, nullptr };
-  bool shown = 0;  // which one is on show
-  bool pending = false;
+  uint16_t *(&frm)[3] = gWs21Show.frm;  // the frames
+  uint16_t *presented = nullptr;        // the last one given to present()
   volatile uint32_t frames = 0;
-  uint32_t askedAt = 0;
   int64_t lastFrameUs = 0;
   volatile uint32_t gapMax = 0, gapLate = 0;
   uint32_t statFrom = 0;
@@ -365,23 +674,32 @@ static IRAM_ATTR bool ws21DmaDone(async_memcpy_handle_t, async_memcpy_event_t *,
   return false;
 }
 
-// The 466x466 canvas in PSRAM. flush() makes the panel's rows from it a band at a time in internal RAM: in the middle,
-// straight or turned (gWs21RotDeg) and with the Knomi's soft rim (knomi_rim.h). (With DMAIN, straight or upside
-// down, the canvas also comes in by DMA: straightBands().) Each band goes out to the frame buffer not on show
-// by DMA while the next one is made, then that buffer is shown. All on the game's core, where the panel's refill also
-// runs. The console's SPLIT 1 has a task on the other core make every other band (each core with its own DMA): 135 ms
-// a frame turned and blended instead of 160, but the glitch lines came back (Fedor, 2026-11-20). Two cores reading
-// PSRAM at once hold up the refill. So it stays off.
+// The 466x466 canvas in PSRAM, where the game draws. flush() puts it into a frame (Ws21Panel) and shows that:
+// - straight (the usual): the whole canvas by DMA, PSRAM to PSRAM. The CPU only waits (it would stall on PSRAM).
+// - turned (gWs21RotDeg, the console's ROTDEG): the CPU makes each band of the turned picture in internal RAM and the
+//   DMA takes it out to the frame while the next band is made. The console's SPLIT 1 has a task on the other core
+//   make every other band (each core with its own DMA): 135 ms a frame turned and blended instead of 160.
+// - direct (setDirect(), the usual): the game draws straight into the frame to be shown, so there's nothing to copy
+//   at all. The canvas then is that frame, a different one each time, and what's in it is from three frames back.
+//   Every screen paints all of itself each time it's drawn (render(); one that hasn't changed isn't drawn or sent
+//   at all), and so does the update's progress screen, so all can draw this way. Upside down too (the refill turns
+//   the frame over); not sideways.
+// The panel's refill adds the border and the rim (ws21PanelRows()).
 //
-// Why DMA (bring-up, 2026-11-20): the CPU writing the frame buffer through the cache read every line of it in first
-// and wrote it back after, and then each line had to be flushed: 68 ms a frame just to copy, 138 ms turned. The DMA
-// writes PSRAM straight, while the CPU goes on to the next band, and leaves nothing dirty in the cache for the
-// panel's refill to wait on. Turned, each pixel is still about 50 instructions and a wait on PSRAM: 84 ms a frame on
-// one core.
+// Why DMA (bring-up, 2026-11-20): the CPU writing PSRAM through the cache reads every line in first and writes it
+// back after (68 ms a frame just to copy). The DMA writes PSRAM straight and leaves nothing in the cache.
 inline bool gWs21Split = false;
-// The straight copy reading the canvas by DMA too (the console's DMAIN 1): 9 ms a frame quicker, but the DMA's PSRAM
-// reads held up the panel's refill like a second core and the glitch lines came back (Fedor, 2026-11-20). Off.
-inline bool gWs21DmaIn = false;
+inline bool gWs21DirectOk = true;  // the console's DIRECT 0: no direct drawing (comparing)
+// Frame profiling (the console's PROF): marks inside a game's frame, the time since the last mark added to slot k
+inline uint32_t gWs21ProfUs[12];
+inline uint32_t gWs21ProfN = 0;
+inline int64_t gWs21ProfT = 0;
+inline void ws21ProfStart() { gWs21ProfT = esp_timer_get_time(); gWs21ProfN++; }
+inline void ws21ProfMark(int k) {
+  int64_t t = esp_timer_get_time();
+  gWs21ProfUs[k] += (uint32_t)(t - gWs21ProfT);
+  gWs21ProfT = t;
+}
 class Ws21Canvas : public Arduino_Canvas {
 public:
   Ws21Canvas(Ws21Panel *out) : Arduino_Canvas(LCD_WIDTH, LCD_HEIGHT, out), panel(out) {}
@@ -390,10 +708,14 @@ public:
   bool begin(int32_t = GFX_NOT_DEFINED) override {
     if (!Arduino_Canvas::begin(GFX_NOT_DEFINED)) return false;
     if (!panel->frontBuffer()) return false;
+    uint16_t *c = ws21FrameAlloc();  // the canvas on whole 64-byte lines, as the frames, for the DMA
+    if (!c) return false;
+    memcpy(c, _framebuffer, WS21_FRAME_BYTES);
+    free(_framebuffer);
+    _framebuffer = canvas = c;
     knomiRimBegin(LCD_WIDTH);
     ws21SetRotation(WS21_ROT_DEG);
-    if (!allocBands(0)) return false;
-    installDma(side[0]);  // (the other core's and the canvas reads' only once SPLIT or DMAIN asks for them)
+    installDma(side[0]);  // (the other core's only once SPLIT asks for it)
     go = xSemaphoreCreateBinary();
     back = xSemaphoreCreateBinary();
     // below the touch task (5) and the buzzer (4), so the half frame made there never holds up a tap or a beep
@@ -403,52 +725,99 @@ public:
 
   void flush(bool = false) override {
     const int64_t t0 = esp_timer_get_time();
+    if (direct && !directTurn()) setDirect(false);  // (just turned sideways: the canvas, with the last frame, goes out turned)
     pressOverlay();
-    uint16_t *fb = panel->backBuffer();
-    if (!fb) return;
     const int64_t t1 = esp_timer_get_time();
-    const bool straight = (gWs21RotDeg == 0 || gWs21RotDeg == 180) && gWs21DmaIn && allocRaws();
-    const bool split = !straight && gWs21Split && worker && allocBands(1);
-    if (straight) installDma(in);
-    if (split) installDma(side[1]);
-    curFb = fb;
-    if (split) xSemaphoreGive(go);
-    int64_t waited = straight ? straightBands(fb, gWs21RotDeg == 180) : doBands(0, fb, split ? 2 : 1, 0);
-    const int64_t t2 = esp_timer_get_time();
-    if (split && xSemaphoreTake(back, pdMS_TO_TICKS(300)) != pdTRUE) {
-      Serial.println("ws21: the other core's half of the frame didn't come back; one core from now on");
-      gWs21Split = false;
+    int64_t waited = 0;
+    uint16_t *f = _framebuffer;  // direct: drawn into already
+    if (!direct) {
+      f = panel->backBuffer();
+      if (!gWs21RotDeg) {
+        const int64_t w0 = esp_timer_get_time();
+        ws21Writeback();  // what the game left of the canvas in the cache goes out to PSRAM first, where the DMA reads it
+        prof[5] += esp_timer_get_time() - w0;
+        waited = copy(f, canvas, WS21_FRAME_ALLOC);
+      } else {
+        if (!allocBands(0)) return;
+        const bool split = gWs21Split && worker && allocBands(1);
+        if (split) installDma(side[1]);
+        curFb = f;
+        if (split) xSemaphoreGive(go);
+        waited = doBands(0, f, split ? 2 : 1, 0);
+        if (split && xSemaphoreTake(back, pdMS_TO_TICKS(300)) != pdTRUE) {
+          Serial.println("ws21: the other core's half of the frame didn't come back; one core from now on");
+          gWs21Split = false;
+        }
+      }
     }
+    const int64_t t2 = esp_timer_get_time();
+    if (!direct) ws21Drop(f, WS21_FRAME_ALLOC);  // (written by the DMA: no old lines of it to read below)
+    shadeRim(f);
+    panel->present(f, direct && gWs21RotDeg == 180);
+    if (direct) handOut();  // the next frame is drawn into another
     const int64_t t3 = esp_timer_get_time();
-    panel->present(fb);
-    const int64_t t4 = esp_timer_get_time();
-    prof[0] += t1 - t0;          // the press overlay and waiting for the buffer
-    prof[1] += t2 - t1 - waited;  // making this core's rows
-    prof[2] += waited + t3 - t2;  // waiting for the DMA and the other core
-    prof[3] += t4 - t3;          // the cache dropped, the buffer handed over
+    prof[0] += t1 - t0;           // the press overlay
+    prof[1] += t2 - t1 - waited;  // the CPU's part of the copy (turned: making the rows)
+    prof[2] += waited;            // waiting for the DMA (and the other core)
+    prof[3] += t3 - t2;           // the frame out of the cache and handed over
     profN++;
   }
 
-  uint16_t *panelBuffer() { return panel->frontBuffer(); }  // the console's SHOT: the whole 480x480 panel
+  // Direct drawing on or off (above). On: the game draws into a frame from the next flush (this one's, if it hasn't
+  // drawn yet). Off: the canvas is back, with the last frame shown copied into it, for anything that builds on what's
+  // there (a page sliding). Not while turned: the frame is the turned picture, not the canvas.
+  // upright or upside down (the refill turns it over); sideways the frame has to be made from the canvas
+  static bool directTurn() { return gWs21RotDeg == 0 || gWs21RotDeg == 180; }
+  void setDirect(bool on) {
+    if (!directTurn()) on = false;
+    if (on == direct) return;
+    if (on) {
+      direct = true;
+      handOut();
+      return;
+    }
+    direct = false;
+    ws21Drop(_framebuffer, WS21_FRAME_ALLOC);  // (half drawn, never shown: dropped)
+    ws21Drop(canvas, WS21_FRAME_ALLOC);        // (all of it is about to be written)
+    if (const uint16_t *last = panel->lastPresented()) copy(canvas, last, WS21_FRAME_ALLOC);
+    _framebuffer = canvas;
+  }
+  bool isDirect() const { return direct; }
+
+  // A whole picture (src: on 64-byte lines, WS21_FRAME_ALLOC long and written back, ws21Writeback()) into the canvas,
+  // by DMA: Pinball's table under what moves. The CPU's copy reads every line of both and took 36 ms a frame.
+  void restoreFrom(const uint16_t *src) {
+    ws21Drop(_framebuffer, WS21_FRAME_ALLOC);  // (all of it is about to be written)
+    const int64_t t = esp_timer_get_time();
+    copy(_framebuffer, src, WS21_FRAME_ALLOC);
+    prof[4] += esp_timer_get_time() - t;
+  }
+
+  // the console's SHOT: the panel's 480 rows as shown, RGB565
+  void shotWrite(Print &out) {
+    static uint16_t row[PANEL_SIZE];
+    for (int y = 0; y < PANEL_SIZE; y++) {
+      panel->shownRows(row, y, 1);
+      out.write((const uint8_t *)row, sizeof row);
+    }
+  }
 
   // the console's FPS: flush()'s parts since the last call, in ms per frame
   void profPrint() {
     const float n = profN ? profN : 1;
-    Serial.printf("flush n=%u wait=%.1f rows=%.1f dma+other=%.1f present=%.1f total=%.1f ms dma=%s split=%d refill=%d\n",
-                  (unsigned)profN, prof[0] / 1000.f / n, prof[1] / 1000.f / n, prof[2] / 1000.f / n,
-                  prof[3] / 1000.f / n, (prof[0] + prof[1] + prof[2] + prof[3]) / 1000.f / n,
-                  side[0].dma ? "on" : "off", gWs21Split && worker ? 1 : 0, panel->refillCore);
+    Serial.printf("flush n=%u overlay=%.1f cpu=%.1f (writeback %.1f) dma=%.1f present=%.1f total=%.1f restore=%.1f ms %s "
+                  "split=%d refill=%d\n",
+                  (unsigned)profN, prof[0] / 1000.f / n, prof[1] / 1000.f / n, prof[5] / 1000.f / n, prof[2] / 1000.f / n,
+                  prof[3] / 1000.f / n, (prof[0] + prof[1] + prof[2] + prof[3]) / 1000.f / n, prof[4] / 1000.f / n,
+                  direct ? "direct" : side[0].dma ? "dma" : "cpu", gWs21Split && worker ? 1 : 0, panel->refillCore);
     memset(prof, 0, sizeof prof);
     profN = 0;
   }
 
 private:
-  // 8 rows, so the straight copy's two in-buffers fit in internal RAM as well (turned, 16 was 9 ms a frame quicker:
-  // less of the canvas read twice, band to band)
+  // 8 rows a band (turned)
   static constexpr int BAND = 8;
-  static constexpr size_t BAND_BYTES = (size_t)BAND * PANEL_SIZE * 2;  // (a multiple of 64, as the DMA to PSRAM wants)
-  static constexpr size_t RAW_BYTES = (size_t)BAND * LCD_WIDTH * 2 + 64;  // a band of the canvas, from a 32-byte line
-  static constexpr size_t CANVAS_BYTES = (size_t)LCD_WIDTH * LCD_HEIGHT * 2;
+  static constexpr size_t BAND_BYTES = (size_t)BAND * LCD_WIDTH * 2;  // (a multiple of 32, as the DMA to PSRAM wants)
   // each core's own: its DMA and the counts of its copies
   struct Side {
     async_memcpy_handle_t dma = nullptr;
@@ -459,32 +828,23 @@ private:
   };
   // a side's DMA, installed the first time it's needed. Each takes one of the S3's five DMA channel pairs, and with
   // the amplifier's output (2026-11-22) there was none left for the TLS encryption ("no free gdma channel", HTTPS
-  // failed): so the other core's (SPLIT) and the canvas reads' (DMAIN), both off, no longer take theirs at start-up.
-  // Without one, that side's copy is the CPU's
+  // failed): so the other core's (SPLIT), off, no longer takes one at start-up. Without one, that side's copy is the
+  // CPU's
   void installDma(Side &d) {
     if (d.dma || d.tried) return;
     d.tried = true;
     async_memcpy_config_t mc = ASYNC_MEMCPY_DEFAULT_CONFIG();
     mc.backlog = 4;
-    mc.dma_burst_size = 32;  // (the frame buffers start on 32-byte lines; 64-byte bursts want 64-byte starts)
+    mc.dma_burst_size = 32;  // (the frames start on 64-byte lines)
     if (esp_async_memcpy_install_gdma_ahb(&mc, &d.dma) != ESP_OK) {
       d.dma = nullptr;
       Serial.println("ws21: no DMA for the frame copy, the CPU copies it");
     }
   }
   Side side[2];
-  Side in;  // the straight copy's DMA from the canvas
-  uint16_t *raws[2] = { nullptr, nullptr };  // internal RAM: the canvas's bands as they come in (DMAIN only)
-  bool allocRaws() {
-    for (auto &r : raws) {
-      if (!r) r = (uint16_t *)heap_caps_aligned_calloc(64, 1, RAW_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
-      if (!r) return false;
-    }
-    return true;
-  }
-  uint16_t *bands[4] = { nullptr, nullptr, nullptr, nullptr };  // internal RAM: two for each side
-  // side k's two band buffers, made the first time they're needed (the other core's only with SPLIT): whole panel
-  // rows, so the 7 px of border either side stay black
+  uint16_t *canvas = nullptr;  // the canvas proper (direct drawing points _framebuffer at a frame instead)
+  bool direct = false;
+  uint16_t *bands[4] = { nullptr, nullptr, nullptr, nullptr };  // internal RAM: two for each side (turned only)
   bool allocBands(int k) {
     for (int i = 2 * k; i < 2 * k + 2; i++) {
       if (!bands[i]) bands[i] = (uint16_t *)heap_caps_aligned_calloc(64, 1, BAND_BYTES, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
@@ -495,8 +855,89 @@ private:
   TaskHandle_t worker = nullptr;
   SemaphoreHandle_t go = nullptr, back = nullptr;
   uint16_t *volatile curFb = nullptr;
-  int64_t prof[4] = { 0, 0, 0, 0 };
+  int64_t prof[6] = { 0, 0, 0, 0, 0, 0 };
   uint32_t profN = 0;
+
+  // The Knomi's soft rim, shaded into the frame (knomi_rim.h): only its edge pixels, once a frame. A need bar's label
+  // drawn over it this frame stays as it is (Fedor: "make the food, energy, joy, and hyg lables be above the shadow").
+  // Turned, the rim is the frame's (the panel's), and a label's lift by where it lands, not where it was drawn.
+  // The rim is the same in all four quarters, so a quarter of it is kept, in internal RAM (rimPrepare()). Where it
+  // darkens by less than 8/256 it's left out: on the panel's 5- and 6-bit colours that's at most one step, and it
+  // takes the ring from 45 px wide to 29 (59 to 40 thousand pixels). Shaded from the PSRAM table, it was 19 ms a frame.
+  static constexpr int RIM_KEEP = 248;
+  static constexpr int HALF = LCD_HEIGHT / 2;  // (233: the canvas is even, so the halves mirror exactly)
+  uint8_t *rimQ = nullptr;                     // each quarter row's darkening, from its first shaded column inwards
+  uint16_t rimOff[HALF];
+  int16_t rimA[HALF], rimB[HALF];              // quarter row y: columns rimA..rimB-1 are shaded
+  void rimPrepare() {
+    if (rimQ || !gKnomiRim) return;
+    size_t total = 0;
+    for (int y = 0; y < HALF; y++) {
+      const uint8_t *r = gKnomiRim + y * LCD_WIDTH;
+      int a = gKnomiRimX0[y], b = a;
+      while (b < HALF && r[b] < RIM_KEEP) b++;
+      if (a > HALF) a = b = HALF;
+      rimA[y] = a, rimB[y] = b, rimOff[y] = total;
+      total += b - a;
+    }
+    uint8_t *q = (uint8_t *)heap_caps_malloc(total ? total : 1, MALLOC_CAP_INTERNAL);
+    if (!q) return;
+    for (int y = 0; y < HALF; y++) memcpy(q + rimOff[y], gKnomiRim + y * LCD_WIDTH + rimA[y], rimB[y] - rimA[y]);
+    rimQ = q;
+  }
+  void shadeRim(uint16_t *f) {
+    rimPrepare();
+    if (!rimQ) return;
+    const bool lift = gKnomiLiftOn;
+    for (int y = 0; y < LCD_HEIGHT; y++) {
+      const int qy = y < HALF ? y : LCD_HEIGHT - 1 - y, a = rimA[qy], n = rimB[qy] - a;
+      if (n <= 0) continue;
+      const uint8_t *k = rimQ + rimOff[qy];
+      uint16_t *l = f + y * LCD_WIDTH + a, *r = f + y * LCD_WIDTH + (LCD_WIDTH - 1 - a);  // (r runs leftwards)
+      if (!lift) {
+        for (int i = 0; i < n; i++) l[i] = knomiRimPixel(l[i], k[i]);
+        for (int i = 0; i < n; i++) r[-i] = knomiRimPixel(r[-i], k[i]);
+        continue;
+      }
+      for (int i = 0; i < n; i++) {
+        const int xl = a + i, xr = LCD_WIDTH - 1 - xl;
+        if (!knomiLifted(xl >> 1, y >> 1)) l[i] = knomiRimPixel(l[i], k[i]);
+        if (!knomiLifted(xr >> 1, y >> 1)) r[-i] = knomiRimPixel(r[-i], k[i]);
+      }
+    }
+  }
+
+  // direct: the next frame to draw into, out of the cache first (an old copy of its lines there would be drawn on)
+  void handOut() {
+    _framebuffer = panel->backBuffer();
+    ws21Drop(_framebuffer, WS21_FRAME_ALLOC);
+  }
+
+  // dst <- src, bytes (whole 32-byte lines, both starting on one), by DMA in 32 KB pieces, three at a time; returns
+  // the time spent waiting, in us. Without a DMA the CPU copies, and writes it back for the refill
+  int64_t copy(uint16_t *dst, const uint16_t *src, size_t bytes) {
+    Side &d = side[0];
+    int64_t waited = 0;
+    static constexpr size_t PIECE = 32768;
+    for (size_t off = 0; off < bytes; off += PIECE) {
+      const size_t n = bytes - off < PIECE ? bytes - off : PIECE;
+      uint8_t *to = (uint8_t *)dst + off;
+      const uint8_t *from = (const uint8_t *)src + off;
+      if (d.dma) {
+        if (d.issued - d.done >= 3) waited += waitDma(d, d.issued - 2);
+        if (esp_async_memcpy(d.dma, to, (void *)from, n, ws21DmaDone, (void *)&d.done) == ESP_OK) {
+          d.issued++;
+          continue;
+        }
+        Serial.printf("ws21: DMA copy refused (%p <- %p, %u bytes), the CPU copies from now on\n", to, from, (unsigned)n);
+        waited += waitDma(d, d.issued);
+        d.dma = nullptr;
+      }
+      memcpy(to, from, n);
+      ws21Writeback();
+    }
+    return waited + waitDma(d, d.issued);
+  }
 
   static void workerTask(void *arg) {
     Ws21Canvas *c = (Ws21Canvas *)arg;
@@ -507,9 +948,9 @@ private:
     }
   }
 
-  // bands first, first + step, ... of the frame into fb, by side k (0: the game's core, 1: the other); returns the
-  // time spent waiting for its DMA, in us. All its copies are done when it returns
-  int64_t doBands(int k, uint16_t *fb, int step, int first) {
+  // turned: bands first, first + step, ... of the frame into f, by side k (0: the game's core, 1: the other); returns
+  // the time spent waiting for its DMA, in us. All its copies are done when it returns
+  int64_t doBands(int k, uint16_t *f, int step, int first) {
     Side &d = side[k];
     int64_t waited = 0;
     int j = 0;
@@ -517,59 +958,15 @@ private:
       const int y0 = i * BAND, n = LCD_HEIGHT - y0 < BAND ? LCD_HEIGHT - y0 : BAND;
       uint16_t *buf = bands[2 * k + (j & 1)];
       waited += waitDma(d, d.ticket[j & 1]);  // the band before last, from this buffer, is out
-      makeBand(buf + WS21_BORDER, y0, n);
-      d.ticket[j & 1] = send(d, fb + (size_t)(WS21_BORDER + y0) * PANEL_SIZE, buf, (size_t)n * PANEL_SIZE * 2);
+      makeBand(buf, y0, n);
+      // (the last band, 2 rows, rounded up to whole 32-byte lines: it runs into the frame's spare end)
+      d.ticket[j & 1] = send(d, f + (size_t)y0 * LCD_WIDTH, buf, ((size_t)n * LCD_WIDTH * 2 + 31) & ~(size_t)31);
     }
     return waited + waitDma(d, d.issued);
   }
 
-  // Straight (0 degrees, or upside down: flip): the canvas comes in by DMA too, a band at a time into internal RAM,
-  // while the band before is made and the one before that goes out. So the CPU never waits on PSRAM: it only shades
-  // the rim and puts each row in its place. (A frame's copy took 33 ms this way, 38 with the CPU reading the canvas;
-  // but the DMA's reading held up the panel's refill: gWs21DmaIn)
-  int64_t straightBands(uint16_t *fb, bool flip) {
-    Side &d = side[0];
-    // what the game left of the canvas in the cache goes out to PSRAM first, where the DMA reads it
-    esp_cache_msync(_framebuffer, CANVAS_BYTES, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
-    const int nb = (LCD_HEIGHT + BAND - 1) / BAND;
-    uint32_t inT[2] = { 0, 0 };
-    size_t inOff[2] = { 0, 0 };
-    int64_t waited = 0;
-    inT[0] = fetch(0, flip, raws[0], &inOff[0]);
-    for (int i = 0; i < nb; i++) {
-      const int y0 = i * BAND, n = LCD_HEIGHT - y0 < BAND ? LCD_HEIGHT - y0 : BAND;
-      waited += waitDma(in, inT[i & 1]);  // this band is in
-      if (i + 1 < nb) inT[(i + 1) & 1] = fetch(i + 1, flip, raws[(i + 1) & 1], &inOff[(i + 1) & 1]);  // the next comes
-      uint16_t *buf = bands[i & 1];
-      waited += waitDma(d, d.ticket[i & 1]);  // the band before last, from this buffer, is out
-      const uint16_t *src = (const uint16_t *)((const uint8_t *)raws[i & 1] + inOff[i & 1]);
-      for (int r = 0; r < n; r++)
-        straightRow(buf + r * PANEL_SIZE + WS21_BORDER, src + (flip ? n - 1 - r : r) * LCD_WIDTH, y0 + r, flip);
-      d.ticket[i & 1] = send(d, fb + (size_t)(WS21_BORDER + y0) * PANEL_SIZE, buf, (size_t)n * PANEL_SIZE * 2);
-    }
-    return waited + waitDma(d, d.issued);
-  }
-  // the canvas rows panel band i shows (upside down: flip) into raw, from the 32-byte line they start in (the DMA wants
-  // whole lines): *off is where the first of them starts in raw. Returns the count to wait for
-  uint32_t fetch(int i, bool flip, uint16_t *raw, size_t *off) {
-    const int p0 = i * BAND, n = LCD_HEIGHT - p0 < BAND ? LCD_HEIGHT - p0 : BAND;  // (the panel's rows)
-    const int y0 = flip ? LCD_HEIGHT - p0 - n : p0;
-    const uintptr_t a = (uintptr_t)(_framebuffer + y0 * LCD_WIDTH), b = (uintptr_t)(_framebuffer + (y0 + n) * LCD_WIDTH);
-    const uintptr_t a0 = a & ~(uintptr_t)31, b0 = (b + 31) & ~(uintptr_t)31;
-    *off = a - a0;
-    if (in.dma) {
-      if (esp_async_memcpy(in.dma, raw, (void *)a0, b0 - a0, ws21DmaDone, (void *)&in.done) == ESP_OK) return ++in.issued;
-      Serial.printf("ws21: DMA from the canvas refused (%p, %u bytes), the CPU reads it from now on\n", (void *)a0,
-                    (unsigned)(b0 - a0));
-      waitDma(in, in.issued);
-      in.dma = nullptr;
-    }
-    memcpy((uint8_t *)raw + *off, (const void *)a, b - a);
-    return in.issued;
-  }
-
-  // a band out to the frame buffer: by DMA, or by the CPU if that's refused (then written back from the cache at
-  // once, since present() drops the cache's copy). Returns the count to wait for.
+  // a band out to the frame: by DMA, or by the CPU if that's refused (then written back from the cache at once, for
+  // the refill). Returns the count to wait for.
   uint32_t send(Side &d, uint16_t *to, uint16_t *from, size_t bytes) {
     if (d.dma) {
       if (esp_async_memcpy(d.dma, to, from, bytes, ws21DmaDone, (void *)&d.done) == ESP_OK) return ++d.issued;
@@ -578,10 +975,10 @@ private:
       d.dma = nullptr;
     }
     memcpy(to, from, bytes);
-    esp_cache_msync(to, bytes, ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+    ws21Writeback();
     return d.issued;
   }
-  // waits for the count t (the DMA does a band in well under the time a band takes to make: it hardly ever waits)
+  // waits for the count t
   int64_t waitDma(Side &d, uint32_t t) {
     if ((int32_t)(d.done - t) >= 0) return 0;
     const int64_t t0 = esp_timer_get_time();
@@ -596,101 +993,43 @@ private:
     return esp_timer_get_time() - t0;
   }
 
-  // the panel's row y (of the canvas-sized middle) into o, from the canvas row it shows (src): straight, or upside
-  // down (flip: src is canvas row 465 - y, read right to left). The black outside the circle, the rim's shading
-  void straightRow(uint16_t *o, const uint16_t *src, int y, bool flip = false) {
-    const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
-    const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : LCD_WIDTH;
-    const int i0 = rim ? gKnomiRimI0[y] : 0, i1 = rim ? gKnomiRimI1[y] : LCD_WIDTH;
-    if (x0 > 0) memset(o, 0, x0 * 2);
-    if (x1 < LCD_WIDTH) memset(o + x1, 0, (LCD_WIDTH - x1) * 2);
-    if (!flip) {
-      for (int x = x0; x < i0; x++) o[x] = edge(src[x], rim, x, y);
-      memcpy(o + i0, src + i0, (size_t)(i1 - i0) * 2);
-      for (int x = i1; x < x1; x++) o[x] = edge(src[x], rim, x, y);
-      return;
-    }
-    const int cy = LCD_HEIGHT - 1 - y;  // (the rim is the panel pixel's; a label's lift, the canvas pixel's)
-    for (int x = x0; x < x1; x++) {
-      const int cx = LCD_WIDTH - 1 - x;
-      uint16_t c = src[cx];
-      if ((x < i0 || x >= i1) && rim && !(gKnomiLiftOn && knomiLifted(cx >> 1, cy >> 1))) c = knomiRimPixel(c, rim[x]);
-      o[x] = c;
-    }
-  }
-
-  // A quarter turn either way (q 1: 90 degrees clockwise, 3: 270): each panel row is a canvas column. Each canvas
+  // A quarter turn either way (q 1: 90 degrees clockwise, 3: 270): each frame row is a canvas column. Each canvas
   // row gives the band's rows their pixel in one column, so each canvas line is read once a band
   void quarterBand(uint16_t *out, int y0, int n, int q) {
     const uint16_t *cv = _framebuffer;
     for (int x = 0; x < LCD_WIDTH; x++) {
-      if (q == 1) {  // panel (x, y) shows canvas (y, 465 - x)
+      if (q == 1) {  // frame (x, y) shows canvas (y, 465 - x)
         const uint16_t *src = cv + (LCD_HEIGHT - 1 - x) * LCD_WIDTH + y0;
-        for (int r = 0; r < n; r++) out[r * PANEL_SIZE + x] = src[r];
-      } else {  // panel (x, y) shows canvas (465 - y, x)
+        for (int r = 0; r < n; r++) out[r * LCD_WIDTH + x] = src[r];
+      } else {  // frame (x, y) shows canvas (465 - y, x)
         const uint16_t *src = cv + x * LCD_WIDTH + (LCD_WIDTH - 1 - y0);
-        for (int r = 0; r < n; r++) out[r * PANEL_SIZE + x] = src[-r];
-      }
-    }
-    for (int r = 0; r < n; r++) {  // the black outside the circle, the rim's shading
-      const int y = y0 + r;
-      uint16_t *o = out + r * PANEL_SIZE;
-      const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
-      if (!rim) continue;
-      const int x0 = gKnomiRimX0[y], x1 = gKnomiRimX1[y], i0 = gKnomiRimI0[y], i1 = gKnomiRimI1[y];
-      if (x0 > 0) memset(o, 0, x0 * 2);
-      if (x1 < LCD_WIDTH) memset(o + x1, 0, (LCD_WIDTH - x1) * 2);
-      for (int x = x0; x < x1; x++) {
-        if (x == i0) x = i1 > x ? i1 : x;
-        if (x >= x1) break;
-        const int cx = q == 1 ? y : LCD_WIDTH - 1 - y, cy = q == 1 ? LCD_HEIGHT - 1 - x : x;
-        if (!(gKnomiLiftOn && knomiLifted(cx >> 1, cy >> 1))) o[x] = knomiRimPixel(o[x], rim[x]);
+        for (int r = 0; r < n; r++) out[r * LCD_WIDTH + x] = src[-r];
       }
     }
   }
 
-  // canvas rows y0..y0+n-1 into out (each 466 px, the row's part in the panel's middle; rows PANEL_SIZE apart)
+  // the turned picture's rows y0..y0+n-1 into out (rows LCD_WIDTH apart). The rim is the refill's, by the frame's
+  // position (so a label lifted over it lifts where it lands on the panel, not where it was drawn: close enough)
   void makeBand(uint16_t *out, int y0, int n) {
     if (gWs21RotDeg == 90 || gWs21RotDeg == 270) {
       quarterBand(out, y0, n, gWs21RotDeg / 90);
       return;
     }
     if (gWs21RotDeg == 180) {
-      for (int r = 0; r < n; r++)
-        straightRow(out + r * PANEL_SIZE, _framebuffer + (LCD_HEIGHT - 1 - y0 - r) * LCD_WIDTH, y0 + r, true);
+      for (int r = 0; r < n; r++) {
+        const uint16_t *src = _framebuffer + (LCD_HEIGHT - 1 - y0 - r) * LCD_WIDTH;
+        uint16_t *o = out + r * LCD_WIDTH;
+        for (int x = 0; x < LCD_WIDTH; x++) o[x] = src[LCD_WIDTH - 1 - x];
+      }
       return;
     }
-    for (int r = 0; r < n; r++) {  // the black outside the circle; unturned, the whole row
-      const int y = y0 + r;
-      uint16_t *o = out + r * PANEL_SIZE;
-      const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
-      const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : LCD_WIDTH;
-      if (!gWs21RotDeg) {
-        straightRow(o, _framebuffer + y * LCD_WIDTH, y);
-        continue;
-      }
-      if (x0 > 0) memset(o, 0, x0 * 2);
-      if (x1 < LCD_WIDTH) memset(o + x1, 0, (LCD_WIDTH - x1) * 2);
-    }
-    if (!gWs21RotDeg) return;
-    // Turned: each panel pixel takes the canvas point turned back onto it, blended from its four pixels (smooth) or
-    // the nearest one. The rim is round, so its darkening is the panel pixel's own; whether a need bar's label lifts
-    // it is the canvas pixel's. In tiles 32 wide, so the canvas lines a tile reads (a small turned square) stay in
-    // the cache from one of its rows to the next. Each tile row in up to three runs: the rim, the middle (no
-    // darkening, and nothing near the canvas's edge, so nothing to check per pixel), the rim.
+    // Turned: each frame pixel takes the canvas point turned back onto it, blended from its four pixels (smooth) or
+    // the nearest one. In tiles 32 wide, so the canvas lines a tile reads (a small turned square) stay in the cache
+    // from one of its rows to the next
     const uint8_t sm = gWs21RotDeg % 90 ? gWs21Smooth : 0;  // (a quarter turn lands on whole pixels: nothing to blend)
     for (int tx = 0; tx < LCD_WIDTH; tx += TILE) {
       const int te = tx + TILE < LCD_WIDTH ? tx + TILE : LCD_WIDTH;
-      for (int r = 0; r < n; r++) {
-        const int y = y0 + r;
-        uint16_t *o = out + r * PANEL_SIZE;
-        const uint8_t *rim = gKnomiRim ? gKnomiRim + y * LCD_WIDTH : nullptr;
-        const int x0 = rim ? gKnomiRimX0[y] : 0, x1 = rim ? gKnomiRimX1[y] : LCD_WIDTH;
-        const int i0 = rim ? gKnomiRimI0[y] : 0, i1 = rim ? gKnomiRimI1[y] : LCD_WIDTH;
-        turnPart(o, x0 > tx ? x0 : tx, i0 < te ? i0 : te, rim, y, sm);
-        turnPart(o, i0 > tx ? i0 : tx, i1 < te ? i1 : te, nullptr, y, sm);
-        turnPart(o, i1 > tx ? i1 : tx, x1 < te ? x1 : te, rim, y, sm);
-      }
+      for (int r = 0; r < n; r++) turnPart(out + r * LCD_WIDTH, tx, te, nullptr, y0 + r, sm);
     }
   }
   static constexpr int TILE = 32;
@@ -777,9 +1116,6 @@ private:
   static inline uint16_t pack(uint32_t x) { return (uint16_t)(x | x >> 16); }
   static inline uint32_t mix(uint32_t a, uint32_t b, uint32_t w) { return ((a * (32 - w) + b * w) >> 5) & 0x07E0F81Fu; }
 
-  static inline uint16_t edge(uint16_t c, const uint8_t *rim, int x, int y) {
-    return gKnomiLiftOn && knomiLifted(x >> 1, y >> 1) ? c : knomiRimPixel(c, rim[x]);
-  }
   Ws21Panel *panel;
 };
 

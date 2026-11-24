@@ -33,9 +33,10 @@
 #define LCD_R3 18
 #define LCD_R4 17
 // timings, as Waveshare's demo: 18 MHz, about 66 frames a second
-#define LCD_PCLK_HZ 12000000  // 44 refreshes a second (Waveshare's demos: 16 and 18): plenty for a game drawing ~7 frames a
-                               // second, and each refresh's copy out of PSRAM takes the CPU less often. The console's
-                               // PCLK tries others
+#define LCD_PCLK_HZ 8000000  // 29 refreshes a second (Waveshare's demos: 16 and 18 MHz). PSRAM is what limits a frame,
+                              // and each refresh reads the whole picture out of it: at 29 Hz Pinball takes 49 ms a frame
+                              // against 67 at 44 Hz (12 MHz), and Fedor saw no flicker (2026-11-23). The console's
+                              // PCLK tries others
 #define LCD_PCLK_NEG 1  // data out on the falling edge, so the panel reads it steady on the rising one. With 0 (as
                         // Waveshare's demos) thin streaks ran along the rows at any pixel clock (2026-11-20)
 #define LCD_HSYNC_POL 1  // (1: idle high, esp_lcd's default, which the demo keeps)
@@ -46,8 +47,12 @@
 #define LCD_VSYNC_PW 3
 #define LCD_VSYNC_BP 8
 #define LCD_VSYNC_FP 8
-#define LCD_BOUNCE_PX (20 * PANEL_SIZE)  // bounce buffers: 20 lines each in internal RAM (2 x 19 KB; the demo has 10),
-                                         // so a short stall of PSRAM (a flash read, a busy frame) doesn't show
+#define LCD_BOUNCE_PX (16 * PANEL_SIZE)  // bounce buffers: 16 lines each in internal RAM (2 x 15 KB; the demo has 10),
+                                         // so a short stall (a flash read, the cache written back: ws21Writeback(),
+                                         // 0.4 ms) doesn't make a refill late (a band goes out in 0.73 ms). 480 / 16 =
+                                         // 30 a refresh. The refill's DMA brings the next band into 15 KB more
+                                         // (Ws21Prefetch). (30 lines took 19 KB more, and internal RAM fell to 34 KB
+                                         // while TLS connected)
 
 // the panel's setup commands: 3-wire SPI (9-bit) on GPIO 1 and 2, its CS on the expander. GPIO 1 and 2 are also
 // the microSD's CMD and CLK; the game doesn't use the card
