@@ -599,6 +599,11 @@ static void testGame() {
   hostInit(res.c_str(), saveSub.c_str());
   gGameOn = true;
   CHECK(!readFile(saveSub + "/" SAVE_NS_NEW ".prefs").empty());
+  // every game's how-to card, landed, drawn from what's kept as the boards do (not on a computer: its button lifts under
+  // the mouse), and each such frame drawn the old way too: the same picture
+  extern bool gCardStillOn, gCardStillCheck;
+  extern uint32_t gCardStillChecked, gCardStillWrong;
+  gCardStillOn = gCardStillCheck = true;
 
   runTicks(200);
   CHECK(hostFrameDirty());
@@ -1554,6 +1559,10 @@ static void testGame() {
     runTicks(100);
     CHECK(hostMusicWanted() != 17);
   }
+
+  CHECK(gCardStillChecked > 50 && gCardStillWrong == 0);  // (the cards kept: the same pictures)
+  printf("  (how-to cards kept: %u frames checked, %u different)\n", (unsigned)gCardStillChecked, (unsigned)gCardStillWrong);
+  gCardStillOn = gCardStillCheck = false;
 
   hostSerialPush("WIPE");
   runTicks(50);

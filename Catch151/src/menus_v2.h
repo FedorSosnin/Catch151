@@ -2898,8 +2898,9 @@ static void v2GameResult(const char *title, const char *top, const char *big, bo
 // V1's button is (where its tap is); the whole card drops in and flies off as V1's did, (cx, cy) its middle
 #define CARD_TEXT_W 264  // how to play: the widest line (test_tools.py checks every language fits)
 #define CARD_LINE_H 22   // and its lines, 8 of them in the panel's 176 px
+#define V2_CARD_DIM 115  // the game under a card: this much (of 256) toward the night tint
 static void v2IntroCard(int cx, int cy, bool dim, const char *title, const char *how) {
-  if (dim) v2DimFrame(115);
+  if (dim) v2DimFrame(V2_CARD_DIM);
   int dx = cx - CX;
   char b[40];
   setSize(2);

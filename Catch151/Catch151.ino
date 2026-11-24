@@ -3271,15 +3271,153 @@ void introTouch(int16_t x0, int16_t y0, int16_t x1, int16_t y1, bool picked) {
   }
 }
 
+// The card, once it has landed, kept (it cost 56 ms a frame on the XL, in every game: Fedor's go, 2026-11-23): which of
+// its pixels are its own (drawn over black and over white, the same on both: rows of runs) and those pixels, worked out
+// once; each frame after, the game under it darkened only round them, and they put back. The same picture as drawing
+// it each frame (the host test checks every frame it's used). Not on a computer: there the button lifts under the
+// mouse (hover_v2.h), and drawing it costs nothing to speak of.
+#ifdef BOARD_HOST
+bool gCardStillOn = false;  // (the host test turns it on, and its check)
+bool gCardStillCheck = false;
+uint32_t gCardStillChecked = 0, gCardStillWrong = 0;
+#else
+static const bool gCardStillOn = true;
+#endif
+struct CardRun {
+  int16_t y, x0, x1;  // the card's own pixels on row y, x0..x1 - 1
+};
+static struct {
+  int g = -1;
+  const char *title = nullptr, *how = nullptr;
+  CardRun *runs = nullptr;
+  int nRuns = 0;
+  uint16_t *px = nullptr;  // their colours, run after run
+  bool failed = false;     // (a pixel the card blends with what's under it: drawn each frame, as before)
+} cardStill;
+#define CARD_STILL_Y0 (CY - 176)  // the rows it can reach: its board's top to its panel's bottom
+#define CARD_STILL_Y1 (CY + 148)
+static void cardStillFree() {
+  free(cardStill.runs), free(cardStill.px);
+  cardStill.runs = nullptr, cardStill.px = nullptr;
+  cardStill.nRuns = 0;
+  cardStill.g = -1;
+  cardStill.failed = false;
+}
+// worked out from the screen as the game left it (put back after): true if it's kept
+static bool cardStillMake(int g, const char *title, const char *how) {
+  cardStillFree();
+  cardStill.g = g, cardStill.title = title, cardStill.how = how;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  const int Y0 = CARD_STILL_Y0 < 0 ? 0 : CARD_STILL_Y0, Y1 = CARD_STILL_Y1 > V2_W ? V2_W : CARD_STILL_Y1;
+  const size_t n = (size_t)(Y1 - Y0) * V2_W;
+  uint16_t *keep = (uint16_t *)ps_malloc(n * 2), *onBlack = (uint16_t *)ps_malloc(n * 2);
+  bool ok = keep && onBlack;
+  if (ok) {
+    uint16_t *band = fb + (size_t)Y0 * V2_W;
+    memcpy(keep, band, n * 2);
+    memset(band, 0, n * 2);  // over black
+    v2IntroCard(CX, CY, false, title, how);
+    memcpy(onBlack, band, n * 2);
+    for (size_t i = 0; i < n; i++) band[i] = 0xFFFF;  // over white: its own pixels are the same
+    v2IntroCard(CX, CY, false, title, how);
+    int runs = 0, pxN = 0;  // counted, then kept
+    for (int pass = 0; pass < 2 && ok; pass++) {
+      if (pass == 1) {
+        cardStill.runs = (CardRun *)ps_malloc((size_t)(runs ? runs : 1) * sizeof(CardRun));
+        cardStill.px = (uint16_t *)ps_malloc((size_t)(pxN ? pxN : 1) * 2);
+        if (!cardStill.runs || !cardStill.px) { ok = false; break; }
+        runs = pxN = 0;
+      }
+      for (int y = Y0; y < Y1 && ok; y++) {
+        const uint16_t *a = onBlack + (size_t)(y - Y0) * V2_W, *b = band + (size_t)(y - Y0) * V2_W;
+        for (int x = 0; x < V2_W;) {
+          if (a[x] != b[x]) {
+            if (a[x] != 0 || b[x] != 0xFFFF) ok = false;  // (blended with what's under it)
+            x++;
+            continue;
+          }
+          int x0 = x;
+          while (x < V2_W && a[x] == b[x]) x++;
+          if (pass == 1) {
+            cardStill.runs[runs] = { (int16_t)y, (int16_t)x0, (int16_t)x };
+            memcpy(cardStill.px + pxN, a + x0, (size_t)(x - x0) * 2);
+          }
+          runs++, pxN += x - x0;
+        }
+      }
+    }
+    cardStill.nRuns = runs;
+    memcpy(band, keep, n * 2);  // the game as it was
+  }
+  free(keep), free(onBlack);
+  if (!ok) {
+    cardStillFree();
+    cardStill.g = g, cardStill.title = title, cardStill.how = how;
+    cardStill.failed = true;
+  }
+  return ok;
+}
+// the card as kept, over the game: what isn't the card's darkened, the card's put back
+static void cardStillDraw() {
+  V2Lut L;
+  v2LutStart(L);
+  v2LutBlend(L, sc565(V2_DIM_TINT), V2_CARD_DIM);
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  int y = 0;  // rows done
+  const uint16_t *px = cardStill.px;
+  for (int i = 0; i < cardStill.nRuns;) {
+    int ry = cardStill.runs[i].y;
+    if (ry > y) v2LutRun(fb + (size_t)y * V2_W, (ry - y) * V2_W, L);  // rows without the card
+    uint16_t *row = fb + (size_t)ry * V2_W;
+    int x = 0;
+    for (; i < cardStill.nRuns && cardStill.runs[i].y == ry; i++) {
+      const CardRun &r = cardStill.runs[i];
+      v2LutRun(row + x, r.x0 - x, L);
+      memcpy(row + r.x0, px, (size_t)(r.x1 - r.x0) * 2);
+      px += r.x1 - r.x0;
+      x = r.x1;
+    }
+    v2LutRun(row + x, V2_W - x, L);
+    y = ry + 1;
+  }
+  if (y < V2_W) v2LutRun(fb + (size_t)y * V2_W, (V2_W - y) * V2_W, L);
+}
+
 // drawn over the game, last before its flush: the game at half brightness, then the card
 void drawIntroCard() {
-  if (introCard < 0) return;
+  if (introCard < 0 || introAwayT) {  // (gone, or going: what was kept goes)
+    if (cardStill.g >= 0) cardStillFree();
+    if (introCard < 0) return;
+  }
   int g = introCard;
   uint32_t now = millis();
   int cx, cy;
   introCardPos(now, cx, cy);
-  v2IntroCard(cx, cy, !introAwayT || now - introAwayT < CARD_AWAY_MS / 2, introTitle(g), introHow(g));  // V2: board, panel, button
-  return;
+  const char *title = introTitle(g), *how = introHow(g);
+  if (gCardStillOn && !introAwayT && cx == CX && cy == CY) {  // landed: kept
+    if (cardStill.g != g || cardStill.title != title || cardStill.how != how) cardStillMake(g, title, how);
+    if (!cardStill.failed && cardStill.runs) {
+#ifdef BOARD_HOST
+      if (gCardStillCheck) {  // (the host test: drawn both ways, the same?)
+        uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+        size_t n = (size_t)V2_W * V2_W;
+        uint16_t *game = (uint16_t *)malloc(n * 2), *kept = (uint16_t *)malloc(n * 2);
+        memcpy(game, fb, n * 2);
+        cardStillDraw();
+        memcpy(kept, fb, n * 2);
+        memcpy(fb, game, n * 2);
+        v2IntroCard(cx, cy, true, title, how);
+        gCardStillChecked++;
+        if (memcmp(kept, fb, n * 2)) gCardStillWrong++;
+        free(game), free(kept);
+        return;
+      }
+#endif
+      cardStillDraw();
+      return;
+    }
+  }
+  v2IntroCard(cx, cy, !introAwayT || now - introAwayT < CARD_AWAY_MS / 2, title, how);  // V2: board, panel, button
 }
 
 void gamesMenuTap(int16_t x, int16_t y) {
@@ -5714,9 +5852,13 @@ void renderSnap() {
   }
   psDraw(ps, now, psCapture, playKeysUi);
   psCapture = false;
-  // the next place made ready while the print (or IT GOT AWAY!) is up, a little a frame
-  if (ps.phase == PSP_LOAD) snapReady(introUp() ? 40 : 80);  // (the card gone: nothing else to show yet)
-  else if ((ps.phase == PSP_PRINT || ps.phase == PSP_AWAY) && ps.shot + 1 < PS_SHOTS) psPrepWork(ps.order[ps.shot + 1], 40);
+  // the next place made ready while the print (or IT GOT AWAY!) is up, a little a frame. None while a finger is down:
+  // the frames stay quick enough to follow it, or a swipe (the card's, up to quit) ended between two of them and was
+  // only a tap (the XL, 2026-11-23)
+  if (!wasPressed) {
+    if (ps.phase == PSP_LOAD) snapReady(introUp() ? 40 : 80);  // (the card gone: nothing else to show yet)
+    else if ((ps.phase == PSP_PRINT || ps.phase == PSP_AWAY) && ps.shot + 1 < PS_SHOTS) psPrepWork(ps.order[ps.shot + 1], 40);
+  }
   if (psOverT) {  // the end: the score, the record, the joy, as every game shows it
     char big[16], rec[32];
     snprintf(big, sizeof(big), "%u", (unsigned)ps.score);
