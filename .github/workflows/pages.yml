@@ -27,11 +27,8 @@ defaults:
     working-directory: Catch151
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - name: Assemble the site
@@ -56,5 +53,15 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: Catch151/site
+  # The deploy in a job of its own once the build is done, as GitHub's own Pages workflow has it: in the same job it
+  # asked for the site half a second after the upload and found none ("Found 0 artifact(s)", three runs in a row on
+  # 2026-11-24; a re-run then found two)
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
