@@ -70,19 +70,23 @@ static size_t psBlurBytes() {
 // room in the boards' internal RAM (quick a byte at a time, PSRAM isn't), as long as PS_KEEP_FAST is left over for the
 // rest (Wi-Fi's buffers); else in PSRAM, slower but the same
 #define PS_KEEP_FAST (40 * 1024)
-static void *psFastAlloc(size_t n) {
+uint32_t psKeepFast = PS_KEEP_FAST;  // (the console's PSKEEP changes it, testing)
+static bool psBlurFast = false;      // the blur's room is in internal RAM (the console's timing says so)
+static void *psFastAlloc(size_t n, bool *fast = nullptr) {
+  if (fast) *fast = false;
 #ifdef BOARD_HOST
   return malloc(n);
 #else
   void *p = nullptr;
-  if (heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) >= n + PS_KEEP_FAST)
+  if (heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) >= n + psKeepFast)
     p = heap_caps_malloc(n, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  if (p && fast) *fast = true;
   return p ? p : ps_malloc(n);
 #endif
 }
 static bool psAllocAll() {
   const size_t P = (size_t)PS_BW * PS_BW;
-  psBlurBuf = (uint8_t *)psFastAlloc(psBlurBytes());
+  psBlurBuf = (uint8_t *)psFastAlloc(psBlurBytes(), &psBlurFast);
   psPickC = (PsPickCache *)psFastAlloc(sizeof(PsPickCache));
   if (psPickC) {
     memset(psPickC, 0, sizeof(PsPickCache));
@@ -164,6 +168,7 @@ static void psPalCollect() {
 // checker gives it, by how far it lies from the nearest toward the other (picsnap_blur.h's pick, each colour's kept
 // while the palette stays the same)
 static int psPickN = -1;  // the palette's size the picks kept are for
+PS_QUICK_BEGIN
 static uint16_t psDitherPick(int r, int g, int b, int cx, int cy, int n) {
   PsPick p;
   if (psPickC) {
@@ -174,16 +179,23 @@ static uint16_t psDitherPick(int r, int g, int b, int cx, int cy, int n) {
   }
   return psPal[(p.mask >> ((cy & 1) * 2 + (cx & 1)) & 1) ? p.i2 : p.i1];
 }
+PS_QUICK_END
 // a picture (w x h, stride st) in 2 x 2 cells from (ox, oy): each its average, then the palette's, checkered
+PS_QUICK_BEGIN
 static void psDitherCells(uint16_t *p, int w, int h, int st, int ox, int oy, int palN) {
-  for (int y = (oy & 1); y + 1 < h; y += 2)
+  for (int y = (oy & 1); y + 1 < h; y += 2) {
+    uint16_t *q0 = p + y * st, *q1 = q0 + st;
+    const int cy = (y - oy) >> 1;
     for (int x = (ox & 1); x + 1 < w; x += 2) {
-      uint16_t *q = p + y * st + x;
-      int c[3];
-      for (int ch = 0; ch < 3; ch++) c[ch] = (psCh(q[0], ch) + psCh(q[1], ch) + psCh(q[st], ch) + psCh(q[st + 1], ch) + 2) / 4;
-      q[0] = q[1] = q[st] = q[st + 1] = psDitherPick(c[0], c[1], c[2], (x - ox) >> 1, (y - oy) >> 1, palN);
+      uint16_t a = q0[x], b = q0[x + 1], c = q1[x], d = q1[x + 1];
+      int r = (psCh0(a) + psCh0(b) + psCh0(c) + psCh0(d) + 2) >> 2;
+      int g = (psCh1(a) + psCh1(b) + psCh1(c) + psCh1(d) + 2) >> 2;
+      int bl = (psCh2(a) + psCh2(b) + psCh2(c) + psCh2(d) + 2) >> 2;
+      q0[x] = q0[x + 1] = q1[x] = q1[x + 1] = psDitherPick(r, g, bl, (x - ox) >> 1, cy, palN);
     }
+  }
 }
+PS_QUICK_END
 
 // ----- painting a place -----
 // The painters draw in the canvas's px, the camera at rest, over the screen and PS_M more each side: the strip being
@@ -716,41 +728,24 @@ static bool psPrepStep(uint8_t place) {
   int rFar = PS_BLUR_MAX - step, rNear = step;
   // each a blur streamed (picsnap_blur.h): the rows read out of the planes as they're wanted, each written once
   if (c < 3) {  // a far channel, blurred, into the picture
+    if (rFar == 0) {  // (sharp: the far plane as it is, all three at once)
+      if (c == 0) memcpy(out, psFar, (size_t)PS_BW * PS_BW * 2);
+      return false;
+    }
+    const int ch = c;
     psBlurStream(
-        PS_BW, PS_BW, rFar, psBlurBuf,
-        [&](int y, uint8_t *row) {
-          const uint16_t *f = psFar + y * PS_BW;
-          for (int x = 0; x < PS_BW; x++) row[x] = psCh(f[x], c);
-        },
-        [&](int y, const uint8_t *row) {
-          uint16_t *o = out + y * PS_BW;
-          if (c == 0)
-            for (int x = 0; x < PS_BW; x++) o[x] = psSetCh(0, 0, row[x]);
-          else
-            for (int x = 0; x < PS_BW; x++) o[x] = psSetCh(o[x], c, row[x]);
-        });
+        PS_BW, PS_BW, rFar, psBlurBuf, [ch](int y, uint8_t *row) { psRowCh(psFar + y * PS_BW, row, PS_BW, ch); },
+        [out, ch](int y, const uint8_t *row) { psRowSetCh(out + y * PS_BW, row, PS_BW, ch); });
   } else if (c == 3) {  // the near plane's cover, blurred
     psBlurStream(
-        PS_BW, PS_BW, rNear, psBlurBuf, [&](int y, uint8_t *row) { memcpy(row, psNearA + y * PS_BW, PS_BW); },
-        [&](int y, const uint8_t *row) { memcpy(psCover + y * PS_BW, row, PS_BW); });
+        PS_BW, PS_BW, rNear, psBlurBuf, [](int y, uint8_t *row) { memcpy(row, psNearA + y * PS_BW, PS_BW); },
+        [](int y, const uint8_t *row) { memcpy(psCover + y * PS_BW, row, PS_BW); });
   } else if (c < 7) {  // a near channel: its colour times its cover, blurred, laid over by its cover
-    int ch = c - 4;
+    const int ch = c - 4;
     psBlurStream(
         PS_BW, PS_BW, rNear, psBlurBuf,
-        [&](int y, uint8_t *row) {
-          const uint16_t *n = psNear + y * PS_BW;
-          const uint8_t *a = psNearA + y * PS_BW;
-          for (int x = 0; x < PS_BW; x++) row[x] = (uint8_t)(psCh(n[x], ch) * a[x] / 255);
-        },
-        [&](int y, const uint8_t *row) {
-          uint16_t *o = out + y * PS_BW;
-          const uint8_t *cv = psCover + y * PS_BW;
-          for (int x = 0; x < PS_BW; x++) {
-            int a = cv[x];
-            if (!a) continue;
-            o[x] = psSetCh(o[x], ch, row[x] + psCh(o[x], ch) * (255 - a) / 255);
-          }
-        });
+        [ch](int y, uint8_t *row) { psRowNear(psNear + y * PS_BW, psNearA + y * PS_BW, row, PS_BW, ch); },
+        [out, ch](int y, const uint8_t *row) { psRowOver(out + y * PS_BW, row, psCover + y * PS_BW, PS_BW, ch); });
   } else {  // the dither, in the scenes' cells (the world's: PS_PAD is even)
     psDitherCells(out, PS_BW, PS_BW, PS_BW, 0, 0, psPalN);
   }
@@ -760,27 +755,44 @@ static bool psPrepStep(uint8_t place) {
 // frames it was spread over, its longest step, and from start to end)
 static uint32_t psPrepBegan = 0, psPrepMs = 0, psPrepLongest = 0;
 static uint16_t psPrepCalls = 0;
+static uint32_t psPrepKindMs[5];  // ...by kind of step: painting, a far channel, the cover, a near channel, the dither
+static uint8_t psPrepKindN[5];
+static int psPrepKind(int k) {
+  if (k <= 2 * PS_STRIPS) return 0;
+  int c = (k - 1 - 2 * PS_STRIPS) % 8;
+  return c < 3 ? 1 : c == 3 ? 2 : c < 7 ? 3 : 4;
+}
 static void psPrepWork(uint8_t place, uint32_t ms) {
   if (psPrepFor != (int8_t)place) {
     psPrepFor = (int8_t)place;
     psPrepAt = 0;
     psPrepDone = false;
     psPrepBegan = millis(), psPrepMs = psPrepLongest = 0, psPrepCalls = 0;
+    memset(psPrepKindMs, 0, sizeof(psPrepKindMs));
+    memset(psPrepKindN, 0, sizeof(psPrepKindN));
   }
   if (psPrepDone) return;
   uint32_t t0 = millis();
   psPrepCalls++;
   while (!psPrepDone) {
     uint32_t s0 = millis();
+    int kind = psPrepKind(psPrepAt);
     psPrepDone = psPrepStep(place);
     uint32_t t = millis();
     if (t - s0 > psPrepLongest) psPrepLongest = t - s0;
+    psPrepKindMs[kind] += t - s0, psPrepKindN[kind]++;
     if (ms && t - t0 >= ms) break;
   }
   psPrepMs += millis() - t0;
-  if (psPrepDone)
+  if (psPrepDone) {
     Serial.printf("picsnap: place %d ready: %lu ms of work over %u frames, its longest step %lu ms, %lu ms from start to end\n",
                   place, (unsigned long)psPrepMs, psPrepCalls, (unsigned long)psPrepLongest, (unsigned long)(millis() - psPrepBegan));
+    static const char *KIND[5] = { "painting", "far blurs", "covers", "near blurs", "dithers" };
+    Serial.printf("picsnap:   ");
+    for (int i = 0; i < 5; i++)
+      Serial.printf("%s %lu ms (%u)%s", KIND[i], (unsigned long)psPrepKindMs[i], psPrepKindN[i], i < 4 ? ", " : "");
+    Serial.printf("; the blur in %s\n", psBlurFast ? "internal RAM" : "PSRAM");
+  }
 }
 
 // ----- a frame through the camera -----

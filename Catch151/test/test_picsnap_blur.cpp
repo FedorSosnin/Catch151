@@ -79,6 +79,20 @@ uint8_t newPick(PsPickCache &c, const uint8_t (*palC)[3], int r, int g, int b, i
   return (p.mask >> ((cy & 1) * 2 + (cx & 1)) & 1) ? p.i2 : p.i1;
 }
 
+// ----- the first colour sums, as they were (picsnap_v2.h's psCh(), psSetCh() and the lens step's loops) -----
+uint8_t oldCh(uint16_t c, int ch) {
+  if (ch == 0) { int r = c >> 11; return (uint8_t)(r << 3 | r >> 2); }
+  if (ch == 1) { int g = (c >> 5) & 63; return (uint8_t)(g << 2 | g >> 4); }
+  int b = c & 31;
+  return (uint8_t)(b << 3 | b >> 2);
+}
+uint16_t oldSetCh(uint16_t c, int ch, int v) {
+  v = v < 0 ? 0 : v > 255 ? 255 : v;
+  if (ch == 0) return (uint16_t)((c & 0x07FF) | (v >> 3) << 11);
+  if (ch == 1) return (uint16_t)((c & 0xF81F) | (v >> 2) << 5);
+  return (uint16_t)((c & 0xFFE0) | v >> 3);
+}
+
 // pictures to blur: noise, hard shapes (a place's grass, a tombstone's edge), a smooth ramp, all one colour
 void fill(std::vector<uint8_t> &p, int w, int h, int kind) {
   for (int y = 0; y < h; y++)
@@ -143,6 +157,37 @@ TEST(picsnap_blur, read_from_one_place_and_written_to_another_as_the_place_is_ma
   }
 }
 
+TEST(picsnap_blur, the_quick_colour_loops_are_the_first_ones_bit_for_bit) {
+  for (int x = 0; x <= 255 * 255; x++)  // (all it is asked: a channel times a cover)
+    if (psDiv255(x) != x / 255) {
+      CHECK_MSG(false, "psDiv255 differs from / 255");
+      return;
+    }
+  const int W = 297;
+  std::vector<uint16_t> c(W), n(W), o(W), oNew(W);
+  std::vector<uint8_t> a(W), cv(W), row(W), rowNew(W);
+  for (int pass = 0; pass < 200; pass++) {
+    for (int x = 0; x < W; x++) {
+      c[x] = (uint16_t)rnd(), n[x] = (uint16_t)rnd(), o[x] = (uint16_t)rnd(), row[x] = (uint8_t)rnd();
+      a[x] = pass % 3 == 0 ? (uint8_t)(rnd() & 1 ? 255 : 0) : (uint8_t)rnd();
+      cv[x] = pass % 4 == 0 ? 0 : (uint8_t)rnd();
+    }
+    for (int ch = 0; ch < 3; ch++) {
+      psRowCh(c.data(), rowNew.data(), W, ch);  // a channel out
+      for (int x = 0; x < W; x++) CHECK_EQ(rowNew[x], oldCh(c[x], ch));
+      oNew = o;  // a channel in
+      psRowSetCh(oNew.data(), row.data(), W, ch);
+      for (int x = 0; x < W; x++) CHECK_EQ(oNew[x], ch == 0 ? oldSetCh(0, 0, row[x]) : oldSetCh(o[x], ch, row[x]));
+      psRowNear(n.data(), a.data(), rowNew.data(), W, ch);  // a near channel times its cover
+      for (int x = 0; x < W; x++) CHECK_EQ(rowNew[x], (uint8_t)(oldCh(n[x], ch) * a[x] / 255));
+      oNew = o;  // ...laid over by its cover
+      psRowOver(oNew.data(), row.data(), cv.data(), W, ch);
+      for (int x = 0; x < W; x++)
+        CHECK_EQ(oNew[x], cv[x] ? oldSetCh(o[x], ch, row[x] + oldCh(o[x], ch) * (255 - cv[x]) / 255) : o[x]);
+    }
+  }
+}
+
 TEST(picsnap_blur, the_kept_pick_is_the_first_one_for_every_colour_and_cell) {
   static PsPickCache c;
   memset(&c, 0, sizeof(c));
@@ -156,9 +201,11 @@ TEST(picsnap_blur, the_kept_pick_is_the_first_one_for_every_colour_and_cell) {
       for (int ch = 0; ch < 3; ch++) palC[i][ch] = (uint8_t)(rnd() % (pal % 4 == 0 ? 4 : 256) * (pal % 4 == 0 ? 85 : 1));
     if (n > 4) memcpy(palC[n - 1], palC[1], 3);
     psPickForget(c);
+    int r = 0, g = 0, b = 0;
     for (int k = 0; k < 20000; k++) {
-      int r, g, b;
-      if (k % 3 == 0 && n > 0) {  // the palette's own colours and near them
+      if (k % 4 == 1) {
+        // the cell before's colour again (the most often of all)
+      } else if (k % 3 == 0 && n > 0) {  // the palette's own colours and near them
         int i = (int)(rnd() % n);
         r = palC[i][0] + (int)(rnd() % 5) - 2, g = palC[i][1] + (int)(rnd() % 5) - 2, b = palC[i][2] + (int)(rnd() % 5) - 2;
         r = r < 0 ? 0 : r > 255 ? 255 : r, g = g < 0 ? 0 : g > 255 ? 255 : g, b = b < 0 ? 0 : b > 255 ? 255 : b;

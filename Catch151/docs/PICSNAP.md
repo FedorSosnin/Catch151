@@ -49,16 +49,20 @@ six common Pokémon of its zone and two rare ones (`PS_SCENE`); a test checks ea
   frame in a picture just big enough for it. The making ready runs a few steps a frame while the last print is up,
   and under the how-to card for the first place (it used to be made all at once as the game opened, which stopped the
   screen for about 4.5 s before the card came up).
-- **The blur** (`src/picsnap_blur.h`) is a box twice across and twice down, streamed: each row is read out of PSRAM
-  once, the four passes run on a few rows kept in internal RAM, and each row is written once. The first blur worked on
-  whole 88 KB planes in PSRAM a byte at a time, each pixel through it about ten times: 80 ms a blur, 3.8 s of the
-  4.4 s a place took on the XL (2026-11-23). The dither keeps each colour's pick (the two nearest of the palette and
-  which the checker gives each cell), so the palette is searched for about 1 cell in 14. Both give exactly the
-  pictures the first ones did: `test/test_picsnap_blur.cpp` holds them to the first ones, bit for bit.
+- **The blur** (`src/picsnap_blur.h`) is a box twice across and twice down, streamed: each row is read out of its
+  plane once, the four passes run on a few rows kept aside, and each row is written once. Its loops are plain
+  functions built for speed (the boards' builds are otherwise built small). The dither keeps each colour's pick (the
+  two nearest of the palette and which the checker gives each cell), so the palette is searched for about 1 cell in
+  14. Both give exactly the pictures the first ones did: `test/test_picsnap_blur.cpp` holds them to the first ones,
+  bit for bit. Timed on the Knomi (2026-11-23), a place takes about 1.75 s of work (4.4 s before), ready about 4 s
+  after it begins between photos (about 10 s before); a blur about 30 ms (80), the dither about 25 ms (70); aiming
+  draws a frame in 63 to 70 ms (70 to 112, the slowest 131). The console prints each place's timing and each photo's
+  aiming (`picsnap: place N ready: ...`, `picsnap: aiming ...`).
 - **Memory:** about 2.1 MB of PSRAM while it's open (1.2 MB for the 7 steps of 297 × 297, then the planes, the
-  blurred cover, the photo, the roll and the Pokémon's picture), about 17 KB of internal RAM for the blur's rows and the
-  kept picks (in PSRAM instead when less than 40 KB of internal RAM would be left), and the sprite. All of it is freed
-  when it closes. With less room it makes fewer lens steps, down to one.
+  blurred cover, the photo, the roll and the Pokémon's picture), and the sprite. The blur's rows and the kept picks
+  (about 17 KB) go in internal RAM only when 40 KB of it would still be left: never on the Knomi, which has about
+  37 KB free and dips to 2 KB (Wi-Fi's buffers). All of it is freed when it closes. With less room it makes fewer lens
+  steps, down to one.
 
 ## The score
 

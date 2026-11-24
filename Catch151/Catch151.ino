@@ -1341,6 +1341,10 @@ void handleSerial() {
   } else if (line == "PSBOT" && pet.noSave) {  // Pic Snap snaps by itself (testing, screenshots)
     psBot = !psBot;
     Serial.println("DONE");
+  } else if (line.startsWith("PSKEEP ") && pet.noSave) {  // Pic Snap: the internal RAM its blur leaves free, PSKEEP kb
+    extern uint32_t psKeepFast;                            // (from the next time it opens; timing, testing)
+    psKeepFast = (uint32_t)atoi(line.c_str() + 7) * 1024;
+    Serial.println("DONE");
   } else if (line.startsWith("PSPLACE ") && pet.noSave) {  // Pic Snap: this place now, PSPLACE n [dex] (testing, pictures)
     int n = -1, dex = 0;
     if (psOpen && sscanf(line.c_str() + 8, "%d %d", &n, &dex) >= 1 && n >= 0 && n < PS_SCENES) snapPlace((uint8_t)n, (int16_t)dex);
