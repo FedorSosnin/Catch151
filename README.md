@@ -13,7 +13,7 @@
   <a href="Catch151/relay/README.md"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcatch151-relay.fedor-dd0.workers.dev%2Fstats&query=%24.online&label=live%20players&color=2ea043&cacheSeconds=300" alt="Live players right now"></a>
 </p>
 
-**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play eight mini games by tapping and tilting, the newest BerryMatch, a berry-swapping puzzle, Pinball on a round table and a fishing contest off the Beach's pier, with a live [minigame leaderboard](#minigame-leaderboard) for each one's best.
+**Catch 151** (until 2.2.0 called PokeKnomiGochi) is a Pokémon game for the **BTT Knomi V2**, the little round screen made for 3D printers, and for your Mac, your Windows PC and your browser. Raise any of the original 151 as it walks through its own pixel world, battle and catch wild Pokémon, climb Knomi Tower, fill your [Pokédex](https://fedorsosnin.github.io/Catch151/sprites/), and play nine mini games by tapping and tilting, the newest Pic Snap, a camera on Knomi Island, then BerryMatch, a berry-swapping puzzle, Pinball on a round table and a fishing contest off the Beach's pier, with a live [minigame leaderboard](#minigame-leaderboard) for each one's best.
 
 | | |
 |:--:|:--:|
@@ -38,8 +38,8 @@ The Mac and Windows apps and the browser game, as they open: in the Poké Ball r
 | **Battle wild Pokémon** | **Climb Knomi Tower** |
 | <img src="Catch151/docs/images/v2/crt-island.webp" width="381" alt="Knomi Island with the CRT screen: five zones and the pier out to the tower"> | <img src="Catch151/docs/images/v2/crt-starters.webp" width="381" alt="Choose your starter with the CRT screen: Bulbasaur, Charmander, Squirtle and Pikachu"> |
 | **Travel Knomi Island** | **Choose your partner** |
-| <img src="Catch151/docs/images/v2/crt-pinball.webp" width="381" alt="Pinball with the CRT screen: the ball goes into the tall grass with a !, a wild Butterfree jumps into the ring in the middle, Diglett pops up between the bumpers, and each hit of the ball is Squirtle's Bite"> | <img src="Catch151/docs/images/v2/crt-berrymatch.webp" width="381" alt="BerryMatch with the CRT screen: pieces caught and refilled, a Great Ball and an Ultra Ball on the board, moves earned, and Pikachu running in to sit in the top-left corner"> |
-| **Pinball** | **New: BerryMatch** |
+| <img src="Catch151/docs/images/v2/crt-picsnap.webp" width="381" alt="Pic Snap with the CRT screen: Pikachu peeks over a log under the Forest's pines while the lens hunts for focus, then the print comes out: GREAT SHOT! +82, its focus and centre, and NEXT SHOT IN 3"> | <img src="Catch151/docs/images/v2/crt-berrymatch.webp" width="381" alt="BerryMatch with the CRT screen: pieces caught and refilled, a Great Ball and an Ultra Ball on the board, moves earned, and Pikachu running in to sit in the top-left corner"> |
+| **New: Pic Snap** | **BerryMatch** |
 
 ## Minigame Leaderboard
 
@@ -141,11 +141,11 @@ The Knomi's own 466 × 466 round screen, just as it shows the game. The computer
 
 ## New: Pic Snap
 
-<p align="center"><img src="Catch151/docs/images/v2/picsnap.gif" alt="Pic Snap: Pikachu pops up from behind a log in the Forest while the lens hunts for focus, the photo comes out as a print worth 87, then Clefairy turns up among the Cave's crystals" width="360"></p>
+<p align="center"><img src="Catch151/docs/images/v2/picsnap.gif" alt="Pic Snap: Pikachu peeks over a log under the Forest's pines while the lens hunts for focus; the photo comes out as a print, GREAT SHOT! +82; then Gastly peers out of the Mansion's lit window, and its print, NICE SHOT! +72, counts down: NEXT SHOT IN 3" width="360"></p>
 
 The newest mini game, the ninth cartridge, on the Game Boy's third page: a camera on Knomi Island. There are ten places, two in each zone (the Forest's tall grass and pines, the Beach's shore and waves, the Cave's crystals and a ledge, the Mansion's graveyard and lit window, the Field's sky and its flowers at sunset), and in each a wild Pokémon of that zone shows up: out of the grass, the sea or the dark, from behind a log or a rock, or down from the sky. It stays a few seconds, looking about, hopping and taking a few steps, while the camera drifts and its lens hunts for focus, sweeping from what's close through the Pokémon to what's far off. Tap anywhere (or click, or press Space) to snap.
 
-Each photo scores up to 50 points for focus and 50 for the Pokémon in the middle, and comes out as a print with its points. A roll is ten photos, 1,000 points at best, and ends with all ten as small prints round your score. Your best roll is kept and goes on the [leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/) with your gamer tag, and like every mini game it gives your Pokémon joy and speed training.
+Each photo scores up to 50 points for focus and 50 for the Pokémon in the middle, and comes out as a print with its points, counting down the seconds to the next photo so you're ready for it. On the Mac, Windows and the web it has a song of its own, a race for the shot ([▶&nbsp;Pic Snap](https://fedorsosnin.github.io/Catch151/music/#pic-snap)). A roll is ten photos, 1,000 points at best, and ends with all ten as small prints round your score. Your best roll is kept and goes on the [leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/) with your gamer tag, and like every mini game it gives your Pokémon joy and speed training.
 
 <p align="center"><img src="Catch151/docs/images/v2/picsnap-end.png" width="300" alt="A roll's end: 830, NEW RECORD!, So much fun!, SPD TRAINING +4, Play Again! and the Repel bar, with the ten prints round it"></p>
 

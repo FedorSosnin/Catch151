@@ -131,10 +131,11 @@ A camera on Knomi Island. Ten places, two in each zone, and a wild Pokémon show
 - **It shows up** out of the grass, from behind a log, a rock or a rail, out of the sea, down from the sky or out of the dark. It stays about 7 seconds (5 by the last photo). While it's there it breathes, looks about, hops and takes a few steps. Then it's gone: **IT GOT AWAY!** scores nothing.
 - **The camera** drifts on its own, a little more as the roll goes on. Its lens hunts for focus: the sharp part sweeps from the things close by (big grass, a starfish, a tombstone) through the Pokémon to the things far off, and back. Every sweep crosses the Pokémon, and now and then it rests on it for a moment. Out of focus is drawn in the place's own colours, dithered like the game's skies.
 - **Snap:** tap anywhere. On a computer, click or press Space (the Knomi's button too). One photo a place.
-- **The score:** up to 50 for focus and up to 50 for the Pokémon in the middle: 100 a photo, 1,000 a roll. The print says **PERFECT!** at 95, **GREAT SHOT!** at 80, **NICE SHOT!** at 55, or what let it down: **A BIT BLURRY** or **OFF CENTER**. Tap the print to go on.
+- **The score:** up to 50 for focus and up to 50 for the Pokémon in the middle: 100 a photo, 1,000 a roll. The print says **PERFECT!** at 95, **GREAT SHOT!** at 80, **NICE SHOT!** at 55, or what let it down: **A BIT BLURRY** or **OFF CENTER**. At its foot, in gold, it counts down the seconds to the next photo (**NEXT SHOT IN 3**, then **GET READY!**), so you're ready for it; tap the print to go on sooner.
 - **The end:** your ten photos small, each with its points, then the score and your record.
 - **Rewards:** joy and speed training from the score, a point for every 40, as the table above. Waiting for the moment scores about 750 to 850; tapping at any old moment, about 400.
-- On a computer and the web it plays Travel's song. It isn't on the online leaderboard yet.
+- **Its song:** on a computer and the web it plays its own, **Pic Snap**, a race for the shot, its tune going off in bursts of three like a shutter ([listen](https://fedorsosnin.github.io/Catch151/music/#pic-snap)). The Knomi has no speaker.
+- **The leaderboard:** your best roll goes on the [online leaderboard](https://fedorsosnin.github.io/Catch151/leaderboard/) with your gamer tag.
 
 ## Battles
 
