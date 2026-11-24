@@ -690,6 +690,19 @@ static void v2SayPet();                    // ...and a Pokemon's cry: petted, af
 static void v2SayWin();
 static void v2SayDex();
 #endif
+#ifdef BOARD_WS21
+// the screen now, in a few words, for the log (ws21GuardCheck())
+static const char *ws21ScreenNow() {
+  static char b[96];
+  snprintf(b, sizeof(b), "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s(zone %d)", battleOpen ? "battle " : "", pinOpen ? "pinball " : "",
+           psOpen ? "picsnap " : "", bmOpen ? "berrymatch " : "", fishOpen ? "fishing " : "", surfOpen ? "surf " : "",
+           runOpen ? "run " : "", dungeonOpen ? "dungeon " : "", quizOpen ? "quiz " : "", gameOpen ? "tiltcatch " : "",
+           vbOpen ? "volley " : "", sdOpen ? "showdown " : "", gamesMenuOpen ? "gamesmenu " : "", galleryOpen ? "pokedex " : "",
+           cardOpen ? "card " : "", v2RadialOpen ? "radial " : "", introCard >= 0 ? "howto " : "", v2Sliding() ? "sliding " : "",
+           (int)zoneScreen);
+  return b;
+}
+#endif
 void loop() {
   uint32_t now = millis();
   uint32_t loopStart = now;
@@ -697,6 +710,11 @@ void loop() {
   pet.update(now);
 #ifdef BOARD_WS21
   batTick();  // the cell, twice a second: whether it charges
+  static uint32_t guardT = 0;
+  if (now - guardT >= 1000) {  // anything drawn past a picture's edge (ws21_hal.h), and in which screen
+    guardT = now;
+    if (gfx) ws21GuardCheck(ws21ScreenNow());
+  }
 #endif
 
   // the amplifier follows the sleep state (the call returns early if unchanged).
@@ -1145,6 +1163,12 @@ void handleSerial() {
     Serial.printf(" sum=%.1f psram free=%u largest=%u\n", sum, (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
                   (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
     gWs21ProfN = 0;
+    Serial.println("DONE");
+    return;
+  } else if (line == "GUARDTEST") {  // a row written just above the picture being drawn: the guard must catch it
+    uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+    for (int x = 0; x < LCD_WIDTH; x++) fb[x - LCD_WIDTH] = 0x0884;
+    Serial.printf("guard test: %s\n", ws21GuardCheck("GUARDTEST") ? "caught" : "NOT caught");
     Serial.println("DONE");
     return;
   } else if (line == "FPS") {  // frames drawn since the last FPS, and their time; flush()'s share of it

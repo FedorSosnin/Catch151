@@ -61,7 +61,12 @@ static void psFreeAll() {
   }
   psLays = 0;
   free(psFar), free(psNear), free(psNearA), free(psCover), free(psBlurBuf), free(psPickC), free(psStripBuf);
-  free(psPhoto), free(psThumbs), free(psSub), free(psOcc), free(psStill);
+  free(psPhoto), free(psThumbs), free(psSub), free(psOcc);
+#ifdef BOARD_WS21
+  ws21FrameFree(psStill);  // (ws21FrameAlloc()'s: with its guards)
+#else
+  free(psStill);
+#endif
   psStill = nullptr;
   psStillKey = -1;
   psFar = psNear = nullptr;

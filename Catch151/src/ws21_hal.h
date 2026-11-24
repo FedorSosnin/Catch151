@@ -139,8 +139,70 @@ static const uint8_t WS21_INIT_OPS[] = {
 // of 64-byte lines, so the DMA and the cache can take it in whole lines.
 #define WS21_FRAME_BYTES ((size_t)LCD_WIDTH * LCD_HEIGHT * 2)
 #define WS21_FRAME_ALLOC ((WS21_FRAME_BYTES + 63) & ~(size_t)63)
+// Each frame-sized picture (the frames, the canvas, Pinball's table, Pic Snap's still) has a guard on each side:
+// WS21_GUARD bytes of WS21_GUARD_FILL that nothing should write. Something draws a few rows past the screen's top
+// (or bottom) now and then, and the game draws straight into the frames: the first frame lies just after the I2C
+// driver's memory, which was overwritten with dark pixels, and the touch task crashed on it (Fedor, 2026-11-23: "quit
+// to a black screen" in a battle, and once in Pinball; LoadProhibited at 0x08841108 in i2c_master, the I2C bus at
+// 0x3c202edc, the first frame at 0x3c203400). A stray row now lands in a guard: ws21GuardCheck() says where, and in
+// what screen, and fills it again.
+#define WS21_GUARD 16384  // (17 rows of the screen each side)
+#define WS21_GUARD_FILL 0x5A
+#define WS21_GUARDS_MAX 8
+inline uint8_t *gWs21Guarded[WS21_GUARDS_MAX];  // each picture's allocation (its guard before it at the start)
 inline uint16_t *ws21FrameAlloc() {
-  return (uint16_t *)heap_caps_aligned_calloc(64, 1, WS21_FRAME_ALLOC, MALLOC_CAP_SPIRAM);
+  uint8_t *b = (uint8_t *)heap_caps_aligned_calloc(64, 1, WS21_FRAME_ALLOC + 2 * WS21_GUARD, MALLOC_CAP_SPIRAM);
+  if (!b) return nullptr;
+  memset(b, WS21_GUARD_FILL, WS21_GUARD);
+  memset(b + WS21_GUARD + WS21_FRAME_ALLOC, WS21_GUARD_FILL, WS21_GUARD);
+  for (auto &g : gWs21Guarded)
+    if (!g) {
+      g = b;
+      break;
+    }
+  return (uint16_t *)(b + WS21_GUARD);
+}
+inline void ws21FrameFree(uint16_t *p) {
+  if (!p) return;
+  uint8_t *b = (uint8_t *)p - WS21_GUARD;
+  for (auto &g : gWs21Guarded)
+    if (g == b) g = nullptr;
+  heap_caps_free(b);
+}
+// How far into a guard something wrote: the bytes from the picture's edge out to the farthest one changed (0: none)
+inline int ws21GuardReach(const uint8_t *g, bool before) {
+  if (before) {
+    for (int i = 0; i < WS21_GUARD; i++)
+      if (g[i] != WS21_GUARD_FILL) return WS21_GUARD - i;
+  } else {
+    for (int i = WS21_GUARD - 1; i >= 0; i--)
+      if (g[i] != WS21_GUARD_FILL) return i + 1;
+  }
+  return 0;
+}
+// The guards looked at (the 2 KB next to each picture: a row or two past an edge lands there first; all of a guard
+// once one is hit), any hit said with where (the screen open) and filled again. True if one was hit
+inline bool ws21GuardCheck(const char *where) {
+  constexpr int NEAR = 2048;
+  bool hit = false;
+  for (uint8_t *b : gWs21Guarded) {
+    if (!b) continue;
+    uint8_t *pre = b, *post = b + WS21_GUARD + WS21_FRAME_ALLOC;
+    bool dirty = false;
+    for (int i = WS21_GUARD - NEAR; i < WS21_GUARD && !dirty; i++) dirty = pre[i] != WS21_GUARD_FILL;
+    for (int i = 0; i < NEAR && !dirty; i++) dirty = post[i] != WS21_GUARD_FILL;
+    if (!dirty) continue;
+    hit = true;
+    int rb = ws21GuardReach(pre, true), ra = ws21GuardReach(post, false);
+    uint16_t px = rb ? *(uint16_t *)(pre + WS21_GUARD - 2) : *(uint16_t *)post;
+    Serial.printf("GUARD: the picture at %p was written past its %s%s: %d bytes before, %d after (%.1f / %.1f rows), "
+                  "pixel %04X, in %s\n",
+                  b + WS21_GUARD, rb ? "top" : "", ra ? (rb ? " and bottom" : "bottom") : "", rb, ra,
+                  rb / (2.f * LCD_WIDTH), ra / (2.f * LCD_WIDTH), px, where);
+    memset(pre, WS21_GUARD_FILL, WS21_GUARD);
+    memset(post, WS21_GUARD_FILL, WS21_GUARD);
+  }
+  return hit;
 }
 // The cache and the frames. PSRAM is only reached through the 32 KB data cache, and the DMA and the panel's refill go
 // round it. Writing back by address walks every line of the range: 17 ms for a frame (2026-11-23). Dropping by

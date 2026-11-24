@@ -257,6 +257,22 @@ Result, on the bench board: Pinball 67 ms a frame (15 a second, the ball at full
 - **DMA channels:** the read-ahead takes one more pair (now the panel, the frame copy, the read-ahead, the sound,
   and one left for TLS). HTTPS with it isn't tested yet. `WS21_REFILL_DMA 0` builds it out.
 
+### Guards (2026-11-23)
+
+Fedor's XL went to a black screen and restarted, once in a battle and once in Pinball. The log showed a crash in
+the touch task's I2C read. The address it read was made of dark pixels (0x0884). Something had drawn over the I2C
+driver's memory.
+
+- **Why the frames matter:** the I2C driver's memory lies in PSRAM just before the first frame (0x3c202edc, the frame at
+  0x3c203400). The game now draws straight into the frames, so a row drawn above the top of the screen lands there.
+- **The fix:** every frame-sized picture (the three frames, the canvas, Pinball's table, Pic Snap's still) has 16 KB of
+  padding on each side (`ws21FrameAlloc()`, `ws21FrameFree()`). A stray row lands in the padding.
+- **Finding who did it:** once a second the board checks the padding (`ws21GuardCheck()`). If something wrote there,
+  it prints a `GUARD:` line: how far past the top or bottom, the pixel, and which screen was open. Then it refills it.
+- **Not found yet:** console battles and Pinball didn't write past an edge. The next `GUARD:` line in the log says
+  where to look.
+- **`GUARDTEST`** writes a row on purpose, to check the guards still catch it.
+
 ### What bring-up found (2026-11-20)
 
 - **Streaks along the rows:** the pixel clock's edge. The panel wants data on the falling edge (`LCD_PCLK_NEG`).
@@ -297,6 +313,7 @@ Console commands for testing (115200 baud on the "UART" port; none of them is sa
 | `FPS` | Frames drawn since the last `FPS`, their time, and the flush's parts: the overlay, the CPU's part of a copy (and the cache's write-back), waiting for the DMA, the rim and handing over, and Pinball's table by DMA. |
 | `PROF` | A game's frame in parts, ms each, and PSRAM free. Pinball: 0 the physics, 1 the table back, 2 what's lit, 3 the grass, 4 the wild one, 5 the flippers, 6 the ball, 7 the words, 8 the card over it, 9 the flush. Pic Snap: 0 the game's step, 2 the place, 3 its life, 4 the Pokémon (blurred), 5 the viewfinder or the print, 6 the rest, 7 the next place made ready, 8 the card, 9 the flush. |
 | `PLAY g` / `QUIT` | After `NOSAVE`: game g (0 Tilt Catch to 8 Pic Snap) under its card, as from the Games menu; out of it again. A swipe sends the card away. |
+| `GUARDTEST` | Writes one row just above the picture being drawn, then checks the guards: it should say "caught" (see Guards). |
 | `DIRECT 0` / `DIRECT 1` | Drawing on the canvas and copying it out, as before, or straight into the frame (the default). |
 | `PERF` | The frame copy's cost, 10 in a row. |
 | `ROTDEG n` | Turns the picture n degrees clockwise. |
