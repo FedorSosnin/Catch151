@@ -5682,6 +5682,16 @@ void renderSnap() {
   }
   uint32_t now = millis();
   float dt = (now - psLast) / 1000.0f;
+  // each photo's aiming, timed for the console: its frames, their time, the slowest (how smooth it is on a board)
+  static uint32_t aimFrames = 0, aimMs = 0, aimMax = 0;
+  if (ps.phase == PSP_AIM && !introPaused()) {
+    uint32_t gap = now - psLast;
+    aimFrames++, aimMs += gap, aimMax = gap > aimMax ? gap : aimMax;
+  } else if (aimFrames) {
+    Serial.printf("picsnap: aiming %lu frames, %lu ms each, the slowest %lu ms\n", (unsigned long)aimFrames,
+                  (unsigned long)(aimMs / aimFrames), (unsigned long)aimMax);
+    aimFrames = aimMs = aimMax = 0;
+  }
   psLast = now;
   if (dt > 0.1f) dt = 0.1f;  // a stall (a flash save) mustn't skip the moment
   if (!introPaused() && !psOverT) {

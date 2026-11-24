@@ -756,18 +756,31 @@ static bool psPrepStep(uint8_t place) {
   }
   return slot == psLays - 1 && c == 7;
 }
-// make place ready for up to ms (all of it: ms 0)
+// make place ready for up to ms (all of it: ms 0). Once it's ready, the console says how long it took (the work, the
+// frames it was spread over, its longest step, and from start to end)
+static uint32_t psPrepBegan = 0, psPrepMs = 0, psPrepLongest = 0;
+static uint16_t psPrepCalls = 0;
 static void psPrepWork(uint8_t place, uint32_t ms) {
   if (psPrepFor != (int8_t)place) {
     psPrepFor = (int8_t)place;
     psPrepAt = 0;
     psPrepDone = false;
+    psPrepBegan = millis(), psPrepMs = psPrepLongest = 0, psPrepCalls = 0;
   }
+  if (psPrepDone) return;
   uint32_t t0 = millis();
+  psPrepCalls++;
   while (!psPrepDone) {
+    uint32_t s0 = millis();
     psPrepDone = psPrepStep(place);
-    if (ms && millis() - t0 >= ms) break;
+    uint32_t t = millis();
+    if (t - s0 > psPrepLongest) psPrepLongest = t - s0;
+    if (ms && t - t0 >= ms) break;
   }
+  psPrepMs += millis() - t0;
+  if (psPrepDone)
+    Serial.printf("picsnap: place %d ready: %lu ms of work over %u frames, its longest step %lu ms, %lu ms from start to end\n",
+                  place, (unsigned long)psPrepMs, psPrepCalls, (unsigned long)psPrepLongest, (unsigned long)(millis() - psPrepBegan));
 }
 
 // ----- a frame through the camera -----
