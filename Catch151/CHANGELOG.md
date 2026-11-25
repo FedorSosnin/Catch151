@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.18] - 2026-11-25
 
 - **Pinball ends properly again:** since 2.2.15, losing your last ball left the table empty with no balls and nothing happening, and sending the ball round the orbit at the top could end the game in the middle of play. A name Pic Snap added had taken over Pinball's "game over" signal. Now the orbit just scores, and the last ball down the drain brings up your score and record as before. (On every device: the Knomi, the Mac, Windows and the web.)
 - **BerryMatch no longer closes when you swipe a piece:** a swipe up from the lower half of the board was read as the swipe that leaves a game, so the game shut with no reward, as if it had crashed. Now swiping a piece moves it the way you swipe, as in other match-3 games, and tapping one piece then the one beside it still works. To leave, swipe up from under the board or a bottom corner, or make one long swipe up.
