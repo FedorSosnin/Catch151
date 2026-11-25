@@ -1744,8 +1744,17 @@ void handleTouch() {
   // The reject counter came out 0 in both cases, so it does NOT work by
   // skipping reads when the chip doesn't answer: what it does is wake it up,
   // so the next read doesn't find the CST9217 asleep.
+  //
+  // Not on the XL: there the touch task reads the chip (getPoint() takes from its queue) and the chip never sleeps,
+  // so this cycle was only a second user of the bus. And it crashed the XL (its crash record, 2026-11-24): an
+  // address-only cycle is ESP-IDF 5.5.4's i2c_master_probe(), which keeps its steps on its own stack and doesn't
+  // clear the bus's "a read is under way" mark. After a touch read that stopped partway, the probe's end ran the
+  // I2C interrupt's read code with the old read's step number, past the probe's 2 steps: it wrote the received
+  // byte through whatever lay past them on the stack (a crash in the interrupt, or a stray write somewhere).
+#ifndef BOARD_WS21
   Wire.beginTransmission(TOUCH_ADDR);
   if (Wire.endTransmission() != 0) return;  // no response: retry in 20 ms
+#endif
   int16_t x, y;
   bool pressed = touch.getPoint(&x, &y, 1) > 0;
   if (pressed) v2PlayInputAt = millis();  // V2: a finger on it
