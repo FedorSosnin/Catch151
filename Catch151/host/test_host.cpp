@@ -888,6 +888,8 @@ static void testGame() {
         for (int i = 0; i < 60 && bm.phase != BMP_PLAY; i++) runTicks(100);
       }
       hostPointer(233, 440, true);  // a swipe up from under the board quits
+      runTicks(40);  // (the game reads the finger every 20 ms: let it see the press under the board, or it starts the
+                     // swipe on the bottom row, a piece swiped ~180..210 px, either side of BM_DRAG_QUIT by timing)
       for (int k = 1; k <= 8; k++) {
         hostPointer(233, 440 - k * 30, true);
         runTicks(16);
