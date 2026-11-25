@@ -224,6 +224,50 @@ TEST(berrymatch, with_a_piece_picked_a_near_miss_beside_it_still_swaps_for_big_f
   CHECK(bmTapAt(s, 5, 233) & BE_UNPICK);
 }
 
+// a drag: the press played as a tap (bmTapAt()), then the lift (bmDrag()), as the sketch does
+static bool drag(BmState &s, int x0, int y0, int x1, int y1, uint32_t &ev) {
+  uint32_t down = bmTapAt(s, x0, y0);
+  ev = down;
+  return bmDrag(s, down, x0, y0, x1, y1, ev);
+}
+TEST(berrymatch, a_piece_swiped_swaps_that_way_and_only_a_long_swipe_up_leaves_the_game) {
+  BmState s;
+  bmStart(s, 12);
+  uint32_t ev;
+  // up a square from the bottom row's middle (2.2.14..17: this left the game): the board's, and it swaps up
+  CHECK(drag(s, spx(2, 0), spy(3, 0), spx(2, 0), spy(3, -1.4f), ev));
+  CHECK((ev & BE_SWAP) && s.ax == 2 && s.ay == 3 && s.bx == 2 && s.by == 2);
+  settle(s);
+  // left, right and down, a little off straight: those ways
+  CHECK(drag(s, spx(2, 0), spy(2, 0), spx(2, -0.6f), spy(2, 0.2f), ev) && (ev & BE_SWAP) && s.bx == 1 && s.by == 2);
+  settle(s);
+  CHECK(drag(s, spx(1, 0), spy(1, 0), spx(1, 0.7f), spy(1, 0), ev) && (ev & BE_SWAP) && s.bx == 2 && s.by == 1);
+  settle(s);
+  CHECK(drag(s, spx(3, 0), spy(1, 0), spx(3, 0), spy(1, 0.5f), ev) && (ev & BE_SWAP) && s.bx == 3 && s.by == 2);
+  settle(s);
+  // a short one is a tap (picked); corner to corner, nothing more; toward a corner that's off, nothing more
+  CHECK(drag(s, spx(2, 0), spy(2, 0), spx(2, 0.1f), spy(2, 0.1f), ev) && ev == BE_PICK && s.selX == 2);
+  bmTap(s, 2, 2);
+  CHECK(drag(s, spx(2, 0), spy(2, 0), spx(2, 0.8f), spy(2, -0.8f), ev) && ev == BE_PICK && s.phase == BMP_PLAY);
+  bmTap(s, 2, 2);
+  CHECK(drag(s, spx(1, 0), spy(4, 0), spx(1, -0.8f), spy(4, 0), ev) && ev == BE_PICK && s.phase == BMP_PLAY);
+  bmTap(s, 1, 4);
+  // the piece already picked, pressed again (put down) and dragged: picked again and swapped
+  bmTap(s, 2, 2);
+  CHECK(drag(s, spx(2, 0), spy(2, 0), spx(2, 0), spy(2, 0.6f), ev) && (ev & BE_UNPICK) && (ev & BE_SWAP));
+  CHECK(s.ax == 2 && s.ay == 2 && s.bx == 2 && s.by == 3);
+  settle(s);
+  // a press that swapped (a piece picked, the one beside it pressed): the drag swaps nothing more
+  bmTap(s, 2, 2);
+  CHECK(drag(s, spx(3, 0), spy(2, 0), spx(3, 0.7f), spy(2, 0), ev) && (ev & BE_SWAP) && s.ax == 2 && s.bx == 3);
+  settle(s);
+  // a long swipe straight up from the board: left to the swipe out of the game; begun off the board: never the board's
+  CHECK(!drag(s, spx(2, 0), spy(4, 0), spx(2, 0), spy(4, 0) - BM_DRAG_QUIT, ev));
+  bmTap(s, -1, -1);
+  CHECK(!drag(s, 233, BM_Y0 + BM_N * BM_CELL + 10, 233, BM_Y0 + BM_N * BM_CELL - 110, ev));
+  CHECK(!drag(s, spx(0, 0), spy(4, 0), spx(0, 0), spy(4, -1.5f), ev));  // (the corner off the board)
+}
+
 TEST(berrymatch, gravity_brings_the_pieces_down_in_order_and_new_ones_fill_the_top) {
   BmState s;
   bmStart(s, 9);

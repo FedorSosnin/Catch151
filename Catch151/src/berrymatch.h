@@ -518,6 +518,33 @@ inline uint32_t bmTapAt(BmState &s, int px, int py) {
   return bmTap(s, x, y);
 }
 
+// A finger dragged from (x0, y0) to (x1, y1), its press already played (bmTapAt(), downEv what it did). People swipe
+// the pieces, as in other match-3 games, and in 2.2.14..17 a swipe up from the board's lower half left the game as if
+// it had crashed (Fedor: "berry match crash and close"). A drag that began on a square in play is the board's: along
+// a row or a column, at least BM_DRAG_MIN px, the piece it began on swaps that way (ev: its events). Only a long one
+// straight up (BM_DRAG_QUIT px, much more than a piece's swipe) is left to the swipe out of the game, as in every
+// game: false then, and for a drag that began off the board
+#define BM_DRAG_MIN 24
+#define BM_DRAG_QUIT 190
+inline bool bmDrag(BmState &s, uint32_t downEv, int x0, int y0, int x1, int y1, uint32_t &ev) {
+  int cx, cy;
+  if (!bmCellAt(x0, y0, cx, cy)) return false;
+  int dx = x1 - x0, dy = y1 - y0, ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy;
+  if (-dy >= BM_DRAG_QUIT && ay >= ax) return false;
+  if (ax < BM_DRAG_MIN && ay < BM_DRAG_MIN) return true;  // a tap: its press played it
+  int tx = cx, ty = cy;
+  if (ax >= BM_TAP_CLEAR * ay) tx += dx > 0 ? 1 : -1;
+  else if (ay >= BM_TAP_CLEAR * ax) ty += dy > 0 ? 1 : -1;
+  else return true;  // corner to corner: nothing
+  if (!bmOn(tx, ty) || (downEv & BE_SWAP)) return true;  // off the board's edge, or the press itself swapped
+  if (s.selX == cx && s.selY == cy) ev |= bmTap(s, tx, ty);  // the piece the press picked
+  else if (s.selX < 0 && (downEv & BE_UNPICK)) {           // the press put it down (it was picked): picked again
+    ev |= bmTap(s, cx, cy);
+    ev |= bmTap(s, tx, ty);
+  }
+  return true;
+}
+
 // the keys' cursor: an arrow moves it (past a corner that's off, to the next square in play); with a piece picked,
 // an arrow swaps it that way instead. Space picks (bmTap on the cursor)
 inline uint32_t bmKey(BmState &s, int dx, int dy) {

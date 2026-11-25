@@ -47,6 +47,9 @@
 #include "src/pinball.h"   // Pinball: its rules and physics (drawn by pinball_v2.h)
 #include "src/berrymatch.h"  // BerryMatch: its rules (drawn by berrymatch_v2.h)
 #include "src/picsnap.h"  // Pic Snap: its rules (drawn by picsnap_v2.h)
+// each game's events by their own names: in 2.2.15..17 Pic Snap's #define PE_END (64) turned Pinball's PE_END into
+// its PE_ORBIT here, so an orbit ended the game and the real end went unseen
+static_assert(PE_END == (1u << 21) && PSE_END == 64u, "a game's event name taken by another's");
 #include "src/leaderboard.h"  // the leaderboard on the devices: its pages' rules (drawn by leaderboard_v2.h)
 #include "src/dungeon.h"
 #include "src/zones.h"
@@ -1810,6 +1813,8 @@ void handleTouch() {
           introTouch(tX0, tY0, tXl, tYl, picked);
         } else if (picked) {
           gameTap(tXl, tYl);  // the control under the finger when it lifted
+        } else if (bmOpen && matchDrag(tX0, tY0, tXl, tYl)) {
+          // BerryMatch: a drag on the board is a piece swiped, not a swipe out of the game
         } else if (swipeUpQuit(tX0, tY0, tXl, tYl, millis() - tStart) && !battleOpen) {  // V2: no swipe out of a battle
           if (zoneScreen) zoneBack();  // (Fedor: "you can swipe out of a battle. Which means you can cancel out a run")
           else quitGame();
@@ -5731,10 +5736,24 @@ void bmEvents(uint32_t ev) {
 }
 
 // a finger down on the board: that square tapped (off the board: the piece picked is put down)
+uint32_t bmDownEv = 0;  // ...what it did, for the drag (matchDrag())
 void matchTouchDown(int16_t x, int16_t y) {
   if (!bmOpen || bmOverT) return;
   v2PlayInputAt = millis();
-  bmEvents(bmTapAt(bm, x, y));  // (a near miss beside the piece picked still swaps: berrymatch.h)
+  bmDownEv = bmTapAt(bm, x, y);  // (a near miss beside the piece picked still swaps: berrymatch.h)
+  bmEvents(bmDownEv);
+}
+
+// the finger lifted: a drag that began on the board swaps its piece that way and is no swipe out of the game (only a
+// long one straight up is: bmDrag())
+bool matchDrag(int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
+  if (!bmOpen || bmOverT) return false;
+  uint32_t ev = 0;
+  bool mine = bmDrag(bm, bmDownEv, x0, y0, x1, y1, ev);
+  bmDownEv = 0;
+  if (ev) v2PlayInputAt = millis();
+  bmEvents(ev);
+  return mine;
 }
 
 // the Knomi's button (Space on a computer): the card's READY, GO!; then, on a computer, Space picks under the cursor
@@ -5857,19 +5876,19 @@ void snapPlace(uint8_t place, int16_t dex) {
 // what happened: its sound, the end (its reward and record)
 void snapEvents(uint32_t ev) {
   if (!ev) return;
-  if (ev & PE_IN) {
+  if (ev & PSE_IN) {
 #if HAS_MUSIC
     voiceSay(ps.dex, VOICE_PET);  // its cry, as it shows up
 #endif
   }
-  if (ev & PE_SNAP) {
+  if (ev & PSE_SNAP) {
     sfxPlay(SFX_SHUTTER);
     psCapture = true;
   }
-  if (ev & PE_PERFECT) sfxPlay(SFX_MEDAL);
-  else if (ev & PE_GOOD) sfxPlay(SFX_LEVEL);
-  if (ev & PE_AWAY) sfxPlay(SFX_DENY);
-  if (ev & PE_END) {
+  if (ev & PSE_PERFECT) sfxPlay(SFX_MEDAL);
+  else if (ev & PSE_GOOD) sfxPlay(SFX_LEVEL);
+  if (ev & PSE_AWAY) sfxPlay(SFX_DENY);
+  if (ev & PSE_END) {
     psNewHi = ps.score > pet.snapHi;
     pet.snapResult(ps.score);  // the reward and record only at the end
     scoreReport(GAME_SNAP);  // V2: the leaderboard

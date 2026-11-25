@@ -61,7 +61,7 @@ TEST(picsnap, a_roll_is_every_place_once_in_a_new_order_each_game) {
   CHECK(!same);
   CHECK(a.phase == PSP_LOAD && a.shot == 0 && a.score == 0);
   CHECK(psSnap(a) == 0);  // nothing to snap while the place is made ready
-  CHECK(psReady(a) == PE_IN);
+  CHECK(psReady(a) == PSE_IN);
   CHECK(a.phase == PSP_IN);
 }
 
@@ -98,7 +98,7 @@ TEST(picsnap, the_lens_sweeps_through_the_pokemon_again_and_again_and_now_and_th
     bool rested = false;
     for (float t = 0; s.phase == PSP_AIM; t += DT) {
       uint32_t ev = psStep(s, DT);
-      locks += (ev & PE_LOCK) != 0;
+      locks += (ev & PSE_LOCK) != 0;
       CHECK_RANGE(s.f, 0.0f, 1.0f);
       float e = s.f - d;
       if ((e > 0) != (was > 0)) crossings++;
@@ -155,8 +155,8 @@ TEST(picsnap, a_tap_takes_the_photo_as_it_is_then_its_print_then_the_next_place)
   PsState s = aiming(9);
   s.f = psDepth(s), s.wx = s.wy = 0, s.ox = s.oy = 0;  // sharp and in the middle
   uint32_t ev = psSnap(s);
-  CHECK(ev & PE_SNAP);
-  CHECK(ev & PE_PERFECT);
+  CHECK(ev & PSE_SNAP);
+  CHECK(ev & PSE_PERFECT);
   CHECK(s.phase == PSP_SNAP && s.got[0] && s.pts[0] == 100 && s.score == 100 && s.dexOf[0] == s.dex);
   CHECK(psSnap(s) == 0);  // one photo a place
   float f = s.f, wx = s.wx;
@@ -169,14 +169,14 @@ TEST(picsnap, a_tap_takes_the_photo_as_it_is_then_its_print_then_the_next_place)
   for (float t = 0; t < PS_PRINT_MIN_S + 0.05f; t += DT) psStep(s, DT);
   psSnap(s);  // then it sends it off
   ev = psStep(s, DT);
-  CHECK(ev & PE_LOAD);
+  CHECK(ev & PSE_LOAD);
   CHECK(s.phase == PSP_LOAD && s.shot == 1);
   // off focus and off the middle: less on both
   psReady(s);
   until(s, PSP_AIM);
   s.f = psDepth(s) + 0.15f, s.wx = 16, s.wy = 0, s.ox = s.oy = 0;
   ev = psSnap(s);
-  CHECK(!(ev & (PE_GOOD | PE_PERFECT)));
+  CHECK(!(ev & (PSE_GOOD | PSE_PERFECT)));
   CHECK_RANGE(s.focusPts, 10, 25);
   CHECK_RANGE(s.centrePts, 20, 35);
   CHECK_EQ(s.score, (uint16_t)(100 + s.focusPts + s.centrePts));
@@ -230,12 +230,12 @@ TEST(picsnap, while_its_there_it_stands_walks_hops_and_does_its_own_moves_within
 TEST(picsnap, not_snapped_in_time_it_gets_away_for_nothing_and_the_roll_goes_on) {
   PsState s = aiming(21);
   uint32_t ev = until(s, PSP_AWAY);
-  CHECK(ev & PE_AWAY);
+  CHECK(ev & PSE_AWAY);
   CHECK(s.phase == PSP_AWAY && !s.got[0] && s.pts[0] == 0 && s.score == 0);
   CHECK(psSnap(s) == 0);  // gone: a tap does nothing
   ev = 0;
   for (float t = 0; t < PS_AWAY_S + 0.1f; t += DT) ev |= psStep(s, DT);
-  CHECK(ev & PE_LOAD);
+  CHECK(ev & PSE_LOAD);
   CHECK(s.shot == 1);
 }
 
@@ -270,7 +270,7 @@ TEST(picsnap, whole_rolls_end_after_ten_photos_and_waiting_for_the_moment_beats_
     float secs;
     uint32_t ev = playRoll(s, 500 + g, true, &secs);
     seen |= ev;
-    CHECK(ev & PE_END);
+    CHECK(ev & PSE_END);
     CHECK(s.phase == PSP_END && s.shot == PS_SHOTS - 1);
     uint16_t sum = 0;
     for (int i = 0; i < PS_SHOTS; i++) {
@@ -291,8 +291,8 @@ TEST(picsnap, whole_rolls_end_after_ten_photos_and_waiting_for_the_moment_beats_
     rndSum += r.score;
     rndHi = r.score > rndHi ? r.score : rndHi;
   }
-  CHECK(seen & PE_PERFECT);
-  CHECK(seen & PE_LOCK);
+  CHECK(seen & PSE_PERFECT);
+  CHECK(seen & PSE_LOCK);
   printf("    (bot: %d rolls, %u..%u, mean %u, %d perfect photos; tapping at random: mean %u, best %u; a roll %.0f..%.0f s)\n",
          rolls, botLo, botHi, botSum / rolls, perfect, rndSum / rolls, rndHi, shortest, longest);
   CHECK(botSum / rolls >= 750);  // waiting for the moment pays (a patient bot: about 790)...

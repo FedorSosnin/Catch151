@@ -123,14 +123,14 @@ enum PsAct : uint8_t { PSA_IDLE, PSA_WALK, PSA_HOP, PSA_LOOK };
 #define PS_LOOK_S 1.3f
 
 // what happened, for the sounds and words (psStep(), psSnap())
-#define PE_IN 1u        // it's showing up (its cry)
-#define PE_SNAP 2u      // a photo taken
-#define PE_GOOD 4u      // ...a great one
-#define PE_PERFECT 8u   // ...perfect
-#define PE_AWAY 16u     // it got away
-#define PE_LOAD 32u     // on to the next place: make it ready
-#define PE_END 64u      // the roll is done
-#define PE_LOCK 128u    // the lens settled on it
+#define PSE_IN 1u        // it's showing up (its cry)
+#define PSE_SNAP 2u      // a photo taken
+#define PSE_GOOD 4u      // ...a great one
+#define PSE_PERFECT 8u   // ...perfect
+#define PSE_AWAY 16u     // it got away
+#define PSE_LOAD 32u     // on to the next place: make it ready
+#define PSE_END 64u      // the roll is done
+#define PSE_LOCK 128u    // the lens settled on it
 
 struct PsState {
   uint8_t order[PS_SHOTS];  // the places, in this roll's order
@@ -310,7 +310,7 @@ inline uint32_t psReady(PsState &s) {
   if (s.phase != PSP_LOAD) return 0;
   s.phase = PSP_IN;
   s.t = 0;
-  return PE_IN;
+  return PSE_IN;
 }
 
 // swimming: the places in the water (they bob and drift; no walking, no hops)
@@ -381,10 +381,10 @@ inline uint32_t psStep(PsState &s, float dt) {
         s.shot = PS_SHOTS - 1;
         s.phase = PSP_END;
         s.t = 0;
-        return PE_END;
+        return PSE_END;
       }
       psBeginPlace(s);
-      return PE_LOAD;
+      return PSE_LOAD;
     }
     return 0;
   }
@@ -395,10 +395,10 @@ inline uint32_t psStep(PsState &s, float dt) {
         s.shot = PS_SHOTS - 1;
         s.phase = PSP_END;
         s.t = 0;
-        return PE_END;
+        return PSE_END;
       }
       psBeginPlace(s);
-      return PE_LOAD;
+      return PSE_LOAD;
     }
     return 0;
   }
@@ -409,7 +409,7 @@ inline uint32_t psStep(PsState &s, float dt) {
     s.f = s.fa + (s.fb - s.fa) * psEase(s.ft / s.fdur);
   } else {
     s.f = s.fb;
-    if (s.fLock && s.ft - dt < s.fdur) ev |= PE_LOCK;
+    if (s.fLock && s.ft - dt < s.fdur) ev |= PSE_LOCK;
     if (s.ft >= s.fdur + s.fhold) psSweep(s);
   }
   psDrift(s);
@@ -428,7 +428,7 @@ inline uint32_t psStep(PsState &s, float dt) {
     s.pts[s.shot] = 0;
     s.dexOf[s.shot] = s.dex;
     s.got[s.shot] = false;
-    ev |= PE_AWAY;
+    ev |= PSE_AWAY;
   }
   psMonMove(s);
   return ev;
@@ -454,7 +454,7 @@ inline uint32_t psSnap(PsState &s) {
   s.score += p;
   s.phase = PSP_SNAP;
   s.t = 0;
-  return PE_SNAP | (p >= PS_PERFECT ? PE_PERFECT : p >= PS_GOOD ? PE_GOOD : 0);
+  return PSE_SNAP | (p >= PS_PERFECT ? PSE_PERFECT : p >= PS_GOOD ? PSE_GOOD : 0);
 }
 
 inline uint8_t psLastPts(const PsState &s) { return s.pts[s.shot]; }

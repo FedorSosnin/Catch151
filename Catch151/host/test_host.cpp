@@ -793,6 +793,18 @@ static void testGame() {
     CHECK(pin.hold[0] && pin.hold[1]);
     hostButton(false);
     runTicks(100);
+    {  // the ball round the orbit plays on; the last ball down the drain ends the game, its score on show (2.2.15..17:
+       // Pic Snap's #define PE_END was Pinball's orbit in the sketch, so an orbit ended the game and the real end was
+       // never seen: no balls left and nothing happening)
+      extern void pinEvents(uint32_t ev);
+      extern uint32_t pinOverT;
+      pinEvents(PE_ORBIT);
+      CHECK(pinOverT == 0);
+      pin.ballsLeft = 0;
+      pin.x = 233, pin.y = PB_FLIP_Y + 60, pin.vx = pin.vy = 0;
+      for (int i = 0; i < 40 && !pinOverT; i++) runTicks(100);
+      CHECK(pin.phase == PIN_END && pinOverT != 0);
+    }
     hostPointer(233, 400, true);  // a swipe up quits
     for (int k = 1; k <= 8; k++) {
       hostPointer(233, 400 - k * 30, true);
@@ -862,12 +874,25 @@ static void testGame() {
       CHECK(bm.selX == 3 && bm.selY == 2);
       tapAt(30, 233);  // off the board: put down
       CHECK(bm.selX < 0 && bmOpen);
-      hostPointer(233, 400, true);  // a swipe up quits
+      {  // a piece swiped up from the bottom row, as people swipe in match-3 games: it swaps up and the game stays
+         // (2.2.14..17: the swipe out of the game, "berry match crash and close")
+        for (int i = 0; i < 60 && bm.phase != BMP_PLAY; i++) runTicks(100);
+        int x = BM_X0 + 2 * BM_CELL + BM_CELL / 2, y = BM_Y0 + 4 * BM_CELL + BM_CELL / 2;
+        for (int k = 0; k <= 5; k++) {
+          hostPointer(x, y - k * 25, true);
+          runTicks(16);
+        }
+        hostPointer(x, y - 125, false);
+        runTicks(100);
+        CHECK(bmOpen && !gamesMenuOpen && bm.ax == 2 && bm.ay == 4 && bm.bx == 2 && bm.by == 3);
+        for (int i = 0; i < 60 && bm.phase != BMP_PLAY; i++) runTicks(100);
+      }
+      hostPointer(233, 440, true);  // a swipe up from under the board quits
       for (int k = 1; k <= 8; k++) {
-        hostPointer(233, 400 - k * 30, true);
+        hostPointer(233, 440 - k * 30, true);
         runTicks(16);
       }
-      hostPointer(233, 160, false);
+      hostPointer(233, 200, false);
       runTicks(400);
       CHECK(!bmOpen && !gamesMenuOpen);
       hostSerialPush("GAMES");  // the menu again, on its second page
