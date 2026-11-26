@@ -675,7 +675,9 @@ static void testGame() {
   runTicks(100);
   {
     extern Pet pet;
-    pet.tagAsked = true;  // (the gamer tag's own checks are testKeyboard()'s: here a game's end goes to the menu)
+    CHECK(strlen(pet.gamerTag) == 4 && pet.tagGiven);  // a new player: a tag made up for them (gamertag.h)
+    strcpy(pet.gamerTag, "TEST");  // (the gamer tag's own checks are testKeyboard()'s: with one picked, a game's end
+    pet.tagGiven = false;          // goes to the menu; without one, or with the given one, it asks each time)
   }
   hostSerialPush("SPEC 5");
   runTicks(100);
@@ -916,6 +918,26 @@ static void testGame() {
       CHECK(psOpen && !gamesMenuOpen && introCard == 8);
       runTicks(500);
       CHECK(ps.phase == PSP_LOAD && ps.shot == 0);  // it waits under the card
+      {  // its card shows who's playing (Fedor, 2026-11-25: "I like 3 and 4"): a tap there opens the gamer tag's keyboard
+         // over the game, which waits under it; its X goes back to the card, still up; a new tag is on the card at once
+        extern bool kbOpen, gTagKbOverGame;
+        extern Pet pet;
+        char was[GAMER_TAG_LEN + 1];
+        strcpy(was, pet.gamerTag);
+        tapAt(233, 123);  // (its PLAYING AS line, at the card's top)
+        CHECK(kbOpen && gTagKbOverGame && psOpen && introCard == 8);
+        runTicks(200);
+        tapAt(233, 422);  // its X
+        CHECK(!kbOpen && !gTagKbOverGame && psOpen && introCard == 8 && ps.phase == PSP_LOAD && !strcmp(pet.gamerTag, was));
+        tapAt(233, 123);  // (its PLAYING AS line, at the card's top)
+        for (int i = 0; i < 4; i++) hostTypeKey(HOST_KEY_BACKSPACE);
+        for (const char *p = "zoe"; *p; p++) hostTypeKey(*p);
+        hostTypeKey(HOST_KEY_ENTER);
+        runTicks(300);
+        CHECK(!kbOpen && psOpen && introCard == 8 && !strcmp(pet.gamerTag, "ZOE"));
+        strcpy(pet.gamerTag, was);
+        runTicks(200);
+      }
       hostButton(true);  // the button (Space): Ready, GO!
       runTicks(60);
       hostButton(false);
@@ -1606,6 +1628,16 @@ static void testGame() {
 // the keyboard zooms (Fedor: "Just the zoom one"): a tap on a letter zooms in round it and types nothing; zoomed, a
 // tap types the letter under it and it stays zoomed (Fedor: "doesnt zoom out until you hit a blue up arrow", now a down one), a
 // tap off the keys does nothing, and that arrow where the X was zooms out; the X closes
+// what goes to the relay, caught (the gamer tag's checks): the scores and fish sent, and the tag the last one had
+static int gTestScoresSent = 0;
+static char gTestScoreTag[13];
+static void testRelayCapture(const uint8_t *d, int n) {
+  const BuddyMsg *m = (const BuddyMsg *)d;
+  if (n != (int)sizeof(BuddyMsg) || (m->type != BM_SCORE && m->type != BM_FISH)) return;
+  gTestScoresSent++;
+  memcpy(gTestScoreTag, m->nick, 12);
+  gTestScoreTag[12] = 0;
+}
 static void testKeyboard() {
   extern bool kbOpen;
   extern char nameBuf[12];
@@ -1641,13 +1673,17 @@ static void testKeyboard() {
   tapAt(233, 422);  // the X: out without renaming
   CHECK(!kbOpen);
 
-  // the gamer tag (gamertag.h): asked for once, after a first scored game's end (not Who's That?'s); typed on the same
-  // keyboard, four at most; a rude one isn't kept; the Games menu's label opens it again, and back to the menu after
+  // the gamer tag (gamertag.h): asked for after a scored game's end (not Who's That?'s), each time until there's one
+  // picked, and no score goes to the relay without one (Fedor, 2026-11-25: "require a name to be put in"); typed on the
+  // same keyboard, four at most, the bests sent with it once it's picked; a rude one isn't kept; the Games menu's label
+  // opens it again, and back to the menu after. (No tag at all is a save from before 2.2.19 only for a moment: Pet::begin()
+  // gives one. Then the given one, further down)
   extern Pet pet;
   extern bool gamesMenuOpen;
   extern void gameEndToMenu(int g);
   pet.gamerTag[0] = 0;
   pet.tagAsked = false;
+  pet.tagGiven = false;
   uint32_t board[7];
   memcpy(board, pet.boardHi, sizeof(board));
   memset(pet.boardHi, 0, sizeof(pet.boardHi));
@@ -1658,10 +1694,23 @@ static void testKeyboard() {
   gameEndToMenu(0);  // no score on the board yet: just the menu
   CHECK(gamesMenuOpen && !kbOpen);
   pet.boardHi[0] = 12;
+  extern void scoreReport(uint8_t g);
+  hostRelayConnected(testRelayCapture);  // (what goes to the relay, caught)
+  runTicks(100);
+  gTestScoresSent = 0;
+  scoreReport(0);
+  runTicks(600);  // (and each kind of fish's, a few a second)
+  CHECK(gTestScoresSent == 0);  // no tag: nothing goes
   gameEndToMenu(1);  // Who's That? has no place on the board
   CHECK(gamesMenuOpen && !kbOpen);
   gameEndToMenu(0);  // a scored game's end: the tag's keyboard
   CHECK(kbOpen && !gamesMenuOpen && pet.tagAsked);
+  runTicks(200);
+  tapAt(233, 422);  // its X: no tag
+  CHECK(!kbOpen && gamesMenuOpen && !pet.gamerTag[0]);
+  gamesMenuOpen = false;
+  gameEndToMenu(0);  // the next scored game's end: asked again
+  CHECK(kbOpen && !gamesMenuOpen);
   runTicks(200);
   tapAt(253, 146);  // Y: zooms in
   tapAt(233, 150);  // types it
@@ -1672,9 +1721,37 @@ static void testKeyboard() {
   tapAt(233, 422);  // the down arrow
   tapAt(375, 320);  // OK
   CHECK(!kbOpen && gamesMenuOpen && !strcmp(pet.gamerTag, "YYYY"));
+  CHECK(gTestScoresSent > 0 && !strcmp(gTestScoreTag, "YYYY"));  // the bests, with it
   gamesMenuOpen = false;
-  gameEndToMenu(0);  // asked once: not again
+  gameEndToMenu(0);  // a tag now: not asked
   CHECK(gamesMenuOpen && !kbOpen);
+  // the tag a player was given (Fedor: "give each player random 4 player name until they change it"; "If the name is
+  // default, they keyboard should still come up asking for a name change"): the scores go with it; after each scored
+  // game its keyboard, the X leaving it as it was; OK on it keeps it as the player's own, and it's not asked again
+  gamerTagStarter(12345, pet.gamerTag);
+  pet.tagGiven = true;
+  char given[GAMER_TAG_LEN + 1];
+  strcpy(given, pet.gamerTag);
+  gTestScoresSent = 0;
+  scoreReport(0);
+  CHECK(gTestScoresSent == 1 && !strcmp(gTestScoreTag, given));
+  gamesMenuOpen = false;
+  gameEndToMenu(0);
+  CHECK(kbOpen && !gamesMenuOpen);
+  runTicks(200);
+  tapAt(233, 422);  // its X
+  CHECK(!kbOpen && gamesMenuOpen && pet.tagGiven && !strcmp(pet.gamerTag, given));
+  gamesMenuOpen = false;
+  gameEndToMenu(0);  // asked again
+  CHECK(kbOpen);
+  runTicks(200);
+  tapAt(375, 320);  // OK: the given one, the player's own now
+  CHECK(!kbOpen && gamesMenuOpen && !pet.tagGiven && !strcmp(pet.gamerTag, given));
+  gamesMenuOpen = false;
+  gameEndToMenu(0);
+  CHECK(gamesMenuOpen && !kbOpen);
+  strcpy(pet.gamerTag, "YYYY");
+  hostRelayConnected(nullptr);
   tapAt(233, 72);  // the label on the Game Boy: its keyboard again
   CHECK(kbOpen && !gamesMenuOpen);
   for (int i = 0; i < 4; i++) tapAt(397, 262);  // backspace
@@ -1744,6 +1821,24 @@ static void testKeyboard() {
   hostTypeKey(HOST_KEY_ENTER);
   runTicks(100);
   CHECK(!kbOpen && !strcmp(pet.gamerTag, "FEDR"));
+  // the one given is typed over whole: the first letter starts a new tag; <- clears it whole
+  strcpy(pet.gamerTag, "KT47");
+  pet.tagGiven = true;
+  openTagKeyboard(false);
+  runTicks(100);
+  for (const char *p = "mo"; *p; p++) hostTypeKey(*p);
+  hostTypeKey(HOST_KEY_ENTER);
+  runTicks(100);
+  CHECK(!kbOpen && !strcmp(pet.gamerTag, "MO") && !pet.tagGiven);
+  strcpy(pet.gamerTag, "KT47");
+  pet.tagGiven = true;
+  openTagKeyboard(false);
+  runTicks(100);
+  hostTypeKey(HOST_KEY_BACKSPACE);
+  for (const char *p = "ab"; *p; p++) hostTypeKey(*p);
+  hostTypeKey(HOST_KEY_ENTER);
+  runTicks(100);
+  CHECK(!kbOpen && !strcmp(pet.gamerTag, "AB") && !pet.tagGiven);
   strcpy(pet.gamerTag, oldTag);
 }
 

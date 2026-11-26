@@ -1933,11 +1933,17 @@ static const Rgb V2_PLAY_COL[3] = { 0xC9A43C, 0x5AC8D8, 0xF2C230 };
 // the power light, on (Fedor: lit up, as a real Game Boy's is when it's switched on, and flickering a little): drawn
 // every frame over the kept Game Boy, a bright red with a hot middle and its glow on the bezel round it (not on the
 // screen). Now and then, for a moment, it dips, as an old one's does
-static void v2GbLight(uint32_t now) {
-  const int lx = V2_GB_LED_X, ly = V2_GB_LED_Y, R = 18, bezel = 22;
+#define V2_GB_LED_R 18  // its glow's reach
+static float v2GbLightLevel(uint32_t now) {
   uint32_t h = (now / 90) * 2654435761u;  // a moment (90 ms, one Knomi frame), and its own roll
   h ^= h >> 15;
-  float on = h % 100 < 14 ? 0.45f + (h >> 8) % 40 / 100.0f : 1.0f;  // 14 moments in 100 dimmer, by a random amount
+  return h % 100 < 14 ? 0.45f + (h >> 8) % 40 / 100.0f : 1.0f;  // 14 moments in 100 dimmer, by a random amount
+}
+static float v2GbLightShown = -1;  // the level it was last drawn at
+static void v2GbLight(uint32_t now) {
+  const int lx = V2_GB_LED_X, ly = V2_GB_LED_Y, R = V2_GB_LED_R, bezel = 22;
+  const float on = v2GbLightLevel(now);
+  v2GbLightShown = on;
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
   const uint16_t glow = sc565(0xFF3A2A);
   for (int y = ly - R; y < ly + R; y += 2)
@@ -1954,35 +1960,65 @@ static void v2GbLight(uint32_t now) {
   gfx->fillCircle(lx, ly, 2, sc565(scMix(0xA8402E, 0xFF9C7A, on)));
   if (on > 0.8f) gfx->fillRect(lx - 2, ly - 3, 2, 2, sc565(0xFFF0E2));
 }
+// The Games menu isn't drawn again until what it shows changes (Catch151.ino staticScreen()), but its light still
+// flickers: when its level has moved on, the light alone, over its box from the kept Game Boy (its glow's reach, nothing
+// else drawn there: the page arrow is under it). True if it was drawn (the frame to be sent); false if it's as it was,
+// or the Game Boy isn't kept (then the menu is drawn whole when it next changes)
+bool v2GbLightOnly() {
+  const uint32_t now = millis();
+  if (v2GbLightLevel(now) == v2GbLightShown || v2SceneKey != V2_GB_KEY || !v2SceneBuf) return false;
+  uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
+  const int x0 = V2_GB_LED_X - V2_GB_LED_R, w = 2 * V2_GB_LED_R;
+  for (int y = V2_GB_LED_Y - V2_GB_LED_R; y < V2_GB_LED_Y + V2_GB_LED_R; y++)
+    memcpy(fb + y * V2_W + x0, v2SceneBuf + y * V2_W + x0, w * sizeof(uint16_t));
+  v2GbLight(now);
+  return true;
+}
 static void v2GbBack(const char *title) {
   char b[40];
   v2Cached(V2_GB_KEY, v2PaintGb, 0);
   v2GbLight(millis());
   v2Sign(v2Caps(title, b, sizeof(b)), 24);
 }
-// your gamer tag on the Game Boy under GAMES (Fedor: "somewhere on the games menu"), as a label stuck on it with a
-// pencil: a tap there changes it (gamertag.h). Four bars before there is one
+// The EDIT tab (Fedor, 2026-11-25, of five marks: "I like the C edit tab"; it was a small pencil, and the label read as
+// just a label): green as READY, GO!, its word white, 22 px tall; on the gamer tag's label and on a game card's PLAYING
+// AS line. In the language's own font
+#define V2_EDIT_GREEN C565(0x58, 0xb8, 0x68)
+static int v2EditTabW() {
+  setSize(2);
+  return textW(T(S_EDIT), 2) + 12;
+}
+static void v2EditTab(int x, int y) {
+  gfx->fillRoundRect(x, y, v2EditTabW(), 22, 5, V2_EDIT_GREEN);
+  gfx->setTextColor(UI_WHITE);
+  setSize(2);
+  setCur(x + 6, y + 4);
+  printT(T(S_EDIT));
+}
+// your gamer tag on the Game Boy under GAMES (Fedor: "somewhere on the games menu"), as a label stuck on it, its EDIT
+// tab at its end: a tap there changes it (gamertag.h); the given one grey. Four bars before there is one
 static void v2TagChipBox(int &x0, int &w) {
+  bool cjk = classicFontBegin();  // (the tag in the classic font, as it's drawn)
   setSize(2);
   int tw = textW(pet.gamerTag[0] ? pet.gamerTag : "____", 2) - 2;
-  w = tw + 40;
+  classicFontEnd(cjk);
+  w = tw + 16 + v2EditTabW();
   x0 = SNAP2(CX - w / 2);
 }
 #define V2_TAG_CHIP_Y 62
 static void v2TagChip() {
-  bool cjk = classicFontBegin();
   int x0, w, y0 = V2_TAG_CHIP_Y;
   v2TagChipBox(x0, w);
+  const int tabW = v2EditTabW();
   V2_HOVER(x0 - 2, y0 - 2, w + 4, 26);  // under the mouse: lifted (hover_v2.h)
   gfx->fillRoundRect(x0 - 2, y0 - 2, w + 4, 26, 6, V2_RIM);
-  gfx->fillRoundRect(x0, y0, w, 22, 5, C565(0xf4, 0xec, 0xd8));
-  gfx->setTextColor(pet.gamerTag[0] ? UI_INK : V2_INK_MUTED);
+  gfx->fillRoundRect(x0, y0, w - tabW + 6, 22, 5, C565(0xf4, 0xec, 0xd8));
+  v2EditTab(x0 + w - tabW, y0);
+  bool cjk = classicFontBegin();
+  gfx->setTextColor(pet.gamerTag[0] && !pet.tagGiven ? UI_INK : V2_INK_MUTED);  // (the one given: grey, a placeholder)
   setSize(2);
   setCur(x0 + 8, y0 + 4);
   printT(pet.gamerTag[0] ? pet.gamerTag : "____");
-  int px = x0 + w - 20, py = y0 + 4;  // the pencil: a pink end, a yellow body, a dark tip, at 45 degrees
-  for (int i = 0; i < 6; i++)
-    gfx->fillRect(px + 10 - i * 2, py + i * 2, 4, 4, i < 1 ? C565(0xe8, 0x80, 0x90) : i < 5 ? C565(0xf0, 0xc0, 0x4a) : UI_INK);
   classicFontEnd(cjk);
 }
 // a tap on the label (a finger's width round it: it's small)
@@ -2475,7 +2511,8 @@ static void v2Key(const V2Key &k, const char *lab, uint16_t col, uint16_t ink, i
 // the whole keyboard: its title, what's been typed (the end of it, if it's long), the keys of layer L; hot:
 // the key under the finger, lit, and big over the text (the finger hides the real one); ready: OK is green
 // slots: a box a character, that many (the gamer tag's four), in place of the line of text
-static void v2Keyboard(int L, const char *title, const char *typed, int hot, bool ready, int slots = 0) {
+// (given: what's typed is a placeholder, grey: the gamer tag a player was given)
+static void v2Keyboard(int L, const char *title, const char *typed, int hot, bool ready, int slots = 0, bool given = false) {
   v2MenuBackdrop();
   gfx->setTextColor(C565(0xff, 0xf3, 0xdc));
   setSize(2);
@@ -2490,7 +2527,7 @@ static void v2Keyboard(int L, const char *title, const char *typed, int hot, boo
       v2Panel(x, 58, x + bw - 1, 104, 6);
       if (i < (int)len) {
         char c[2] = { typed[i], 0 };
-        gfx->setTextColor(UI_INK);
+        gfx->setTextColor(given ? V2_INK_MUTED : UI_INK);
         setSize(4);
         setCur(x + 14, 68);
         printT(c);
@@ -2560,11 +2597,14 @@ static void v2Keyboard(int L, const char *title, const char *typed, int hot, boo
 
 // ----- the gamer tag's keyboard (gamertag.h): the same keyboard, four boxes for what's typed, in capitals unless shift
 // turns them small (they stay as chosen). Under the keys (not zoomed): what it's for, or PICK ANOTHER after a rude one.
-// OK keeps it and sends the best scores again with it; the X leaves it as it was. Asked for once by itself, after a
-// first scored game (Fedor: "after a player plays their first game and adds a score, they will be asked to make their
-// tag"); its label on the Games menu changes it after that
+// OK keeps it and sends the best scores again with it; the X leaves it as it was. Asked for by itself after each scored
+// game while the tag is still the one the player was given (Fedor: "after a player plays their first game and adds a
+// score, they will be asked to make their tag"; 2026-11-25: "If the name is default, they keyboard should still come
+// up asking for a name change"); its label on the Games menu changes it any time. The given one shows grey, as a
+// placeholder: the first letter typed starts a new tag, <- clears it, OK keeps it as the player's own
 static bool v2TagKbOn = false;     // the keyboard open (kbOpen) is the gamer tag's, not the name's
 static bool v2TagToGames = false;  // ...and closing it goes back to the Games menu
+static bool v2TagGiven = false;    // ...and what's in its boxes is the tag the player was given, untouched
 static char v2TagBuf[GAMER_TAG_LEN + 1] = "";
 static uint8_t v2TagLayer = 1;
 static uint32_t v2TagRudeAt = 0;   // when OK found it rude: PICK ANOTHER for a while
@@ -2574,6 +2614,7 @@ void openGamesMenu();
 static bool v2TagRudeShown() { return v2TagRudeAt && millis() - v2TagRudeAt < V2_TAG_RUDE_MS; }
 void openTagKeyboard(bool fromGames) {
   strcpy(v2TagBuf, pet.gamerTag);
+  v2TagGiven = pet.tagGiven && pet.gamerTag[0];
   v2TagLayer = 1;
   v2TagRudeAt = 0;
   v2KbZoomX = -1;
@@ -2587,11 +2628,12 @@ static void v2TagKbClose() {
   kbOpen = false;
   v2TagKbOn = false;
   v2KbZoomX = -1;
-  if (v2TagToGames) openGamesMenu();
+  if (gTagKbOverGame) introTagDone();  // (opened from a game's card: back to it)
+  else if (v2TagToGames) openGamesMenu();
 }
 static void v2TagKb() {
   bool rude = v2TagRudeShown();
-  v2Keyboard(v2TagLayer, T(S_GAMER_TAG), v2TagBuf, -1, v2TagBuf[0] != 0, GAMER_TAG_LEN);
+  v2Keyboard(v2TagLayer, T(S_GAMER_TAG), v2TagBuf, -1, v2TagBuf[0] != 0, GAMER_TAG_LEN, v2TagGiven);
   if (v2KbZoomX >= 0) return;  // (the zoomed keys reach down there)
   const char *s = rude ? T(S_TAG_PICK_ANOTHER) : T(S_TAG_WHY);
   gfx->setTextColor(rude ? C565(0xff, 0x8a, 0x7a) : C565(0xff, 0xf3, 0xdc));
@@ -2607,7 +2649,9 @@ static void v2TagKbKey(int c) {
     v2TagLayer = v2KbNext(v2TagLayer, c);
   } else if (c == V2K_BKSP) {
     sfxPlay(SFX_TAP);
-    if (n) v2TagBuf[n - 1] = 0;
+    if (v2TagGiven) v2TagBuf[0] = 0;  // (the given one goes whole)
+    else if (n) v2TagBuf[n - 1] = 0;
+    v2TagGiven = false;
     v2TagRudeAt = 0;
   } else if (c == V2K_OK) {
     if (!n || !pet.setGamerTag(v2TagBuf)) {  // nothing typed, or a rude one: PICK ANOTHER
@@ -2618,8 +2662,10 @@ static void v2TagKbKey(int c) {
     sfxPlay(SFX_TAP);
     scoreReportAll();
     v2TagKbClose();
-  } else if (n < GAMER_TAG_LEN) {
+  } else if (v2TagGiven || n < GAMER_TAG_LEN) {
     sfxPlay(SFX_TAP);
+    if (v2TagGiven) n = 0;  // the first letter typed over the given one: a new tag
+    v2TagGiven = false;
     v2TagBuf[n] = (char)c;
     v2TagBuf[n + 1] = 0;
   } else {
@@ -2641,7 +2687,7 @@ static uint8_t v2NameLayer = 0;
 static int v2KbLayerNow() { return v2TagKbOn ? v2TagLayer : v2NameLayer; }  // the open keyboard's layer
 // what the open keyboard shows, for redrawing it only when that changes (screenKey())
 uint32_t v2KbScreenKey() {
-  uint32_t h = (v2TagKbOn ? 7u : 3u) + v2KbLayerNow() * 131u + (v2TagRudeShown() ? 977u : 0u);
+  uint32_t h = (v2TagKbOn ? 7u : 3u) + v2KbLayerNow() * 131u + (v2TagRudeShown() ? 977u : 0u) + (v2TagGiven ? 5003u : 0u);
   for (const char *p = v2TagBuf; *p; p++) h = h * 31 + (uint8_t)*p;
   return h;
 }
@@ -2899,7 +2945,23 @@ static void v2GameResult(const char *title, const char *top, const char *big, bo
 #define CARD_TEXT_W 264  // how to play: the widest line (test_tools.py checks every language fits)
 #define CARD_LINE_H 22   // and its lines, 8 of them in the panel's 176 px
 #define V2_CARD_DIM 115  // the game under a card: this much (of 256) toward the night tint
-static void v2IntroCard(int cx, int cy, bool dim, const char *title, const char *how) {
+// The player's gamer tag on a scored game's card (Fedor, 2026-11-25, of six mockups: "I like 3 and 4. Clean"), at the
+// top of its panel ("Lets move the name to the top of the how to play card. Its too close to the play button"): PLAYING
+// AS KT47 and the label's EDIT tab, a tap there its keyboard (Catch151.ino introTouch()); the given one grey, as on the
+// Games menu's label. The how-to sits in the middle of the room under it, eight lines a little closer. tag: none on
+// Who's That?'s and a buddy game's
+#define CARD_TAG_DY -110  // its words' top, from the card's middle
+#define CARD_TAG_Y0 -124  // its tap's band, from the card's middle: as wide as the panel
+#define CARD_TAG_Y1 -92
+static void v2CardTagWords(const char *tag, int &x, int &wa, int &wt) {
+  setSize(2);
+  wa = textW(T(S_CARD_PLAYER), 2) + 12;
+  bool cjk = classicFontBegin();
+  wt = textW(tag, 2);
+  classicFontEnd(cjk);
+  x = SNAP2(CX - (wa + wt + 8 + v2EditTabW()) / 2);
+}
+static void v2IntroCard(int cx, int cy, bool dim, const char *title, const char *how, const char *tag = nullptr, bool given = false) {
   if (dim) v2DimFrame(V2_CARD_DIM);
   int dx = cx - CX;
   char b[40];
@@ -2918,7 +2980,27 @@ static void v2IntroCard(int cx, int cy, bool dim, const char *title, const char 
   v2Panel(86 + dx, cy - 128, 380 + dx, cy + 140, 12);
   int n = drawWrappedAt(how, 2, CARD_TEXT_W, cx, 0, CARD_LINE_H, false);
   gfx->setTextColor(UI_INK);
-  drawWrappedAt(how, 2, CARD_TEXT_W, cx, cy - 110 + (176 - (n * CARD_LINE_H - 6)) / 2, CARD_LINE_H, true);
+  if (tag && tag[0]) {  // the how-to in the middle of the room under the tag (eight lines 20 px apart, not 22)
+    const int y0 = cy - 90, y1 = cy + 68;
+    int lh = n * CARD_LINE_H - 6 > y1 - y0 ? 20 : CARD_LINE_H;
+    drawWrappedAt(how, 2, CARD_TEXT_W, cx, SNAP2(y0 + (y1 - y0 - (n * lh - 6)) / 2), lh, true);
+    int x, wa, wt;
+    v2CardTagWords(tag, x, wa, wt);
+    x += cx - CX;
+    const int y = cy + CARD_TAG_DY;
+    gfx->setTextColor(V2_INK_MUTED);
+    setCur(x, y);
+    printT(T(S_CARD_PLAYER));
+    bool cjk = classicFontBegin();
+    gfx->setTextColor(given ? V2_INK_MUTED : UI_INK);
+    setSize(2);
+    setCur(x + wa, y);
+    printT(tag);
+    classicFontEnd(cjk);
+    v2EditTab(x + wa + wt + 8, y - 4);  // (the label's EDIT tab)
+  } else {
+    drawWrappedAt(how, 2, CARD_TEXT_W, cx, cy - 110 + (176 - (n * CARD_LINE_H - 6)) / 2, CARD_LINE_H, true);
+  }
   char go[32];
   v2LabelButton(CX - 117 + dx, cy + 79, CX + 117 + dx, cy + 125, v2Caps(T(S_READY_GO), go, sizeof(go)), C565(0x58, 0xb8, 0x68));
 }

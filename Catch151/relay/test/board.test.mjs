@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf, GAMES, BM_BOARD, BOARD_ALL, BOARD_GAMES, boardAsk, boardReply } from '../src/board.js';
+import { STRONG, MILD, tagRude, tagShown, tagOf, scoreReport, boardAdd, recordAdd, boardSvg, idHash, named, BM_SCORE, TOP, topReply, RELAY_ID, SEASON, seasonOf, GAMES, BM_BOARD, BOARD_ALL, BOARD_GAMES, boardAsk, boardReply } from '../src/board.js';
 import { CART } from '../src/board_art.js';
 import { boardPublic, fishReport, FISH, liveSince, Lobby } from '../src/index.js';
 
@@ -89,10 +89,47 @@ test('a top ten: one entry a device, its new tag whatever the score, a higher sc
   assert.deepEqual(list.map((e) => [e.id, e.score, e.day]), [['a', 90, '2026-11-17'], ['b', 70, '2026-11-16']]);
   boardAdd(list, { id: 'c', tag: 'CCC', score: 70, day: '2026-11-17' });             // a tie: after the first to it
   assert.deepEqual(list.map((e) => e.id), ['a', 'b', 'c']);
-  for (let i = 0; i < 20; i++) boardAdd(list, { id: 'x' + i, tag: '', score: 100 + i, day: '2026-11-18' });
+  for (let i = 0; i < 20; i++) boardAdd(list, { id: 'x' + i, tag: 'X' + i, score: 100 + i, day: '2026-11-18' });
   assert.equal(list.length, TOP);
   assert.equal(list[0].score, 119);
-  assert.ok(!boardAdd(list, { id: 'y', tag: '', score: 1, day: '2026-11-18' }));     // too low for the ten
+  assert.ok(!boardAdd(list, { id: 'y', tag: 'Y', score: 1, day: '2026-11-18' }));     // too low for the ten
+});
+
+test('no tag, no place: one without a tag isn\'t taken, those from before are kept but not shown, and come back named', () => {
+  assert.ok(!boardAdd([], { id: 'a', tag: '', score: 50, day: '2026-11-25' }));
+  // a ten from before the rule: a tagless first and fifth among them
+  const list = [];
+  for (let i = 0; i < TOP; i++) list.push({ id: 'o' + i, tag: i === 0 || i === 4 ? '' : 'O' + i, score: 100 - i, day: '2026-11-20' });
+  assert.deepEqual(named(list).map((e) => e.id), ['o1', 'o2', 'o3', 'o5', 'o6', 'o7', 'o8', 'o9']);
+  const b = boardPublic({ 0: list }, []);
+  assert.equal(b.games.find((g) => g.game === 0).top.length, 8);  // (no ----)
+  assert.ok(!JSON.stringify(b).includes('----'));
+  assert.equal(readBoard(boardReply(42, 0, list)).top[0].tag, 'O1  ');  // a device's page: the first with a tag first
+  // the ten with tags counted: two more with tags get in under the eight, and the tagless kept above them stay
+  assert.ok(boardAdd(list, { id: 'n1', tag: 'NEW1', score: 10, day: '2026-11-25' }));
+  assert.ok(boardAdd(list, { id: 'n2', tag: 'NEW2', score: 9, day: '2026-11-25' }));
+  assert.equal(named(list).length, TOP);
+  assert.equal(list.length, TOP + 2);
+  assert.ok(!boardAdd(list, { id: 'n3', tag: 'NEW3', score: 8, day: '2026-11-25' }));  // ten with tags over it
+  // one with a tag over the fifth: the tenth with a tag goes, and the tagless under the new tenth with it
+  assert.ok(boardAdd(list, { id: 'n4', tag: 'NEW4', score: 99, day: '2026-11-25' }));
+  assert.equal(named(list).length, TOP);
+  assert.ok(!list.some((e) => e.id === 'n2'));
+  assert.ok(list.some((e) => e.id === 'o0') && list.some((e) => e.id === 'o4'));
+  // a tagless one's device picks a tag: its entry shows, the first again
+  assert.ok(boardAdd(list, { id: 'o0', tag: 'BACK', score: 100, day: '2026-11-25' }));
+  assert.equal(named(list)[0].tag, 'BACK');
+  assert.equal(named(list).length, TOP);
+});
+
+test('no tag, no fish record: one kept from before without a tag gives way to any with one, and doesn\'t show', () => {
+  const r = { 129: { id: 'a', tag: '', score: 900, day: '2026-11-20' } };
+  assert.equal(boardPublic({}, [], r).kinds.find((k) => k.dex === 129).lb, null);
+  assert.ok(!recordAdd(r, 129, { id: 'b', tag: '', score: 950, day: '2026-11-25' }));  // no tag: not taken
+  assert.ok(recordAdd(r, 129, { id: 'c', tag: 'KAI', score: 80, day: '2026-11-25' }));  // lighter, but with a tag
+  assert.equal(r[129].tag, 'KAI');
+  assert.ok(recordAdd(r, 129, { id: 'a', tag: 'ZOE', score: 900, day: '2026-11-25' }));  // the first, named now: back
+  assert.equal(r[129].tag, 'ZOE');
 });
 
 test('the board as /stats shows it hides ids and rude tags, and the picture is drawn', () => {
@@ -227,7 +264,7 @@ test('a game\'s best three, as a device reads them: scores past 16 bits, short a
     { score: 5, tag: '****', mon: 12, day: 31 },
   ]);
   assert.equal(readBoard(boardReply(42, 3, [])).n, 0);  // nobody yet
-  assert.equal(readBoard(boardReply(42, 0, [{ tag: '', score: 9, day: '2026-11-19' }])).top[0].tag, '----');
+  assert.equal(readBoard(boardReply(42, 0, [{ tag: '', score: 9, day: '2026-11-19' }])).n, 0);  // a tagless one: not shown
   const f = readBoard(boardReply(42, 5, [{ tag: '3DPS', score: 2486, dex: 131, shiny: true, day: '2026-11-17' }]));
   assert.deepEqual([f.dex, f.shiny, f.top[0].score], [131, 1, 2486]);
 });

@@ -117,7 +117,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORD: %u.%u lb",
     "TU MAYOR CAPTURA!",
     "ESCRIBE GAMER TAG",
-    "CLASIFICACION EN GITHUB",
+    "SALE EN LA CLASIFICACION",
     "ELIGE OTRO",
     "TROFEOS %d/%d",
     "PINBALL",
@@ -174,6 +174,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ENTRENO VEL +%u",
     "PROXIMA FOTO EN %u",
     "PREPARATE!",
+    "JUGADOR",
+    "EDITAR",
   },
   // ---------------- EN ----------------
   {
@@ -285,7 +287,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "BEST: %u.%u lb",
     "YOUR BIGGEST EVER!",
     "ENTER GAMER TAG",
-    "SEE LEADERBOARD ON GITHUB",
+    "SHOWN ON THE LEADERBOARD",
     "PICK ANOTHER",
     "TROPHIES %d/%d",
     "PINBALL",
@@ -342,6 +344,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "SPD TRAINING +%u",
     "NEXT SHOT IN %u",
     "GET READY!",
+    "PLAYING AS",
+    "EDIT",
   },
   // ---------------- FR ----------------
   {
@@ -453,7 +457,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORD: %u.%u lb",
     "TA PLUS GROSSE PRISE!",
     "ENTRE TON GAMERTAG",
-    "CLASSEMENT SUR GITHUB",
+    "AFFICH\220 AU CLASSEMENT",
     "CHOISIS-EN UN AUTRE",
     "TROPHEES %d/%d",
     "FLIPPER",
@@ -510,6 +514,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ENTRAINEMENT VIT +%u",
     "PROCHAINE DANS %u",
     "SOIS PRET !",
+    "JOUEUR",
+    "CHANGER",
   },
   // ---------------- DE ----------------
   // German does take umlauts: the firmware's 5x7 font is a full CP437 table
@@ -626,7 +632,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "REKORD: %u.%u lb",
     "DEIN GROESSTER FANG!",
     "GAMER TAG EINGEBEN",
-    "BESTENLISTE AUF GITHUB",
+    "STEHT IN DER BESTENLISTE",
     "WAEHLE EIN ANDERES",
     "POKALE %d/%d",
     "FLIPPER",
@@ -683,6 +689,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "INI-TRAINING +%u",
     "N\216CHSTES FOTO IN %u",
     "MACH DICH BEREIT!",
+    "SPIELER",
+    "\216NDERN",
   },
   // ---------------- IT ----------------
   {
@@ -794,7 +802,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORD: %u.%u lb",
     "LA PRESA PIU GROSSA!",
     "INSERISCI GAMERTAG",
-    "CLASSIFICA SU GITHUB",
+    "MOSTRATO IN CLASSIFICA",
     "SCEGLINE UN ALTRO",
     "TROFEI %d/%d",
     "FLIPPER",
@@ -851,6 +859,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "ALLENAMENTO VEL +%u",
     "PROSSIMA FOTO TRA %u",
     "PREPARATI!",
+    "GIOCATORE",
+    "CAMBIA",
   },
   // ---------------- PT ----------------
   {
@@ -962,7 +972,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "RECORDE: %u.%u lb",
     "SUA MAIOR PESCA!",
     "DIGITE O GAMER TAG",
-    "RANKING NO GITHUB",
+    "APARECE NO RANKING",
     "ESCOLHA OUTRO",
     "TROFEUS %d/%d",
     "PINBALL",
@@ -1019,6 +1029,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "TREINO VEL +%u",
     "PROXIMA FOTO EM %u",
     "PREPARE-SE!",
+    "JOGADOR",
+    "EDITAR",
   },
   // ---------------- JA ----------------
   {
@@ -1153,7 +1165,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "きろく: %u.%u lb",
     "いちばん おおきい！",
     "ゲーマータグを いれてね",
-    "ランキングは GITHUBで みてね",
+    "ランキングに でるよ",
     "ほかのに してね",
     "トロフィー %d/%d",
     "ピンボール",
@@ -1210,6 +1222,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "すばやさの くんれん +%u",
     "つぎの しゃしんまで %u",
     "かまえて！",
+    "プレイヤー",
+    "へんこう",
   },
   // ---------------- KO ----------------
   // The specifiers go in the SAME ORDER as in the English row even though
@@ -1326,7 +1340,7 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "최고: %u.%u lb",
     "가장 큰 물고기!",
     "게이머 태그 입력",
-    "순위표는 GITHUB에서",
+    "순위표에 나와요",
     "다른 걸로 해요",
     "트로피 %d/%d",
     "핀볼",
@@ -1383,6 +1397,8 @@ static const char *const STRINGS[LANG_COUNT][STR_COUNT] = {
     "속도 훈련 +%u",
     "다음 사진까지 %u",
     "준비해요!",
+    "플레이어",
+    "편집",
   },
 };
 

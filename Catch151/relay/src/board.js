@@ -62,6 +62,12 @@ export function tagOf(bytes) {
 }
 // how a tag shows: ----, its own, or **** for a rude one
 export const tagShown = (t) => (!t ? '----' : tagRude(t) ? '****' : t);
+// No tag, no place (Fedor, 2026-11-25: "We need to find a way to require a name to be put in. We are getting some
+// entries from folks without them adding a name"): an entry without a gamer tag isn't taken (copies before 2.2.19 send
+// their bests with none until a tag is picked; 2.2.19 sends none without one), and the ones taken before don't show.
+// They're kept, not deleted: one shows again, with its tag, once its device picks one (a device sends all its bests
+// anew then). A game's ten are ten with tags
+export const named = (list) => list.filter((e) => e.tag);
 
 // a device's id as kept: a hash of it (FNV-1a), only to keep one entry a device
 export function idHash(from) {
@@ -125,7 +131,7 @@ export function boardReply(to, game, top) {
   v.setUint8(18, game);
   v.setUint8(19, 1);  // ack: a reply
   v.setUint8(20, SEASON);
-  const list = top.slice(0, BOARD_TOP);
+  const list = named(top).slice(0, BOARD_TOP);
   v.setUint8(21, list.length);
   const at = [14, 26, 30], tagAt = [34, 38, 46];
   list.forEach((e, i) => {
@@ -144,29 +150,40 @@ export function boardReply(to, game, top) {
 }
 
 // adds an entry ({ id, score, tag, day, ... }) to a top ten, best first: a device's own entry takes its new tag
-// whatever the score, and the new score and day only when it's higher. Returns whether anything changed
+// whatever the score, and the new score and day only when it's higher. One without a tag isn't taken, and the ten
+// counted are those with tags: a tagless one kept from before goes once ten with tags are over it, as any entry the ten
+// pass. Returns whether anything changed
 export function boardAdd(list, e) {
+  if (!e.tag) return false;
   const i = list.findIndex((o) => o.id === e.id);
   if (i >= 0) {
     const o = list[i];
     const changed = e.score > o.score || o.tag !== e.tag;
     if (e.score > o.score) Object.assign(o, e);
     else o.tag = e.tag;
-    if (changed) list.sort(byBest);
+    if (changed) topTen(list);
     return changed;
   }
-  if (list.length >= TOP && e.score <= list[list.length - 1].score) return false;
+  const shown = named(list);
+  if (shown.length >= TOP && e.score <= shown[TOP - 1].score) return false;
   list.push(e);
-  list.sort(byBest);
-  list.length = Math.min(list.length, TOP);
+  topTen(list);
   return true;
+}
+// sorted, best first, and cut after the tenth with a tag
+function topTen(list) {
+  list.sort(byBest);
+  let k = 0;
+  for (let n = 0; k < list.length && n < TOP; k++) if (list[k].tag) n++;
+  list.length = k;
 }
 // a kind of fish's record ({ id, tag, score, ... }) in records, by its dex (Fedor: "a record weight for each type of
 // fish caught. That would give incentive to try to catch all fish"): the heavier one takes it (a tie: the first to it
 // keeps it), and its holder's new tag comes with any report from it. Returns whether anything changed
 export function recordAdd(records, key, e) {
+  if (!e.tag) return false;  // (no tag, no record; one kept from before without one gives way to any with one)
   const o = records[key];
-  if (!o || e.score > o.score) {
+  if (!o || !o.tag || e.score > o.score) {
     records[key] = e;
     return true;
   }

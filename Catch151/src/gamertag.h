@@ -2,8 +2,9 @@
 #include <stdint.h>
 #include <string.h>
 // The gamer tag (Fedor: "lets call it a gamer tag and I think 4 gives lots of freedom"): up to four characters typed
-// on the keyboard, shown with your best scores on the leaderboard (relay/src/board.js draws them). Asked for after your
-// first scored game, changed from its label on the Games menu.
+// on the keyboard, shown with your best scores on the leaderboard (relay/src/board.js draws them). Each player starts
+// with one made up for them (gamerTagStarter()), asked to pick their own after each scored game until they do (OK on
+// the one they were given keeps it), and changes it from its label on the Games menu.
 //
 // Words nobody should see on the board (Fedor: "a list of typical cursewords that would force a name to show up as
 // ****"): the relay keeps the same list and shows a tag on it as ****, so the list there can grow without an update.
@@ -63,4 +64,23 @@ inline bool gamerTagClean(const char *in, char *out) {
   while (n && out[n - 1] == ' ') n--;
   out[n] = 0;
   return n > 0;
+}
+
+// the tag a player starts with, made from r (a random number) (Fedor, 2026-11-25: "give each player random 4 player
+// name until they change it ... That's better than nothing and not having anything display"): two letters and two
+// digits, KT47, a placeholder at a glance and never a word, so nobody's taken for someone who picked it. No I or O
+// (they'd read as 1 and 0), no 0 or 1; never a rude one (another r tried: FA9x reads as FAG); 36,864 of them
+inline void gamerTagStarter(uint32_t r, char *out) {
+  static const char L[] = "ABCDEFGHJKLMNPQRSTUVWXYZ", D[] = "23456789";
+  for (int k = 0; k < 64; k++) {
+    uint32_t v = r;
+    out[0] = L[v % 24], v /= 24;
+    out[1] = L[v % 24], v /= 24;
+    out[2] = D[v % 8], v /= 8;
+    out[3] = D[v % 8];
+    out[4] = 0;
+    if (!gamerTagRude(out)) return;
+    r = r * 1664525u + 1013904223u;
+  }
+  strcpy(out, "PK23");  // (never reached: most are fine)
 }

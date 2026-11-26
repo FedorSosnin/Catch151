@@ -125,14 +125,72 @@ static void lbTag(const char *tag, int x, int y, int shade) {
   }
 }
 
-// the play line: its pointer and words, centred at y 352; its box for a tap (a finger's width round it)
-#define LB_PLAY_Y 352
+// a score in bold: each letter drawn twice, a font pixel apart (2 px: whole on the Knomi), a font pixel more between
+// letters so they don't run together. Right-aligned to xr as lbTextR() puts the plain ones (the last letter's ink ends
+// 2 px before it)
+#define LB_BOLD_ADV 14
+static int lbBoldW(const char *s) { return gCjkFont ? textW(s, 2) + 2 : (int)strlen(s) * LB_BOLD_ADV; }
+static void lbBoldR(const char *s, int xr, int y, int shade) {
+  setSize(2);
+  int x = xr - lbBoldW(s);
+  if (gCjkFont) {  // (Dungeon Crawler's floor in Japanese or Korean: the language's letters, a pixel thicker each pass)
+    lbText(s, x, y, 2, shade);
+    lbText(s, x + 2, y, 2, shade);
+    return;
+  }
+  gfx->setTextColor(lbG(shade));
+  for (const char *p = s; *p; p++, x += LB_BOLD_ADV)
+    for (int d = 0; d <= 2; d += 2) {
+      setCur(x + d, y);
+      printT(*p);
+    }
+}
+
+// the rows: the best three alike (Fedor, 2026-11-25: "make all three scores similar in size. With the top one still
+// with a crown and bold score"), the first's day (Reel Fishing: its fish) on a line of its own under its tag
+#define LB_WHAT_Y 224  // what the best is (HI-SCORE...)
+#define LB_ROW1_Y 244
+#define LB_WHEN_Y 262  // the first's day, or its fish
+#define LB_DOTS_Y 282
+#define LB_ROW2_Y 290  // the second; the third 20 px under it
+#define LB_RANK_X 112  // the second's and third's number (the crown's middle on it)
+#define LB_TAG_X 142
+#define LB_SCORE_XR 354
+
+// TAP TO PLAY: a button as wide as the rows (wider if its words need it), dark, its words the screen's colour; its box
+// for a tap a finger's width round it (Fedor, 2026-11-25: the scores in a row each "give us more space for a bigger
+// 'tap to play' area"; your own row under the three was tried and dropped for it: "keep the tap to play larger")
+#define LB_PLAY_Y 334  // the button's top
+#define LB_PLAY_H 44
+#define LB_PLAY_W 276  // (the dots' width, 96..372)
 static const char *lbPlayWords(char *buf, int n) { return v2Caps(T(playKeysUi ? S_LB_PLAY_KEYS : S_LB_PLAY), buf, n); }
 static void lbPlayBox(int &x0, int &w) {
   char b[48];
   setSize(2);
-  w = 18 + textW(lbPlayWords(b, sizeof(b)), 2);
+  w = 18 + textW(lbPlayWords(b, sizeof(b)), 2) + 32;
+  if (w < LB_PLAY_W) w = LB_PLAY_W;
   x0 = SNAP2(CX - w / 2);
+}
+static void lbPlayButton() {
+  int x0, w;
+  lbPlayBox(x0, w);
+  const int y0 = LB_PLAY_Y, h = LB_PLAY_H;
+  V2_HOVER(x0 - 2, y0 - 2, w + 6, h + 6);  // under the mouse: lifted (hover_v2.h)
+  gfx->fillRect(x0 + 4, y0 + h, w - 4, 2, lbG(1));  // its shadow, below and to the right
+  gfx->fillRect(x0 + w, y0 + 4, 2, h - 2, lbG(1));
+  gfx->fillRect(x0 + 2, y0, w - 4, h, lbG(3));  // the button, its corners a pixel in
+  gfx->fillRect(x0, y0 + 2, w, h - 4, lbG(3));
+  gfx->fillRect(x0 + 4, y0 + 4, w - 8, 2, lbG(1));  // a line round inside it, as a Game Boy box has
+  gfx->fillRect(x0 + 4, y0 + h - 6, w - 8, 2, lbG(1));
+  gfx->fillRect(x0 + 4, y0 + 6, 2, h - 12, lbG(1));
+  gfx->fillRect(x0 + w - 6, y0 + 6, 2, h - 12, lbG(1));
+  char b[48];
+  const char *words = lbPlayWords(b, sizeof(b));
+  setSize(2);
+  int tw = 18 + textW(words, 2) - 2;  // (the words' ink: the blank column after the last letter left out)
+  int px = SNAP2(CX - tw / 2), py = SNAP2(y0 + (h - 14) / 2);
+  lbPointer(px, py, 14, 0);
+  lbText(words, px + 18, py, 2, 0);
 }
 // the picture's box
 #define LB_PIC_X (CX - V2_LBL_W)
@@ -169,77 +227,80 @@ static void v2LbPage() {
     lbCapsC(T(S_LB_NO_SCORES), 282, 2, 2);
   } else {
     const BoardTop &b = gBoard[g];
-    lbCapsC(T(lbWhat(g)), 224, 2, 2);
+    lbCapsC(T(lbWhat(g)), LB_WHAT_Y, 2, 2);
     char rec[40], line[48];
     if (!gBoardHave) {  // nothing from the relay yet: on its way, or no connection
       if (buddyNetUp()) {
-        lbTextC("-----", 242, 4, 1);
+        lbTextC("-----", 250, 4, 1);
       } else {
-        lbCapsC(T(S_LB_OFFLINE), 250, 2, 3);
+        lbCapsC(T(S_LB_OFFLINE), 266, 2, 3);
       }
     } else if (!b.n) {
-      lbCapsC(T(S_LB_NONE), 250, 2, 3);
+      lbCapsC(T(S_LB_NONE), 266, 2, 3);
     } else {
-      // the best, big (in the classic font, unless it's in the language's letters: Dungeon Crawler's floor in Japanese);
-      // then the crown, who set it, and when (Reel Fishing: the fish), centred together
-      lbScoreText(g, b.score[0], rec, sizeof(rec), gLang);
-      v2Caps(rec, line, sizeof(line));
-      cjk = v2CartFont(line);
-      lbTextC(line, 242, 4, 3);
-      classicFontEnd(cjk);
-      cjk = classicFontBegin();
-      setSize(2);
-      int tagW = textW(b.tag[0], 2);
-      classicFontEnd(cjk);
-      if (g == 5) {
-        char fish[40];
-        snprintf(fish, sizeof(fish), b.fishShiny ? T(S_LB_SHINY_FMT) : "%s", dexName(b.fishDex));
-        v2Caps(fish, rec, sizeof(rec));
-      } else {
-        lbDayText(b.mon[0], b.day[0], rec, sizeof(rec), gLang);
-      }
-      bool dayCjk = g != 5 && classicFontBegin();
-      setSize(2);
-      int recW = textW(rec, 2);
-      int x0 = SNAP2(CX - (LB_CROWN_W + 8 + tagW + 24 + recW) / 2);
-      lbText(rec, x0 + LB_CROWN_W + 8 + tagW + 24, 278, 2, 3);
-      if (g != 5) classicFontEnd(dayCjk);
-      cjk = classicFontBegin();
-      lbCrown(x0, 278);
-      lbTag(b.tag[0], x0 + LB_CROWN_W + 8, 278, 3);
-      classicFontEnd(cjk);
-      // the second and third
-      lbDots(96, 372, 300, 1);
-      for (int i = 1; i < 3; i++) {
-        int y = 308 + (i - 1) * 20;
-        char n[4];
-        snprintf(n, sizeof(n), "%d", i + 1);
+      // the three in rows, each its place (the first a crown), its tag, its score at the right (the first's in bold:
+      // plain if bold would reach its tag). Scores in the classic font, unless they're in the language's letters
+      // (Dungeon Crawler's floor in Japanese)
+      for (int i = 0; i < 3; i++) {
+        int y = i ? LB_ROW2_Y + (i - 1) * 20 : LB_ROW1_Y;
         cjk = classicFontBegin();
-        lbText(n, 112, y, 2, 2);
-        lbTag(i < b.n ? b.tag[i] : "----", 142, y, i < b.n ? 3 : 1);
-        if (i >= b.n) lbTextR("-----", 354, y, 2, 1);
+        if (i) {
+          char n[4];
+          snprintf(n, sizeof(n), "%d", i + 1);
+          lbText(n, LB_RANK_X, y, 2, 2);
+        } else {
+          lbCrown(SNAP2(LB_RANK_X + 5 - LB_CROWN_W / 2), y);
+        }
+        lbTag(i < b.n ? b.tag[i] : "----", LB_TAG_X, y, i < b.n ? 3 : 1);
+        setSize(2);
+        int tagEnd = LB_TAG_X + textW(i < b.n ? b.tag[i] : "----", 2) + 4;
+        if (i >= b.n) lbTextR("-----", LB_SCORE_XR, y, 2, 1);
         classicFontEnd(cjk);
         if (i < b.n) {
           lbScoreText(g, b.score[i], rec, sizeof(rec), gLang);
           v2Caps(rec, line, sizeof(line));
           cjk = v2CartFont(line);
-          lbTextR(line, 354, y, 2, 3);
+          if (!i && LB_SCORE_XR - lbBoldW(line) >= tagEnd + 12) lbBoldR(line, LB_SCORE_XR, y, 3);
+          else lbTextR(line, LB_SCORE_XR, y, 2, 3);
           classicFontEnd(cjk);
+        }
+        if (!i) {  // the first's day (Reel Fishing: its fish), under its tag, lighter
+          if (g == 5) {
+            char fish[40];
+            snprintf(fish, sizeof(fish), b.fishShiny ? T(S_LB_SHINY_FMT) : "%s", dexName(b.fishDex));
+            v2Caps(fish, rec, sizeof(rec));
+          } else {
+            lbDayText(b.mon[0], b.day[0], rec, sizeof(rec), gLang);
+          }
+          bool whenCjk = g != 5 && classicFontBegin();
+          lbText(rec, LB_TAG_X, LB_WHEN_Y, 2, 2);
+          if (g != 5) classicFontEnd(whenCjk);
+          lbDots(96, 372, LB_DOTS_Y, 1);
         }
       }
     }
   }
-  int px, pw;
-  lbPlayBox(px, pw);
-  {
-    V2_HOVER(px - 6, LB_PLAY_Y - 6, pw + 12, 26);  // under the mouse: lifted (hover_v2.h)
-    char b[48];
-    lbPointer(px, LB_PLAY_Y, 14, 3);
-    lbText(lbPlayWords(b, sizeof(b)), px + 18, LB_PLAY_Y, 2, 3);
-  }
+  lbPlayButton();
   v2GamesArrows();  // (both: round the games)
   v2PageOf(V2_LB_PAGES, c, 400);
   v2CloseX();
+}
+
+// what the Games menu shows, all but its power light (Catch151.ino screenKey(): drawn again only when this changes):
+// its page; the board as the relay sent it, whether it's come, and the connection (its pages' NOT CONNECTED and -----);
+// the gamer tag on its label (grey while it's the one given); the language and the play line's words; whether the
+// cartridges' pictures can be made yet; and the minute (the pictures follow the hour's light, a page asks for the board
+// again each minute)
+uint32_t v2GamesScreenKey() {
+  uint32_t h = 2166136261u;
+  auto mix = [&h](uint32_t v) { h = (h ^ v) * 16777619u; };
+  mix((uint32_t)(v2GamesPage + 64));
+  mix(gBoardHave), mix(buddyNetUp()), mix(gLang), mix(playKeysUi), mix(pet.tagGiven), mix(thumbs.loaded);
+  for (const char *p = pet.gamerTag; *p; p++) mix((uint8_t)*p);
+  const uint8_t *b = (const uint8_t *)gBoard;
+  for (size_t i = 0; i < sizeof(gBoard); i++) mix(b[i]);
+  mix(millis() / 60000UL);
+  return h;
 }
 
 // the game a tap on a leaderboard page's play line plays, or -1. Only there does the touch itself play it: a control
@@ -248,7 +309,7 @@ static void v2LbPage() {
 static bool lbOnPlay(int16_t x, int16_t y) {
   int px, pw;
   lbPlayBox(px, pw);
-  return x >= px - 16 && x < px + pw + 16 && y >= LB_PLAY_Y - 10 && y < LB_PLAY_Y + 26;
+  return x >= px - 12 && x < px + pw + 12 && y >= LB_PLAY_Y - 8 && y < LB_PLAY_Y + LB_PLAY_H + 10;
 }
 static int v2LbPlayAt(int16_t x, int16_t y) {
   if (v2GamesPage >= 0 || !lbOnPlay(x, y)) return -1;

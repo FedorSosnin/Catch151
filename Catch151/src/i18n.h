@@ -139,7 +139,7 @@ enum StrId : STRID_BASE {
   S_FISH_TOO_SOON, S_FISH_TOO_SLOW, S_FISH_AWAY, S_FISH_WEIGH, S_FISH_BACK, S_FISH_BIG, S_FISH_LINE,
   S_FISH_SMALL_FMT, S_FISH_FINE_FMT, S_FISH_LARGE_FMT,  // ...the weigh-in: how big it is for its kind (%s its name)
   S_FISH_BRONZE, S_FISH_SILVER, S_FISH_GOLD, S_FISH_LB_FMT, S_FISH_REC_FMT, S_FISH_BIGGEST,  // ...its goals and weights
-  S_GAMER_TAG, S_TAG_WHY, S_TAG_PICK_ANOTHER, S_TRG_CUPS_FMT,  // V2: the gamer tag's keyboard: ENTER GAMER TAG, where the leaderboard are, a rude one; the trophy
+  S_GAMER_TAG, S_TAG_WHY, S_TAG_PICK_ANOTHER, S_TRG_CUPS_FMT,  // V2: the gamer tag's keyboard: ENTER GAMER TAG, where it shows (the leaderboard), a rude one; the trophy
                                               // room's cups shelf (the cups and the high score's cartridge)
   S_GAME_PINBALL, S_HOW_PINBALL, S_HOW_PINBALL_KEYS,  // Pinball: its name and how-to cards
   S_PIN_HINT, S_PIN_FLIP, S_PIN_BOTH, S_PIN_SPACE, S_PIN_BALL_FMT, S_PIN_BERRIES_FMT, S_PIN_DIG_FMT,  // ...in play
@@ -158,6 +158,8 @@ enum StrId : STRID_BASE {
   S_PS_FOCUS, S_PS_CENTRE,                  // ...and its two scores
   S_SPD_TRAIN_FMT,  // a game's end (v2GameResult()): what it added to SPD training, as a won battle's line does ATK's
   S_PS_NEXT_FMT, S_PS_READY,  // Pic Snap between two photos (picsnap_v2.h): the seconds to the next, then the word as it comes
+  S_CARD_PLAYER,  // the gamer tag on a game's how-to card (PLAYING AS KT47)
+  S_EDIT,  // the green tab on the gamer tag's label and on the card's line, a tap there its keyboard (short: it's a tab)
   STR_COUNT
 };
 

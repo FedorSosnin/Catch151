@@ -174,6 +174,7 @@ bool kbOpen = false;          // keyboard for renaming the pet
 int16_t v2KbZoomX = -1;       // V2: a keyboard zoomed in round this x of the whole one, or -1 (menus_v2.h)
 void openKeyboard();          // (the console's KEYBOARD opens it)
 uint32_t v2KbScreenKey();     // what the open keyboard shows (menus_v2.h)
+uint32_t v2GamesScreenKey();  // what the Games menu shows, but its power light (leaderboard_v2.h)
 void openTagKeyboard(bool fromGames);  // the gamer tag's keyboard (menus_v2.h)
 void scoreReport(uint8_t g);  // a game's best to the relay, for the leaderboard
 BoardTop gBoard[LB_GAMES];    // V2: the leaderboard's best three of each game, from the relay (boardAsk())
@@ -234,6 +235,9 @@ bool gamesMenuOpen = false;
 // a game's how-to-play card: a white disc that drops over the game as it opens, the game waiting dimmed
 // under it; its button, or a swipe, sends it off and the game starts (introCard: that game, -1 none)
 int8_t introCard = -1;
+bool gTagKbOverGame = false;  // V2: the gamer tag's keyboard open over a game's card (its PLAYING AS line): drawn and
+                              // touched before the game, back to the card when it closes (introTagOpen())
+void introTagDone();          // ...it closed: the card drawn again
 uint32_t introT = 0, introAwayT = 0;
 int8_t introAwayDx = 0, introAwayDy = -1;
 #ifdef BOARD_HOST
@@ -1785,8 +1789,9 @@ void handleTouch() {
 
   // games: the touch is resolved on finger lift, so that swiping up exits
   // without pressing anything on the way. Only the Rock Hopper jump fires on touch-down: there every ms counts.
-  if (battleOpen || quizOpen || gamesMenuOpen || gameOpen || runOpen || surfOpen || dungeonOpen || zoneScreen || sdOpen || vbOpen ||
-      fishOpen || pinOpen || bmOpen || psOpen) {
+  if (!(kbOpen && gTagKbOverGame) &&  // (V2: the gamer tag's keyboard over a game's card: a menu's touch)
+      (battleOpen || quizOpen || gamesMenuOpen || gameOpen || runOpen || surfOpen || dungeonOpen || zoneScreen || sdOpen || vbOpen ||
+       fishOpen || pinOpen || bmOpen || psOpen)) {
     if (pressed) { tXl = x; tYl = y; }  // tXl: aim with the finger where there is no accelerometer
     // in the dungeon, keeping the finger down keeps walking
     if (dungeonOpen && !introUp() && pressed && wasPressed && !swallowGesture && !dnOverT && millis() - tStart > 350 &&
@@ -2595,7 +2600,11 @@ void printT(const char *s) {
 static bool staticScreen() {
   if (pet.awaitingStarter()) return false;  // V2: the starters walk
   if (pet.awaitingStarter()) return true;
-  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || gamesMenuOpen || zoneScreen || runOpen || surfOpen || dungeonOpen || fishOpen || pinOpen || bmOpen || psOpen) return false;  // the gallery manages its own repainting
+  if (pet.awaitingEggPick() || buddyMenuOpen || partyOpen || playMenuOpen || tradeOpen || sdOpen || vbOpen || galleryOpen || gameOpen || battleOpen || quizOpen || zoneScreen || runOpen || surfOpen || dungeonOpen || fishOpen || pinOpen || bmOpen || psOpen) return false;  // the gallery manages its own repainting
+  // V2: the Games menu, drawn again only when what it shows changes (Fedor, 2026-11-25: "speed up the time between
+  // hitting play and the game starting. Especially on the knomi"): drawn every frame there, ~200 ms each, a tap on it
+  // waited up to that long to be read. Its power light's flicker is put back on its own (render(): v2GbLightOnly())
+  if (gamesMenuOpen) return true;
   if (clockOpen && clockPage == V2_ABOUT_PAGE) return false;  // V2: About's coin spins and gleams
   if (kbOpen || clockOpen) return true;
   if (cardOpen && !cardAch && cardPage >= 4) return false;  // V2: an item's page: the item hovers (Fedor)
@@ -2611,7 +2620,9 @@ static uint32_t screenKey() {
   h = mixKey(h, sdEpoch);
   h = mixKey(h, partyBoostOn());  // the stats page shows the boost
   h = mixKey(h, (uint32_t)(v2KbZoomX + 1));  // V2: a keyboard zoomed in or out
-  if (kbOpen) {
+  if (gamesMenuOpen) {
+    h = mixKey(h, v2GamesScreenKey());  // V2: its page, the board, the tag... (leaderboard_v2.h)
+  } else if (kbOpen) {
     h = mixKey(h, v2KbScreenKey());  // V2: its layer, and the gamer tag's (menus_v2.h)
     h = mixKey(h, nameLen);
     for (int i = 0; i < nameLen; i++) h = mixKey(h, (uint8_t)nameBuf[i]);
@@ -2677,11 +2688,21 @@ bool render() {
   if (!galleryOpen && zoneScreen != ZS_ZONE && !pet.awaitingEggPick()) dexGridUnload();  // off the grids: their shinies go
   if (staticScreen()) {
     uint32_t k = screenKey();
-    if (screenKeyValid && k == lastScreenKey) return false;
+    if (screenKeyValid && k == lastScreenKey) {
+      if (gamesMenuOpen && v2GbLightOnly()) {  // V2: the Games menu as it was, its power light flickering on
+        gfx->flush();
+        return true;
+      }
+      return false;
+    }
     lastScreenKey = k;
     screenKeyValid = true;
   } else {
     screenKeyValid = false;
+  }
+  if (kbOpen && gTagKbOverGame) {  // V2: the gamer tag's keyboard over a game's card
+    renderKeyboard();
+    return true;
   }
   if (pet.awaitingStarter()) {  // first game: choose starter (top priority)
     renderStarterSelect();
@@ -3146,8 +3167,11 @@ void gameEndToMenu(int g) {
   v2GamesShow(g);
   if (pet.isEgg() || pet.sleeping || pet.ceremony || choiceKind) return;
   openGamesMenu();
-  // V2: after a first scored game (one with a place on the leaderboard: not Who's That?), the gamer tag, once
-  if (g != 1 && gamesMenuOpen && !pet.gamerTag[0] && !pet.tagAsked && pet.hasScore()) openTagKeyboard(true);
+  // V2: after a scored game (one with a place on the leaderboard: not Who's That?), the gamer tag, each time while it's
+  // the one the player was given (Fedor, 2026-11-25: "We need to find a way to require a name to be put in"; "If the
+  // name is default, they keyboard should still come up asking for a name change"). Until 2.2.19 it was asked once,
+  // and its X left every score after it on the board as ----; now no score goes without one (scoreReport())
+  if (g != 1 && gamesMenuOpen && (!pet.gamerTag[0] || pet.tagGiven) && pet.hasScore()) openTagKeyboard(true);
 }
 
 void openGamesMenu() {
@@ -3268,10 +3292,15 @@ void dimFrame() {
   for (int i = 0; i < 466 * 466; i++) fb[i] = (fb[i] >> 1) & 0x7BEF;
 }
 
+// a game's start timed for the console (drawIntroCard()): its first frame and its card landed, from PLAY
+static uint16_t introFrames = 0;
+static bool introLandSaid = false;
 void introOpen(int g) {
   introCard = g;
   introT = millis();
   introAwayT = 0;
+  introFrames = 0;
+  introLandSaid = false;
 }
 
 // where the card's centre is: dropping in (a little overshoot, so it lands), settled, or flying off
@@ -3292,9 +3321,29 @@ void introCardPos(uint32_t now, int &cx, int &cy) {
   }
 }
 
+// the gamer tag on the card (menus_v2.h v2IntroCard()): a game of the leaderboard's (not Who's That?, nor a buddy game)
+static bool introHasTag(int g) { return g >= 0 && g < LB_GAMES && lbHasBoard(g) && pet.gamerTag[0]; }
+static const char *introTagOf(int g) { return introHasTag(g) ? pet.gamerTag : nullptr; }
+// its band: the panel's width, at its top
+static bool introTagHit(int16_t x, int16_t y) {
+  return introHasTag(introCard) && x >= CX - 140 && x < CX + 140 && y >= CY + CARD_TAG_Y0 && y < CY + CARD_TAG_Y1;
+}
+
 bool introBtnHit(int16_t x, int16_t y) {  // a little roomier than the button
   return x >= CX - CARD_BTN_W / 2 - 12 && x < CX + CARD_BTN_W / 2 + 12 && y >= CY + CARD_BTN_DY - 12 &&
          y < CY + CARD_BTN_DY + CARD_BTN_H + 14;
+}
+// the tag tapped on a landed card: its keyboard over the game, the game waiting under it; back to the card after
+void openTagKeyboard(bool fromGames);
+static int32_t psHoldShown = -1;  // (Pic Snap's frames held: renderSnap())
+static void introTagOpen() {
+  sfxPlay(SFX_TAP);
+  openTagKeyboard(false);
+  gTagKbOverGame = true;
+}
+void introTagDone() {
+  gTagKbOverGame = false;
+  psHoldShown = -1;  // (what's on the screen is the keyboard: the card's frame drawn again)
 }
 
 // sends it off: up for the button, along a swipe
@@ -3351,6 +3400,10 @@ void introTouch(int16_t x0, int16_t y0, int16_t x1, int16_t y1, bool picked) {
   if (abs(dx) >= 40 || abs(dy) >= 40) {
     if (abs(dx) > abs(dy)) introDismiss(dx > 0 ? 1 : -1, 0);
     else introDismiss(0, dy > 0 ? 1 : -1);
+  } else if (!introAwayT && introTagHit(x0, y0)) {  // V2: the gamer tag: its keyboard
+    int cx, cy;
+    introCardPos(millis(), cx, cy);
+    if (cx == CX && cy == CY) introTagOpen();
   } else if (picked || introBtnHit(x0, y0)) {
     introDismiss(0, -1);
   }
@@ -3374,6 +3427,8 @@ struct CardRun {
 static struct {
   int g = -1;
   const char *title = nullptr, *how = nullptr;
+  char tag[GAMER_TAG_LEN + 1] = "";  // (the gamer tag on it, and whether it's the given one)
+  bool given = false;
   CardRun *runs = nullptr;
   int nRuns = 0;
   uint16_t *px = nullptr;  // their colours, run after run
@@ -3392,6 +3447,9 @@ static void cardStillFree() {
 static bool cardStillMake(int g, const char *title, const char *how) {
   cardStillFree();
   cardStill.g = g, cardStill.title = title, cardStill.how = how;
+  const char *tag = introTagOf(g);
+  snprintf(cardStill.tag, sizeof(cardStill.tag), "%s", tag ? tag : "");
+  cardStill.given = pet.tagGiven;
   uint16_t *fb = (uint16_t *)gfx->getFramebuffer();
   const int Y0 = CARD_STILL_Y0 < 0 ? 0 : CARD_STILL_Y0, Y1 = CARD_STILL_Y1 > V2_W ? V2_W : CARD_STILL_Y1;
   const size_t n = (size_t)(Y1 - Y0) * V2_W;
@@ -3401,10 +3459,10 @@ static bool cardStillMake(int g, const char *title, const char *how) {
     uint16_t *band = fb + (size_t)Y0 * V2_W;
     memcpy(keep, band, n * 2);
     memset(band, 0, n * 2);  // over black
-    v2IntroCard(CX, CY, false, title, how);
+    v2IntroCard(CX, CY, false, title, how, tag, pet.tagGiven);
     memcpy(onBlack, band, n * 2);
     for (size_t i = 0; i < n; i++) band[i] = 0xFFFF;  // over white: its own pixels are the same
-    v2IntroCard(CX, CY, false, title, how);
+    v2IntroCard(CX, CY, false, title, how, tag, pet.tagGiven);
     int runs = 0, pxN = 0;  // counted, then kept
     for (int pass = 0; pass < 2 && ok; pass++) {
       if (pass == 1) {
@@ -3438,6 +3496,8 @@ static bool cardStillMake(int g, const char *title, const char *how) {
   if (!ok) {
     cardStillFree();
     cardStill.g = g, cardStill.title = title, cardStill.how = how;
+    snprintf(cardStill.tag, sizeof(cardStill.tag), "%s", tag ? tag : "");
+    cardStill.given = pet.tagGiven;
     cardStill.failed = true;
   }
   return ok;
@@ -3468,6 +3528,16 @@ static void cardStillDraw() {
   if (y < V2_W) v2LutRun(fb + (size_t)y * V2_W, (V2_W - y) * V2_W, L);
 }
 
+// The card dropping in, or landed but not kept yet (the frame that keeps it draws it whole): a game's own slow first
+// painting waits until it's kept (Pinball's table), so the card drops in at once and the painting is done behind a card
+// that stands still. False on a computer (the card isn't kept there, and nothing takes long)
+bool introCardDropping() {
+  if (!gCardStillOn || introCard < 0 || introAwayT) return false;
+  int cx, cy;
+  introCardPos(millis(), cx, cy);
+  return cx != CX || cy != CY || cardStill.g != introCard;
+}
+
 // drawn over the game, last before its flush: the game at half brightness, then the card
 void drawIntroCard() {
   if (introCard < 0 || introAwayT) {  // (gone, or going: what was kept goes)
@@ -3479,8 +3549,16 @@ void drawIntroCard() {
   int cx, cy;
   introCardPos(now, cx, cy);
   const char *title = introTitle(g), *how = introHow(g);
+  if (++introFrames == 1) Serial.printf("start: game %d, its first frame %lu ms after PLAY\n", g, (unsigned long)(now - introT));
+  if (!introLandSaid && !introAwayT && cx == CX && cy == CY) {
+    introLandSaid = true;
+    Serial.printf("start: game %d, its card landed %lu ms after PLAY, %u frames\n", g, (unsigned long)(now - introT), introFrames);
+  }
   if (gCardStillOn && !introAwayT && cx == CX && cy == CY) {  // landed: kept
-    if (cardStill.g != g || cardStill.title != title || cardStill.how != how) cardStillMake(g, title, how);
+    const char *tag = introTagOf(g);
+    if (cardStill.g != g || cardStill.title != title || cardStill.how != how || strcmp(cardStill.tag, tag ? tag : "") ||
+        cardStill.given != pet.tagGiven)
+      cardStillMake(g, title, how);
     if (!cardStill.failed && cardStill.runs) {
 #ifdef BOARD_HOST
       if (gCardStillCheck) {  // (the host test: drawn both ways, the same?)
@@ -3491,7 +3569,7 @@ void drawIntroCard() {
         cardStillDraw();
         memcpy(kept, fb, n * 2);
         memcpy(fb, game, n * 2);
-        v2IntroCard(cx, cy, true, title, how);
+        v2IntroCard(cx, cy, true, title, how, introTagOf(g), pet.tagGiven);
         gCardStillChecked++;
         if (memcmp(kept, fb, n * 2)) gCardStillWrong++;
         free(game), free(kept);
@@ -3502,7 +3580,7 @@ void drawIntroCard() {
       return;
     }
   }
-  v2IntroCard(cx, cy, !introAwayT || now - introAwayT < CARD_AWAY_MS / 2, title, how);  // V2: board, panel, button
+  v2IntroCard(cx, cy, !introAwayT || now - introAwayT < CARD_AWAY_MS / 2, title, how, introTagOf(g), pet.tagGiven);  // V2: board, panel, button
 }
 
 void gamesMenuTap(int16_t x, int16_t y) {
@@ -5292,7 +5370,7 @@ void renderRun() {
 // marked BOARD_SEASON): the weight, the kind and the gamer tag. Sent each time the relay connects and at each
 // game's end
 static void fishSend(int16_t dex, uint16_t kg10, bool shiny) {
-  if (!buddyDexOk(dex) || !kg10) return;
+  if (!buddyDexOk(dex) || !kg10 || !pet.gamerTag[0]) return;  // (no tag, no place: they all go once there's one)
   BuddyMsg m;
   buddyInit(m, BM_FISH, buddyNetId(), 0, 0);
   m.dex = dex;
@@ -5312,7 +5390,7 @@ void fishReport() {
 // end (the relay keeps the best), all of them when the relay is reached anew or the tag changes
 void scoreReport(uint8_t g) {
   uint32_t v = g == GAME_MATCH ? pet.boardMatch : g == GAME_SNAP ? pet.boardSnap : g < 7 && g != 1 && g != 5 ? pet.boardHi[g] : 0;  // the best since the leaderboard started over
-  if (!v) return;
+  if (!v || !pet.gamerTag[0]) return;  // (no tag, no place on the board: kept here, and sent once one's picked)
   BuddyMsg m;
   buddyInit(m, BM_SCORE, buddyNetId(), 0, v);  // (the session field carries the score)
   m.kind = g;
@@ -5678,7 +5756,11 @@ void renderPinball() {
 #ifdef BOARD_WS21
   ws21ProfMark(0);  // the physics
 #endif
-  pinDraw(pin, playKeysUi);
+  // V2: the table not painted yet in this game's look: painted once its card has landed (Fedor, 2026-11-25: "speed up
+  // the time between hitting play and the game starting. Especially on the knomi"). Painted at once, it held the first
+  // frame ~0.65 s on the Knomi, half the games, the card not dropping in at all; till then, the floor's colour
+  if (introCardDropping() && !pbPicsReady(pin)) pbWaiting(pin);
+  else pinDraw(pin, playKeysUi);
   if (pinOverT) {  // the end: the score, the record, the joy, as every game shows it
     char big[16], rec[32];
     snprintf(big, sizeof(big), "%lu", (unsigned long)pin.score);
@@ -5844,8 +5926,9 @@ void startSnap() {
   psFreeze = 0;
   psPrepFor = -1;
   psMonDex = 0;
+  psHoldShown = -1;
   // the first place is made ready under the card, a little a frame (renderSnap()): all at once here, the screen
-  // stopped before the card was even up
+  // stopped before the card was even up. Once the card has landed, the frames aren't drawn again and it's made faster
 }
 
 void closeSnap() {
@@ -5928,9 +6011,32 @@ void snapButton() {
 }
 
 #define PS_ROLL_S 4.0f  // the roll at the end, before the score comes up over it
+// The first place being made ready, and nothing on the screen moving: under the how-to card once it has landed and is
+// kept (the place isn't there yet, the card stands still), or after it, the bar between two of its steps. Then the
+// screen isn't drawn again (what's on the panel is right), and the frame's time all goes on the making (Fedor,
+// 2026-11-25: "Getting into Pic Snap takes long enough to think the game froze"; on the Knomi each frame under the card
+// took ~110 ms to draw again the same and left 40 for the making: the place was ready 4 s after PLAY, 1.8 s of it work).
+static int32_t snapHoldKey() {
+  if (ps.phase != PSP_LOAD || ps.shot != 0 || psOverT || wasPressed) return -1;
+  if (psPrepFor == (int8_t)psPlace(ps) && psPrepDone) return -1;  // (ready: its place is drawn)
+  if (introCard >= 0) {
+    if (introAwayT || !gCardStillOn || cardStill.g != introCard || cardStill.failed || !cardStill.runs) return -1;
+    int cx, cy;
+    introCardPos(millis(), cx, cy);
+    return cx == CX && cy == CY ? 1 : -1;
+  }
+  return 2 + psPrepPct(psPlace(ps)) / 4;  // (the bar: drawn again as it grows a step)
+}
+#define PS_HOLD_MS 80  // the making, a held frame (a frame is due each 85 ms in a game: the loop reads the finger between)
+
 void renderSnap() {
   if (pet.ceremony) {
     closeSnap();
+    return;
+  }
+  const int32_t holdDrawn = snapHoldKey();
+  if (holdDrawn >= 0 && holdDrawn == psHoldShown) {
+    snapReady(PS_HOLD_MS);
     return;
   }
 #ifdef BOARD_WS21
@@ -5996,6 +6102,9 @@ void renderSnap() {
 #ifdef BOARD_WS21
   ws21ProfMark(9);
 #endif
+  // what this frame showed, for the frames held after it: the bar as drawn (the making went on after it), else the card
+  // as it's now kept (it's kept as this frame drew it)
+  psHoldShown = holdDrawn >= 2 ? holdDrawn : snapHoldKey();
 }
 
 // ---------- PikaSurf ----------
@@ -9703,13 +9812,23 @@ static bool pressSet(PressTarget &t, int x, int y, int w, int h, const char *lab
 // The control at (x, y) on the open screen, false if there is none there. It mirrors the
 // screens' own tap code, so it is only for real controls: petting, aiming, walking and the
 // "tap anywhere to close" screens keep working as they did, without a preview.
+// a keyboard's key under (x, y), or its X
+static bool kbPressAt(int16_t x, int16_t y, PressTarget &t, char *buf) {
+  V2Key k;  // V2: round the key under the finger, where it's drawn (zoomed in, if it is)
+  int c = v2KbAtZ(v2KbLayerNow(), x, y, &k);
+  if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, v2KbZoomX < 0 ? "X" : "\x19");  // (zoomed: the down arrow)
+  return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2KbLayerNow(), buf));
+}
 bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
   static char buf[52];
   // V2: the ring open, nothing under it is a control: a touch acts on nothing as it lands, nothing lifts under the
   // mouse; the ring takes the lift (Fedor: "clicking sound clicks on the map icon behind it. When this menu is open,
   // the other buttons should not function")
   if (v2RadialOpen) return false;
+  if (kbOpen && gTagKbOverGame) return kbPressAt(x, y, t, buf);  // V2: the gamer tag's keyboard over a game's card
   if (introUp()) {  // a game's card: its button
+    if (!introAwayT && introTagHit(x, y))  // V2: the gamer tag on it
+      return pressSet(t, CX - 140, CY + CARD_TAG_Y0, 280, CARD_TAG_Y1 - CARD_TAG_Y0, pet.gamerTag);
     if (!introAwayT && introBtnHit(x, y))
       return pressSet(t, CX - CARD_BTN_W / 2, CY + CARD_BTN_DY, CARD_BTN_W, CARD_BTN_H, T(S_READY_GO));
     return false;
@@ -9761,7 +9880,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     if (v2GamesPage < 0) {  // V2: a leaderboard page: its play line, the side buttons and the X
       int px, pw;
       lbPlayBox(px, pw);
-      if (lbOnPlay(x, y)) return pressSet(t, px - 6, LB_PLAY_Y - 6, pw + 12, 26, gameLabel(V2_CART_GAME[-1 - v2GamesPage]));
+      if (lbOnPlay(x, y)) return pressSet(t, px - 2, LB_PLAY_Y - 2, pw + 6, LB_PLAY_H + 6, gameLabel(V2_CART_GAME[-1 - v2GamesPage]));
       return v2GamesPressNav(x, y, t);
     }
     int g = gameAt(x, y);
@@ -9852,12 +9971,7 @@ bool pressTargetAt(int16_t x, int16_t y, PressTarget &t) {
     if (v2PressNav(x, y, t, 0, 0, 0, true, GAL_CLOSE_Y)) return true;  // V2: its X
     return false;
   }
-  if (kbOpen) {
-    V2Key k;  // V2: round the key under the finger, where it's drawn (zoomed in, if it is)
-    int c = v2KbAtZ(v2KbLayerNow(), x, y, &k);
-    if (c < 0) return closeHit(x, y) && pressSet(t, CX - CLOSE_R, CLOSE_Y - CLOSE_R, 2 * CLOSE_R, 2 * CLOSE_R, v2KbZoomX < 0 ? "X" : "\x19");  // (zoomed: the down arrow)
-    return pressSet(t, k.x0, k.y0, k.x1 - k.x0 + 1, k.y1 - k.y0 + 1, v2KeyLabel(c, v2KbLayerNow(), buf));
-  }
+  if (kbOpen) return kbPressAt(x, y, t, buf);
   if (clockOpen) {
 #if HAS_MUSIC
     if (soundOpen) return v2SoundPress(x, y, t);  // V2: the Sound page (sound_v2.h)

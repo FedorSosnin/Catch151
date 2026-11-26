@@ -2030,10 +2030,14 @@ TEST(save, state_survives_a_reboot) {
   a.surfHi = 52;
   a.fishBig = 2418, a.fishBigDex = 130, a.fishBigShiny = true;
   a.pinHi = 123450;
+  CHECK(strlen(a.gamerTag) == 4 && a.tagGiven && !a.tagAsked);  // a new player: a gamer tag made up for them
+  char given[GAMER_TAG_LEN + 1];
+  strcpy(given, a.gamerTag);
   CHECK(!a.setGamerTag("F*CK"));  // the gamer tag: a rude one isn't taken (gamertag.h)
-  CHECK(!a.gamerTag[0] && !a.tagAsked);
+  CHECK(!strcmp(a.gamerTag, given) && a.tagGiven && !a.tagAsked);
   CHECK(a.setGamerTag(" PIKACHU"));
   CHECK_STREQ(a.gamerTag, "PIKA");
+  CHECK(!a.tagGiven);  // (picked: the player's own)
   a.rename("SPARKY");  // rename persists the whole state
 
   Pet b;
@@ -2053,7 +2057,7 @@ TEST(save, state_survives_a_reboot) {
   CHECK(b.fishBigShiny);
   CHECK_EQ(b.pinHi, (uint32_t)123450);
   CHECK_STREQ(b.gamerTag, "PIKA");
-  CHECK(b.tagAsked);
+  CHECK(b.tagAsked && !b.tagGiven);
   CHECK_EQ(b.boardHi[6], (uint32_t)0);  // the leaderboard's bests: from zero, not the all-time records
   CHECK(!b.hasScore());
   b.pinResult(5000);  // a game played: on the board (below the all-time 123450)

@@ -841,6 +841,31 @@ static void psPrepWork(uint8_t place, uint32_t ms) {
   }
 }
 
+// how far the making ready of place has got, 0..100, by what its steps cost on the Knomi (2026-11-23: a painting step
+// ~3 ms, a lens step's channel ~30)
+static int psPrepPct(uint8_t place) {
+  if (psPrepFor != (int8_t)place) return 0;
+  if (psPrepDone) return 100;
+  const int paint = 1 + 2 * PS_STRIPS, total = paint + 8 * 8 * psLays;
+  int done = psPrepAt <= paint ? psPrepAt : paint + 8 * (psPrepAt - paint);
+  return done >= total ? 100 : done * 100 / total;
+}
+// the first place not ready yet, the card gone (pressed before the making was done): a bar across the dark, filling
+// as it's made, so the screen isn't taken for stuck (Fedor, 2026-11-25: "Getting into Pic Snap takes long enough to
+// think the game froze")
+#define PS_BAR_W 180
+#define PS_BAR_H 14
+static void psLoadBar(int pct) {
+  const int x0 = SNAP2(CX - PS_BAR_W / 2), y0 = SNAP2(CX - PS_BAR_H / 2);
+  const uint16_t cream = sc565(PS_CREAM);
+  gfx->fillRect(x0 + 2, y0, PS_BAR_W - 4, 2, cream);  // its outline, the corners a pixel in
+  gfx->fillRect(x0 + 2, y0 + PS_BAR_H - 2, PS_BAR_W - 4, 2, cream);
+  gfx->fillRect(x0, y0 + 2, 2, PS_BAR_H - 4, cream);
+  gfx->fillRect(x0 + PS_BAR_W - 2, y0 + 2, 2, PS_BAR_H - 4, cream);
+  int w = SNAP2((PS_BAR_W - 8) * pct / 100);
+  if (w > 0) gfx->fillRect(x0 + 4, y0 + 4, w, PS_BAR_H - 8, cream);
+}
+
 // ----- a frame through the camera -----
 // the camera's pan now (px): its aim at the Pokemon and its drift
 static int psPanX(const PsState &s) { return psAimX + (int)lroundf(s.wx); }
@@ -1301,6 +1326,7 @@ static void psDraw(PsState &s, uint32_t now, bool capture, bool keys) {
       psViewfinder(s);
     } else {
       scRect(0, 0, V2_W - 1, V2_W - 1, 0x1E1838);
+      if (introCard < 0) psLoadBar(psPrepPct(psPlace(s)));  // (the card gone: how far it's got)
     }
     return;
   }

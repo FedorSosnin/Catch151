@@ -6,6 +6,15 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Every player has a gamer tag, so no score shows up nameless:** each player now starts with a gamer tag made up for them, two letters and two digits like **KT47**, and their scores go to the leaderboard with it. The label on the Games menu now has a green **EDIT** tab instead of a small pencil, so it reads as something to tap. While the tag is still the one they were given, it shows grey, and the gamer tag's keyboard comes up after each scored game to ask for their own: the first letter typed starts a new tag, and **OK** keeps the given one as theirs. Before, the keyboard came up once, and closing it left every score after that on the board as `----`. Players who never picked a tag get one made up for them too, so their scores show with it. The keyboard now says **SHOWN ON THE LEADERBOARD** instead of pointing to GitHub. Entries already on the board without a tag no longer show; each one comes back with a tag once its player updates.
+- **A game's page shows its top three alike:** the first, second and third are three rows the same size, the first with its crown and its score in bold, and the day it was set (Reel Fishing: the fish) under its tag. That leaves room for a big **TAP TO PLAY** button across the screen, easier to hit on the Knomi.
+- **Your gamer tag on every game's card:** a scored game's how-to card now says **PLAYING AS KT47** with a green **EDIT** tab at its top, over how to play. Tap it to change your tag right there; closing the keyboard brings you back to the card.
+- **Pinball starts at once on the Knomi:** about every other game, the first frame froze for over half a second while the table was painted. Now the how-to card drops in straight away and the table is painted behind it while you read.
+- **The Games menu responds sooner on the Knomi:** it's only drawn again when something on it changes, so taps on it are picked up sooner. Its power light still flickers.
+- **Pic Snap gets ready sooner on the Knomi:** while its how-to card is up and nothing on the screen moves, the Knomi no longer redraws the same screen every frame, and spends that time getting the first place ready instead. If you press **Ready, GO!** before the place is ready, a bar fills across the screen until it is, so it never looks stuck.
+
 ## [2.2.18] - 2026-11-25
 
 - **Pinball ends properly again:** since 2.2.15, losing your last ball left the table empty with no balls and nothing happening, and sending the ball round the orbit at the top could end the game in the middle of play. A name Pic Snap added had taken over Pinball's "game over" signal. Now the orbit just scores, and the last ball down the drain brings up your score and record as before. (On every device: the Knomi, the Mac, Windows and the web.)

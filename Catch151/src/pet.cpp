@@ -17,6 +17,13 @@ void Pet::begin() {
   bootSeen = prefs.getUInt("seen", 0);
   bootLife = lifeMin;
   lastTick = millis();
+  // V2: a gamer tag made up for a player who has none (a new one, or one who closed its keyboard before 2.2.19), so
+  // their scores show on the leaderboard as something; asked to pick their own after each scored game
+  if (!gamerTag[0]) {
+    gamerTagStarter((uint32_t)random(0x7FFFFFFF), gamerTag);
+    tagGiven = true;
+    pendingSave = true;
+  }
 }
 
 void Pet::newEgg() {
@@ -892,6 +899,7 @@ bool Pet::setGamerTag(const char *tag) {
   if (!gamerTagClean(tag, t) || gamerTagRude(t)) return false;
   strcpy(gamerTag, t);
   tagAsked = true;
+  tagGiven = false;
   pendingSave = true;
   return true;
 }
@@ -1337,6 +1345,7 @@ void Pet::save() {
   prefs.putBool("lbfs", boardFishShiny);
   prefs.putBytes("lbkd", boardKinds, sizeof(boardKinds));
   prefs.putBool("gtak", tagAsked);
+  prefs.putBool("gtgv", tagGiven);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
   prefs.putUInt("cdyd", candyDay);
@@ -1457,6 +1466,7 @@ void Pet::load() {
     if (!gamerTagClean(t, gamerTag)) gamerTag[0] = 0;
   }
   tagAsked = prefs.getBool("gtak", false);
+  tagGiven = gamerTag[0] && prefs.getBool("gtgv", false);
   if (prefs.getBytes("lbhi", boardHi, sizeof(boardHi)) != sizeof(boardHi))
     memset(boardHi, 0, sizeof(boardHi));  // (a save from before 2.2.10 has none: the board starts from zero)
   boardMatch = prefs.getUInt("lbbm", 0);

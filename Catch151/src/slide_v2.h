@@ -225,7 +225,10 @@ static void v2SlideCompose(float p) {
         if (y < k.my0 || x < k.mx0 || x >= k.mx1) row[x] = n[x];
     }
   if (v2SlideTo.stillR) v2CloseX();  // the X, still (both pages slide without theirs), as the side buttons
-  drawPageArrows(v2SlideTo.page, v2SlideTo.pages, v2SlideTo.arrowY);  // the new page's side buttons, still
+  // the new page's side buttons, still; both where the pages go round (the Games' own pages, as v2GamesArrows() draws
+  // them: by the page's number the first lost its left one, cut off where the screen it moved on began)
+  if (k.round) drawPageArrows(1, 3, k.arrowY);
+  else drawPageArrows(k.page, k.pages, k.arrowY);
 }
 // each frame a screen flushes (pressOverlay(), before the press preview): a slide's next frame in place of what was
 // drawn; or, a paged menu's page just turned, the slide starts from the page kept; or, a paged menu's frame, kept
@@ -239,6 +242,8 @@ static void v2SlideFrame() {
     memcpy(v2SlideOld, fb, V2_W * V2_W * sizeof(uint16_t));
     v2SlideLast = v2SlideTo;
     v2SlideHave = true;
+    screenKeyValid = false;  // (a screen drawn only when it changes, the Games menu: the page itself again, not the slide's
+                             // last frame)
     return;
   }
   V2PageKey k = v2PageKeyNow();

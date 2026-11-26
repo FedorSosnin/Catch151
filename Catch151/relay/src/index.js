@@ -33,7 +33,7 @@
 // about who or where. A device's Games menu shows each game's best three on its leaderboard pages: it asks (a BM_BOARD,
 // to the relay alone) and the relay answers each game in a BM_BOARD of its own, to it alone (board.js boardReply()).
 
-import { BM_SCORE, GAMES, SEASON, seasonOf, scoreReport, boardAdd, recordAdd, boardSvg, tagOf, idHash, tagShown, topReply, BM_BOARD, BOARD_ALL, BOARD_GAMES, boardAsk, boardReply } from './board.js';
+import { BM_SCORE, GAMES, SEASON, seasonOf, scoreReport, boardAdd, recordAdd, boardSvg, tagOf, idHash, tagShown, named, topReply, BM_BOARD, BOARD_ALL, BOARD_GAMES, boardAsk, boardReply } from './board.js';
 
 const MSG_SIZE = 65;
 const MAX_PER_GROUP = 16;  // a home has a few devices: more is someone filling a group on purpose
@@ -75,18 +75,19 @@ export function fishText(f) {
   return `${Math.floor(lb10 / 10)}.${lb10 % 10} lb ${f.shiny ? 'shiny ' : ''}${FISH[f.dex][0]}`;
 }
 
-// the board as /stats shows it: each game's best ten and the fish's, the tags as they show (---- or ****), no ids;
-// and each kind of fish's record, every kind in Pokedex order (lb null: none landed yet)
+// the board as /stats shows it: each game's best ten and the fish's, the tags as they show (**** for a rude one), no
+// ids, none without a tag (board.js named()); and each kind of fish's record, every kind in Pokedex order (lb null: none
+// landed yet, or its record has no tag)
 export function boardPublic(scores, fishTop, fishKinds = {}) {
   return {
     games: Object.keys(GAMES).map((g) => ({
       game: +g, name: GAMES[g].name,
-      top: (scores[g] || []).map((e) => ({ tag: tagShown(e.tag), score: e.score, shown: GAMES[g].show(e.score), day: e.day })),
+      top: named(scores[g] || []).map((e) => ({ tag: tagShown(e.tag), score: e.score, shown: GAMES[g].show(e.score), day: e.day })),
     })),
-    fish: fishTop.map((e) => ({ tag: tagShown(e.tag), lb: lb(e.score), kind: FISH[e.dex][0], shiny: e.shiny, day: e.day })),
+    fish: named(fishTop).map((e) => ({ tag: tagShown(e.tag), lb: lb(e.score), kind: FISH[e.dex][0], shiny: e.shiny, day: e.day })),
     kinds: Object.keys(FISH).map((d) => {
       const e = fishKinds[d];
-      return e ? { dex: +d, kind: FISH[d][0], lb: lb(e.score), shiny: e.shiny, tag: tagShown(e.tag), day: e.day } : { dex: +d, kind: FISH[d][0], lb: null };
+      return e && e.tag ? { dex: +d, kind: FISH[d][0], lb: lb(e.score), shiny: e.shiny, tag: tagShown(e.tag), day: e.day } : { dex: +d, kind: FISH[d][0], lb: null };
     }),
   };
 }
@@ -243,23 +244,26 @@ export class Lobby {
     if (type === BM_FISH) {  // a device's heaviest fish since the board started over, or of a kind: the board's; never passed on
       const f = fishReport(data);
       if (!f || seasonOf(data) !== SEASON) return;  // (unmarked: an all-time one from 2.2.9 or before)
+      const from = new DataView(data).getUint32(6, true), id = idHash(from), tag = tagOf(new Uint8Array(data, 34, 12));
+      if (!tag) return;  // no tag, no place (board.js named())
       const day = new Date().toISOString().slice(0, 10);
       const { fishTop, fishKinds } = await this.board();
-      const from = new DataView(data).getUint32(6, true), id = idHash(from), tag = tagOf(new Uint8Array(data, 34, 12));
       const e = { id, tag, score: f.kg10, dex: f.dex, shiny: f.shiny, day };
       if (boardAdd(fishTop, { ...e })) await this.ctx.storage.put('fishTop' + SEASON, fishTop);  // (a device's heaviest)
       if (recordAdd(fishKinds, f.dex, { ...e })) await this.ctx.storage.put('fishKinds' + SEASON, fishKinds);
-      if (fishTop[0] && fishTop[0].id === id) this.tellTop(ws, from, 5, fishTop[0].score);  // the heaviest of all: Reel Fishing's first
+      const fishFirst = named(fishTop)[0];
+      if (fishFirst && fishFirst.id === id) this.tellTop(ws, from, 5, fishFirst.score);  // the heaviest of all: Reel Fishing's first
       return;
     }
     if (type === BM_SCORE) {  // a game's best, with the gamer tag: the board's; never passed on
       const s = scoreReport(data, MSG_SIZE);
-      if (!s) return;
+      if (!s || !s.tag) return;  // (no tag, no place: board.js named())
       const { scores } = await this.board();
       const list = scores[s.game] || (scores[s.game] = []);
       if (boardAdd(list, { id: s.id, tag: s.tag, score: s.score, day: new Date().toISOString().slice(0, 10) }))
         await this.ctx.storage.put('scores' + SEASON, scores);
-      if (list[0].id === s.id) this.tellTop(ws, new DataView(data).getUint32(6, true), s.game, s.score);
+      const first = named(list)[0];
+      if (first && first.id === s.id) this.tellTop(ws, new DataView(data).getUint32(6, true), s.game, s.score);
       return;
     }
     if (type === BM_BOARD) {  // a device asking for the board: each game's best three, to it alone; never passed on

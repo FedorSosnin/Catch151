@@ -748,6 +748,15 @@ static void pbPaintStatic() {
   for (int k = 0; k < 3; k++) pbBumper(k, false);
   pbGrass(false);
 }
+// the table's pictures painted in s's look (pinDraw() paints them when they aren't: ~0.65 s on the Knomi). Each game's
+// look is drawn at random (pinStart()), and one look is kept, so about one game in two paints them
+static bool pbPicsReady(const PinState &s) { return pbPic && pbPicFloor && pbPicKey == (s.day ? 1 : 0); }
+// ...and while they wait to be (under the how-to card as it drops in: Catch151.ino renderPinball()): the floor's colour
+static void pbWaiting(const PinState &s) {
+  pbDay = s.day;
+  scScreen();
+  scRect(0, 0, V2_W - 1, V2_W - 1, pbDay ? 0x7CC85A : 0x34388A);
+}
 // the raised parts put back over (x0, y0)..(x1, y1): wherever the picture with them differs from the floor's
 static void pbRaisedOver(int x0, int y0, int x1, int y1) {
   if (!pbPic || !pbPicFloor || pbPicKey < 0) return;

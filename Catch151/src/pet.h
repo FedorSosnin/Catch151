@@ -169,11 +169,14 @@ public:
   uint32_t matchHi = 0;    // BerryMatch's record: the best score
   uint16_t snapHi = 0;     // Pic Snap's record: the best roll (up to 1,000)
   // V2: the gamer tag (gamertag.h): the trainer's, kept through a goodbye, shown with the best scores on the world
-  // board. tagAsked: asked for once already, after a first scored game (the Games menu's label changes it after that)
+  // board, and none goes there without one (Catch151.ino scoreReport()). tagAsked: the keyboard for it was offered (until
+  // 2.2.19 only once, after a first scored game; now after each scored game while there's no tag)
   char gamerTag[GAMER_TAG_LEN + 1] = "";
   bool tagAsked = false;
-  bool setGamerTag(const char *tag);  // false for one that's empty or rude (gamertag.h): then it's not changed
-  void askedForTag();                 // the keyboard for it was offered: not again by itself
+  bool tagGiven = false;  // gamerTag is the one made up for this player (gamertag.h gamerTagStarter()), not picked yet
+  bool setGamerTag(const char *tag);  // false for one that's empty or rude (gamertag.h): then it's not changed (it's
+                                      // the player's own now, even the one it was given, OK'd)
+  void askedForTag();                 // the keyboard for it was offered
   bool topScore();                   // the relay says one of your bests is the first on the leaderboard: its medal (once)
   // V2: the leaderboard's bests (Fedor: the board's first scores "were made during testing when the games were still
   // evolving ... put them all to zeros until someone plays the game and gets their score put there"): each game's
