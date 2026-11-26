@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.19] - 2026-11-26
 
 - **Every player has a gamer tag, so no score shows up nameless:** each player now starts with a gamer tag made up for them, two letters and two digits like **KT47**, and their scores go to the leaderboard with it. The label on the Games menu now has a green **EDIT** tab instead of a small pencil, so it reads as something to tap. While the tag is still the one they were given, it shows grey, and the gamer tag's keyboard comes up after each scored game to ask for their own: the first letter typed starts a new tag, and **OK** keeps the given one as theirs. Before, the keyboard came up once, and closing it left every score after that on the board as `----`. Players who never picked a tag get one made up for them too, so their scores show with it. The keyboard now says **SHOWN ON THE LEADERBOARD** instead of pointing to GitHub. Entries already on the board without a tag no longer show; each one comes back with a tag once its player updates.
 - **A game's page shows its top three alike:** the first, second and third are three rows the same size, the first with its crown and its score in bold, and the day it was set (Reel Fishing: the fish) under its tag. That leaves room for a big **TAP TO PLAY** button across the screen, easier to hit on the Knomi.

@@ -68,7 +68,7 @@ static_assert(PE_END == (1u << 21) && PSE_END == 64u, "a game's event name taken
 
 // Firmware version. Bump this number on every release (and manifest.json for
 // the web installer). Shown on the settings screen and over serial at boot.
-#define FW_VERSION "2.2.18"
+#define FW_VERSION "2.2.19"
 
 // the settings page: Wi-Fi, then updates (check / install, and the auto-update switch under it)
 #define SET_WIFI_BTN_Y 178  // change the Wi-Fi
