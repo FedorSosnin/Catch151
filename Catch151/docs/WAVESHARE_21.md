@@ -146,11 +146,12 @@ bash tools/build_ws21.sh     # compile only: build-ws21/Catch151.ino.bin
 | `Catch151.ino` | Includes `ws21_hal.h`, builds the panel objects, and the touch address. |
 | `src/rtcbat.cpp` | The PCF85063 keeps the time across restarts. The battery is read from the ADC. |
 | `src/audio.cpp` | Sound through an added PAM8302A (`WS21_AUDIO_PDM`) or MAX98357A (`WS21_AUDIO_I2S`); else silent, or the buzzer (`WS21_BUZZER`). |
-| `src/ota_update.cpp` | Wi-Fi updates are off. The update site carries the Knomi's firmware, which would not drive this screen. |
+| `src/ota_update.cpp` | Wi-Fi updates from its own channel, `xl/` on the update site (`OTA_BASE_URL_XL`), never the Knomi's: its update.json must say `"board": "xl"`. |
 | `src/autorot.h` | The quarter turn stays 0: the picture turns in `ws21_hal.h` instead (45° plus quarter turns). |
 | `src/knomi_rim.h` | Its row tables can be sized for the 466 canvas. The Knomi's build is unchanged. |
 | `tools/build_ws21.sh` | Compile only. Output in `build-ws21/` (git ignores it). |
 | `tools/ws21_flash.sh` | Builds, packs the sprites and flashes a board. The port must be given. |
+| `tools/build_xl_web.sh` | Makes `web/knomi/xl/` (firmware, sprites, update.json) for its Wi-Fi updates. Run it with every release. |
 
 What the code uses:
 
@@ -180,6 +181,11 @@ What the code uses:
   frame), sideways a canvas column per panel row (140 ms). Turned, the game draws on the canvas and each frame is made
   from it (2026-11-20 numbers, before "Faster frames").
 - **Dimming:** only while the pet sleeps, as on computers (Fedor). The Knomi still dims when left alone.
+- **The I2C driver's memory:** ESP-IDF's I2C driver asks for its memory (the bus, with the lock its interrupt
+  takes, and each chip's handle) as any memory, which with PSRAM in the heap is PSRAM, in among the frames. Things
+  drawn or copied there overwrote it three times, and the touch task crashed (2026-11-23, 11-24, 11-26). So
+  `ws21WireBegin()` holds all of PSRAM while the bus starts and each chip gets its handle: all of it is in internal
+  RAM (the boot log says where the bus is).
 - **Touch:** the CST820 read like the Knomi's CST816S (same registers), mapped back into the canvas and turned with
   the picture. A small task on the other core reads it every 8 ms while a finger is down and queues each press and
   lift, so a quick tap isn't lost while a frame is drawn. The chip gets the Knomi's setup: no gestures (a double-tap

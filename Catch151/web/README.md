@@ -23,7 +23,7 @@ own site.
 
 ## Rebuild
 
-After a firmware change, rebuild `web/knomi/firmware/` with `tools/build_knomi_web.sh`.
+After a firmware change, rebuild `web/knomi/firmware/` with `tools/build_knomi_web.sh`. For each release also run `tools/build_xl_web.sh`: it makes `web/knomi/xl/`, Catch 151 XL's Wi-Fi updates (no page).
 
 ## Test locally
 

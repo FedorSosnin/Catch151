@@ -32,8 +32,15 @@ bool PmdMon::load(uint8_t dexNum, bool shiny) {
 
   uint32_t size = f.size();
   if (size < 7 || size > 3UL * 1024 * 1024) { f.close(); return false; }
+#ifdef PAKFILE_TAKE
+  // the pack is unpacked in PSRAM already (flashpak.h): kept as it is. Copied, it needed twice its size at once, and
+  // on the XL during Pic Snap that wasn't there: places with no Pokemon in them (Fedor, 2026-11-26)
+  blob = f.take();
+#else
   blob = (uint8_t *)ps_malloc(size);
-  if (!blob || f.read(blob, size) != size || memcmp(blob, "TPK2", 4) != 0) {
+  if (blob && f.read(blob, size) != size) { free(blob); blob = nullptr; }
+#endif
+  if (!blob || memcmp(blob, "TPK2", 4) != 0) {
     if (blob) { free(blob); blob = nullptr; }
     f.close();
     return false;

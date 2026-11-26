@@ -22,11 +22,19 @@ public:
     return n;
   }
   void close() { free(data); data = nullptr; }
+  // the unpacked file itself, handed over (freed with free()): PmdMon keeps it as it is instead of copying it, so a
+  // pack needs its size in PSRAM once, not twice (Onix's: 975 KB, not 1.9 MB)
+  uint8_t *take() {
+    uint8_t *d = data;
+    data = nullptr;
+    return d;
+  }
 private:
   uint8_t *data = nullptr;
   uint32_t total = 0, pos = 0;
 };
 using File = PakFile;
+#define PAKFILE_TAKE 1  // (sdmon.cpp: File::take())
 
 class FlashPak {
 public:

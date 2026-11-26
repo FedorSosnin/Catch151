@@ -1,8 +1,8 @@
 #include "ota_update.h"
 
-// (not on the Waveshare 2.1: the update site carries the Knomi's firmware, which would not drive its screen. It gets
-// the stubs below until it has an update channel of its own: docs/WAVESHARE_21.md)
-#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST) && !defined(BOARD_WS21)
+// (the Waveshare 2.1, Catch 151 XL, reads its own update channel, OTA_BASE_URL_XL: the Knomi's firmware would not
+// drive its screen. docs/WAVESHARE_21.md)
+#if defined(BOARD_KNOMI_V2) && !defined(BOARD_HOST)
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -21,7 +21,11 @@ static char newVer[16] = "", spritesSha[65] = "";
 static uint32_t spritesSize = 0;
 static bool fwNewer = false, spritesStale = false;
 static uint8_t buf[4096];  // one flash sector: sprite reads, writes and the held-back header
+#ifdef BOARD_WS21
+static const char *gBase = OTA_BASE_URL_XL;  // the XL's own channel, and only it
+#else
 static const char *gBase = OTA_BASE_URL;  // the site update.json last came from: the files come from the same one
+#endif
 
 // The buddy relay's TLS connection closed while an update talks to the site: two at once don't
 // fit in memory (1.22 on a Knomi: 111 KB free before the relay, 66 KB after, http -1)
@@ -84,9 +88,13 @@ bool otaCheck(const char *current) {
   client.setCACert(OTA_ROOTS);
   String body;
   int code = -1;
-  // Catch 151's site first, then the old one (ota.h); redirects followed, in case a site moves again
+  // Catch 151's site first, then the old one (ota.h); redirects followed, in case a site moves again. The XL: its own
+#ifdef BOARD_WS21
+  static const char *const BASES[1] = { OTA_BASE_URL_XL };
+#else
   static const char *const BASES[2] = { OTA_BASE_URL, OTA_BASE_URL_OLD };
-  for (int b = 0; b < 2 && code != 200; b++) {
+#endif
+  for (int b = 0; b < (int)(sizeof(BASES) / sizeof(BASES[0])) && code != 200; b++) {
     HTTPClient http;
     http.setTimeout(8000);
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -107,6 +115,14 @@ bool otaCheck(const char *current) {
     state = OTA_FAILED;
     return false;
   }
+#ifdef BOARD_WS21
+  char board[8];
+  if (!otaJsonField(body.c_str(), "board", board, sizeof(board)) || strcmp(board, OTA_BOARD_XL) != 0) {
+    Serial.println("ota: that update.json isn't the XL's: nothing taken");
+    state = OTA_FAILED;
+    return false;
+  }
+#endif
   spritesSize = strtoul(sz, nullptr, 10);
   fwNewer = otaVersionCmp(newVer, current) > 0;
   spritesStale = !spritesMatch();  // also repairs sprites left half-written by a cut update

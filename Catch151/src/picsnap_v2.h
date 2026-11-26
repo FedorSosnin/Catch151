@@ -99,6 +99,19 @@ static void *psFastAlloc(size_t n, bool *fast = nullptr) {
   return p ? p : ps_malloc(n);
 #endif
 }
+// Room kept free in PSRAM, in one piece, for the Pokemon's sprites: the biggest pack unpacked (Onix's, 997,625 bytes)
+// and its decompressor. The lens steps and the kept still screen only take what's left over (with fewer lens steps,
+// the steps between share a picture). Without it the XL (three frames of its own) had 606 KB in one piece once Pic
+// Snap was set up, so a big Pokemon never loaded, and after Pinball or with buddies around hardly any did: places
+// with nobody in them (Fedor, 2026-11-26: "I wasnt getting pokemon loading")
+#define PS_MON_ROOM (1000UL * 1024 + 48 * 1024)
+static bool psMonRoomLeft() {
+#ifdef ESP_PLATFORM
+  return heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM) >= PS_MON_ROOM;
+#else
+  return true;  // (a computer)
+#endif
+}
 static bool psAllocAll() {
   const size_t P = (size_t)PS_BW * PS_BW;
   psBlurBuf = (uint8_t *)psFastAlloc(psBlurBytes(), &psBlurFast);
@@ -121,24 +134,31 @@ static bool psAllocAll() {
     psFreeAll();
     return false;
   }
-  for (psLays = 0; psLays < PS_LENS_STEPS; psLays++)  // as many lens steps as there's room for (all of them, mostly)
+  // as many lens steps as there's room for with the Pokemon's room kept (all of them, mostly); the first one always
+  for (psLays = 0; psLays < PS_LENS_STEPS; psLays++) {
     if (!(psLay[psLays] = (uint16_t *)ps_malloc(P * 2))) break;
+    if (psLays > 0 && !psMonRoomLeft()) {
+      free(psLay[psLays]);
+      psLay[psLays] = nullptr;
+      break;
+    }
+  }
   if (!psLays) {
     psFreeAll();
     return false;
   }
-#ifdef ESP_PLATFORM
-  const bool room = heap_caps_get_free_size(MALLOC_CAP_SPIRAM) > (size_t)V2_W * V2_W * 2 + 1024 * 1024;  // (1 MB left)
-#else
-  const bool room = true;  // (a computer)
-#endif
-  if (room) {
+  // the still screen kept (quicker frames under the print) only if the Pokemon's room is still there after it
 #ifdef BOARD_WS21
-    psStill = ws21FrameAlloc();  // (on whole lines, as the frames: it goes back by DMA, restoreFrom())
+  psStill = ws21FrameAlloc();  // (on whole lines, as the frames: it goes back by DMA, restoreFrom())
+  if (psStill && !psMonRoomLeft()) ws21FrameFree(psStill), psStill = nullptr;
 #else
-    psStill = (uint16_t *)ps_malloc((size_t)V2_W * V2_W * 2);
+  psStill = (uint16_t *)ps_malloc((size_t)V2_W * V2_W * 2);
+  if (psStill && !psMonRoomLeft()) free(psStill), psStill = nullptr;
 #endif
-  }
+#ifdef ESP_PLATFORM
+  Serial.printf("picsnap: %d lens steps, still %s, PSRAM %u free, %u in one piece\n", psLays, psStill ? "kept" : "not kept",
+                (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+#endif
   return true;
 }
 // the still screen kept for key, put back (false: not kept)
@@ -730,6 +750,11 @@ static void psPaintOcc(uint8_t place) {
 static void psLoadMon(const PsState &s) {
   if (psMonDex != s.dex || psMonShiny != s.shiny || !psMon.loaded) {
     psMon.load((uint8_t)s.dex, s.shiny);
+#ifdef ESP_PLATFORM
+    if (!psMon.loaded)
+      Serial.printf("picsnap: #%d didn't load: PSRAM %u free, %u in one piece\n", s.dex, (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
+                    (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+#endif
     psMonDex = s.dex;
     psMonShiny = s.shiny;
   }

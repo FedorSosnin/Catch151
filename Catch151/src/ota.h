@@ -10,6 +10,10 @@
 // that hadn't moved yet when the repo was renamed (Fedor: "Catch151 is the new game name")
 #define OTA_BASE_URL "https://fedorsosnin.github.io/Catch151/"
 #define OTA_BASE_URL_OLD "https://fedorsosnin.github.io/PokeKnomiGochi/"
+// Catch 151 XL (the Waveshare 2.1) has its own: the Knomi's firmware doesn't drive its screen, nor the XL's the
+// Knomi's. Its update.json also says "board": "xl", and the XL takes nothing that doesn't (tools/build_xl_web.sh)
+#define OTA_BASE_URL_XL "https://fedorsosnin.github.io/Catch151/xl/"
+#define OTA_BOARD_XL "xl"
 #define OTA_CHECK_EVERY_MS (24UL * 60 * 60 * 1000)  // the automatic check: once a day
 #define OTA_FIRST_CHECK_MS (2UL * 60 * 1000)        // and the first, 2 minutes after boot
 #define OTA_CHECK_V2_MS (60UL * 60 * 1000)           // V2: every hour, so a release made overnight is in by morning

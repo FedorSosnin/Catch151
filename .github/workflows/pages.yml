@@ -1,5 +1,5 @@
 # Publishes to GitHub Pages: the Knomi installer at the root (the README's link, and where Knomis
-# download Wi-Fi updates from), the Waveshare one under /waveshare/, the leaderboard under /leaderboard/, /play/ pointing to
+# download Wi-Fi updates from), Catch 151 XL's Wi-Fi updates under /xl/ (web/knomi/xl), the leaderboard under /leaderboard/, /play/ pointing to
 # Catch 151 for Web's own site (tools/publish_web.sh), the Catch 151 Dex under /sprites/, built from the packs, and the
 # soundtrack under /music/ (web/music).
 name: Pages

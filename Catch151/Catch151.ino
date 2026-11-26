@@ -67,8 +67,11 @@ static_assert(PE_END == (1u << 21) && PSE_END == 64u, "a game's event name taken
 #include "src/music.h"  // background music, on a computer and the web (HAS_MUSIC)
 
 // Firmware version. Bump this number on every release (and manifest.json for
-// the web installer). Shown on the settings screen and over serial at boot.
+// the web installer). Shown on the settings screen and over serial at boot. (A test build can be given another with
+// -DFW_VERSION=..., an older one to try a Wi-Fi update on a board)
+#ifndef FW_VERSION
 #define FW_VERSION "2.2.19"
+#endif
 
 // the settings page: Wi-Fi, then updates (check / install, and the auto-update switch under it)
 #define SET_WIFI_BTN_Y 178  // change the Wi-Fi
@@ -561,6 +564,38 @@ int16_t tX0, tY0, tXl, tYl; // gesture in progress (start and last position)
 uint32_t tStart = 0;
 bool holdFired = false;
 
+#ifdef BOARD_WS21
+#include <driver/i2c_master.h>
+#include <esp_memory_utils.h>
+// The I2C driver asks for its memory (the bus with the lock its interrupt takes, each chip's handle) as "any memory",
+// and with PSRAM in the heap that's PSRAM, in among the frames and the DMA. The touch task crashed on it three times:
+// a LoadProhibited (2026-11-23, the bus overwritten with dark pixels), an I2C interrupt panic (11-24) and
+// "spinlock_release ... lock->count < 0x100" (11-26, in front of a group: "it was crashing on me"), each time with the
+// bus at 0x3c202edc, just before the first frame. So at boot all of PSRAM is held for a moment while the bus starts and
+// each chip on it gets its handle (a one-byte read makes one, answered or not): they land in internal RAM, out of
+// reach of anything drawn or copied into PSRAM. Before anything else uses the bus.
+static void ws21WireBegin() {
+  void *hold[48];
+  int n = 0;
+  while (n < 48) {
+    const size_t big = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+    void *p = big ? heap_caps_malloc(big, MALLOC_CAP_SPIRAM) : nullptr;
+    if (!p) break;
+    hold[n++] = p;
+  }
+  Wire.begin(IIC_SDA, IIC_SCL);
+  Wire.setTimeOut(50);
+  // the touch (CST820), the expander (TCA9554), the IMU (QMI8658), the codec (ES8311, audio.cpp), the clock (PCF85063,
+  // rtcbat.cpp)
+  static const uint8_t chips[] = { TOUCH_I2C_ADDR, EXIO_ADDR, IMU_I2C_ADDR, 0x18, 0x51 };
+  for (uint8_t a : chips) Wire.requestFrom(a, (uint8_t)1);
+  for (int i = 0; i < n; i++) heap_caps_free(hold[i]);
+  i2c_master_bus_handle_t bus = nullptr;
+  i2c_master_get_bus_handle(I2C_NUM_0, &bus);
+  Serial.printf("i2c: bus at %p, %s (PSRAM held in %d pieces)\n", bus, esp_ptr_external_ram(bus) ? "IN PSRAM" : "internal RAM", n);
+}
+#endif
+
 void setup() {
   Serial.setRxBufferSize(8192);  // the SD transfer arrives in 2 KB blocks
   Serial.begin(115200);
@@ -576,7 +611,11 @@ void setup() {
 #ifdef BOARD_KNOMI_V2
   autoUpdateLoad();  // (Wi-Fi updates are the Knomi's)
 #endif
+#ifdef BOARD_WS21
+  ws21WireBegin();  // (the I2C driver's memory in internal RAM)
+#else
   Wire.begin(IIC_SDA, IIC_SCL);
+#endif
   // CST9217 (touch), AXP2101 (PMU) y PCF85063 (RTC) share this I2C bus.
   // Safety net for PMU/RTC (SensorLib does NOT honor this timeout on the
   // touch; the sleeping-touch hang is solved by gating on INT, see
