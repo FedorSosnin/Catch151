@@ -34,8 +34,8 @@ void hostPointerHover(void);
 // ...and where over the screen, in canvas coordinates, with no button down (x < 0: it left the screen): V2 outlines
 // the control under it, as a finger's press does
 void hostPointerHoverAt(int x, int y);
-// Was the press that follows a finger's (the web on a phone or a tablet) rather than a mouse's? Only a finger's tap on
-// a keyboard zooms in (menus_v2.h). Off until told: the Mac and Windows apps never zoom it
+// Are the presses that follow a finger's, so a tap on a keyboard zooms in as on the Knomi (menus_v2.h)? Only the host
+// test turns it on, to check the Knomi's zoom: the Mac and Windows apps and the web game never zoom it
 void hostPointerFinger(bool finger);
 // Tilt keys; the game sees a ramp, not a jump, so it can be fine-tuned
 void hostTiltKeys(bool left, bool right);

@@ -81,7 +81,7 @@ Each minigame's best ten, from every copy of the game, are on the **[Leaderboard
 
 ### The keyboard
 
-Ten keys a row are small on the Knomi, so the keyboard zooms: tap near the letter you want and the keys around it grow about three times wider; tap the big ones to type, as many as you like. The blue down arrow where the X was goes back to the whole keyboard. Shift, ⌫, 123, SPACE and OK work at once on the whole one. Hold a key to see it big over your finger; slide off before you let go to change your mind. The same keyboard types your Pokémon's name, your gamer tag and the Knomi's Wi-Fi password. The zoom is for fingers: on the Mac and Windows apps, and with a mouse in the browser, the keyboard stays whole and a click types the letter under it; the web game on a phone or a tablet zooms like the Knomi.
+Ten keys a row are small on the Knomi, so the keyboard zooms: tap near the letter you want and the keys around it grow about three times wider; tap the big ones to type, as many as you like. The blue down arrow where the X was goes back to the whole keyboard. Shift, ⌫, 123, SPACE and OK work at once on the whole one. Hold a key to see it big over your finger; slide off before you let go to change your mind. The same keyboard types your Pokémon's name, your gamer tag and the Knomi's Wi-Fi password. The zoom is only on the Knomi: on the Mac and Windows apps and in the browser, on a phone or a tablet too, the keyboard stays whole and a tap or a click types the letter under it.
 
 ### Pinball
 

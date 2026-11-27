@@ -230,7 +230,6 @@ canvas.addEventListener('pointerdown', (e) => {
   down = true;
   if (e.pointerType === 'mouse') canvas.style.cursor = FINGER_DOWN;
   const [x, y] = point(e);
-  if (Module._webFinger) Module._webFinger(e.pointerType === 'mouse' ? 0 : 1);  // a finger's tap zooms the keyboard in, a mouse's types
   Module._webPointer(x, y, 1);
   e.preventDefault();
 });

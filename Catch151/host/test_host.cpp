@@ -1650,7 +1650,7 @@ static void testKeyboard() {
     hostPointer(x, y, false);
     runTicks(300);
   };
-  hostPointerFinger(true);  // a finger's taps (the web on a phone): the zoom
+  hostPointerFinger(true);  // a finger's taps, as on the Knomi (only the test turns them on): the zoom
   hostSerialPush("KEYBOARD");
   runTicks(300);
   CHECK(kbOpen && v2KbZoomX < 0);
@@ -1770,7 +1770,7 @@ static void testKeyboard() {
   pet.boardMatch = boardMatch0;
   pet.boardSnap = boardSnap0;
 
-  // a mouse's taps (the Mac and Windows apps, the web on a computer; Fedor: "remove the keyboard zoom from them"):
+  // a mouse's taps (the Mac and Windows apps and the web game; Fedor: "remove the keyboard zoom from them"):
   // a letter on the whole keyboard is typed at once, and it never zooms
   hostPointerFinger(false);
   hostSerialPush("KEYBOARD");
