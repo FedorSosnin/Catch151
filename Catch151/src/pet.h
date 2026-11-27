@@ -169,8 +169,10 @@ public:
   uint32_t matchHi = 0;    // BerryMatch's record: the best score
   uint16_t snapHi = 0;     // Pic Snap's record: the best roll (up to 1,000)
   // V2: the gamer tag (gamertag.h): the trainer's, kept through a goodbye, shown with the best scores on the world
-  // board, and none goes there without one (Catch151.ino scoreReport()). tagAsked: the keyboard for it was offered (until
-  // 2.2.19 only once, after a first scored game; now after each scored game while there's no tag)
+  // board, and none goes there without one (Catch151.ino scoreReport()). tagAsked: its keyboard came up, or one was
+  // picked: from 2.2.21 it comes up once, over the card of the first game chosen, for a player without one of their
+  // own (Catch151.ino gamesMenuTap()). Saved as "gtk2": saves from before start unasked (their "gtak" meant asked
+  // after a game), so a player who updated without picking one is asked once too
   char gamerTag[GAMER_TAG_LEN + 1] = "";
   bool tagAsked = false;
   bool tagGiven = false;  // gamerTag is the one made up for this player (gamertag.h gamerTagStarter()), not picked yet

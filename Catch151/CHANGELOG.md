@@ -6,6 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
+## [Unreleased]
+
+- **Your gamer tag, asked once, before your first game:** the first time you choose a game, its keyboard comes up over the game's card: type a name, or keep the one made up for you with **OK**, then play. It no longer comes up after games (or not at all after **PLAY AGAIN!**, which let a new player go on without ever being asked). Change it any time with **EDIT**, on the Games menu's label or at the top of a game's card. If you've updated without ever picking one, it asks you once too, the next time you choose a game.
+
 ## [2.2.20] - 2026-11-26
 
 - **Big Pokémon always load:** loading a Pokémon's pictures took twice their size in memory for a moment, so with little to spare a big one (Onix, Gyarados) could fail to show, most of all in Pic Snap, which could then leave a place empty. Now it takes their size once, and Pic Snap keeps room for the biggest. (The Knomi; the Mac, Windows and the web never ran short.)

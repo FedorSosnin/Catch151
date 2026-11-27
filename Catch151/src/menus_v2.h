@@ -2598,10 +2598,9 @@ static void v2Keyboard(int L, const char *title, const char *typed, int hot, boo
 
 // ----- the gamer tag's keyboard (gamertag.h): the same keyboard, four boxes for what's typed, in capitals unless shift
 // turns them small (they stay as chosen). Under the keys (not zoomed): what it's for, or PICK ANOTHER after a rude one.
-// OK keeps it and sends the best scores again with it; the X leaves it as it was. Asked for by itself after each scored
-// game while the tag is still the one the player was given (Fedor: "after a player plays their first game and adds a
-// score, they will be asked to make their tag"; 2026-11-25: "If the name is default, they keyboard should still come
-// up asking for a name change"); its label on the Games menu changes it any time. The given one shows grey, as a
+// OK keeps it and sends the best scores again with it; the X leaves it as it was. Asked for by itself once, over the card
+// of the first game chosen, while the player has none of their own (2.2.21: Catch151.ino gamesMenuTap(); until then
+// after each scored game); its label on the Games menu and the card's PLAYING AS change it any time. The given one shows grey, as a
 // placeholder: the first letter typed starts a new tag, <- clears it, OK keeps it as the player's own
 static bool v2TagKbOn = false;     // the keyboard open (kbOpen) is the gamer tag's, not the name's
 static bool v2TagToGames = false;  // ...and closing it goes back to the Games menu

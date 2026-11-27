@@ -676,8 +676,8 @@ static void testGame() {
   {
     extern Pet pet;
     CHECK(strlen(pet.gamerTag) == 4 && pet.tagGiven);  // a new player: a tag made up for them (gamertag.h)
-    strcpy(pet.gamerTag, "TEST");  // (the gamer tag's own checks are testKeyboard()'s: with one picked, a game's end
-    pet.tagGiven = false;          // goes to the menu; without one, or with the given one, it asks each time)
+    strcpy(pet.gamerTag, "TEST");  // (the gamer tag's own checks are testKeyboard()'s: with one picked, the first game
+    pet.tagGiven = false;          // chosen goes straight to its card; without one, its keyboard comes up over it)
   }
   hostSerialPush("SPEC 5");
   runTicks(100);
@@ -1674,16 +1674,18 @@ static void testKeyboard() {
   tapAt(233, 422);  // the X: out without renaming
   CHECK(!kbOpen);
 
-  // the gamer tag (gamertag.h): asked for after a scored game's end (not Who's That?'s), each time until there's one
-  // picked, and no score goes to the relay without one (Fedor, 2026-11-25: "require a name to be put in"); typed on the
-  // same keyboard, four at most, the bests sent with it once it's picked; a rude one isn't kept; the Games menu's label
-  // opens it again, and back to the menu after. (No tag at all is a save from before 2.2.19 only for a moment: Pet::begin()
-  // gives one. Then the given one, further down)
+  // the gamer tag (gamertag.h): asked for once, over the card of the first game chosen, while the player has none of
+  // their own (Fedor, 2026-11-27: "Before anyone plays a mini game they chose, only for the first time, the playing as
+  // window should come up and ask to make a name first, before playing"; "Now there is no need for windows to come up
+  // later"; "If a player has just updated and they HAVENT set a name, this window should come up for them as well"); a
+  // game's end never asks. No score goes to the relay without one; typed on the same keyboard, four at most, the bests
+  // sent with it once it's picked; a rude one isn't kept; the Games menu's label opens it again, and back to the menu
+  // after. (No tag at all is a save from before 2.2.19 only for a moment: Pet::begin() gives one. Then the given one)
   extern Pet pet;
-  extern bool gamesMenuOpen;
+  extern bool gamesMenuOpen, gameOpen, gTagKbOverGame;
   extern void gameEndToMenu(int g);
   pet.gamerTag[0] = 0;
-  pet.tagAsked = false;
+  pet.tagAsked = true;  // (asked already: this part is the label's; the first game's ask is further down)
   pet.tagGiven = false;
   uint32_t board[7];
   memcpy(board, pet.boardHi, sizeof(board));
@@ -1702,15 +1704,14 @@ static void testKeyboard() {
   scoreReport(0);
   runTicks(600);  // (and each kind of fish's, a few a second)
   CHECK(gTestScoresSent == 0);  // no tag: nothing goes
-  gameEndToMenu(1);  // Who's That? has no place on the board
-  CHECK(gamesMenuOpen && !kbOpen);
-  gameEndToMenu(0);  // a scored game's end: the tag's keyboard
-  CHECK(kbOpen && !gamesMenuOpen && pet.tagAsked);
-  runTicks(200);
-  tapAt(233, 422);  // its X: no tag
-  CHECK(!kbOpen && gamesMenuOpen && !pet.gamerTag[0]);
   gamesMenuOpen = false;
-  gameEndToMenu(0);  // the next scored game's end: asked again
+  gameEndToMenu(0);  // a scored game's end, with no tag: still just the menu (it's asked before a game, not after)
+  CHECK(gamesMenuOpen && !kbOpen);
+  gameEndToMenu(1);  // (Who's That?'s too)
+  CHECK(gamesMenuOpen && !kbOpen);
+  extern void v2GamesToCarts();
+  v2GamesToCarts();
+  tapAt(233, 72);  // the label on the Game Boy: its keyboard
   CHECK(kbOpen && !gamesMenuOpen);
   runTicks(200);
   tapAt(253, 146);  // Y: zooms in
@@ -1726,28 +1727,59 @@ static void testKeyboard() {
   gamesMenuOpen = false;
   gameEndToMenu(0);  // a tag now: not asked
   CHECK(gamesMenuOpen && !kbOpen);
-  // the tag a player was given (Fedor: "give each player random 4 player name until they change it"; "If the name is
-  // default, they keyboard should still come up asking for a name change"): the scores go with it; after each scored
-  // game its keyboard, the X leaving it as it was; OK on it keeps it as the player's own, and it's not asked again
+  // the tag a player was given (Fedor: "give each player random 4 player name until they change it"): the scores go
+  // with it. The first game chosen: its card, with the tag's keyboard over it; OK keeps it as the player's own, and the
+  // card plays. Not asked again, nor at a game's end
   gamerTagStarter(12345, pet.gamerTag);
   pet.tagGiven = true;
+  pet.tagAsked = false;
   char given[GAMER_TAG_LEN + 1];
   strcpy(given, pet.gamerTag);
   gTestScoresSent = 0;
   scoreReport(0);
   CHECK(gTestScoresSent == 1 && !strcmp(gTestScoreTag, given));
+  auto chooseBerryDrop = [&]() {  // the Games menu, Berry Drop's cartridge, TAP TO PLAY
+    gamesMenuOpen = false;
+    hostSerialPush("GAMES");
+    runTicks(300);
+    tapAt(150, 128);
+    tapAt(233, 358);
+    runTicks(500);
+  };
+  auto leaveGame = [&]() {
+    gameOpen = false;
+    introCard = -1;
+  };
+  chooseBerryDrop();
+  CHECK(gameOpen && introCard == 0 && kbOpen && gTagKbOverGame && pet.tagAsked);
+  runTicks(200);
+  tapAt(375, 320);  // OK: the given one, the player's own now; back to the card
+  CHECK(gameOpen && introCard == 0 && !kbOpen && !gTagKbOverGame && !pet.tagGiven && !strcmp(pet.gamerTag, given));
+  tapAt(233, 335);  // Ready, GO!
+  runTicks(500);
+  CHECK(gameOpen && introCard == -1);
+  leaveGame();
+  chooseBerryDrop();  // the next game: straight to its card
+  CHECK(gameOpen && introCard == 0 && !kbOpen);
+  leaveGame();
+  // a player who updated without ever picking one (asked after games until 2.2.20, so their save has it unasked):
+  // asked once, the first game they choose; its X keeps the given one, and it's not asked again
+  gamerTagStarter(777, pet.gamerTag);
+  pet.tagGiven = true;
+  pet.tagAsked = false;
+  strcpy(given, pet.gamerTag);
   gamesMenuOpen = false;
-  gameEndToMenu(0);
-  CHECK(kbOpen && !gamesMenuOpen);
+  gameEndToMenu(0);  // a game's end: not asked
+  CHECK(gamesMenuOpen && !kbOpen);
+  chooseBerryDrop();
+  CHECK(gameOpen && introCard == 0 && kbOpen && gTagKbOverGame);
   runTicks(200);
   tapAt(233, 422);  // its X
-  CHECK(!kbOpen && gamesMenuOpen && pet.tagGiven && !strcmp(pet.gamerTag, given));
-  gamesMenuOpen = false;
-  gameEndToMenu(0);  // asked again
-  CHECK(kbOpen);
-  runTicks(200);
-  tapAt(375, 320);  // OK: the given one, the player's own now
-  CHECK(!kbOpen && gamesMenuOpen && !pet.tagGiven && !strcmp(pet.gamerTag, given));
+  CHECK(gameOpen && introCard == 0 && !kbOpen && pet.tagGiven && !strcmp(pet.gamerTag, given));
+  leaveGame();
+  chooseBerryDrop();
+  CHECK(gameOpen && introCard == 0 && !kbOpen);
+  leaveGame();
   gamesMenuOpen = false;
   gameEndToMenu(0);
   CHECK(gamesMenuOpen && !kbOpen);

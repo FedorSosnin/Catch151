@@ -18,7 +18,7 @@ void Pet::begin() {
   bootLife = lifeMin;
   lastTick = millis();
   // V2: a gamer tag made up for a player who has none (a new one, or one who closed its keyboard before 2.2.19), so
-  // their scores show on the leaderboard as something; asked to pick their own after each scored game
+  // their scores show on the leaderboard as something; asked once to pick their own, before the first game chosen
   if (!gamerTag[0]) {
     gamerTagStarter((uint32_t)random(0x7FFFFFFF), gamerTag);
     tagGiven = true;
@@ -1344,7 +1344,7 @@ void Pet::save() {
   prefs.putShort("lbfd", boardFishDex);
   prefs.putBool("lbfs", boardFishShiny);
   prefs.putBytes("lbkd", boardKinds, sizeof(boardKinds));
-  prefs.putBool("gtak", tagAsked);
+  prefs.putBool("gtk2", tagAsked);  // (not "gtak", asked after a game until 2.2.20: see pet.h)
   prefs.putBool("gtgv", tagGiven);
   prefs.putUChar("dhi", dungeonHi);
   prefs.putUChar("cdyn", candyToday);
@@ -1465,7 +1465,7 @@ void Pet::load() {
     prefs.getString("gtag", t, sizeof(t));
     if (!gamerTagClean(t, gamerTag)) gamerTag[0] = 0;
   }
-  tagAsked = prefs.getBool("gtak", false);
+  tagAsked = prefs.getBool("gtk2", false);
   tagGiven = gamerTag[0] && prefs.getBool("gtgv", false);
   if (prefs.getBytes("lbhi", boardHi, sizeof(boardHi)) != sizeof(boardHi))
     memset(boardHi, 0, sizeof(boardHi));  // (a save from before 2.2.10 has none: the board starts from zero)

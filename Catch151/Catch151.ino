@@ -3206,11 +3206,7 @@ void gameEndToMenu(int g) {
   v2GamesShow(g);
   if (pet.isEgg() || pet.sleeping || pet.ceremony || choiceKind) return;
   openGamesMenu();
-  // V2: after a scored game (one with a place on the leaderboard: not Who's That?), the gamer tag, each time while it's
-  // the one the player was given (Fedor, 2026-11-25: "We need to find a way to require a name to be put in"; "If the
-  // name is default, they keyboard should still come up asking for a name change"). Until 2.2.19 it was asked once,
-  // and its X left every score after it on the board as ----; now no score goes without one (scoreReport())
-  if (g != 1 && gamesMenuOpen && (!pet.gamerTag[0] || pet.tagGiven) && pet.hasScore()) openTagKeyboard(true);
+  // (V2: the gamer tag isn't asked for here any more, from 2.2.21: once, before the first game chosen, gamesMenuTap())
 }
 
 void openGamesMenu() {
@@ -3671,7 +3667,18 @@ void gamesMenuTap(int16_t x, int16_t y) {
   else if (g == 6) startPinball();
   else if (g == 7) startMatch();
   else startSnap();
-  if (gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen || pinOpen || bmOpen || psOpen) introOpen(g);  // it opens under its card
+  if (!(gameOpen || quizOpen || runOpen || dungeonOpen || surfOpen || fishOpen || pinOpen || bmOpen || psOpen)) return;
+  introOpen(g);  // it opens under its card
+  // V2: the first game chosen, for a player without a gamer tag of their own (none, or the one made up for them), and
+  // one who updated without picking one: its keyboard over the card first, once, a name typed or OK keeping the one
+  // given; then the card, PLAYING AS it, and its button plays. Its EDIT changes it after, on the card and the Games
+  // menu's label (Fedor, 2026-11-27: "Before anyone plays a mini game they chose, only for the first time, the playing
+  // as window should come up and ask to make a name first, before playing"; "Now there is no need for windows to
+  // come up later"; "If a player has just updated and they HAVENT set a name, this window should come up for them")
+  if (!pet.tagAsked && (!pet.gamerTag[0] || pet.tagGiven)) {
+    openTagKeyboard(false);  // (pet.askedForTag(): once)
+    gTagKbOverGame = true;
+  }
 }
 
 // the art in a rounded square r from its centre, its corners rad round
