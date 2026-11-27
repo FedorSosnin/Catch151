@@ -6,13 +6,10 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
-
-- **No keyboard zoom in the browser:** on a phone or a tablet too, a tap types the letter under it, as a click does. The Knomi keeps the zoom.
-
 ## [2.2.20] - 2026-11-26
 
 - **Big Pokémon always load:** loading a Pokémon's pictures took twice their size in memory for a moment, so with little to spare a big one (Onix, Gyarados) could fail to show, most of all in Pic Snap, which could then leave a place empty. Now it takes their size once, and Pic Snap keeps room for the biggest. (The Knomi; the Mac, Windows and the web never ran short.)
+- **No keyboard zoom in the browser** (the web game, 2026-11-27): on a phone or a tablet too, a tap types the letter under it, as a click does. The Knomi keeps the zoom.
 
 ## [2.2.19] - 2026-11-26
 
