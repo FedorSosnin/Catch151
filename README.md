@@ -20,7 +20,7 @@
 | <img src="Catch151/docs/images/v2/crt-cave.webp" width="404" alt="Catch 151 for Mac with its CRT screen, in its Poké Ball ring: Moltres flying through the Cave as the ground slides by, with Pikachu visiting"> | <img src="Catch151/docs/images/v2/knomi-on-stand.gif" width="360" alt="Catch 151 on a BTT Knomi V2 in its 3D-printed case, on its magnetic stand on a desk: a Pokémon walking through the Forest"> |
 | **On your computer**<br><sub>Mac, Windows and the browser, with the CRT screen</sub> | **On the Knomi V2**<br><sub>its real round screen, in its own 3D-printed case</sub> |
 
-**No Knomi? [Play it in your browser](https://catch151.3dprintsos.com)** on a computer, phone or tablet, or get the [Mac app](#catch-151-for-mac) or the [Windows app](#catch-151-for-windows). **CRT effect:** each scanline a soft beam, a warm glow, a slightly curved glass for that nostalgia look.
+**No Knomi? [Play it in your browser](https://catch151.3dprintsos.com)** on a computer, phone or tablet, or get the [Mac app](#catch-151-for-mac) or the [Windows app](#catch-151-for-windows).
 
 **[Listen to the soundtrack](https://fedorsosnin.github.io/Catch151/music/)**: 33 original chiptune songs, written for the game and played live in your browser by its own synthesizer, with a scope for each of the four voices. See [Original music and sound](#original-music-and-sound).
 
