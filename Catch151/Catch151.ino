@@ -5986,6 +5986,8 @@ void closeSnap() {
 
 // its pictures are still in memory (the host test: they go when it closes)
 bool snapPicturesHeld() { return psPhoto || psLay[0] || psFar; }
+// the Pokemon whose sprite is loaded, 0 for none (the host test: it's the place's own)
+int16_t snapMonLoaded() { return psMon.loaded ? psMonDex : 0; }
 
 // the place now in the roll made ready all at once (ms 0), or as far as ms allows; its Pokemon too, once it's known
 bool snapReady(uint32_t ms) {
@@ -6103,7 +6105,11 @@ void renderSnap() {
   psLast = now;
   if (dt > 0.1f) dt = 0.1f;  // a stall (a flash save) mustn't skip the moment
   if (!introPaused() && !psOverT) {
-    if (ps.phase == PSP_LOAD && psPrepFor == psPlace(ps) && psPrepDone) snapEvents(psReady(ps));
+    // the place shows once it's ready and its own Pokemon loaded (snapReady()). Made ready while the print was up, with
+    // a finger down on the frame the print went (a tap on it), nothing had loaded its Pokemon, and the last place's
+    // showed there (Fedor, 2026-11-27: "Seeing the wrong pokemon in Pic Snap. Pikachu flying, gastly at the beach and in
+    // the water"; since 2.2.18, when no making ready went on under a finger)
+    if (ps.phase == PSP_LOAD && psPrepFor == psPlace(ps) && psPrepDone && snapReady(0)) snapEvents(psReady(ps));
     if (psFreeze && (ps.phase == PSP_IN || ps.phase == PSP_AIM || ps.phase == PSP_OUT)) {  // PSHOLD: the lens and the
       float f = ps.f, wx = ps.wx, wy = ps.wy;                                                // camera still, the Pokemon
       snapEvents(psStep(ps, dt));                                                              // there as long as it's held

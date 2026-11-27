@@ -943,6 +943,8 @@ static void testGame() {
       hostButton(false);
       runTicks(300);
       CHECK(introCard == -1 && (ps.phase == PSP_IN || ps.phase == PSP_AIM) && ps.dex > 0);
+      extern int16_t snapMonLoaded();
+      CHECK(snapMonLoaded() == ps.dex);  // the place's own Pokemon on show
       for (int i = 0; i < 40 && ps.phase != PSP_AIM; i++) runTicks(50);
       CHECK(ps.phase == PSP_AIM);
       tapAt(90, 330);  // anywhere: the photo
@@ -960,9 +962,15 @@ static void testGame() {
         return n;
       };
       CHECK(goldFoot() > 20);
-      tapAt(233, 233);  // on to the next place
+      // a tap on the print: on to the next place, made ready while the print was up. Its own Pokemon shows there, not
+      // the last place's: the finger down as the print went kept it from loading, and the place showed anyway (Fedor,
+      // 2026-11-27: "Seeing the wrong pokemon in Pic Snap. Pikachu flying, gastly at the beach and in the water")
+      const int16_t dex0 = ps.dex;
+      tapAt(233, 233);
       for (int i = 0; i < 60 && ps.phase != PSP_AIM; i++) runTicks(50);
       CHECK(ps.shot == 1 && ps.phase == PSP_AIM);
+      CHECK(snapMonLoaded() == ps.dex);
+      if (snapMonLoaded() != ps.dex) printf("  | picsnap: place %d wants #%d, #%d on show (the last place's #%d)\n", psPlace(ps), ps.dex, snapMonLoaded(), dex0);
       tapAt(380, 233);
       CHECK((ps.phase == PSP_SNAP || ps.phase == PSP_PRINT) && ps.got[1]);  // (the tap takes a while here)
       ps.shot = PS_SHOTS - 1;  // (the rest of the roll skipped: this was its last photo)
