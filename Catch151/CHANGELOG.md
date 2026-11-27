@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.22] - 2026-11-27
 
 - **Pic Snap shows each place's own Pokémon:** tapping the print to move on could bring the last place's Pokémon along into the next one (Pikachu in the sky, Gastly on the beach and out on the water). Since 2.2.18.
 
