@@ -70,7 +70,7 @@ static_assert(PE_END == (1u << 21) && PSE_END == 64u, "a game's event name taken
 // the web installer). Shown on the settings screen and over serial at boot. (A test build can be given another with
 // -DFW_VERSION=..., an older one to try a Wi-Fi update on a board)
 #ifndef FW_VERSION
-#define FW_VERSION "2.2.20"
+#define FW_VERSION "2.2.21"
 #endif
 
 // the settings page: Wi-Fi, then updates (check / install, and the auto-update switch under it)
