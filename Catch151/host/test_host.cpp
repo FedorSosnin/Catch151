@@ -1085,6 +1085,12 @@ static void testGame() {
     pet.speciesId = 94;  // Gengar: the Mansion
     runTicks(300);
     CHECK(fb[4 * 466 + 233] == 0x1065);  // its night sky, #140f2c
+    // any medal the Pokemon is due (Final Form: Gengar is fully evolved), earned and seen now: otherwise the minute's
+    // tick earns it wherever that falls, and its banner stops the walk below or takes the home's next tap. On CI's
+    // Linux, whose 5 ms sleeps are exact, it fell on the ring's second hold (no ring, the tap opened the medal's page)
+    // and, from 2.2.19, on the walk's last check (the medal's modal holds the world still). The Mac oversleeps
+    pet.checkMedals();
+    pet.endCelebration();
     // the walk (walk_v2.h): once a walk starts the world's clock runs; the food picker stops it, and the
     // world holds still until it closes
     extern void v2HostStartWalk();
@@ -1138,11 +1144,6 @@ static void testGame() {
     CHECK(!gamesMenuOpen);
     CHECK(anySound(HOST_AUDIO_RATE / 10));
     musicSetEnabled(true);
-    // any medal the Pokemon is due (Final Form: it was set fully evolved), earned and seen now: otherwise the minute's
-    // tick earns it wherever that falls, and its banner takes the home's next tap. On CI's Linux, whose 5 ms sleeps are
-    // exact, it fell on the ring's second hold below: no ring, the tap opened the medal's page (the Mac oversleeps)
-    pet.checkMedals();
-    pet.endCelebration();
     // no swipes on home (Fedor: "Making the hold menu the main navigation there"): a quick swipe each way
     // opens nothing; the ring opens the pages, where a swipe still turns them
     extern bool galleryOpen, clockOpen, v2RadialOpen;

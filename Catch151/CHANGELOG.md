@@ -6,7 +6,7 @@ All notable changes to the firmware. Versions match the number shown at the
 Updating from the [web installer](https://fedorsosnin.github.io/Catch151/)
 **without** ticking "Erase device" keeps your Pokémon.
 
-## [Unreleased]
+## [2.2.20] - 2026-11-26
 
 - **Big Pokémon always load:** loading a Pokémon's pictures took twice their size in memory for a moment, so with little to spare a big one (Onix, Gyarados) could fail to show, most of all in Pic Snap, which could then leave a place empty. Now it takes their size once, and Pic Snap keeps room for the biggest. (The Knomi; the Mac, Windows and the web never ran short.)
 
